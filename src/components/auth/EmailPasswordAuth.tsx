@@ -65,6 +65,9 @@ const EmailPasswordAuth: React.FC<EmailPasswordAuthProps> = ({ onError, disabled
         const { error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
         });
 
         if (error) {
@@ -108,7 +111,7 @@ const EmailPasswordAuth: React.FC<EmailPasswordAuthProps> = ({ onError, disabled
     setLocalError('');
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: window.location.origin,
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) {
         setLocalError(translateError(error.message));
