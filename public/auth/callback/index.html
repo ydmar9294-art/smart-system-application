@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>جارٍ التحقق...</title>
+  <title>تأكيد البريد الإلكتروني</title>
   <style>
     body {
       margin: 0; min-height: 100vh; display: flex; align-items: center;
@@ -11,25 +11,134 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       text-align: center;
     }
+    .card {
+      max-width: 400px; padding: 2.5rem; background: #1e293b;
+      border-radius: 1.5rem; border: 1px solid #334155;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+    }
+    .icon {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: rgba(34,197,94,0.1); display: flex;
+      align-items: center; justify-content: center; margin: 0 auto 1.25rem;
+    }
+    .icon svg { width: 32px; height: 32px; color: #22c55e; }
+    h2 { font-size: 1.25rem; font-weight: 900; margin: 0 0 0.5rem; color: #f1f5f9; }
+    p { font-size: 0.875rem; color: #94a3b8; margin: 0 0 1.5rem; line-height: 1.6; }
+    .btn {
+      display: inline-block; padding: 0.75rem 2rem; background: #3b82f6;
+      color: #fff; border-radius: 1rem; font-weight: 700; font-size: 0.875rem;
+      text-decoration: none; transition: background 0.2s;
+    }
+    .btn:hover { background: #2563eb; }
     .spinner {
       width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1);
       border-top-color: #3b82f6; border-radius: 50%;
       animation: spin 0.8s linear infinite; margin: 0 auto 1rem;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+    #loading { display: block; }
+    #success { display: none; }
+    #error { display: none; }
+    .error-icon { background: rgba(239,68,68,0.1) !important; }
+    .error-icon svg { color: #ef4444 !important; }
   </style>
 </head>
 <body>
-  <div>
+  <!-- Loading state -->
+  <div id="loading" class="card">
     <div class="spinner"></div>
     <p>جارٍ التحقق من البريد الإلكتروني...</p>
   </div>
+
+  <!-- Success state -->
+  <div id="success" class="card">
+    <div class="icon">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    </div>
+    <h2>تم تأكيد البريد الإلكتروني بنجاح</h2>
+    <p>يمكنك الآن تسجيل الدخول باستخدام بريدك الإلكتروني وكلمة المرور.</p>
+    <a class="btn" id="loginBtn">تسجيل الدخول</a>
+  </div>
+
+  <!-- Error state -->
+  <div id="error" class="card">
+    <div class="icon error-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+      </svg>
+    </div>
+    <h2>حدث خطأ</h2>
+    <p id="errorMsg">فشل التحقق من البريد الإلكتروني. الرابط قد يكون منتهي الصلاحية.</p>
+    <a class="btn" id="retryBtn">العودة لتسجيل الدخول</a>
+  </div>
+
   <script>
-    // This page handles email confirmation redirect only.
-    // After confirmation, redirect to the app root.
-    setTimeout(function() {
-      window.location.replace(window.location.origin + '/');
-    }, 1500);
+    (function() {
+      var origin = window.location.origin;
+      document.getElementById('loginBtn').href = origin + '/';
+      document.getElementById('retryBtn').href = origin + '/';
+
+      // Parse the hash fragment for tokens/type
+      var hash = window.location.hash.substring(1);
+      var params = new URLSearchParams(hash);
+      var type = params.get('type');
+      var accessToken = params.get('access_token');
+      var error = params.get('error');
+      var errorDescription = params.get('error_description');
+
+      function showSuccess() {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('success').style.display = 'block';
+      }
+
+      function showError(msg) {
+        document.getElementById('loading').style.display = 'none';
+        if (msg) document.getElementById('errorMsg').textContent = msg;
+        document.getElementById('error').style.display = 'block';
+      }
+
+      // If there's an error in the URL
+      if (error) {
+        showError(errorDescription || 'حدث خطأ أثناء التحقق');
+        return;
+      }
+
+      // If this is a signup/email confirmation
+      if (type === 'signup' || type === 'email_change' || type === 'magiclink') {
+        // Sign out any auto-created session to prevent auto-login
+        if (accessToken) {
+          // Use the Supabase REST API to sign out
+          var supabaseUrl = document.querySelector('meta[name="supabase-url"]');
+          // Just clear any stored session and show success
+          try {
+            localStorage.removeItem('sb-' + 'nrqueogifxxdwladewey' + '-auth-token');
+          } catch(e) {}
+        }
+        // Brief delay to let Supabase process the confirmation
+        setTimeout(showSuccess, 800);
+        return;
+      }
+
+      // If this is a password recovery, redirect to reset-password page
+      if (type === 'recovery') {
+        window.location.replace(origin + '/reset-password#' + hash);
+        return;
+      }
+
+      // For any other type or if tokens exist (confirmation happened)
+      if (accessToken) {
+        try {
+          localStorage.removeItem('sb-nrqueogifxxdwladewey-auth-token');
+        } catch(e) {}
+        setTimeout(showSuccess, 800);
+        return;
+      }
+
+      // Fallback — no recognizable params
+      setTimeout(showSuccess, 1000);
+    })();
   </script>
 </body>
 </html>
