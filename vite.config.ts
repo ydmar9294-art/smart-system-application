@@ -18,4 +18,31 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    // Production optimizations
+    target: 'es2020',
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        // Strip console.log/warn in production (keep errors)
+        drop_console: mode === 'production',
+        drop_debugger: true,
+        pure_funcs: mode === 'production' ? ['console.log', 'console.warn', 'console.info'] : [],
+      },
+    },
+    rollupOptions: {
+      output: {
+        // Manual chunk splitting for optimal caching
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-router': ['react-router-dom'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-ui': ['lucide-react', 'recharts'],
+        },
+      },
+    },
+    // Increase chunk size warning limit for vendor chunks
+    chunkSizeWarningLimit: 600,
+    sourcemap: false,
+  },
 }));

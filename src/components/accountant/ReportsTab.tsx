@@ -1,0 +1,133 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  BarChart3, TrendingUp, TrendingDown, DollarSign,
+  ShoppingCart, Wallet, Package
+} from 'lucide-react';
+import { useApp } from '@/store/AppContext';
+import { supabase } from '@/integrations/supabase/client';
+
+const ReportsTab: React.FC = () => {
+  const { sales, customers, products } = useApp();
+  const [purchasesTotal, setPurchasesTotal] = useState(0);
+  const [salesReturnsTotal, setSalesReturnsTotal] = useState(0);
+  const [purchaseReturnsTotal, setPurchaseReturnsTotal] = useState(0);
+  const [collectionsTotal, setCollectionsTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { loadData(); }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [pRes, srRes, prRes, cRes] = await Promise.all([
+        supabase.from('purchases').select('total_price'),
+        supabase.from('sales_returns').select('total_amount'),
+        supabase.from('purchase_returns').select('total_amount'),
+        supabase.from('collections').select('amount, is_reversed').eq('is_reversed', false),
+      ]);
+      if (pRes.data) setPurchasesTotal(pRes.data.reduce((s, p) => s + Number(p.total_price), 0));
+      if (srRes.data) setSalesReturnsTotal(srRes.data.reduce((s, r) => s + Number(r.total_amount), 0));
+      if (prRes.data) setPurchaseReturnsTotal(prRes.data.reduce((s, r) => s + Number(r.total_amount), 0));
+      if (cRes.data) setCollectionsTotal(cRes.data.reduce((s, c) => s + Number(c.amount), 0));
+    } catch (error) { console.error('Error loading report data:', error); }
+    finally { setLoading(false); }
+  };
+
+  const totalSales = sales.filter(s => !s.isVoided).reduce((sum, s) => sum + Number(s.grandTotal), 0);
+  const netSales = totalSales - salesReturnsTotal;
+  const netPurchases = purchasesTotal - purchaseReturnsTotal;
+  const totalDebt = customers.reduce((sum, c) => sum + Number(c.balance), 0);
+  const estimatedProfit = netSales - netPurchases;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Main KPIs */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-emerald-500/10 p-4 rounded-2xl">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span className="text-[9px] text-muted-foreground font-bold">صافي المبيعات</span>
+          </div>
+          <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">{netSales.toLocaleString('ar-SA')}</p>
+          <p className="text-[9px] text-muted-foreground">{totalSales.toLocaleString()} - {salesReturnsTotal.toLocaleString()}</p>
+        </div>
+
+        <div className="bg-blue-500/10 p-4 rounded-2xl">
+          <div className="flex items-center gap-2 mb-1">
+            <ShoppingCart className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span className="text-[9px] text-muted-foreground font-bold">صافي المشتريات</span>
+          </div>
+          <p className="text-lg font-black text-blue-600 dark:text-blue-400">{netPurchases.toLocaleString('ar-SA')}</p>
+          <p className="text-[9px] text-muted-foreground">{purchasesTotal.toLocaleString()} - {purchaseReturnsTotal.toLocaleString()}</p>
+        </div>
+      </div>
+
+      {/* Profit */}
+      <div className={`p-5 rounded-2xl text-center ${estimatedProfit >= 0 ? 'bg-emerald-500/10' : 'bg-destructive/10'}`}>
+        <DollarSign className={`w-8 h-8 mx-auto mb-2 ${estimatedProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`} />
+        <p className="text-xs text-muted-foreground font-bold mb-1">الربح التقديري</p>
+        <p className={`text-2xl font-black ${estimatedProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
+          {estimatedProfit.toLocaleString('ar-SA')} ل.س
+        </p>
+      </div>
+
+      {/* Secondary KPIs */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-card p-3 rounded-2xl shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <Wallet className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            <span className="text-[9px] text-muted-foreground font-bold">التحصيلات</span>
+          </div>
+          <p className="text-lg font-black text-purple-600 dark:text-purple-400">{collectionsTotal.toLocaleString('ar-SA')}</p>
+        </div>
+        <div className="bg-card p-3 rounded-2xl shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingDown className="w-4 h-4 text-red-500" />
+            <span className="text-[9px] text-muted-foreground font-bold">الديون</span>
+          </div>
+          <p className="text-lg font-black text-red-500">{totalDebt.toLocaleString('ar-SA')}</p>
+        </div>
+      </div>
+
+      {/* Financial Summary */}
+      <div className="bg-card p-4 rounded-2xl shadow-sm space-y-2">
+        <h3 className="font-bold text-sm flex items-center gap-2 text-foreground mb-3">
+          <BarChart3 className="w-4 h-4" /> ملخص الحركة المالية
+        </h3>
+        
+        <div className="flex items-center justify-between p-2.5 bg-muted rounded-xl text-sm">
+          <span className="text-muted-foreground">إجمالي المبيعات</span>
+          <span className="font-bold text-emerald-600 dark:text-emerald-400">+{totalSales.toLocaleString('ar-SA')}</span>
+        </div>
+        <div className="flex items-center justify-between p-2.5 bg-muted rounded-xl text-sm">
+          <span className="text-muted-foreground">مرتجعات المبيعات</span>
+          <span className="font-bold text-warning">-{salesReturnsTotal.toLocaleString('ar-SA')}</span>
+        </div>
+        <div className="flex items-center justify-between p-2.5 bg-muted rounded-xl text-sm">
+          <span className="text-muted-foreground">إجمالي المشتريات</span>
+          <span className="font-bold text-blue-600 dark:text-blue-400">-{purchasesTotal.toLocaleString('ar-SA')}</span>
+        </div>
+        <div className="flex items-center justify-between p-2.5 bg-muted rounded-xl text-sm">
+          <span className="text-muted-foreground">مرتجعات المشتريات</span>
+          <span className="font-bold text-emerald-600 dark:text-emerald-400">+{purchaseReturnsTotal.toLocaleString('ar-SA')}</span>
+        </div>
+        <div className={`flex items-center justify-between p-3 rounded-xl ${estimatedProfit >= 0 ? 'bg-emerald-500/20' : 'bg-destructive/20'}`}>
+          <span className="font-black">الربح التقديري</span>
+          <span className={`font-black text-lg ${estimatedProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
+            {estimatedProfit.toLocaleString('ar-SA')} ل.س
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ReportsTab;

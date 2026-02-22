@@ -1,1 +1,13 @@
-project_id = "nrqueogifxxdwladewey"
+project_id = "dxajbhmjvpxfxlrborjz"
+
+[functions.auth-status]
+verify_jwt = false
+
+[functions.ai-assistant]
+verify_jwt = false
+
+[functions.app-version]
+verify_jwt = false
+
+[functions.health-check]
+verify_jwt = false
