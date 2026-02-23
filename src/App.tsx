@@ -105,19 +105,33 @@ const MainContent: React.FC = () => {
     </div>
   );
 
-  // Auth error state — show error with retry instead of infinite spinner
+  // Auth error state — show error with retry and logout options
   if (authError && !user) return (
     <div className="h-screen flex flex-col items-center justify-center bg-background px-6" dir="rtl">
       <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
         <Loader2 size={32} className="text-destructive" />
       </div>
       <p className="text-foreground font-black text-sm mb-2 text-center">{authError}</p>
-      <button
-        onClick={refreshAuth}
-        className="mt-4 px-6 py-3 bg-primary text-primary-foreground rounded-2xl font-bold text-sm hover:bg-primary/90 transition-colors"
-      >
-        إعادة المحاولة
-      </button>
+      <div className="flex gap-3 mt-4">
+        <button
+          onClick={refreshAuth}
+          className="px-6 py-3 bg-primary text-primary-foreground rounded-2xl font-bold text-sm hover:bg-primary/90 transition-colors"
+        >
+          إعادة المحاولة
+        </button>
+        <button
+          onClick={async () => {
+            const { clearAuthCache } = await import('@/lib/authCache');
+            clearAuthCache();
+            const { supabase } = await import('@/integrations/supabase/client');
+            await supabase.auth.signOut();
+            window.location.reload();
+          }}
+          className="px-6 py-3 bg-muted text-muted-foreground rounded-2xl font-bold text-sm hover:bg-muted/80 transition-colors"
+        >
+          تسجيل الخروج
+        </button>
+      </div>
     </div>
   );
 
