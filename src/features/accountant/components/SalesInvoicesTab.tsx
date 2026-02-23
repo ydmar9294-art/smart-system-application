@@ -57,7 +57,17 @@ const SalesInvoicesTab: React.FC = () => {
 
   const selectedSale = sales.find(s => s.id === selectedSaleId);
 
-  const handlePrint = (sale: typeof sales[0]) => {
+  const handlePrint = async (sale: typeof sales[0]) => {
+    // Fetch sale items before printing to ensure they're available
+    try {
+      const { data } = await supabase
+        .from('sale_items')
+        .select('id,product_id,product_name,quantity,unit_price,total_price')
+        .eq('sale_id', sale.id);
+      setSaleItems(data || []);
+    } catch (err) {
+      console.error('Error fetching sale items for print:', err);
+    }
     setPrintInvoice(sale);
   };
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
-import { ShoppingCart, Package, Calendar, User, Printer } from 'lucide-react';
+import { ShoppingCart, Package, Calendar, User, Share2, Download, Loader2, CheckCircle2, Receipt } from 'lucide-react';
 import FullScreenModal from '@/components/ui/FullScreenModal';
 import { escapeHtml, escapeNumber } from '@/lib/htmlEscape';
 
@@ -17,6 +17,231 @@ interface Purchase {
   created_at: number;
 }
 
+function buildPurchaseHtml(params: {
+  orgName: string;
+  purchase: Purchase;
+}): string {
+  const { orgName, purchase } = params;
+  const date = new Date(purchase.created_at);
+  return `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>فاتورة شراء</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; width: 80mm; padding: 5mm; font-size: 12px; line-height: 1.4; }
+    @media print { body { width: 80mm; } }
+  </style>
+</head>
+<body>
+  <div style="text-align:center;margin-bottom:10px;border-bottom:1px dashed #000;padding-bottom:10px;">
+    <div style="font-size:16px;font-weight:bold;">${escapeHtml(orgName || 'اسم المنشأة')}</div>
+  </div>
+  <div style="font-size:14px;font-weight:bold;margin:10px 0;text-align:center;">فاتورة شراء</div>
+  <div style="display:flex;justify-content:space-between;font-size:11px;margin:3px 0;">
+    <span>رقم:</span><span dir="ltr">${escapeHtml(purchase.id.slice(0, 8))}</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;font-size:11px;margin:3px 0;">
+    <span>التاريخ:</span><span>${escapeHtml(date.toLocaleDateString('ar-SA'))}</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;font-size:11px;margin:3px 0;">
+    <span>الوقت:</span><span>${escapeHtml(date.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }))}</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;font-size:11px;margin:3px 0;">
+    <span>المورد:</span><span>${escapeHtml(purchase.supplier_name || 'غير محدد')}</span>
+  </div>
+  <div style="margin:10px 0;border-top:1px dashed #000;border-bottom:1px dashed #000;padding:10px 0;">
+    <div style="display:flex;justify-content:space-between;font-size:11px;margin:3px 0;">
+      <span>المادة:</span><span>${escapeHtml(purchase.product_name)}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;margin:3px 0;">
+      <span>الكمية:</span><span>${escapeNumber(purchase.quantity)}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;margin:3px 0;">
+      <span>سعر الوحدة:</span><span>${escapeNumber(purchase.unit_price)}</span>
+    </div>
+  </div>
+  <div style="font-size:14px;font-weight:bold;text-align:center;margin:10px 0;">
+    الإجمالي: ${escapeNumber(purchase.total_price)} ${escapeHtml(CURRENCY)}
+  </div>
+  ${purchase.notes ? `<div style="margin-top:10px;padding-top:10px;border-top:1px dashed #000;font-size:10px;color:#555;">ملاحظات: ${escapeHtml(purchase.notes)}</div>` : ''}
+  <div style="text-align:center;font-size:10px;color:#555;margin-top:15px;border-top:1px dashed #000;padding-top:10px;">
+    <p>Smart Sales System</p>
+  </div>
+</body>
+</html>`;
+}
+
+// ── Purchase Invoice Preview Modal ──────────────────────────────────────────
+const PurchaseInvoiceModal: React.FC<{
+  purchase: Purchase;
+  orgName: string;
+  onClose: () => void;
+}> = ({ purchase, orgName, onClose }) => {
+  const [pdfBase64, setPdfBase64] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [actionLoading, setActionLoading] = useState<'share' | 'save' | null>(null);
+  const [savedOk, setSavedOk] = useState(false);
+  const date = new Date(purchase.created_at);
+
+  React.useEffect(() => {
+    const generate = async () => {
+      setGenerating(true);
+      try {
+        const html = buildPurchaseHtml({ orgName, purchase });
+        const { generateInvoicePdf } = await import('@/lib/invoicePdfService');
+        const { pdfBase64: b64 } = await generateInvoicePdf(html, 'فاتورة شراء');
+        setPdfBase64(b64);
+      } catch (err) {
+        console.error('[PurchaseInvoice] PDF generation failed:', err);
+      } finally {
+        setGenerating(false);
+      }
+    };
+    generate();
+  }, []); // eslint-disable-line
+
+  const ensurePdf = async (): Promise<string> => {
+    if (pdfBase64) return pdfBase64;
+    const html = buildPurchaseHtml({ orgName, purchase });
+    const { generateInvoicePdf } = await import('@/lib/invoicePdfService');
+    const { pdfBase64: b64 } = await generateInvoicePdf(html, 'فاتورة شراء');
+    setPdfBase64(b64);
+    return b64;
+  };
+
+  const handleShare = async () => {
+    setActionLoading('share');
+    try {
+      const b64 = await ensurePdf();
+      const { shareInvoicePdf, buildInvoiceFileName } = await import('@/lib/invoicePdfService');
+      await shareInvoicePdf(b64, buildInvoiceFileName(purchase.id), 'فاتورة شراء');
+    } catch (err) {
+      console.error('[PurchaseInvoice] Share failed:', err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleSave = async () => {
+    setActionLoading('save');
+    try {
+      const b64 = await ensurePdf();
+      const { saveInvoicePdf, buildInvoiceFileName } = await import('@/lib/invoicePdfService');
+      await saveInvoicePdf(b64, buildInvoiceFileName(purchase.id));
+      setSavedOk(true);
+      setTimeout(() => setSavedOk(false), 3000);
+    } catch (err) {
+      console.error('[PurchaseInvoice] Save failed:', err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  return (
+    <FullScreenModal
+      isOpen={true}
+      onClose={onClose}
+      title="تصدير فاتورة الشراء"
+      icon={<Receipt size={24} />}
+      headerColor="primary"
+      footer={
+        <div className="space-y-3">
+          {generating && (
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              جارٍ إنشاء ملف PDF...
+            </div>
+          )}
+          {pdfBase64 && !generating && (
+            <div className="flex items-center justify-center gap-2 text-sm text-green-600 py-1">
+              <CheckCircle2 className="w-4 h-4" />
+              <span className="font-bold">جاهز للمشاركة والحفظ</span>
+            </div>
+          )}
+          <button
+            onClick={handleShare}
+            disabled={generating || actionLoading !== null}
+            className="w-full bg-primary text-primary-foreground font-black py-5 rounded-2xl flex items-center justify-center gap-3 hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-50"
+          >
+            {actionLoading === 'share'
+              ? <><Loader2 className="w-6 h-6 animate-spin" /> جارٍ المشاركة...</>
+              : <><Share2 className="w-6 h-6" /> مشاركة الفاتورة</>
+            }
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={generating || actionLoading !== null}
+            className="w-full bg-muted text-foreground font-black py-5 rounded-2xl flex items-center justify-center gap-3 hover:bg-muted/80 transition-all active:scale-[0.98] disabled:opacity-50"
+          >
+            {actionLoading === 'save'
+              ? <><Loader2 className="w-6 h-6 animate-spin" /> جارٍ الحفظ...</>
+              : savedOk
+                ? <><CheckCircle2 className="w-6 h-6 text-green-500" /> تم الحفظ بنجاح!</>
+                : <><Download className="w-6 h-6" /> حفظ في جهازك</>
+            }
+          </button>
+        </div>
+      }
+    >
+      {/* Invoice Preview */}
+      <p className="text-sm text-muted-foreground text-center mb-4">معاينة الفاتورة</p>
+      <div className="bg-card border rounded-2xl p-5 text-sm" style={{ fontFamily: 'Segoe UI, Tahoma, sans-serif' }}>
+        <div className="text-center border-b border-dashed pb-4 mb-4">
+          <div className="text-lg font-bold">{orgName || 'اسم المنشأة'}</div>
+        </div>
+        <div className="text-center font-bold text-base mb-4">فاتورة شراء</div>
+        <div className="text-sm space-y-2 mb-4">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">رقم:</span>
+            <span dir="ltr" className="font-bold">{purchase.id.slice(0, 8)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">التاريخ:</span>
+            <span className="font-bold">{date.toLocaleDateString('ar-SA')}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">المورد:</span>
+            <span className="font-bold">{purchase.supplier_name || 'غير محدد'}</span>
+          </div>
+        </div>
+
+        <div className="border-t border-b border-dashed py-4 my-4 space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">المادة:</span>
+            <span className="font-bold">{purchase.product_name}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">الكمية:</span>
+            <span className="font-bold">{purchase.quantity}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">سعر الوحدة:</span>
+            <span className="font-bold">{purchase.unit_price.toLocaleString()} {CURRENCY}</span>
+          </div>
+        </div>
+
+        <div className="text-center font-black text-lg py-3 bg-muted rounded-xl">
+          الإجمالي: {purchase.total_price.toLocaleString()} {CURRENCY}
+        </div>
+
+        {purchase.notes && (
+          <div className="mt-4 pt-4 border-t border-dashed text-sm text-muted-foreground">
+            ملاحظات: {purchase.notes}
+          </div>
+        )}
+
+        <div className="text-center text-xs text-muted-foreground mt-6 pt-4 border-t border-dashed">
+          <p>Smart Sales System</p>
+        </div>
+      </div>
+    </FullScreenModal>
+  );
+};
+
+// ── Main PurchasesTab ───────────────────────────────────────────────────────
 export const PurchasesTab: React.FC = () => {
   const { products, addPurchase, purchases = [] } = useApp();
   const [showModal, setShowModal] = useState(false);
@@ -25,6 +250,24 @@ export const PurchasesTab: React.FC = () => {
   const [unitPrice, setUnitPrice] = useState(0);
   const [supplierName, setSupplierName] = useState('');
   const [notes, setNotes] = useState('');
+  const [printPurchase, setPrintPurchase] = useState<Purchase | null>(null);
+  const [orgName, setOrgName] = useState('');
+
+  // Fetch org name once
+  React.useEffect(() => {
+    const fetchOrg = async () => {
+      try {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single();
+        if (!profile?.organization_id) return;
+        const { data: org } = await supabase.from('organizations').select('name').eq('id', profile.organization_id).single();
+        if (org) setOrgName(org.name);
+      } catch (_) { /* ignore */ }
+    };
+    fetchOrg();
+  }, []);
 
   const handleProductChange = (productId: string) => {
     setSelectedProduct(productId);
@@ -56,6 +299,15 @@ export const PurchasesTab: React.FC = () => {
 
   return (
     <div className="space-y-4 animate-fade-in">
+      {/* Purchase Invoice Modal */}
+      {printPurchase && (
+        <PurchaseInvoiceModal
+          purchase={printPurchase}
+          orgName={orgName}
+          onClose={() => setPrintPurchase(null)}
+        />
+      )}
+
       <button 
         onClick={() => setShowModal(true)} 
         className="w-full py-5 bg-success text-white rounded-[1.8rem] font-black text-sm flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all"
@@ -83,16 +335,11 @@ export const PurchasesTab: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={async () => {
-                      const date = new Date(purchase.created_at);
-                      const htmlContent = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>فاتورة شراء</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Segoe UI',Tahoma,sans-serif;width:80mm;padding:5mm;font-size:12px;}.header{text-align:center;margin-bottom:10px;border-bottom:1px dashed #000;padding-bottom:10px;}.org-name{font-size:16px;font-weight:bold;}.invoice-title{font-size:14px;font-weight:bold;margin:10px 0;text-align:center;}.info-row{display:flex;justify-content:space-between;font-size:11px;margin:3px 0;}.total{font-size:14px;font-weight:bold;text-align:center;margin:10px 0;}.footer{text-align:center;font-size:10px;color:#555;margin-top:15px;border-top:1px dashed #000;padding-top:10px;}@media print{body{width:80mm;}}</style></head><body><div class="invoice-title">فاتورة شراء</div><div class="info"><div class="info-row"><span>رقم:</span><span>${escapeHtml(purchase.id.slice(0,8))}</span></div><div class="info-row"><span>التاريخ:</span><span>${escapeHtml(date.toLocaleDateString('ar-SA'))}</span></div><div class="info-row"><span>المورد:</span><span>${escapeHtml(purchase.supplier_name || 'غير محدد')}</span></div></div><div style="margin:10px 0;border-top:1px dashed #000;border-bottom:1px dashed #000;padding:10px 0;"><div class="info-row"><span>المادة:</span><span>${escapeHtml(purchase.product_name)}</span></div><div class="info-row"><span>الكمية:</span><span>${escapeNumber(purchase.quantity)}</span></div><div class="info-row"><span>سعر الوحدة:</span><span>${escapeNumber(purchase.unit_price)}</span></div></div><div class="total">الإجمالي: ${escapeNumber(purchase.total_price)} ${escapeHtml(CURRENCY)}</div><div class="footer"><p>Smart Sales System</p></div></body></html>`;
-                      const { printHTML } = await import('@/lib/printService');
-                      await printHTML(htmlContent, 'print-iframe-purchase');
-                    }}
+                    onClick={() => setPrintPurchase(purchase)}
                     className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary/20 transition-colors"
-                    title="طباعة"
+                    title="معاينة ومشاركة"
                   >
-                    <Printer size={16} />
+                    <Receipt size={16} />
                   </button>
                   <span className="badge badge-success">{purchase.quantity} وحدة</span>
                 </div>
