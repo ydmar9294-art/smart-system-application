@@ -100,7 +100,7 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ disabled = fals
       ) : (
         <>
           {GOOGLE_SVG}
-          <span>تسجيل الدخول بجوجل</span>
+          <span>تسجيل الدخول ب Google</span>
         </>
       )}
     </button>
