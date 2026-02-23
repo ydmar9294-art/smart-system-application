@@ -7,12 +7,25 @@ import { AppProvider } from "@/store/AppContext";
 import { queryClient } from "@/lib/queryClient";
 import { initSessionGuard } from "@/lib/sessionGuard";
 import { initCapacitorOAuth } from "@/lib/capacitorOAuth";
+import { SplashScreen } from "@capacitor/splash-screen";
+import { Capacitor } from "@capacitor/core";
 
 // Initialize proactive token refresh with jitter
 initSessionGuard();
 
 // Initialize Capacitor OAuth deep link listeners (native only)
 initCapacitorOAuth();
+
+// Hide splash screen after app loads
+if (Capacitor.isNativePlatform()) {
+  window.addEventListener('load', async () => {
+    try {
+      await SplashScreen.hide();
+    } catch (error) {
+      console.error('Splash screen hide error:', error);
+    }
+  });
+}
 
 // QueryClientProvider wraps everything to enable React Query caching
 // HashRouter is used for Capacitor/WebView compatibility
