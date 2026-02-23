@@ -274,7 +274,9 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
                 سجل دخولك بالبريد الإلكتروني وكلمة المرور
               </p>
             </div>
-            <EmailPasswordAuth onError={handleAuthError} />
+            
+            {/* Google OAuth */}
+            <GoogleSignInButton onError={handleAuthError} />
             
             {/* Divider */}
             <div className="flex items-center gap-3">
@@ -283,8 +285,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
               <div className="flex-1 h-px bg-border" />
             </div>
             
-            {/* Google OAuth */}
-            <GoogleSignInButton onError={handleAuthError} />
+            <EmailPasswordAuth onError={handleAuthError} />
             
             <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground">
               <ShieldCheck className="w-4 h-4" />
