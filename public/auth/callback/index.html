@@ -107,17 +107,18 @@
 
       // If this is a signup/email confirmation
       if (type === 'signup' || type === 'email_change' || type === 'magiclink') {
-        // Sign out any auto-created session to prevent auto-login
         if (accessToken) {
-          // Use the Supabase REST API to sign out
-          var supabaseUrl = document.querySelector('meta[name="supabase-url"]');
-          // Just clear any stored session and show success
           try {
             localStorage.removeItem('sb-' + 'nrqueogifxxdwladewey' + '-auth-token');
           } catch(e) {}
         }
-        // Brief delay to let Supabase process the confirmation
         setTimeout(showSuccess, 800);
+        return;
+      }
+
+      // OAuth callback (Google, etc.) — redirect to app with session
+      if (accessToken && !type) {
+        window.location.replace(origin + '/#access_token=' + accessToken + '&refresh_token=' + (params.get('refresh_token') || '') + '&type=oauth');
         return;
       }
 
