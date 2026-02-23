@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_versions: {
+        Row: {
+          created_at: string
+          force_update: boolean
+          id: string
+          is_active: boolean
+          min_required_version: string
+          platform: string
+          release_notes: string | null
+          update_url: string | null
+          updated_at: string
+          version_code: number
+          version_name: string
+        }
+        Insert: {
+          created_at?: string
+          force_update?: boolean
+          id?: string
+          is_active?: boolean
+          min_required_version?: string
+          platform: string
+          release_notes?: string | null
+          update_url?: string | null
+          updated_at?: string
+          version_code?: number
+          version_name: string
+        }
+        Update: {
+          created_at?: string
+          force_update?: boolean
+          id?: string
+          is_active?: boolean
+          min_required_version?: string
+          platform?: string
+          release_notes?: string | null
+          update_url?: string | null
+          updated_at?: string
+          version_code?: number
+          version_name?: string
+        }
+        Relationships: []
+      }
       collections: {
         Row: {
           amount: number
