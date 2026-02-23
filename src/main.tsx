@@ -6,9 +6,13 @@ import "./index.css";
 import { AppProvider } from "@/store/AppContext";
 import { queryClient } from "@/lib/queryClient";
 import { initSessionGuard } from "@/lib/sessionGuard";
+import { initCapacitorOAuth } from "@/lib/capacitorOAuth";
 
-// Phase 4: Initialize proactive token refresh with jitter
+// Initialize proactive token refresh with jitter
 initSessionGuard();
+
+// Initialize Capacitor OAuth deep link listeners (native only)
+initCapacitorOAuth();
 
 // QueryClientProvider wraps everything to enable React Query caching
 // HashRouter is used for Capacitor/WebView compatibility

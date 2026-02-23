@@ -47,7 +47,7 @@
   <!-- Loading state -->
   <div id="loading" class="card">
     <div class="spinner"></div>
-    <p>جارٍ التحقق من البريد الإلكتروني...</p>
+    <p>جارٍ التحقق...</p>
   </div>
 
   <!-- Success state -->
@@ -77,6 +77,9 @@
   <script>
     (function() {
       var origin = window.location.origin;
+      var APP_SCHEME = 'smartsystem';
+      var APP_PACKAGE = 'app.lovable.bac2f6ed2db54e828d262c37cac1581f';
+
       document.getElementById('loginBtn').href = origin + '/';
       document.getElementById('retryBtn').href = origin + '/';
 
@@ -85,6 +88,7 @@
       var params = new URLSearchParams(hash);
       var type = params.get('type');
       var accessToken = params.get('access_token');
+      var refreshToken = params.get('refresh_token') || '';
       var error = params.get('error');
       var errorDescription = params.get('error_description');
 
@@ -97,6 +101,38 @@
         document.getElementById('loading').style.display = 'none';
         if (msg) document.getElementById('errorMsg').textContent = msg;
         document.getElementById('error').style.display = 'block';
+      }
+
+      /**
+       * Detect if the page was opened from a native app (Capacitor)
+       * by checking for common Android/iOS browser indicators
+       */
+      function isNativeContext() {
+        var ua = navigator.userAgent || '';
+        // Chrome Custom Tab on Android includes "Android" but not "wv" (WebView)
+        // We also check for the referrer or opener being absent (system browser opened externally)
+        return /Android/i.test(ua) || /iPhone|iPad|iPod/i.test(ua);
+      }
+
+      /**
+       * Try to open the native app via deep link.
+       * On Android Chrome: uses Intent URL which is the most reliable method.
+       * Fallback: uses custom scheme URL.
+       */
+      function openNativeApp(fragment) {
+        var isAndroidChrome = /Android/i.test(navigator.userAgent) && /Chrome/i.test(navigator.userAgent);
+        
+        if (isAndroidChrome) {
+          // Android Intent URL — Chrome handles this natively and opens the app directly
+          var intentUrl = 'intent://oauth-callback' + fragment + 
+            '#Intent;scheme=' + APP_SCHEME + 
+            ';package=' + APP_PACKAGE + 
+            ';end';
+          window.location.href = intentUrl;
+        } else {
+          // iOS / other browsers: use custom scheme
+          window.location.href = APP_SCHEME + '://oauth-callback' + fragment;
+        }
       }
 
       // If there's an error in the URL
@@ -116,9 +152,23 @@
         return;
       }
 
-      // OAuth callback (Google, etc.) — redirect to app with session
+      // OAuth callback (Google, etc.)
       if (accessToken && !type) {
-        window.location.replace(origin + '/#access_token=' + accessToken + '&refresh_token=' + (params.get('refresh_token') || '') + '&type=oauth');
+        // Build fragment with tokens
+        var tokenFragment = '#access_token=' + accessToken + '&refresh_token=' + refreshToken + '&type=oauth';
+        
+        if (isNativeContext()) {
+          // Native app: open via deep link (Intent URL on Android, custom scheme on iOS)
+          openNativeApp(tokenFragment);
+          
+          // Fallback: if the app didn't open within 2 seconds, redirect to web app
+          setTimeout(function() {
+            window.location.replace(origin + '/' + tokenFragment);
+          }, 2000);
+        } else {
+          // Web: redirect normally
+          window.location.replace(origin + '/' + tokenFragment);
+        }
         return;
       }
 
