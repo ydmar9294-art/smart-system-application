@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
-import { useHaptics } from '@/hooks/useHaptics';
+import { useHaptics } from '@/platform/hooks/useHaptics';
 import { ImpactStyle } from '@capacitor/haptics';
 
 interface PullToRefreshProps {

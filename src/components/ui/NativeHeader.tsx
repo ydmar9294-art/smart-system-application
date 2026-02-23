@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
-import { useHaptics } from '@/hooks/useHaptics';
+import { useHaptics } from '@/platform/hooks/useHaptics';
 import { ImpactStyle } from '@capacitor/haptics';
 import { Capacitor } from '@capacitor/core';
 

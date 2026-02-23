@@ -15,10 +15,10 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY, SUPPORT_WHATSAPP_URL } from '@/constants';
-import { InventoryTab } from '@/components/owner/InventoryTab';
-import { DeliveriesTab } from '@/components/owner/DeliveriesTab';
-import { PurchasesTab } from '@/components/owner/PurchasesTab';
-import AIAssistant from '@/components/ai/AIAssistant';
+import { InventoryTab } from '@/features/owner/components/InventoryTab';
+import { DeliveriesTab } from '@/features/owner/components/DeliveriesTab';
+import { PurchasesTab } from '@/features/owner/components/PurchasesTab';
+import AIAssistant from '@/features/ai/components/AIAssistant';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
 
 const StockMovementsTab = lazy(() => import('./StockMovementsTab'));

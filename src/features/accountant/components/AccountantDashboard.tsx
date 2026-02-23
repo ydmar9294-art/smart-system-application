@@ -11,8 +11,8 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
-import AIAssistant from '@/components/ai/AIAssistant';
-import { NotificationCenter } from '@/components/notifications/NotificationCenter';
+import AIAssistant from '@/features/ai/components/AIAssistant';
+import { NotificationCenter } from '@/features/notifications/components/NotificationCenter';
 import SalesInvoicesTab from './SalesInvoicesTab';
 import PurchasesTab from './PurchasesTab';
 import SalesReturnsTab from './SalesReturnsTab';

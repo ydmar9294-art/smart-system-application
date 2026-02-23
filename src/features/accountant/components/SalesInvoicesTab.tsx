@@ -10,7 +10,7 @@ import {
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
 import { supabase } from '@/integrations/supabase/client';
-import InvoicePrint from '@/components/distributor/InvoicePrint';
+import InvoicePrint from '@/features/distributor/components/InvoicePrint';
 import FullScreenModal from '@/components/ui/FullScreenModal';
 
 const SalesInvoicesTab: React.FC = () => {

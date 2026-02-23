@@ -21,9 +21,9 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { supabase } from '@/integrations/supabase/client';
-import AIAssistant from '@/components/ai/AIAssistant';
+import AIAssistant from '@/features/ai/components/AIAssistant';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
-import { NotificationCenter } from '@/components/notifications/NotificationCenter';
+import { NotificationCenter } from '@/features/notifications/components/NotificationCenter';
 import NewSaleTab from './NewSaleTab';
 import SalesReturnTab from './SalesReturnTab';
 import CollectionTab from './CollectionTab';

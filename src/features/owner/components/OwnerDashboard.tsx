@@ -31,8 +31,8 @@ import { AreaChart, Area, XAxis, CartesianGrid, Tooltip, ResponsiveContainer } f
 import { InventoryTab } from './InventoryTab';
 import { FinanceTab } from './FinanceTab';
 import { EmployeeKPIs } from './EmployeeKPIs';
-import { NotificationCenter } from '@/components/notifications/NotificationCenter';
-import AIAssistant from '@/components/ai/AIAssistant';
+import { NotificationCenter } from '@/features/notifications/components/NotificationCenter';
+import AIAssistant from '@/features/ai/components/AIAssistant';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
 import LegalInfoTab from './LegalInfoTab';
 
