@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getCachedAuth, clearAuthCache } from '@/lib/authCache';
 import { checkAuthStatus } from '@/hooks/useAuthOperations';
 import EmailPasswordAuth from './EmailPasswordAuth';
+import GoogleSignInButton from './GoogleSignInButton';
 import LicenseActivation from './LicenseActivation';
 
 interface AuthFlowProps {
@@ -274,6 +275,17 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
               </p>
             </div>
             <EmailPasswordAuth onError={handleAuthError} />
+            
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-xs text-muted-foreground font-bold">أو</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+            
+            {/* Google OAuth */}
+            <GoogleSignInButton onError={handleAuthError} />
+            
             <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground">
               <ShieldCheck className="w-4 h-4" />
               <span>تسجيل دخول آمن ومشفر</span>
