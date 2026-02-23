@@ -51,8 +51,8 @@ const buildUserFromCache = (cached: CachedAuthState): { user: User; role: UserRo
   const organization: Organization | null = cached.organizationId ? {
     id: cached.organizationId,
     name: cached.organizationName || '',
-    licenseStatus: cached.licenseStatus || null,
-    expiryDate: null
+    licenseStatus: (cached.licenseStatus as LicenseStatus) || undefined,
+    expiryDate: undefined
   } : null;
   return { user, role: cached.role, organization };
 };
