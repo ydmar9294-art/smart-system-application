@@ -139,14 +139,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [setAuthenticatedState, resetToLogin]);
 
   const refreshAuth = useCallback(async () => {
-    // If cache is valid, use it instantly without hitting edge function again
-    const cached = getCachedAuth();
-    if (cached && cached.userId) {
-      const built = buildUserFromCache(cached);
-      setAuthenticatedState(built);
-      return;
-    }
-
+    // Always clear cache and re-query to get fresh license/profile status
+    // This is critical for reactivation flows where cached status is stale
+    clearAuthCache();
+    
     setIsLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -158,7 +154,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       resetToLogin();
     }
-  }, [resolveProfile, resetToLogin, setAuthenticatedState]);
+  }, [resolveProfile, resetToLogin]);
 
   // ==========================================
   // AUTH INITIALIZATION
