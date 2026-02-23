@@ -23,9 +23,9 @@ import {
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
 import { UserRole, EmployeeType } from '@/types';
-import AIAssistant from '@/components/ai/AIAssistant';
+import AIAssistant from '@/features/ai/components/AIAssistant';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
-import DistributorWarehouseKPIs from '@/components/kpi/DistributorWarehouseKPIs';
+import DistributorWarehouseKPIs from '@/features/analytics/components/DistributorWarehouseKPIs';
 
 type SalesManagerTabType = 'dashboard' | 'team' | 'sales' | 'kpi';
 

@@ -7,26 +7,26 @@ import { Layout } from '@/components/Layout';
 import { ToastManager } from '@/components/ToastManager';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Loader2 } from 'lucide-react';
-import AuthFlow from '@/components/auth/AuthFlow';
-import { usePushNotifications } from '@/hooks/usePushNotifications';
+import AuthFlow from '@/features/auth/components/AuthFlow';
+import { usePushNotifications } from '@/platform/hooks/usePushNotifications';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { useVersionCheck } from '@/hooks/useVersionCheck';
 import OfflineIndicator from '@/components/ui/OfflineIndicator';
 import UpdateModal from '@/components/ui/UpdateModal';
 import { usePageTheme } from '@/hooks/usePageTheme';
-import { useStatusBar } from '@/hooks/useStatusBar';
+import { useStatusBar } from '@/platform/hooks/useStatusBar';
 import SecurityGate from '@/components/SecurityGate';
 
 // ==========================================
 // LAZY-LOADED DASHBOARD COMPONENTS
 // Code splitting for reduced initial bundle size
 // ==========================================
-const DeveloperHub = lazy(() => import('@/components/developer/DeveloperHub'));
-const OwnerDashboard = lazy(() => import('@/components/owner/OwnerDashboard'));
-const AccountantDashboard = lazy(() => import('@/components/accountant/AccountantDashboard'));
-const SalesManagerDashboard = lazy(() => import('@/components/salesmanager/SalesManagerDashboard'));
-const WarehouseKeeperDashboard = lazy(() => import('@/components/warehouse/WarehouseKeeperDashboard'));
-const DistributorDashboard = lazy(() => import('@/components/distributor/DistributorDashboard'));
+const DeveloperHub = lazy(() => import('@/features/developer/components/DeveloperHub'));
+const OwnerDashboard = lazy(() => import('@/features/owner/components/OwnerDashboard'));
+const AccountantDashboard = lazy(() => import('@/features/accountant/components/AccountantDashboard'));
+const SalesManagerDashboard = lazy(() => import('@/features/salesmanager/components/SalesManagerDashboard'));
+const WarehouseKeeperDashboard = lazy(() => import('@/features/warehouse/components/WarehouseKeeperDashboard'));
+const DistributorDashboard = lazy(() => import('@/features/distributor/components/DistributorDashboard'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
 // ==========================================

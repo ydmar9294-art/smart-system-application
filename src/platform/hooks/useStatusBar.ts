@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
-import { usePageTheme } from './usePageTheme';
+import { usePageTheme } from '@/hooks/usePageTheme';
 
 export function useStatusBar() {
   const { isDark } = usePageTheme();
