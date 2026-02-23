@@ -89,7 +89,7 @@ const ResetPassword: React.FC = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4" dir="rtl">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4" dir="rtl">
       <div className="w-full max-w-md bg-card border border-border rounded-3xl p-8 shadow-2xl text-center space-y-5">
           <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
             <CheckCircle2 className="w-8 h-8 text-primary" />
@@ -105,7 +105,7 @@ const ResetPassword: React.FC = () => {
 
   if (sessionChecking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4" dir="rtl">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4" dir="rtl">
         <div className="w-full max-w-md bg-card border border-border rounded-3xl p-8 shadow-2xl text-center space-y-5">
           <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
           <p className="text-sm text-muted-foreground">جارٍ التحقق من الرابط...</p>
@@ -116,7 +116,7 @@ const ResetPassword: React.FC = () => {
 
   if (!sessionReady && !success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4" dir="rtl">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4" dir="rtl">
         <div className="w-full max-w-md bg-card border border-border rounded-3xl p-8 shadow-2xl text-center space-y-5">
           <div className="w-16 h-16 mx-auto rounded-full bg-destructive/10 flex items-center justify-center">
             <AlertCircle className="w-8 h-8 text-destructive" />
@@ -135,7 +135,7 @@ const ResetPassword: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4" dir="rtl">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4" dir="rtl">
       <div className="w-full max-w-md bg-card border border-border rounded-3xl p-8 shadow-2xl space-y-6">
         <div className="text-center space-y-3">
           <div className="w-14 h-14 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
