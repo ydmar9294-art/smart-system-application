@@ -4,6 +4,8 @@
 @tailwind components;
 @tailwind utilities;
 
+
+
 /* ==========================================
    SMART SALES SYSTEM - DESIGN SYSTEM
    All colors MUST be HSL.
@@ -141,16 +143,13 @@
     --sidebar-border: 222 16% 14%;
     --sidebar-ring: 217 91% 65%;
   }
-}
 
-@layer base {
   *,
   *::before,
   *::after {
     @apply border-border;
   }
 
-  /* Scoped theme transitions — only color-related properties */
   body, .card-elevated, .btn-primary, .btn-secondary, .btn-danger, .btn-success,
   .tab-btn, .nav-tab-dark, .badge, .input-field, .kpi-card, .kpi-dark,
   [class*="bg-"], [class*="text-"], [class*="border-"] {
@@ -167,10 +166,6 @@
     scroll-behavior: smooth;
   }
 
-  /* ==========================================
-     SAFE AREA INSETS — Notch, Status Bar, Nav Bar
-     Works on iOS (env), Android WebView (Capacitor)
-  ========================================== */
   :root {
     --safe-area-top: env(safe-area-inset-top, 0px);
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
