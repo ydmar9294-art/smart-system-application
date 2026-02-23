@@ -19,7 +19,7 @@ interface CollectionTabProps {
 }
 
 const CollectionTab: React.FC<CollectionTabProps> = ({ selectedCustomer }) => {
-  const { sales, refreshAllData } = useApp();
+  const { sales, refreshAllData, customers } = useApp();
   const [selectedSaleId, setSelectedSaleId] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [notes, setNotes] = useState('');
@@ -126,7 +126,7 @@ const CollectionTab: React.FC<CollectionTabProps> = ({ selectedCustomer }) => {
 
       {/* Success Message */}
       {success && !showPrintModal && (
-        <div className="bg-emerald-50 text-emerald-600 p-4 rounded-2xl flex items-center gap-2 border border-emerald-200">
+        <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 rounded-2xl flex items-center gap-2 border border-emerald-500/20">
           <Check className="w-5 h-5" />
           <span className="font-bold">تم التحصيل بنجاح!</span>
         </div>
@@ -134,7 +134,7 @@ const CollectionTab: React.FC<CollectionTabProps> = ({ selectedCustomer }) => {
 
       {/* Error Message */}
       {error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-2xl flex items-center gap-2 border border-red-200">
+        <div className="bg-destructive/10 text-destructive p-4 rounded-2xl flex items-center gap-2 border border-destructive/20">
           <AlertCircle className="w-5 h-5" />
           <span className="font-bold">{error}</span>
         </div>

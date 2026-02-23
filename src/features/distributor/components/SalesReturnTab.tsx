@@ -223,7 +223,7 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer }) => 
 
       {/* Success Message */}
       {success && !showPrintModal && (
-        <div className="bg-emerald-50 text-emerald-600 p-4 rounded-2xl flex items-center gap-2 border border-emerald-200">
+        <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 rounded-2xl flex items-center gap-2 border border-emerald-500/20">
           <Check className="w-5 h-5" />
           <span className="font-bold">تم إنشاء المرتجع بنجاح!</span>
         </div>
@@ -231,7 +231,7 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer }) => 
 
       {/* No Customer Selected Warning */}
       {!selectedCustomer && (
-        <div className="bg-amber-50 text-amber-700 p-4 rounded-2xl flex items-center gap-2 border border-amber-200">
+        <div className="bg-amber-500/10 text-amber-600 dark:text-amber-400 p-4 rounded-2xl flex items-center gap-2 border border-amber-500/20">
           <AlertCircle className="w-5 h-5" />
           <span className="font-bold">يرجى اختيار زبون من القائمة أعلاه</span>
         </div>
@@ -239,13 +239,13 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer }) => 
 
       {/* Selected Customer Info */}
       {selectedCustomer && (
-        <div className="bg-orange-50 rounded-2xl p-4 flex items-center gap-3 border border-orange-200">
+        <div className="bg-orange-500/10 rounded-2xl p-4 flex items-center gap-3 border border-orange-500/20">
           <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
             <User className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="font-bold text-gray-800">{selectedCustomer.name}</p>
-            <p className="text-sm text-gray-500">
+            <p className="font-bold text-foreground">{selectedCustomer.name}</p>
+            <p className="text-sm text-muted-foreground">
               الرصيد: {Number(selectedCustomer.balance).toLocaleString('ar-SA')} ل.س
             </p>
           </div>
@@ -256,7 +256,7 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer }) => 
       {selectedCustomer && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-black text-gray-800">الفاتورة</h3>
+            <h3 className="text-lg font-black text-foreground">الفاتورة</h3>
             {!selectedSaleId && (
               <button
                 onClick={() => setShowSalePicker(true)}
@@ -269,22 +269,22 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer }) => 
           </div>
 
           {selectedSale ? (
-            <div className="bg-gray-50 rounded-2xl p-4">
+            <div className="bg-muted rounded-2xl p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+                  <div className="w-10 h-10 bg-orange-500/10 rounded-xl flex items-center justify-center">
                     <FileText className="w-5 h-5 text-orange-500" />
                   </div>
                   <div>
-                    <p className="font-bold text-gray-800">{selectedSale.customerName}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-bold text-foreground">{selectedSale.customerName}</p>
+                    <p className="text-sm text-muted-foreground">
                       {Number(selectedSale.grandTotal).toLocaleString('ar-SA')} ل.س — {new Date(selectedSale.timestamp).toLocaleDateString('ar-SA')}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={clearSale}
-                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                  className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -293,12 +293,12 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer }) => 
           ) : (
             <button
               onClick={() => setShowSalePicker(true)}
-              className="w-full bg-gray-50 rounded-2xl p-6 text-center hover:bg-gray-100 transition-colors"
+              className="w-full bg-muted rounded-2xl p-6 text-center hover:bg-accent transition-colors"
             >
-              <div className="w-14 h-14 bg-white rounded-2xl mx-auto mb-3 flex items-center justify-center shadow-sm">
-                <FileText className="w-7 h-7 text-gray-300" />
+              <div className="w-14 h-14 bg-card rounded-2xl mx-auto mb-3 flex items-center justify-center shadow-sm">
+                <FileText className="w-7 h-7 text-muted-foreground/30" />
               </div>
-              <p className="text-gray-400 font-bold">اضغط لاختيار فاتورة للإرجاع</p>
+              <p className="text-muted-foreground font-bold">اضغط لاختيار فاتورة للإرجاع</p>
             </button>
           )}
         </div>
@@ -308,7 +308,7 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer }) => 
       {selectedSaleId && (
         <>
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-black text-gray-800">الأصناف المرتجعة</h3>
+            <h3 className="text-lg font-black text-foreground">الأصناف المرتجعة</h3>
             <button
               onClick={() => setShowProductPicker(true)}
               className="flex items-center gap-1.5 text-orange-600 font-bold text-sm hover:text-orange-700"
@@ -320,19 +320,19 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer }) => 
           </div>
 
           {cart.length === 0 ? (
-            <div className="bg-gray-50 rounded-3xl p-8 text-center">
-              <div className="w-20 h-20 bg-white rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-sm">
-                <RotateCcw className="w-10 h-10 text-gray-300" />
+            <div className="bg-muted rounded-3xl p-8 text-center">
+              <div className="w-20 h-20 bg-card rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-sm">
+                <RotateCcw className="w-10 h-10 text-muted-foreground/30" />
               </div>
-              <p className="text-gray-400 font-bold">لم تتم إضافة أصناف للمرتجع</p>
-              <p className="text-gray-300 text-sm mt-1">اضغط "إضافة مادة" لاختيار الأصناف</p>
+              <p className="text-muted-foreground font-bold">لم تتم إضافة أصناف للمرتجع</p>
+              <p className="text-muted-foreground/60 text-sm mt-1">اضغط "إضافة مادة" لاختيار الأصناف</p>
             </div>
           ) : (
             <div className="space-y-3">
               {cart.map((item) => (
-                <div key={item.product_id} className="bg-gray-50 rounded-2xl p-4">
+                <div key={item.product_id} className="bg-muted rounded-2xl p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="font-bold text-gray-800">{item.product_name}</span>
+                    <span className="font-bold text-foreground">{item.product_name}</span>
                     <button
                       onClick={() => removeFromCart(item.product_id)}
                       className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"
@@ -341,12 +341,12 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer }) => 
                     </button>
                   </div>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 bg-white rounded-xl p-1">
+                    <div className="flex items-center gap-3 bg-card rounded-xl p-1">
                       <button
                         onClick={() => updateQuantity(item.product_id, -1)}
-                        className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center hover:bg-gray-200"
+                        className="w-9 h-9 bg-muted rounded-lg flex items-center justify-center hover:bg-accent"
                       >
-                        <Minus className="w-4 h-4 text-gray-600" />
+                        <Minus className="w-4 h-4 text-muted-foreground" />
                       </button>
                       <span className="font-black w-8 text-center text-lg text-foreground">{item.quantity}</span>
                       <button
@@ -360,7 +360,7 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer }) => 
                       <span className="font-black text-orange-600 text-lg">
                         {(item.quantity * item.unit_price).toLocaleString('ar-SA')}
                       </span>
-                      <p className="text-xs text-gray-400">الحد الأقصى: {item.max_quantity}</p>
+                      <p className="text-xs text-muted-foreground">الحد الأقصى: {item.max_quantity}</p>
                     </div>
                   </div>
                 </div>
@@ -372,21 +372,21 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer }) => 
 
       {/* Reason & Total & Submit */}
       {cart.length > 0 && (
-        <div className="space-y-4 pt-4 border-t border-gray-100">
+        <div className="space-y-4 pt-4 border-t border-border">
           {/* Reason */}
           <div>
-            <label className="text-xs font-black text-gray-500 uppercase mb-2 block">سبب الإرجاع (اختياري)</label>
+            <label className="text-xs font-black text-muted-foreground uppercase mb-2 block">سبب الإرجاع (اختياري)</label>
             <input
               type="text"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="مثال: بضاعة تالفة"
-              className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+              className="w-full bg-muted border-none rounded-2xl px-5 py-4 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-orange-500/20"
             />
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="font-bold text-gray-500">إجمالي المرتجع</span>
+            <span className="font-bold text-muted-foreground">إجمالي المرتجع</span>
             <span className="font-black text-orange-600 text-2xl">
               {grandTotal.toLocaleString('ar-SA')} ل.س
             </span>
