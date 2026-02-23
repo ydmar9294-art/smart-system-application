@@ -18,8 +18,8 @@
 
 import { UserRole, EmployeeType, LicenseStatus } from '@/types';
 
-const CACHE_KEY = 'auth_cache_v2';
-const CACHE_VERSION = 2;
+const CACHE_KEY = 'auth_cache_v3';
+const CACHE_VERSION = 3;
 
 // Layered TTLs
 const AUTH_TTL_MS = 5 * 60 * 1000;     // 5 min for auth state
@@ -126,8 +126,9 @@ export const clearAuthCache = (): void => {
   memoryCache = null;
   try {
     sessionStorage.removeItem(CACHE_KEY);
-    // Also clear old v1 cache key
+    // Also clear old cache keys
     sessionStorage.removeItem('auth_cache_v1');
+    sessionStorage.removeItem('auth_cache_v2');
   } catch {
     // Ignore
   }

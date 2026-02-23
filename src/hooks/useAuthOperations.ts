@@ -4,7 +4,8 @@
  * Optimizations:
  * - Request deduplication via inflight tracking
  * - Retry with exponential backoff on network failures
- * - Timeout protection (8s max per request)
+ * - Timeout protection (6s max per request)
+ * - Circuit breaker for cascading failure prevention
  */
 import { useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,62 +43,49 @@ interface AuthStatusResponse {
 // Inflight deduplication
 let inflightAuthStatus: Promise<AuthStatusResponse> | null = null;
 
+/** Timeout-wrapped fetch with a single retry */
+const callAuthStatus = async (accessToken: string): Promise<AuthStatusResponse> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+  try {
+    const { data, error } = await supabase.functions.invoke('auth-status', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    clearTimeout(timeoutId);
+    if (error) throw error;
+    return data as AuthStatusResponse;
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    // Single retry on network/timeout errors
+    if (err?.name === 'AbortError' || err?.message?.includes('fetch')) {
+      console.warn('[AuthOps] Retrying auth-status after failure...');
+      const { data, error } = await supabase.functions.invoke('auth-status', {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (error) throw error;
+      return data as AuthStatusResponse;
+    }
+    throw err;
+  }
+};
+
 /**
- * Fast auth status check with deduplication and timeout
+ * Fast auth status check with deduplication, circuit breaker, and timeout
  */
 export const checkAuthStatus = async (): Promise<AuthStatusResponse> => {
-  // Return existing inflight request if one is pending
-  if (inflightAuthStatus) {
-    return inflightAuthStatus;
-  }
+  if (inflightAuthStatus) return inflightAuthStatus;
 
   const promise = (async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      
       if (!session?.access_token) {
         return { authenticated: false, reason: 'NO_SESSION' };
       }
 
-      // Phase 6: Circuit breaker wraps the auth-status call
       return await authCircuitBreaker.execute<AuthStatusResponse>(
-        async () => {
-          // Timeout protection: 8s max
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-          try {
-            const { data, error } = await supabase.functions.invoke('auth-status', {
-              headers: {
-                Authorization: `Bearer ${session!.access_token}`
-              }
-            });
-
-            clearTimeout(timeoutId);
-
-            if (error) {
-              console.error('[AuthOps] auth-status error:', error);
-              throw error;
-            }
-
-            return data as AuthStatusResponse;
-          } catch (err: any) {
-            clearTimeout(timeoutId);
-            // On timeout or network error, try once more
-            if (err?.name === 'AbortError' || err?.message?.includes('fetch')) {
-              console.warn('[AuthOps] Retrying auth-status after failure...');
-              const { data, error } = await supabase.functions.invoke('auth-status', {
-                headers: {
-                  Authorization: `Bearer ${session!.access_token}`
-                }
-              });
-              if (error) throw error;
-              return data as AuthStatusResponse;
-            }
-            throw err;
-          }
-        },
-        // Fallback: try to use cached auth if circuit is open
+        () => callAuthStatus(session.access_token),
+        // Fallback: use cached auth if circuit is open
         () => {
           const cached = getCachedAuth();
           if (cached) {
