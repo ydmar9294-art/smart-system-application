@@ -165,7 +165,8 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer }) => 
         unit_price: item.unit_price
       }));
 
-      const { error: rpcError } = await supabase.rpc('create_sales_return_rpc', {
+      // Use distributor-specific RPC that returns stock to distributor_inventory
+      const { error: rpcError } = await supabase.rpc('create_distributor_return_rpc', {
         p_sale_id: selectedSaleId,
         p_items: items,
         p_reason: reason || null

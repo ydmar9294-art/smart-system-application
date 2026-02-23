@@ -166,7 +166,8 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
     setLoading(true);
     try {
       // Call RPC with payment type
-      const { data, error } = await supabase.rpc('create_sale_rpc', {
+      // Use distributor-specific RPC that deducts from distributor_inventory
+      const { data, error } = await supabase.rpc('create_distributor_sale_rpc', {
         p_customer_id: selectedCustomer.id,
         p_items: cart.map(item => ({
           productId: item.product_id,

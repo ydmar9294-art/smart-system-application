@@ -1183,6 +1183,14 @@ export type Database = {
         }
         Returns: string
       }
+      create_distributor_return_rpc: {
+        Args: { p_items: Json; p_reason?: string; p_sale_id: string }
+        Returns: string
+      }
+      create_distributor_sale_rpc: {
+        Args: { p_customer_id: string; p_items: Json; p_payment_type?: string }
+        Returns: string
+      }
       create_purchase_return_rpc: {
         Args: { p_items: Json; p_reason?: string; p_supplier_name?: string }
         Returns: string
