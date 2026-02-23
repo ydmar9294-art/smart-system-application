@@ -165,12 +165,12 @@ export const resolveUserProfile = async (uid: string): Promise<ProfileResolution
     };
 
     const role = status.role as UserRole;
-    const expiryDate = status.expiry_date ? new Date(status.expiry_date).getTime() : null;
+    const expiryDate = status.expiry_date ? new Date(status.expiry_date).getTime() : undefined;
     
     const organization: Organization | null = status.organization_id ? {
       id: status.organization_id,
       name: status.organization_name || '',
-      licenseStatus: status.license_status as LicenseStatus || null,
+      licenseStatus: (status.license_status as LicenseStatus) || undefined,
       expiryDate: expiryDate
     } : null;
 
