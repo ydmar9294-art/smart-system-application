@@ -99,8 +99,8 @@ const OwnerDashboard: React.FC = () => {
   }, [ownerLicense?.licenseKey]);
   
   const maxEmployees = licenseInfo?.maxEmployees ?? 10;
-  const remainingSlots = Math.max(0, maxEmployees - activeEmployeeCount - pendingEmployees.filter(pe => !pe.is_used).length);
-  const usagePercent = maxEmployees > 0 ? ((activeEmployeeCount + pendingEmployees.filter(pe => !pe.is_used).length) / maxEmployees) * 100 : 0;
+  const remainingSlots = Math.max(0, maxEmployees - activeEmployeeCount);
+  const usagePercent = maxEmployees > 0 ? (activeEmployeeCount / maxEmployees) * 100 : 0;
 
   const handleLogout = async () => {
     setLoggingOut(true);
