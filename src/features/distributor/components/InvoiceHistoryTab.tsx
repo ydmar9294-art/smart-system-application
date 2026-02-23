@@ -69,50 +69,169 @@ const InvoiceHistoryTab: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      let query = supabase
-        .from('invoice_snapshots')
-        .select('*')
-        .eq('created_by', user.id)
-        .order('invoice_date', { ascending: false })
-        .limit(100);
+      const results: InvoiceSnapshot[] = [];
 
-      // Apply type filter
-      if (filter !== 'all') {
-        query = query.eq('invoice_type', filter);
+      // Fetch sales with items (if filter allows)
+      if (filter === 'all' || filter === 'sale') {
+        const { data: sales } = await supabase
+          .from('sales')
+          .select('id, customer_id, customer_name, grand_total, paid_amount, remaining, payment_type, created_by, created_at, is_voided')
+          .eq('created_by', user.id)
+          .eq('is_voided', false)
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (sales && sales.length > 0) {
+          // Fetch sale items for these sales
+          const saleIds = sales.map(s => s.id);
+          const { data: saleItems } = await supabase
+            .from('sale_items')
+            .select('sale_id, product_name, quantity, unit_price, total_price')
+            .in('sale_id', saleIds);
+
+          const itemsBySale = new Map<string, InvoiceSnapshot['items']>();
+          (saleItems || []).forEach(item => {
+            const list = itemsBySale.get(item.sale_id) || [];
+            list.push({
+              product_name: item.product_name,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              total_price: item.total_price
+            });
+            itemsBySale.set(item.sale_id, list);
+          });
+
+          sales.forEach((sale, i) => {
+            results.push({
+              id: sale.id,
+              invoice_type: 'sale',
+              invoice_number: `INV-${String(i + 1).padStart(4, '0')}`,
+              reference_id: sale.id,
+              customer_id: sale.customer_id,
+              customer_name: sale.customer_name,
+              created_by: sale.created_by,
+              created_by_name: null,
+              grand_total: sale.grand_total,
+              paid_amount: sale.paid_amount,
+              remaining: sale.remaining,
+              payment_type: sale.payment_type as 'CASH' | 'CREDIT',
+              items: itemsBySale.get(sale.id) || [],
+              notes: null,
+              reason: null,
+              org_name: null,
+              legal_info: null,
+              invoice_date: sale.created_at,
+              created_at: sale.created_at
+            });
+          });
+        }
       }
 
-      const { data, error } = await query;
+      // Fetch sales returns (if filter allows)
+      if (filter === 'all' || filter === 'return') {
+        const { data: returns } = await supabase
+          .from('sales_returns')
+          .select('id, sale_id, customer_name, total_amount, reason, created_by, created_at')
+          .eq('created_by', user.id)
+          .order('created_at', { ascending: false })
+          .limit(50);
 
-      if (error) throw error;
+        if (returns && returns.length > 0) {
+          const returnIds = returns.map(r => r.id);
+          const { data: returnItems } = await supabase
+            .from('sales_return_items')
+            .select('return_id, product_name, quantity, unit_price, total_price')
+            .in('return_id', returnIds);
+
+          const itemsByReturn = new Map<string, InvoiceSnapshot['items']>();
+          (returnItems || []).forEach(item => {
+            const list = itemsByReturn.get(item.return_id) || [];
+            list.push({
+              product_name: item.product_name,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              total_price: item.total_price
+            });
+            itemsByReturn.set(item.return_id, list);
+          });
+
+          returns.forEach((ret, i) => {
+            results.push({
+              id: ret.id,
+              invoice_type: 'return',
+              invoice_number: `RET-${String(i + 1).padStart(4, '0')}`,
+              reference_id: ret.id,
+              customer_id: null,
+              customer_name: ret.customer_name,
+              created_by: ret.created_by,
+              created_by_name: null,
+              grand_total: ret.total_amount,
+              paid_amount: 0,
+              remaining: 0,
+              payment_type: null,
+              items: itemsByReturn.get(ret.id) || [],
+              notes: null,
+              reason: ret.reason,
+              org_name: null,
+              legal_info: null,
+              invoice_date: ret.created_at,
+              created_at: ret.created_at
+            });
+          });
+        }
+      }
+
+      // Fetch collections (if filter allows)
+      if (filter === 'all' || filter === 'collection') {
+        const { data: collections } = await supabase
+          .from('collections')
+          .select('id, sale_id, amount, notes, collected_by, created_at, is_reversed')
+          .eq('collected_by', user.id)
+          .eq('is_reversed', false)
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (collections && collections.length > 0) {
+          // Get customer names from sales
+          const collSaleIds = [...new Set(collections.map(c => c.sale_id))];
+          const { data: collSales } = await supabase
+            .from('sales')
+            .select('id, customer_name')
+            .in('id', collSaleIds);
+
+          const saleNameMap = new Map<string, string>();
+          (collSales || []).forEach(s => saleNameMap.set(s.id, s.customer_name));
+
+          collections.forEach((col, i) => {
+            results.push({
+              id: col.id,
+              invoice_type: 'collection',
+              invoice_number: `COL-${String(i + 1).padStart(4, '0')}`,
+              reference_id: col.sale_id,
+              customer_id: null,
+              customer_name: saleNameMap.get(col.sale_id) || 'غير معروف',
+              created_by: col.collected_by,
+              created_by_name: null,
+              grand_total: col.amount,
+              paid_amount: col.amount,
+              remaining: 0,
+              payment_type: 'CASH',
+              items: [],
+              notes: col.notes,
+              reason: null,
+              org_name: null,
+              legal_info: null,
+              invoice_date: col.created_at,
+              created_at: col.created_at
+            });
+          });
+        }
+      }
+
+      // Sort all results by date descending
+      results.sort((a, b) => new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime());
       
-      // Map and type JSONB fields properly
-      const typedData: InvoiceSnapshot[] = (data || []).map(inv => ({
-        id: inv.id,
-        invoice_type: inv.invoice_type as 'sale' | 'return' | 'collection',
-        invoice_number: inv.invoice_number,
-        reference_id: inv.reference_id,
-        customer_id: inv.customer_id,
-        customer_name: inv.customer_name,
-        created_by: inv.created_by,
-        created_by_name: inv.created_by_name,
-        grand_total: inv.grand_total,
-        paid_amount: inv.paid_amount || 0,
-        remaining: inv.remaining || 0,
-        payment_type: inv.payment_type as 'CASH' | 'CREDIT' | null,
-        items: Array.isArray(inv.items) 
-          ? (inv.items as unknown as InvoiceSnapshot['items'])
-          : [],
-        notes: inv.notes,
-        reason: inv.reason,
-        org_name: inv.org_name,
-        legal_info: inv.legal_info && typeof inv.legal_info === 'object' && !Array.isArray(inv.legal_info)
-          ? (inv.legal_info as unknown as InvoiceSnapshot['legal_info'])
-          : null,
-        invoice_date: inv.invoice_date,
-        created_at: inv.created_at
-      }));
-      
-      setInvoices(typedData);
+      setInvoices(results);
     } catch (err) {
       console.error('Error fetching invoices:', err);
     } finally {
@@ -136,10 +255,10 @@ const InvoiceHistoryTab: React.FC = () => {
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'sale': return 'bg-blue-100 text-blue-700';
-      case 'return': return 'bg-orange-100 text-orange-700';
-      case 'collection': return 'bg-emerald-100 text-emerald-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'sale': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+      case 'return': return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
+      case 'collection': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
+      default: return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -189,7 +308,7 @@ const InvoiceHistoryTab: React.FC = () => {
         />
       )}
 
-      {/* Header - Same as other tabs */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="font-black text-lg flex items-center gap-2">
           <History className="w-5 h-5 text-primary" />
@@ -264,7 +383,7 @@ const InvoiceHistoryTab: React.FC = () => {
                   <span className="text-xs text-muted-foreground font-mono">{invoice.invoice_number}</span>
                 </div>
                 <div className="text-left">
-                  <p className={`text-lg font-black ${invoice.invoice_type === 'return' ? 'text-orange-600' : 'text-emerald-600'}`}>
+                  <p className={`text-lg font-black ${invoice.invoice_type === 'return' ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                     {invoice.invoice_type === 'return' ? '-' : ''}{Number(invoice.grand_total).toLocaleString('ar-SA')}
                   </p>
                   <p className="text-xs text-muted-foreground">{CURRENCY}</p>
@@ -280,12 +399,11 @@ const InvoiceHistoryTab: React.FC = () => {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  {/* Payment Status for sales */}
                   {invoice.invoice_type === 'sale' && invoice.payment_type && (
                     <span className={`text-xs px-2 py-1 rounded-full font-bold ${
                       invoice.payment_type === 'CASH' 
-                        ? 'bg-emerald-100 text-emerald-700' 
-                        : 'bg-orange-100 text-orange-700'
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
+                        : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
                     }`}>
                       {invoice.payment_type === 'CASH' ? 'نقداً' : 'آجل'}
                     </span>
