@@ -123,12 +123,12 @@ const DeveloperHub: React.FC = () => {
                 <div>
                   <div className="flex justify-between text-xs font-bold text-muted-foreground mb-1">
                     <span className="flex items-center gap-1"><Users size={12}/> الموظفون النشطون</span>
-                    <span>{stat.employee_count + stat.pending_employees} / {stat.max_employees}</span>
+                    <span>{stat.employee_count} / {stat.max_employees}</span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-2.5">
                     <div
-                      className={`h-2.5 rounded-full transition-all ${(stat.employee_count + stat.pending_employees) >= stat.max_employees ? 'bg-destructive' : (stat.employee_count + stat.pending_employees) >= stat.max_employees * 0.8 ? 'bg-yellow-500' : 'bg-primary'}`}
-                      style={{ width: `${Math.min(100, ((stat.employee_count + stat.pending_employees) / stat.max_employees) * 100)}%` }}
+                      className={`h-2.5 rounded-full transition-all ${stat.employee_count >= stat.max_employees ? 'bg-destructive' : stat.employee_count >= stat.max_employees * 0.8 ? 'bg-yellow-500' : 'bg-primary'}`}
+                      style={{ width: `${Math.min(100, (stat.employee_count / stat.max_employees) * 100)}%` }}
                     />
                   </div>
                   <div className="flex justify-between mt-1">
@@ -136,8 +136,8 @@ const DeveloperHub: React.FC = () => {
                       نشط: {stat.employee_count} | معلّق: {stat.pending_employees} | إجمالي مستخدمين: {stat.total_users}
                     </p>
                   </div>
-                  {(stat.employee_count + stat.pending_employees) >= stat.max_employees && (
-                    <p className="text-[10px] text-destructive font-bold mt-1 flex items-center gap-1"><AlertTriangle size={10}/> تم الوصول للحد الأقصى</p>
+                  {stat.employee_count >= stat.max_employees && (
+                    <p className="text-[10px] text-destructive font-bold mt-1 flex items-center gap-1"><AlertTriangle size={10}/> تم الوصول للحد الأقصى للموظفين النشطين</p>
                   )}
                 </div>
 
