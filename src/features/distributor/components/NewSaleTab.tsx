@@ -169,10 +169,11 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
       const { data, error } = await supabase.rpc('create_sale_rpc', {
         p_customer_id: selectedCustomer.id,
         p_items: cart.map(item => ({
-          product_id: item.product_id,
-          product_name: item.product_name,
+          productId: item.product_id,
+          productName: item.product_name,
           quantity: item.quantity,
-          unit_price: item.unit_price
+          unitPrice: item.unit_price,
+          totalPrice: item.quantity * item.unit_price
         })),
         p_payment_type: paymentType
       });
