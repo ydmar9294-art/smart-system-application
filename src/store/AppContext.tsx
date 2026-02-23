@@ -42,6 +42,7 @@ export const useApp = () => {
     isLoading: auth.isLoading,
     isAuthenticated: auth.isAuthenticated,
     needsActivation: auth.needsActivation,
+    authError: auth.authError,
     logout: auth.logout,
     refreshAuth: auth.refreshAuth,
 
