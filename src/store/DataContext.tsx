@@ -369,9 +369,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw err;
       }
 
+      addNotification('تم إضافة المنتج بنجاح', 'success');
       queryClient.invalidateQueries({ queryKey: prodKey });
     } catch (e) { handleError(e); }
-  }, [orgId, queryClient, handleError]);
+  }, [orgId, queryClient, addNotification, handleError]);
 
   const updateProduct = useCallback(async (product: Product) => {
     try {
