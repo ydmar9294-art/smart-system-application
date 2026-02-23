@@ -1,13 +1,11 @@
 /**
- * AuthContext - Handles authentication state only
+ * AuthContext - SaaS-grade authentication state
  * 
- * SaaS-grade guarantees:
- * - Guaranteed loading resolution (no infinite spinners)
- * - Progressive states: cache → verify → ready/error
- * - Layered cache with short auth TTL + medium license TTL
- * - Deterministic state transitions
- * - Graceful timeout with retry
- * - Every async path resolves or rejects within 8s
+ * Design principles:
+ * - NEVER show error screens. Failures degrade to login.
+ * - Cache-first for instant UI, background verify for freshness.
+ * - Every async path resolves within 7s absolute max.
+ * - No stuck loading states — guaranteed.
  */
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,19 +22,16 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   needsActivation: boolean;
-  authError: string | null;
-  /** Progressive phase for loading UI */
-  authPhase: 'init' | 'cache' | 'verifying' | 'ready' | 'error';
   logout: () => Promise<void>;
   refreshAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-/** Max time for profile resolution before timeout */
-const RESOLVE_TIMEOUT_MS = 7_000;
-/** Hard timeout — absolute maximum before forcing UI out of loading */
-const HARD_TIMEOUT_MS = 9_000;
+/** Max time for the entire auth init before forcing to login */
+const HARD_TIMEOUT_MS = 7_000;
+/** Max time for profile resolution */
+const RESOLVE_TIMEOUT_MS = 6_000;
 
 const deriveDisplayName = (fullName: string, email: string): string => {
   if (fullName && fullName.trim()) return fullName;
@@ -73,50 +68,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [needsActivation, setNeedsActivation] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [authPhase, setAuthPhase] = useState<'init' | 'cache' | 'verifying' | 'ready' | 'error'>('init');
 
   const initializingAuth = useRef(false);
   const isInternalAuthOp = useRef(false);
   const isPasswordRecoveryFlow = useRef(false);
-  
   const inflightResolve = useRef<Promise<boolean> | null>(null);
   const lastResolvedUid = useRef<string | null>(null);
 
-  /** Set final authenticated state — single point of truth */
-  const setAuthenticated = useCallback((result: { user: User | null; role: UserRole | null; organization: Organization | null }) => {
+  /** Transition to authenticated state */
+  const setAuthenticatedState = useCallback((result: { user: User | null; role: UserRole | null; organization: Organization | null }) => {
     setUser(result.user);
     setRole(result.role);
     setOrganization(result.organization);
     setIsAuthenticated(true);
     setNeedsActivation(false);
     setIsLoading(false);
-    setAuthError(null);
-    setAuthPhase('ready');
     logger.setUser(result.user?.id);
   }, []);
 
-  /** Set unauthenticated state */
-  const setUnauthenticated = useCallback(() => {
+  /** Transition to unauthenticated — shows login screen, NEVER an error */
+  const resetToLogin = useCallback(() => {
     setUser(null);
     setRole(null);
     setOrganization(null);
     setIsAuthenticated(false);
     setNeedsActivation(false);
     setIsLoading(false);
-    setAuthError(null);
-    setAuthPhase('ready');
     logger.setUser(undefined);
   }, []);
 
   const resolveProfile = useCallback(async (uid: string): Promise<boolean> => {
-    // Deduplicate inflight resolves for the same UID
     if (inflightResolve.current && lastResolvedUid.current === uid) {
       return inflightResolve.current;
     }
     
     lastResolvedUid.current = uid;
-    setAuthPhase('verifying');
 
     const promise = (async () => {
       try {
@@ -128,24 +114,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ]);
 
         if (!result.success) {
+          // No profile or needs activation — not an error
           setNeedsActivation(true);
           setIsAuthenticated(true);
           setIsLoading(false);
-          setAuthError(null);
-          setAuthPhase('ready');
           return false;
         }
 
-        setAuthenticated({ user: result.user, role: result.role, organization: result.organization });
+        setAuthenticatedState({ user: result.user, role: result.role, organization: result.organization });
         return true;
       } catch (err: any) {
-        const isTimeout = err?.message === 'AUTH_TIMEOUT';
-        logger.error(isTimeout ? 'Auth resolution timed out' : 'resolveProfile failed', 'Auth', { error: String(err) });
-        setAuthError(isTimeout 
-          ? 'انتهت مهلة التحقق من الحساب. يرجى المحاولة مرة أخرى.' 
-          : 'حدث خطأ في التحقق من الحساب.');
-        setAuthPhase('error');
-        setIsLoading(false);
+        // On ANY failure (timeout, network, etc.) → degrade to login
+        logger.warn('Profile resolution failed, degrading to login', 'Auth', { error: String(err) });
+        clearAuthCache();
+        resetToLogin();
         return false;
       } finally {
         inflightResolve.current = null;
@@ -154,25 +136,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     inflightResolve.current = promise;
     return promise;
-  }, [setAuthenticated]);
+  }, [setAuthenticatedState, resetToLogin]);
 
   const refreshAuth = useCallback(async () => {
     setIsLoading(true);
-    setAuthError(null);
-    setAuthPhase('verifying');
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         await resolveProfile(session.user.id);
       } else {
-        setUnauthenticated();
+        resetToLogin();
       }
     } catch {
-      setUnauthenticated();
+      resetToLogin();
     }
-  }, [resolveProfile, setUnauthenticated]);
+  }, [resolveProfile, resetToLogin]);
 
-  // Auth initialization — cache-first, single call, guaranteed resolution
+  // ==========================================
+  // AUTH INITIALIZATION
+  // Single-pass, cache-first, guaranteed resolution
+  // ==========================================
   useEffect(() => {
     if (initializingAuth.current) return;
     initializingAuth.current = true;
@@ -186,7 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isPasswordRecoveryFlow.current = true;
     }
 
-    // Phase 1: Instant cache restore — only if fully activated
+    // ── Phase 1: Instant cache restore ──
     const cached = getCachedAuth();
     if (cached && !isPasswordRecoveryFlow.current && isCacheFullyActivated(cached)) {
       const built = buildUserFromCache(cached);
@@ -196,25 +179,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAuthenticated(true);
       setNeedsActivation(false);
       setIsLoading(false);
-      setAuthPhase('cache');
       hasLoadedFromCache = true;
     } else if (cached && !isCacheFullyActivated(cached)) {
       clearAuthCache();
-      logger.info('Cleared stale cache from interrupted auth flow', 'Auth');
     }
 
-    // GUARANTEED hard timeout — always force loading=false
+    // ── Hard timeout: absolute guarantee against stuck states ──
     const timeoutId = setTimeout(() => {
       if (isMounted && !hasResolved && !hasLoadedFromCache) {
-        logger.warn('Auth hard timeout — forcing login screen', 'Auth');
-        setIsLoading(false);
-        setAuthPhase('error');
-        setAuthError('تعذر التحقق من الحساب. يرجى تسجيل الدخول مرة أخرى.');
+        logger.warn('Auth hard timeout — falling back to login', 'Auth');
+        clearAuthCache();
+        resetToLogin();
         initializingAuth.current = false;
       }
     }, HARD_TIMEOUT_MS);
 
-    // Phase 2: Listen for auth events
+    // ── Phase 2: Auth event listener ──
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (isInternalAuthOp.current) return;
@@ -222,15 +202,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (event === 'SIGNED_OUT') {
           clearAuthCache();
-          logger.info('User signed out', 'Auth');
-          if (isMounted) setUnauthenticated();
+          if (isMounted) resetToLogin();
           return;
         }
 
         if (event === 'PASSWORD_RECOVERY') {
           isPasswordRecoveryFlow.current = true;
           if (isMounted) {
-            setUnauthenticated();
+            resetToLogin();
             window.location.hash = '#/reset-password';
           }
           return;
@@ -243,80 +222,80 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           clearAuthCache();
           if (!hasLoadedFromCache && isMounted) setIsLoading(true);
-          setAuthError(null);
           hasResolved = true;
           await resolveProfile(session.user.id);
         }
       }
     );
 
-    // Phase 3: Background validation
-    const validateInBackground = async () => {
+    // ── Phase 3: Background session validation ──
+    const validateSession = async () => {
       try {
         if (isPasswordRecoveryFlow.current) {
-          if (isMounted) {
-            setIsLoading(false);
-            setAuthPhase('ready');
-          }
+          if (isMounted) resetToLogin();
           initializingAuth.current = false;
           return;
         }
+
         const { data } = await supabase.auth.getSession();
         
         if (!data.session?.user) {
+          // No session → show login immediately
           if (cached) clearAuthCache();
-          if (isMounted) setUnauthenticated();
+          if (isMounted) resetToLogin();
           initializingAuth.current = false;
           return;
         }
 
+        // Has session + loaded from cache → silently revalidate in background
         if (hasLoadedFromCache && cached?.userId === data.session.user.id) {
           hasResolved = true;
-          // Silent background revalidation — don't block UI
-          resolveProfile(data.session.user.id).catch(console.error);
+          resolveProfile(data.session.user.id).catch(() => {
+            // Background revalidation failed — keep cached state, don't break UI
+            logger.warn('Background revalidation failed, keeping cache', 'Auth');
+          });
           initializingAuth.current = false;
           return;
         }
 
-        if (isMounted && !hasLoadedFromCache) {
-          setIsLoading(true);
-          setAuthPhase('verifying');
-        }
+        // Has session but no cache → must resolve before showing UI
+        if (isMounted && !hasLoadedFromCache) setIsLoading(true);
         hasResolved = true;
         await resolveProfile(data.session.user.id);
       } catch (err) {
-        logger.error('Background validation failed', 'Auth', { error: String(err) });
+        logger.error('Session validation failed', 'Auth', { error: String(err) });
         if (isMounted && !hasLoadedFromCache) {
-          setAuthError('تعذر الاتصال بالخادم. يرجى المحاولة لاحقاً.');
-          setAuthPhase('error');
-          setIsLoading(false);
+          clearAuthCache();
+          resetToLogin();
         }
       } finally {
-        if (isMounted) {
-          initializingAuth.current = false;
-        }
+        if (isMounted) initializingAuth.current = false;
       }
     };
 
-    validateInBackground();
+    validateSession();
 
     return () => {
       isMounted = false;
       clearTimeout(timeoutId);
       listener.subscription.unsubscribe();
     };
-  }, [resolveProfile, setUnauthenticated]);
+  }, [resolveProfile, resetToLogin]);
 
+  // ==========================================
+  // LOGOUT
+  // ==========================================
   const logout = async () => {
     return authMutex.withLock(async () => {
       isInternalAuthOp.current = true;
       try {
-        setIsLoading(true);
         clearAuthCache();
-        await supabase.auth.signOut();
-        setUnauthenticated();
+        // Sign out first, then update UI
+        await supabase.auth.signOut().catch(() => {
+          // Even if signOut fails, clear local state
+        });
+        resetToLogin();
       } finally {
-        setIsLoading(false);
         isInternalAuthOp.current = false;
       }
     });
@@ -324,7 +303,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider value={{
-      user, role, organization, isLoading, isAuthenticated, needsActivation, authError, authPhase,
+      user, role, organization, isLoading, isAuthenticated, needsActivation,
       logout, refreshAuth
     }}>
       {children}
