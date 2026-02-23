@@ -14,6 +14,7 @@ import { useVersionCheck } from '@/hooks/useVersionCheck';
 import OfflineIndicator from '@/components/ui/OfflineIndicator';
 import UpdateModal from '@/components/ui/UpdateModal';
 import { usePageTheme } from '@/hooks/usePageTheme';
+import { useStatusBar } from '@/hooks/useStatusBar';
 import SecurityGate from '@/components/SecurityGate';
 
 // ==========================================
@@ -91,6 +92,7 @@ const MainContent: React.FC = () => {
   
   // Initialize theme early so loading/auth screens also get dark mode
   usePageTheme();
+  useStatusBar();
   
   usePushNotifications();
   const { isOnline, pendingCount } = useOfflineSync();
