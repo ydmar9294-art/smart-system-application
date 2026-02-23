@@ -72,7 +72,7 @@ const OwnerDashboard: React.FC = () => {
     return { todayRevenue, totalCollections, chartData };
   }, [sales, payments]);
 
-  const teamMembers = users.filter(u => u.role === UserRole.EMPLOYEE && (u.employeeType === EmployeeType.SALES_MANAGER || u.employeeType === EmployeeType.ACCOUNTANT));
+  const teamMembers = users.filter(u => u.role === UserRole.EMPLOYEE);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -105,16 +105,14 @@ const OwnerDashboard: React.FC = () => {
     switch (type) {
       case EmployeeType.SALES_MANAGER: return 'مدير مبيعات';
       case EmployeeType.ACCOUNTANT: return 'محاسب';
+      case EmployeeType.FIELD_AGENT: return 'موزع ميداني';
+      case EmployeeType.WAREHOUSE_KEEPER: return 'أمين مستودع';
       default: return type;
     }
   };
 
-  const myPendingEmployees = pendingEmployees.filter(pe => 
-    !pe.is_used && (pe.employee_type === EmployeeType.SALES_MANAGER || pe.employee_type === EmployeeType.ACCOUNTANT)
-  );
-  const myActivatedEmployees = pendingEmployees.filter(pe => 
-    pe.is_used && (pe.employee_type === EmployeeType.SALES_MANAGER || pe.employee_type === EmployeeType.ACCOUNTANT)
-  );
+  const myPendingEmployees = pendingEmployees.filter(pe => !pe.is_used);
+  const myActivatedEmployees = pendingEmployees.filter(pe => pe.is_used);
 
   const tabs: { id: OwnerTabType; label: string; icon: React.ReactNode; color: string; bgColor: string }[] = [
     { id: 'daily', label: 'الرئيسية', icon: <LayoutDashboard className="w-5 h-5" />, color: 'text-blue-600', bgColor: 'bg-blue-600' },
@@ -515,6 +513,8 @@ const OwnerDashboard: React.FC = () => {
                 <select name="type" className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-blue-500">
                   <option value={EmployeeType.SALES_MANAGER}>مدير مبيعات</option>
                   <option value={EmployeeType.ACCOUNTANT}>محاسب مالي</option>
+                  <option value={EmployeeType.FIELD_AGENT}>موزع ميداني</option>
+                  <option value={EmployeeType.WAREHOUSE_KEEPER}>أمين مستودع</option>
                 </select>
                 <button type="submit" className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold">توليد كود التفعيل</button>
               </form>
