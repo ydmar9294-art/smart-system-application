@@ -58,7 +58,7 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ disabled = fals
 
         if (data?.url) {
           // Open the OAuth URL in the system browser (not WebView)
-          await Browser.open({ url: data.url, windowName: '_system' });
+          await Browser.open({ url: data.url, windowName: '_blank' });
         }
       } else {
         // ═══ WEB FLOW ═══

@@ -32,6 +32,13 @@ function parseTokensFromFragment(fragment: string): { accessToken: string; refre
  */
 async function handleOAuthTokens(accessToken: string, refreshToken: string): Promise<boolean> {
   try {
+    // Close the browser FIRST for perceived speed — user sees the app instantly
+    try {
+      await Browser.close();
+    } catch {
+      // Browser might already be closed
+    }
+
     console.log('[CapacitorDeepLink] Setting session from deep link tokens');
     
     const { data, error } = await supabase.auth.setSession({
@@ -45,14 +52,6 @@ async function handleOAuthTokens(accessToken: string, refreshToken: string): Pro
     }
 
     console.log('[CapacitorDeepLink] Session set successfully for user:', data.user?.id);
-    
-    // Close the browser tab that was used for OAuth
-    try {
-      await Browser.close();
-    } catch {
-      // Browser might already be closed
-    }
-    
     return true;
   } catch (err) {
     console.error('[CapacitorDeepLink] Error setting session:', err);
