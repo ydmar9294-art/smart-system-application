@@ -1,8 +1,8 @@
 /**
- * DeliveryDetailsModal — uses clean HTML generation (no DOM.innerHTML).
+ * DeliveryDetailsModal — uses clean HTML generation with PDF share/save support.
  */
 import React, { useState, useEffect } from 'react';
-import { Truck, Package, Calendar, User, Hash, Loader2, Printer, FileDown } from 'lucide-react';
+import { Truck, Package, Calendar, User, Hash, Loader2, Share2, Download, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import FullScreenModal from '@/components/ui/FullScreenModal';
 import { escapeHtml, escapeNumber } from '@/lib/htmlEscape';
@@ -103,7 +103,10 @@ const DeliveryDetailsModal: React.FC<DeliveryDetailsModalProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [orgName, setOrgName] = useState('');
-  const [printing, setPrinting] = useState(false);
+  const [pdfBase64, setPdfBase64] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [actionLoading, setActionLoading] = useState<'share' | 'save' | null>(null);
+  const [savedOk, setSavedOk] = useState(false);
 
   const invoiceNumber = deliveryId.substring(0, 8).toUpperCase();
   const deliveryDate = new Date(createdAt);
@@ -137,17 +140,62 @@ const DeliveryDetailsModal: React.FC<DeliveryDetailsModalProps> = ({
     fetchData();
   }, [deliveryId]);
 
-  const handlePrint = async () => {
-    if (printing || items.length === 0) return;
-    setPrinting(true);
+  // Auto-generate PDF when data loads
+  useEffect(() => {
+    if (!loading && items.length > 0 && !pdfBase64) {
+      generatePdf();
+    }
+  }, [loading, items]); // eslint-disable-line
+
+  const generatePdf = async () => {
+    if (generating || items.length === 0) return;
+    setGenerating(true);
     try {
       const html = buildDeliveryHtml({ orgName, invoiceNumber, deliveryDate, distributorName, items, notes });
-      const { printHTML } = await import('@/lib/printService');
-      await printHTML(html, 'فاتورة تسليم');
+      const { generateInvoicePdf } = await import('@/lib/invoicePdfService');
+      const { pdfBase64: b64 } = await generateInvoicePdf(html, 'فاتورة تسليم');
+      setPdfBase64(b64);
     } catch (err) {
-      console.error('[DeliveryDetailsModal] Print failed:', err);
+      console.error('[DeliveryDetailsModal] PDF generation failed:', err);
     } finally {
-      setPrinting(false);
+      setGenerating(false);
+    }
+  };
+
+  const ensurePdf = async (): Promise<string> => {
+    if (pdfBase64) return pdfBase64;
+    const html = buildDeliveryHtml({ orgName, invoiceNumber, deliveryDate, distributorName, items, notes });
+    const { generateInvoicePdf } = await import('@/lib/invoicePdfService');
+    const { pdfBase64: b64 } = await generateInvoicePdf(html, 'فاتورة تسليم');
+    setPdfBase64(b64);
+    return b64;
+  };
+
+  const handleShare = async () => {
+    setActionLoading('share');
+    try {
+      const b64 = await ensurePdf();
+      const { shareInvoicePdf, buildInvoiceFileName } = await import('@/lib/invoicePdfService');
+      await shareInvoicePdf(b64, buildInvoiceFileName(deliveryId), 'فاتورة تسليم');
+    } catch (err) {
+      console.error('[DeliveryDetailsModal] Share failed:', err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleSave = async () => {
+    setActionLoading('save');
+    try {
+      const b64 = await ensurePdf();
+      const { saveInvoicePdf, buildInvoiceFileName } = await import('@/lib/invoicePdfService');
+      await saveInvoicePdf(b64, buildInvoiceFileName(deliveryId));
+      setSavedOk(true);
+      setTimeout(() => setSavedOk(false), 3000);
+    } catch (err) {
+      console.error('[DeliveryDetailsModal] Save failed:', err);
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -163,20 +211,39 @@ const DeliveryDetailsModal: React.FC<DeliveryDetailsModalProps> = ({
       footer={
         !loading && items.length > 0 ? (
           <div className="space-y-3">
+            {generating && (
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                جارٍ إنشاء ملف PDF...
+              </div>
+            )}
+            {pdfBase64 && !generating && (
+              <div className="flex items-center justify-center gap-2 text-sm text-green-600 py-1">
+                <CheckCircle2 className="w-4 h-4" />
+                <span className="font-bold">جاهز للمشاركة والحفظ</span>
+              </div>
+            )}
             <button
-              onClick={handlePrint}
-              disabled={printing}
-              className="w-full bg-primary text-primary-foreground font-black py-5 rounded-2xl flex items-center justify-center gap-3 hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-60"
+              onClick={handleShare}
+              disabled={generating || actionLoading !== null}
+              className="w-full bg-primary text-primary-foreground font-black py-5 rounded-2xl flex items-center justify-center gap-3 hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-50"
             >
-              {printing ? <Loader2 className="w-6 h-6 animate-spin" /> : <Printer className="w-6 h-6" />}
-              {printing ? 'جارٍ الطباعة...' : 'طباعة فاتورة التسليم'}
+              {actionLoading === 'share'
+                ? <><Loader2 className="w-6 h-6 animate-spin" /> جارٍ المشاركة...</>
+                : <><Share2 className="w-6 h-6" /> مشاركة الفاتورة</>
+              }
             </button>
             <button
-              onClick={handlePrint}
-              disabled={printing}
-              className="w-full bg-muted text-foreground font-black py-5 rounded-2xl flex items-center justify-center gap-3 hover:bg-muted/80 transition-all active:scale-[0.98] disabled:opacity-60"
+              onClick={handleSave}
+              disabled={generating || actionLoading !== null}
+              className="w-full bg-muted text-foreground font-black py-5 rounded-2xl flex items-center justify-center gap-3 hover:bg-muted/80 transition-all active:scale-[0.98] disabled:opacity-50"
             >
-              <FileDown className="w-6 h-6" /> تصدير كـ PDF
+              {actionLoading === 'save'
+                ? <><Loader2 className="w-6 h-6 animate-spin" /> جارٍ الحفظ...</>
+                : savedOk
+                  ? <><CheckCircle2 className="w-6 h-6 text-green-500" /> تم الحفظ بنجاح!</>
+                  : <><Download className="w-6 h-6" /> حفظ في جهازك</>
+              }
             </button>
           </div>
         ) : undefined
