@@ -37,8 +37,12 @@ const CollectionTab: React.FC<CollectionTabProps> = ({ selectedCustomer }) => {
     notes?: string;
   } | null>(null);
 
-  // Filter sales with remaining balance
-  const unpaidSales = sales.filter(s => !s.isVoided && Number(s.remaining) > 0);
+  // Filter sales with remaining balance - only for selected customer if any
+  const unpaidSales = sales.filter(s => {
+    if (s.isVoided || Number(s.remaining) <= 0) return false;
+    if (selectedCustomer) return s.customer_id === selectedCustomer.id;
+    return true;
+  });
   
   const filteredSales = unpaidSales.filter(s =>
     s.customerName.toLowerCase().includes(searchSale.toLowerCase())
