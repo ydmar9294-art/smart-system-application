@@ -1164,6 +1164,7 @@ export type Database = {
         Args: { p_email: string; p_full_name?: string; p_user_id: string }
         Returns: undefined
       }
+      check_email_exists_rpc: { Args: { p_email: string }; Returns: boolean }
       check_endpoint_rate_limit: {
         Args: {
           p_endpoint: string

@@ -77,7 +77,7 @@
   <script>
     (function() {
       var origin = window.location.origin;
-      var APP_SCHEME = 'smartsystem';
+      var APP_SCHEME = 'myapp';
       var APP_PACKAGE = 'app.lovable.bac2f6ed2db54e828d262c37cac1581f';
 
       document.getElementById('loginBtn').href = origin + '/';
@@ -148,6 +148,15 @@
             localStorage.removeItem('sb-' + 'nrqueogifxxdwladewey' + '-auth-token');
           } catch(e) {}
         }
+        // On native context, redirect to app via deep link
+        if (isNativeContext() && accessToken) {
+          var confirmFragment = '#access_token=' + accessToken + '&refresh_token=' + refreshToken + '&type=' + type;
+          openNativeApp(confirmFragment.replace('oauth-callback', 'email-confirmed'));
+          // Use direct deep link
+          window.location.href = APP_SCHEME + '://auth/email-confirmed' + confirmFragment;
+          setTimeout(showSuccess, 2000);
+          return;
+        }
         setTimeout(showSuccess, 800);
         return;
       }
@@ -174,6 +183,15 @@
 
       // If this is a password recovery, redirect to reset-password page
       if (type === 'recovery') {
+        if (isNativeContext()) {
+          // Redirect to native app via deep link
+          var recoveryFragment = '#access_token=' + accessToken + '&refresh_token=' + refreshToken + '&type=recovery';
+          window.location.href = APP_SCHEME + '://auth/reset-password' + recoveryFragment;
+          setTimeout(function() {
+            window.location.replace(origin + '/reset-password#' + hash);
+          }, 2000);
+          return;
+        }
         window.location.replace(origin + '/reset-password#' + hash);
         return;
       }

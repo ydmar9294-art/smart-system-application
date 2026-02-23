@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Loader2, Mail, Lock, Eye, EyeOff, AlertCircle, UserPlus, LogIn } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { Capacitor } from '@capacitor/core';
 
 interface EmailPasswordAuthProps {
   onError?: (error: string) => void;
@@ -62,11 +63,16 @@ const EmailPasswordAuth: React.FC<EmailPasswordAuthProps> = ({ onError, disabled
 
     try {
       if (isSignUp) {
+        // Determine email confirm redirect based on platform
+        const emailRedirectTo = Capacitor.isNativePlatform()
+          ? 'myapp://auth/email-confirmed'
+          : `${window.location.origin}/auth/callback`;
+
         const { error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            emailRedirectTo,
           },
         });
 
@@ -110,8 +116,29 @@ const EmailPasswordAuth: React.FC<EmailPasswordAuthProps> = ({ onError, disabled
     setLoading(true);
     setLocalError('');
     try {
+      // Check if email exists before sending reset
+      const { data: exists, error: checkError } = await supabase.rpc('check_email_exists_rpc', {
+        p_email: email.trim(),
+      });
+
+      if (checkError) {
+        console.error('[ForgotPassword] Email check error:', checkError);
+        setLocalError('حدث خطأ أثناء التحقق');
+        return;
+      }
+
+      if (!exists) {
+        setLocalError('الإيميل غير موجود');
+        return;
+      }
+
+      // Determine redirect URL based on platform
+      const redirectTo = Capacitor.isNativePlatform()
+        ? 'myapp://auth/reset-password'
+        : `${window.location.origin}/auth/callback`;
+
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo,
       });
       if (error) {
         setLocalError(translateError(error.message));

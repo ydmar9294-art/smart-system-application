@@ -28,7 +28,9 @@ const SalesManagerDashboard = lazy(() => import('@/features/salesmanager/compone
 const WarehouseKeeperDashboard = lazy(() => import('@/features/warehouse/components/WarehouseKeeperDashboard'));
 const DistributorDashboard = lazy(() => import('@/features/distributor/components/DistributorDashboard'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
+const EmailConfirmed = lazy(() => import('@/pages/EmailConfirmed'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
+
 // ==========================================
 // LOADING FALLBACK
 // ==========================================
@@ -168,7 +170,6 @@ const App: React.FC = () => {
           CapacitorApp.exitApp();
         } else {
           exitPressedOnce = true;
-          // Show a brief toast-like indication (uses native Android toast pattern)
           if (exitTimeout) clearTimeout(exitTimeout);
           exitTimeout = setTimeout(() => { exitPressedOnce = false; }, 2000);
         }
@@ -187,6 +188,11 @@ const App: React.FC = () => {
         <Route path="/reset-password" element={
           <Suspense fallback={<DashboardFallback />}>
             <ResetPassword />
+          </Suspense>
+        } />
+        <Route path="/email-confirmed" element={
+          <Suspense fallback={<DashboardFallback />}>
+            <EmailConfirmed />
           </Suspense>
         } />
         <Route path="/privacy-policy" element={

@@ -41,11 +41,11 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ disabled = fals
     try {
       if (isNativePlatform()) {
         // ═══ NATIVE (Capacitor) FLOW ═══
-        // Use signInWithOAuth but get the URL manually, then open in system browser
+        // Use deep link redirect so OAuth returns directly to the app
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: `${window.location.origin}/auth/callback`,
+            redirectTo: 'myapp://auth/oauth-callback',
             skipBrowserRedirect: true, // Don't redirect WebView
             queryParams: {
               access_type: 'offline',
