@@ -314,14 +314,8 @@ const SalesManagerDashboard: React.FC = () => {
                       <div key={u.id} className={`bg-card p-4 rounded-2xl shadow-sm ${!isActive ? 'opacity-60' : ''}`}>
                         <div className="flex justify-between items-center mb-2">
                           <div className="flex items-center gap-3">
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isActive ? 'bg-emerald-500/10' : 'bg-destructive/10'}`}>
-                              {!isActive ? (
-                                <UserX className="w-6 h-6 text-destructive" />
-                              ) : u.employeeType === EmployeeType.WAREHOUSE_KEEPER ? (
-                                <WarehouseIcon className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                              ) : (
-                                <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-                              )}
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black ${isActive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-destructive/10 text-destructive'}`}>
+                              {u.name ? u.name.charAt(0) : '?'}
                             </div>
                             <div>
                               <p className="font-bold text-foreground">{u.name}</p>

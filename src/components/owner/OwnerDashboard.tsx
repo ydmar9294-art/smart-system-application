@@ -42,7 +42,7 @@ const OwnerDashboard: React.FC = () => {
   const { 
     user, sales = [], payments = [], customers = [], users = [],
     products = [], logout, addDistributor, pendingEmployees = [],
-    deactivateEmployee, reactivateEmployee
+    deactivateEmployee, reactivateEmployee, organization
   } = useApp();
   
   const [activeTab, setActiveTab] = useState<OwnerTabType>('daily');
@@ -72,7 +72,35 @@ const OwnerDashboard: React.FC = () => {
     return { todayRevenue, totalCollections, chartData };
   }, [sales, payments]);
 
+  // Owner sees ALL employees but can only manage SM/Accountant
   const teamMembers = users.filter(u => u.role === UserRole.EMPLOYEE);
+  const manageableMembers = teamMembers.filter(u => 
+    u.employeeType === EmployeeType.SALES_MANAGER || u.employeeType === EmployeeType.ACCOUNTANT
+  );
+  const activeEmployeeCount = teamMembers.filter(u => u.isActive !== false).length;
+  
+  // Get license info for org status
+  const ownerLicense = users.find(u => u.id === user?.id);
+  const [licenseInfo, setLicenseInfo] = React.useState<{ maxEmployees: number; type: string; status: string; expiryDate?: string } | null>(null);
+  
+  React.useEffect(() => {
+    const fetchLicense = async () => {
+      if (!ownerLicense?.licenseKey) return;
+      try {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data } = await supabase.from('developer_licenses')
+          .select('max_employees,type,status,expiryDate')
+          .eq('licenseKey', ownerLicense.licenseKey)
+          .maybeSingle();
+        if (data) setLicenseInfo({ maxEmployees: data.max_employees, type: data.type, status: data.status, expiryDate: data.expiryDate });
+      } catch {}
+    };
+    fetchLicense();
+  }, [ownerLicense?.licenseKey]);
+  
+  const maxEmployees = licenseInfo?.maxEmployees ?? 10;
+  const remainingSlots = Math.max(0, maxEmployees - activeEmployeeCount - pendingEmployees.filter(pe => !pe.is_used).length);
+  const usagePercent = maxEmployees > 0 ? ((activeEmployeeCount + pendingEmployees.filter(pe => !pe.is_used).length) / maxEmployees) * 100 : 0;
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -219,7 +247,7 @@ const OwnerDashboard: React.FC = () => {
                 </div>
                 <div className="bg-orange-500/10 p-3 rounded-xl text-center">
                   <Package className="w-5 h-5 mx-auto text-orange-600 dark:text-orange-400 mb-1" />
-                  <p className="text-lg font-black text-foreground">{teamMembers.length}</p>
+                  <p className="text-lg font-black text-foreground">{activeEmployeeCount}</p>
                   <p className="text-[8px] text-muted-foreground font-bold">الموظفين النشطين</p>
                 </div>
               </div>
@@ -250,8 +278,61 @@ const OwnerDashboard: React.FC = () => {
 
         {activeTab === 'team' && (
           <div className="space-y-4 animate-fade-in">
+            {/* Organization Status Card */}
+            <div className="bg-card p-4 rounded-2xl shadow-sm border border-border">
+              <h3 className="font-bold text-foreground text-sm mb-3 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-primary" /> حالة المنشأة
+              </h3>
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">اسم المنشأة</span>
+                  <span className="font-bold text-foreground">{organization?.name || '—'}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">اسم المالك</span>
+                  <span className="font-bold text-foreground">{user?.name || '—'}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">نوع الاشتراك</span>
+                  <span className="font-bold text-foreground">{licenseInfo?.type === 'PERMANENT' ? 'دائم' : licenseInfo?.type === 'TRIAL' ? 'تجريبي' : '—'}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">الحد الأقصى للموظفين</span>
+                  <span className="font-bold text-foreground">{maxEmployees}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">الموظفون النشطون</span>
+                  <span className="font-bold text-foreground">{activeEmployeeCount}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">الأماكن المتبقية</span>
+                  <span className={`font-bold ${remainingSlots <= 1 ? 'text-destructive' : 'text-foreground'}`}>{remainingSlots}</span>
+                </div>
+                {/* Progress bar */}
+                <div className="w-full bg-muted rounded-full h-2 mt-1">
+                  <div
+                    className={`h-2 rounded-full transition-all ${usagePercent >= 100 ? 'bg-destructive' : usagePercent >= 80 ? 'bg-yellow-500' : 'bg-primary'}`}
+                    style={{ width: `${Math.min(100, usagePercent)}%` }}
+                  />
+                </div>
+                {usagePercent >= 80 && usagePercent < 100 && (
+                  <p className="text-[10px] text-yellow-600 dark:text-yellow-400 font-bold flex items-center gap-1 mt-1">
+                    <AlertTriangle className="w-3 h-3" /> أنت قريب من الحد الأقصى لعدد الموظفين النشطين. يرجى التواصل مع الدعم لترقية خطتك.
+                  </p>
+                )}
+                {usagePercent >= 100 && (
+                  <p className="text-[10px] text-destructive font-bold flex items-center gap-1 mt-1">
+                    <AlertTriangle className="w-3 h-3" /> تم الوصول للحد الأقصى من الموظفين النشطين. يرجى التواصل مع المطور لزيادة الحد.
+                  </p>
+                )}
+              </div>
+            </div>
+
             <button onClick={() => setShowAddUserModal(true)} 
-              className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
+              disabled={remainingSlots <= 0}
+              className={`w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all ${
+                remainingSlots <= 0 ? 'bg-muted text-muted-foreground cursor-not-allowed' : 'bg-blue-600 text-white'
+              }`}>
               <UserPlus className="w-5 h-5" /> إضافة موظف
             </button>
             
@@ -319,16 +400,13 @@ const OwnerDashboard: React.FC = () => {
               ) : (
                 teamMembers.map(u => {
                   const isActive = u.isActive !== false;
+                  const canManage = u.employeeType === EmployeeType.SALES_MANAGER || u.employeeType === EmployeeType.ACCOUNTANT;
                   return (
                     <div key={u.id} className={`bg-card p-4 rounded-2xl shadow-sm ${!isActive ? 'opacity-60' : ''}`}>
                       <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-3">
-                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isActive ? 'bg-emerald-500/10' : 'bg-destructive/10'}`}>
-                            {isActive ? (
-                              <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-                            ) : (
-                              <UserX className="w-6 h-6 text-destructive" />
-                            )}
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black ${isActive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-destructive/10 text-destructive'}`}>
+                            {u.name ? u.name.charAt(0) : '?'}
                           </div>
                           <div>
                             <p className="font-bold text-foreground">{u.name}</p>
@@ -339,23 +417,25 @@ const OwnerDashboard: React.FC = () => {
                           {isActive ? 'نشط' : 'معطّل'}
                         </span>
                       </div>
-                      <button
-                        onClick={() => handleToggleEmployee(u.id, isActive)}
-                        disabled={togglingEmployee === u.id}
-                        className={`w-full py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 ${
-                          isActive
-                            ? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
-                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
-                        }`}
-                      >
-                        {togglingEmployee === u.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : isActive ? (
-                          <><UserX className="w-4 h-4" /> إيقاف الموظف</>
-                        ) : (
-                          <><UserCheck className="w-4 h-4" /> إعادة التنشيط</>
-                        )}
-                      </button>
+                      {canManage && (
+                        <button
+                          onClick={() => handleToggleEmployee(u.id, isActive)}
+                          disabled={togglingEmployee === u.id}
+                          className={`w-full py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 ${
+                            isActive
+                              ? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
+                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
+                          }`}
+                        >
+                          {togglingEmployee === u.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : isActive ? (
+                            <><UserX className="w-4 h-4" /> إيقاف الموظف</>
+                          ) : (
+                            <><UserCheck className="w-4 h-4" /> إعادة التنشيط</>
+                          )}
+                        </button>
+                      )}
                     </div>
                   );
                 })
@@ -513,8 +593,6 @@ const OwnerDashboard: React.FC = () => {
                 <select name="type" className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-blue-500">
                   <option value={EmployeeType.SALES_MANAGER}>مدير مبيعات</option>
                   <option value={EmployeeType.ACCOUNTANT}>محاسب مالي</option>
-                  <option value={EmployeeType.FIELD_AGENT}>موزع ميداني</option>
-                  <option value={EmployeeType.WAREHOUSE_KEEPER}>أمين مستودع</option>
                 </select>
                 <button type="submit" className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold">توليد كود التفعيل</button>
               </form>
