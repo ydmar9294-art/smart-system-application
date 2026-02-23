@@ -1198,6 +1198,8 @@ export type Database = {
         Args: { p_employee_id: string }
         Returns: Json
       }
+      get_my_org_id: { Args: never; Returns: string }
+      get_my_role: { Args: never; Returns: string }
       get_organization_stats_rpc: {
         Args: never
         Returns: {
@@ -1221,6 +1223,7 @@ export type Database = {
           total_users: number
         }[]
       }
+      is_developer: { Args: never; Returns: boolean }
       issue_license_rpc: {
         Args: {
           p_days: number
