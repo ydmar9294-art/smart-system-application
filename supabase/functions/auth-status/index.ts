@@ -40,25 +40,19 @@ Deno.serve(async (req) => {
       )
     }
 
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    })
-
+    // Validate JWT explicitly (verify_jwt=false in config)
     const token = authHeader.replace('Bearer ', '')
 
-    // Parallel: rate limit check + JWT validation
+    // Rate limit check
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
     const ipHash = await hashIdentifier(clientIp)
     
-    const [rateResult, claimsResult] = await Promise.all([
-      serviceClient.rpc('check_endpoint_rate_limit', {
-        p_identifier: ipHash,
-        p_endpoint: 'auth-status',
-        p_max_requests: 60,
-        p_window_seconds: 60
-      }),
-      userClient.auth.getClaims(token)
-    ])
+    const rateResult = await serviceClient.rpc('check_endpoint_rate_limit', {
+      p_identifier: ipHash,
+      p_endpoint: 'auth-status',
+      p_max_requests: 60,
+      p_window_seconds: 60
+    })
     
     if (rateResult.data && !rateResult.data.allowed) {
       return new Response(
@@ -67,18 +61,22 @@ Deno.serve(async (req) => {
       )
     }
 
-    const { data: claimsData, error: claimsError } = claimsResult
+    // SECURITY: Explicit token validation via getUser
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    })
+    const { data: { user: validatedUser }, error: userError } = await userClient.auth.getUser(token)
 
-    if (claimsError || !claimsData?.claims) {
+    if (userError || !validatedUser) {
       return new Response(
         JSON.stringify({ authenticated: false, reason: 'INVALID_TOKEN' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const userId = claimsData.claims.sub as string
-    const userEmail = claimsData.claims.email as string
-    const userFullName = (claimsData.claims as any).user_metadata?.full_name || ''
+    const userId = validatedUser.id
+    const userEmail = validatedUser.email || ''
+    const userFullName = validatedUser.user_metadata?.full_name || ''
 
     // Auto-assign developer role if email is in allowlist (server-side only, idempotent)
     // This runs BEFORE profile lookup so the profile will have the correct role
