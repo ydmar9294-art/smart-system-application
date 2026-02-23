@@ -64,51 +64,51 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
   } | null>(null);
 
   // جلب مخزون الموزع الخاص به فقط
-  useEffect(() => {
-    const fetchDistributorInventory = async () => {
-      setLoadingInventory(true);
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+  const fetchDistributorInventory = React.useCallback(async () => {
+    setLoadingInventory(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-        const { data, error } = await supabase
-          .from('distributor_inventory')
-          .select('id, product_id, product_name, quantity')
-          .eq('distributor_id', user.id)
-          .gt('quantity', 0);
+      const { data, error } = await supabase
+        .from('distributor_inventory')
+        .select('id, product_id, product_name, quantity')
+        .eq('distributor_id', user.id)
+        .gt('quantity', 0);
 
-        if (error) throw error;
+      if (error) throw error;
 
-        // جلب أسعار المنتجات من جدول المنتجات
-        const productIds = (data || []).map(d => d.product_id);
-        const { data: productsData } = await supabase
-          .from('products')
-          .select('id, base_price, consumer_price, unit')
-          .in('id', productIds);
+      // جلب أسعار المنتجات من جدول المنتجات
+      const productIds = (data || []).map(d => d.product_id);
+      const { data: productsData } = await supabase
+        .from('products')
+        .select('id, base_price, consumer_price, unit')
+        .in('id', productIds);
 
-        const priceMap = new Map((productsData || []).map(p => [p.id, { base_price: Number(p.base_price), consumer_price: Number(p.consumer_price ?? 0), unit: p.unit || '' }]));
+      const priceMap = new Map((productsData || []).map(p => [p.id, { base_price: Number(p.base_price), consumer_price: Number(p.consumer_price ?? 0), unit: p.unit || '' }]));
 
-        setDistributorInventory((data || []).map(item => {
-          const priceInfo = priceMap.get(item.product_id);
-          return {
-            id: item.id,
-            product_id: item.product_id,
-            product_name: item.product_name,
-            quantity: item.quantity,
-            base_price: priceInfo?.base_price || 0,
-            consumer_price: priceInfo?.consumer_price || 0,
-            unit: priceInfo?.unit || ''
-          };
-        }));
-      } catch (err) {
-        console.error('Error fetching distributor inventory:', err);
-      } finally {
-        setLoadingInventory(false);
-      }
-    };
-
-    fetchDistributorInventory();
+      setDistributorInventory((data || []).map(item => {
+        const priceInfo = priceMap.get(item.product_id);
+        return {
+          id: item.id,
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          base_price: priceInfo?.base_price || 0,
+          consumer_price: priceInfo?.consumer_price || 0,
+          unit: priceInfo?.unit || ''
+        };
+      }));
+    } catch (err) {
+      console.error('Error fetching distributor inventory:', err);
+    } finally {
+      setLoadingInventory(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchDistributorInventory();
+  }, [fetchDistributorInventory]);
 
   // استخدام مخزون الموزع بدلاً من المخزون العام
   const activeProducts = distributorInventory.filter(p => p.quantity > 0);
@@ -195,6 +195,8 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
       setSuccess(true);
       setShowPrintModal(true); // Show print modal after success
       await refreshAllData();
+      // Refresh local distributor inventory to reflect deducted quantities
+      await fetchDistributorInventory();
     } catch (error) {
       console.error('Error creating sale:', error);
       addNotification('حدث خطأ أثناء إنشاء الفاتورة', 'error');
@@ -236,7 +238,7 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
 
       {/* Success Message */}
       {success && !showPrintModal && (
-        <div className="bg-emerald-50 text-emerald-600 p-4 rounded-2xl flex items-center gap-2 border border-emerald-200">
+        <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 rounded-2xl flex items-center gap-2 border border-emerald-500/20">
           <Check className="w-5 h-5" />
           <span className="font-bold">تم إنشاء الفاتورة بنجاح!</span>
         </div>
@@ -244,7 +246,7 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
 
       {/* No Customer Selected Warning */}
       {!selectedCustomer && (
-        <div className="bg-amber-50 text-amber-700 p-4 rounded-2xl flex items-center gap-2 border border-amber-200">
+        <div className="bg-amber-500/10 text-amber-600 dark:text-amber-400 p-4 rounded-2xl flex items-center gap-2 border border-amber-500/20">
           <AlertCircle className="w-5 h-5" />
           <span className="font-bold">يرجى اختيار زبون من القائمة أعلاه</span>
         </div>
@@ -252,13 +254,13 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
 
       {/* Selected Customer Info */}
       {selectedCustomer && (
-        <div className="bg-blue-50 rounded-2xl p-4 flex items-center gap-3 border border-blue-200">
+        <div className="bg-blue-500/10 rounded-2xl p-4 flex items-center gap-3 border border-blue-500/20">
           <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
             <User className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="font-bold text-gray-800">{selectedCustomer.name}</p>
-            <p className="text-sm text-gray-500">
+            <p className="font-bold text-foreground">{selectedCustomer.name}</p>
+            <p className="text-sm text-muted-foreground">
               الرصيد: {Number(selectedCustomer.balance).toLocaleString('ar-SA')} ل.س
             </p>
           </div>
@@ -267,7 +269,7 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
 
       {/* Section Title */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-black text-gray-800">الأصناف المطلوبة</h3>
+        <h3 className="text-lg font-black text-foreground">الأصناف المطلوبة</h3>
         <button
           onClick={() => setShowProductPicker(true)}
           className="flex items-center gap-1.5 text-blue-600 font-bold text-sm hover:text-blue-700"
@@ -280,18 +282,18 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
 
       {/* Cart Items or Empty State */}
       {cart.length === 0 ? (
-        <div className="bg-gray-50 rounded-3xl p-8 text-center">
-          <div className="w-20 h-20 bg-white rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-sm">
-            <ShoppingBag className="w-10 h-10 text-gray-300" />
+        <div className="bg-muted rounded-3xl p-8 text-center">
+          <div className="w-20 h-20 bg-card rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-sm">
+            <ShoppingBag className="w-10 h-10 text-muted-foreground/30" />
           </div>
-          <p className="text-gray-400 font-bold">السلة فارغة</p>
+          <p className="text-muted-foreground font-bold">السلة فارغة</p>
         </div>
       ) : (
         <div className="space-y-3">
           {cart.map((item) => (
-            <div key={item.product_id} className="bg-gray-50 rounded-2xl p-4">
+            <div key={item.product_id} className="bg-muted rounded-2xl p-4">
               <div className="flex items-center justify-between mb-3">
-                <span className="font-bold text-gray-800">{item.product_name}</span>
+                <span className="font-bold text-foreground">{item.product_name}</span>
                 <button
                   onClick={() => removeFromCart(item.product_id)}
                   className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"
@@ -300,12 +302,12 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
                 </button>
               </div>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 bg-white rounded-xl p-1">
+                <div className="flex items-center gap-3 bg-card rounded-xl p-1">
                   <button
                     onClick={() => updateQuantity(item.product_id, -1)}
-                    className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center hover:bg-gray-200"
+                    className="w-9 h-9 bg-muted rounded-lg flex items-center justify-center hover:bg-accent"
                   >
-                    <Minus className="w-4 h-4 text-gray-600" />
+                    <Minus className="w-4 h-4 text-muted-foreground" />
                   </button>
                   <span className="font-black w-8 text-center text-lg text-foreground">{item.quantity}</span>
                   <button
@@ -326,10 +328,10 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
 
       {/* Total & Submit */}
       {cart.length > 0 && (
-        <div className="space-y-4 pt-4 border-t border-gray-100">
+        <div className="space-y-4 pt-4 border-t border-border">
           {/* Payment Type Selection */}
           <div className="space-y-2">
-            <label className="text-xs font-black text-gray-500 uppercase">نوع الدفع</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">نوع الدفع</label>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
@@ -337,7 +339,7 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
                 className={`py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all border-2 ${
                   paymentType === 'CASH'
                     ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/30'
-                    : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-emerald-300'
+                    : 'bg-muted text-muted-foreground border-border hover:border-emerald-300'
                 }`}
               >
                 💵 نقداً
@@ -348,7 +350,7 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
                 className={`py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all border-2 ${
                   paymentType === 'CREDIT'
                     ? 'bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/30'
-                    : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-orange-300'
+                    : 'bg-muted text-muted-foreground border-border hover:border-orange-300'
                 }`}
               >
                 📝 آجل
@@ -357,7 +359,7 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="font-bold text-gray-500">الإجمالي</span>
+            <span className="font-bold text-muted-foreground">الإجمالي</span>
             <span className="font-black text-blue-600 text-2xl">
               {grandTotal.toLocaleString('ar-SA')} ل.س
             </span>

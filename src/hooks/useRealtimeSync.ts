@@ -97,6 +97,48 @@ export function useRealtimeSync(orgId?: string | null) {
           queryClient.invalidateQueries({ queryKey: queryKeys.customers(orgId) });
         }
       )
+      // Purchases changes
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'purchases',
+          filter: `organization_id=eq.${orgId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: queryKeys.purchases(orgId) });
+          queryClient.invalidateQueries({ queryKey: queryKeys.products(orgId) });
+        }
+      )
+      // Deliveries changes
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'deliveries',
+          filter: `organization_id=eq.${orgId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: queryKeys.deliveries(orgId) });
+          queryClient.invalidateQueries({ queryKey: queryKeys.products(orgId) });
+          queryClient.invalidateQueries({ queryKey: queryKeys.distributorInventory(orgId) });
+        }
+      )
+      // Customers changes
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'customers',
+          filter: `organization_id=eq.${orgId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: queryKeys.customers(orgId) });
+        }
+      )
       .subscribe();
 
     return () => {

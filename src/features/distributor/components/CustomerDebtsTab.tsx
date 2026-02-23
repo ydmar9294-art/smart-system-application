@@ -49,72 +49,72 @@ const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ selectedCustomer, m
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
         <input
           type="text"
           placeholder="بحث عن زبون..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full bg-gray-50 border-none rounded-2xl px-12 py-4 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+          className="w-full bg-muted border-none rounded-2xl px-12 py-4 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
         />
       </div>
 
       {/* Customer List */}
       {debtCustomers.length === 0 ? (
-        <div className="bg-gray-50 rounded-3xl p-8 text-center">
-          <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-          <p className="text-gray-400 font-bold">لا يوجد زبائن بذمم مستحقة</p>
+        <div className="bg-muted rounded-3xl p-8 text-center">
+          <Users className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" />
+          <p className="text-muted-foreground font-bold">لا يوجد زبائن بذمم مستحقة</p>
         </div>
       ) : (
         <div className="space-y-3">
           {debtCustomers.map((customer) => (
             <div 
               key={customer.id}
-              className="bg-gray-50 rounded-2xl p-4 cursor-pointer hover:bg-gray-100 transition-colors"
+              className="bg-muted rounded-2xl p-4 cursor-pointer hover:bg-accent transition-colors"
               onClick={() => setSelectedCustomerId(
                 selectedCustomerId === customer.id ? null : customer.id
               )}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                    <span className="text-lg font-black text-red-500">
+                  <div className="w-12 h-12 bg-card rounded-xl flex items-center justify-center shadow-sm">
+                    <span className="text-lg font-black text-destructive">
                       {customer.name.charAt(0)}
                     </span>
                   </div>
                   <div>
-                    <p className="font-bold text-gray-800">{customer.name}</p>
+                    <p className="font-bold text-foreground">{customer.name}</p>
                     {customer.phone && (
-                      <p className="text-xs text-gray-500 flex items-center gap-1">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
                         {customer.phone}
                       </p>
                     )}
                   </div>
                 </div>
                 <div className="text-end">
-                  <p className="text-xl font-black text-emerald-600">
+                  <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">
                     {Number(customer.balance).toLocaleString('ar-SA')}
                   </p>
-                  <p className="text-xs text-gray-400">ل.س</p>
-                  <p className="text-[10px] text-gray-400">انقر للتحديث</p>
+                  <p className="text-xs text-muted-foreground">ل.س</p>
+                  <p className="text-[10px] text-muted-foreground">انقر للتحديث</p>
                 </div>
               </div>
 
               {/* Expanded Details */}
               {selectedCustomerId === customer.id && customerSales.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
-                  <p className="text-sm font-bold text-gray-500 mb-2">الفواتير المستحقة</p>
+                <div className="mt-4 pt-4 border-t border-border space-y-2">
+                  <p className="text-sm font-bold text-muted-foreground mb-2">الفواتير المستحقة</p>
                   {customerSales
                     .filter(s => Number(s.remaining) > 0)
                     .slice(0, 5)
                     .map((sale) => (
                       <div 
                         key={sale.id}
-                        className="flex items-center justify-between bg-white rounded-xl p-3"
+                        className="flex items-center justify-between bg-card rounded-xl p-3"
                       >
                         <div className="flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-gray-400" />
-                          <p className="text-xs text-gray-500 flex items-center gap-1">
+                          <FileText className="w-4 h-4 text-muted-foreground" />
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
                             {new Date(sale.timestamp).toLocaleDateString('ar-SA')}
                           </p>
@@ -123,7 +123,7 @@ const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ selectedCustomer, m
                           <p className="font-bold text-orange-500">
                             {Number(sale.remaining).toLocaleString('ar-SA')} ل.س
                           </p>
-                          <p className="text-xs text-gray-400">
+                          <p className="text-xs text-muted-foreground">
                             من {Number(sale.grandTotal).toLocaleString('ar-SA')}
                           </p>
                         </div>
