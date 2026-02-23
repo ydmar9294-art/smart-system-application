@@ -87,7 +87,7 @@ const ViewManager: React.FC = () => {
 // MAIN CONTENT
 // ==========================================
 const MainContent: React.FC = () => {
-  const { user, isLoading, refreshAuth, needsActivation, authError, authPhase } = useApp();
+  const { user, isLoading, refreshAuth, needsActivation } = useApp();
   
   // Initialize theme early so loading/auth screens also get dark mode
   usePageTheme();
@@ -96,45 +96,12 @@ const MainContent: React.FC = () => {
   const { isOnline, pendingCount } = useOfflineSync();
   const { showUpdateModal, isForceUpdate, checkResult, dismiss } = useVersionCheck();
 
-  // Progressive loading — phase-aware with guaranteed timeout
-  if (isLoading) {
-    const phaseText = authPhase === 'verifying' ? 'جارٍ التحقق من الحساب...' : 'جارٍ تحميل النظام...';
-    return (
-      <div className="h-screen flex flex-col items-center justify-center bg-background">
-        <Loader2 size={48} className="animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground font-black text-sm mb-2">{phaseText}</p>
-        <p className="text-muted-foreground/40 font-bold text-[10px] uppercase tracking-[0.2em]">Smart System</p>
-      </div>
-    );
-  }
-
-  // Auth error state — show error with retry and logout options
-  if (authError && !user) return (
-    <div className="h-screen flex flex-col items-center justify-center bg-background px-6" dir="rtl">
-      <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-        <Loader2 size={32} className="text-destructive" />
-      </div>
-      <p className="text-foreground font-black text-sm mb-2 text-center">{authError}</p>
-      <div className="flex gap-3 mt-4">
-        <button
-          onClick={refreshAuth}
-          className="px-6 py-3 bg-primary text-primary-foreground rounded-2xl font-bold text-sm hover:bg-primary/90 transition-colors"
-        >
-          إعادة المحاولة
-        </button>
-        <button
-          onClick={async () => {
-            const { clearAuthCache } = await import('@/lib/authCache');
-            clearAuthCache();
-            const { supabase } = await import('@/integrations/supabase/client');
-            await supabase.auth.signOut();
-            window.location.reload();
-          }}
-          className="px-6 py-3 bg-muted text-muted-foreground rounded-2xl font-bold text-sm hover:bg-muted/80 transition-colors"
-        >
-          تسجيل الخروج
-        </button>
-      </div>
+  // Loading — guaranteed to resolve within 7s
+  if (isLoading) return (
+    <div className="h-screen flex flex-col items-center justify-center bg-background">
+      <Loader2 size={48} className="animate-spin text-primary mb-4" />
+      <p className="text-muted-foreground font-black text-sm mb-2">جارٍ تحميل النظام...</p>
+      <p className="text-muted-foreground/40 font-bold text-[10px] uppercase tracking-[0.2em]">Smart System</p>
     </div>
   );
 
