@@ -1,16 +1,29 @@
 /**
- * Auth Cache - Dual-layer caching (sessionStorage + memory)
+ * Auth Cache - Layered caching strategy (SaaS standard)
  * 
- * Memory cache: instant access (0ms)
- * sessionStorage: survives page refreshes within tab
- * TTL: 30 minutes (increased from 15 for high-load stability)
+ * Layer 1: Memory cache (instant, per-tab)
+ * Layer 2: sessionStorage (survives refresh, per-tab)
+ * 
+ * TTL Strategy:
+ * - Session/auth state: 5 minutes (short-lived)
+ * - License status: 15 minutes (medium-lived)
+ * - No permanent cache for auth decisions
+ * 
+ * Invalidation triggers:
+ * - Logout
+ * - Password change
+ * - License change/expiration
+ * - Role/permission update
  */
 
 import { UserRole, EmployeeType, LicenseStatus } from '@/types';
 
-const CACHE_KEY = 'auth_cache_v1';
-const CACHE_VERSION = 1;
-const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const CACHE_KEY = 'auth_cache_v2';
+const CACHE_VERSION = 2;
+
+// Layered TTLs
+const AUTH_TTL_MS = 5 * 60 * 1000;     // 5 min for auth state
+const LICENSE_TTL_MS = 15 * 60 * 1000;  // 15 min for license
 
 export interface CachedAuthState {
   userId: string;
@@ -28,16 +41,30 @@ export interface CachedAuthState {
 // In-memory cache for zero-latency access
 let memoryCache: CachedAuthState | null = null;
 
-export const isCacheValid = (cache: CachedAuthState | null): boolean => {
+/**
+ * Check if auth data is still valid (short TTL)
+ */
+export const isAuthCacheValid = (cache: CachedAuthState | null): boolean => {
   if (!cache) return false;
   if (cache.version !== CACHE_VERSION) return false;
-  const age = Date.now() - cache.cachedAt;
-  return age < CACHE_TTL_MS;
+  return (Date.now() - cache.cachedAt) < AUTH_TTL_MS;
 };
+
+/**
+ * Check if license data is still valid (medium TTL)
+ */
+export const isLicenseCacheValid = (cache: CachedAuthState | null): boolean => {
+  if (!cache) return false;
+  if (cache.version !== CACHE_VERSION) return false;
+  return (Date.now() - cache.cachedAt) < LICENSE_TTL_MS;
+};
+
+/** @deprecated Use isAuthCacheValid instead */
+export const isCacheValid = isAuthCacheValid;
 
 export const getCachedAuth = (): CachedAuthState | null => {
   // Memory cache first (instant)
-  if (memoryCache && isCacheValid(memoryCache)) {
+  if (memoryCache && isAuthCacheValid(memoryCache)) {
     return memoryCache;
   }
   
@@ -47,7 +74,7 @@ export const getCachedAuth = (): CachedAuthState | null => {
     
     const parsed = JSON.parse(cached) as CachedAuthState;
     
-    if (!isCacheValid(parsed)) {
+    if (!isAuthCacheValid(parsed)) {
       clearAuthCache();
       return null;
     }
@@ -57,6 +84,25 @@ export const getCachedAuth = (): CachedAuthState | null => {
     return parsed;
   } catch {
     clearAuthCache();
+    return null;
+  }
+};
+
+/**
+ * Get cached license status even if auth cache expired (medium TTL)
+ */
+export const getCachedLicense = (): CachedAuthState | null => {
+  if (memoryCache && isLicenseCacheValid(memoryCache)) {
+    return memoryCache;
+  }
+  
+  try {
+    const cached = sessionStorage.getItem(CACHE_KEY);
+    if (!cached) return null;
+    const parsed = JSON.parse(cached) as CachedAuthState;
+    if (!isLicenseCacheValid(parsed)) return null;
+    return parsed;
+  } catch {
     return null;
   }
 };
@@ -80,6 +126,8 @@ export const clearAuthCache = (): void => {
   memoryCache = null;
   try {
     sessionStorage.removeItem(CACHE_KEY);
+    // Also clear old v1 cache key
+    sessionStorage.removeItem('auth_cache_v1');
   } catch {
     // Ignore
   }
