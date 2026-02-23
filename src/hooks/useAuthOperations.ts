@@ -151,9 +151,13 @@ export const resolveUserProfile = async (uid: string): Promise<ProfileResolution
       return { user: null, role: null, organization: null, success: false };
     }
 
+    const displayName = (status.full_name && status.full_name.trim()) 
+      ? status.full_name 
+      : (status.email ? status.email.split('@')[0] : 'مستخدم');
+    
     const user: User = {
       id: status.user_id!,
-      name: status.full_name || '',
+      name: displayName,
       email: status.email || '',
       role: status.role as UserRole,
       phone: '',

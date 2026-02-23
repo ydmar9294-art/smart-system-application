@@ -49,7 +49,11 @@ const LegalInfoTab: React.FC = () => {
           .eq('id', user.id)
           .single();
 
-        if (!profile?.organization_id) return;
+        if (!profile?.organization_id) {
+          setLoading(false);
+          setError('لا توجد منشأة مرتبطة بحسابك. يرجى تفعيل ترخيص أولاً.');
+          return;
+        }
 
         const { data, error } = await supabase
           .from('organization_legal_info')
@@ -91,7 +95,7 @@ const LegalInfoTab: React.FC = () => {
         .eq('id', user.id)
         .single();
 
-      if (!profile?.organization_id) throw new Error('لا توجد منشأة');
+      if (!profile?.organization_id) throw new Error('لا توجد منشأة مرتبطة بحسابك. يرجى تفعيل ترخيص أولاً.');
 
       const payload = {
         organization_id: profile.organization_id,

@@ -33,10 +33,16 @@ const AuthContext = createContext<AuthContextType | null>(null);
 /** Max time to wait for auth resolution before showing fallback */
 const AUTH_TIMEOUT_MS = 10_000;
 
+const deriveDisplayName = (fullName: string, email: string): string => {
+  if (fullName && fullName.trim()) return fullName;
+  if (email) return email.split('@')[0];
+  return 'مستخدم';
+};
+
 const buildUserFromCache = (cached: CachedAuthState): { user: User; role: UserRole; organization: Organization | null } => {
   const user: User = {
     id: cached.userId,
-    name: cached.fullName,
+    name: deriveDisplayName(cached.fullName, cached.email),
     email: cached.email,
     role: cached.role,
     phone: '',
