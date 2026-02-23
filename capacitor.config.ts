@@ -6,8 +6,10 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     url: 'https://bac2f6ed-2db5-4e82-8d26-2c37cac1581f.lovableproject.com?forceHideBadge=true',
-    cleartext: true
+    cleartext: true,
+    androidScheme: 'myapp'
   },
+
   plugins: {
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert']
