@@ -43,7 +43,9 @@ export function useVersionCheck() {
   }, [isChecking]);
 
   useEffect(() => {
-    performCheck();
+    // Defer version check to avoid blocking initial render
+    const timer = setTimeout(performCheck, 3000);
+    return () => clearTimeout(timer);
   }, []);
 
   const dismiss = useCallback(() => {

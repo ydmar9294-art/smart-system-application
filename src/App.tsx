@@ -6,7 +6,6 @@ import { UserRole, EmployeeType } from '@/types';
 import { Layout } from '@/components/Layout';
 import { ToastManager } from '@/components/ToastManager';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { Loader2 } from 'lucide-react';
 import AuthFlow from '@/features/auth/components/AuthFlow';
 import { usePushNotifications } from '@/platform/hooks/usePushNotifications';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
@@ -16,6 +15,7 @@ import UpdateModal from '@/components/ui/UpdateModal';
 import { usePageTheme } from '@/hooks/usePageTheme';
 import { useStatusBar } from '@/platform/hooks/useStatusBar';
 import SecurityGate from '@/components/SecurityGate';
+import AppLoadingSkeleton from '@/components/ui/DashboardSkeleton';
 
 // ==========================================
 // LAZY-LOADED DASHBOARD COMPONENTS
@@ -35,7 +35,7 @@ const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
 // LOADING FALLBACK
 // ==========================================
 const DashboardFallback: React.FC = () => (
-  <div className="p-4 space-y-4 animate-in fade-in duration-300">
+  <div className="p-4 space-y-4 animate-in fade-in duration-200">
     <div className="h-8 w-48 bg-muted rounded animate-pulse" />
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {[...Array(4)].map((_, i) => (
@@ -100,14 +100,8 @@ const MainContent: React.FC = () => {
   const { isOnline, pendingCount } = useOfflineSync();
   const { showUpdateModal, isForceUpdate, checkResult, dismiss } = useVersionCheck();
 
-  // Loading — guaranteed to resolve within 7s
-  if (isLoading) return (
-    <div className="h-screen flex flex-col items-center justify-center bg-background">
-      <Loader2 size={48} className="animate-spin text-primary mb-4" />
-      <p className="text-muted-foreground font-black text-sm mb-2">جارٍ تحميل النظام...</p>
-      <p className="text-muted-foreground/40 font-bold text-[10px] uppercase tracking-[0.2em]">Smart System</p>
-    </div>
-  );
+  // Loading — show skeleton instead of spinner for instant perceived speed
+  if (isLoading) return <AppLoadingSkeleton />;
 
   // Force update blocks everything
   if (isForceUpdate && showUpdateModal) {

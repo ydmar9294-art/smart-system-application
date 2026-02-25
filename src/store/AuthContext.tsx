@@ -29,9 +29,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 /** Max time for the entire auth init before forcing to login */
-const HARD_TIMEOUT_MS = 7_000;
+const HARD_TIMEOUT_MS = 5_000;
 /** Max time for profile resolution */
-const RESOLVE_TIMEOUT_MS = 6_000;
+const RESOLVE_TIMEOUT_MS = 4_500;
 
 const deriveDisplayName = (fullName: string, email: string): string => {
   if (fullName && fullName.trim()) return fullName;
