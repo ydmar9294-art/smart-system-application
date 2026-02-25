@@ -12,6 +12,7 @@
 import React, { useState, useEffect } from 'react';
 import { Share2, Download, Loader2, Receipt, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { cacheOrgInfo, getCachedOrgInfo } from '../services/distributorOfflineService';
 import { CURRENCY } from '@/constants';
 import FullScreenModal from '@/components/ui/FullScreenModal';
 import { escapeHtml, escapeNumber } from '@/lib/htmlEscape';
@@ -201,19 +202,38 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
     const fetchLegalInfo = async () => {
       setLoading(true);
       try {
+        // Try cached org info first for instant render
+        const cached = await getCachedOrgInfo();
+        if (cached) {
+          setOrgName(cached.orgName);
+          setLegalInfo(cached.legalInfo);
+          setLoading(false);
+        }
+
+        // Background refresh from server if online
+        if (!navigator.onLine) {
+          setLoading(false);
+          return;
+        }
+
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        const { data: profile } = await supabase.
-        from('profiles').select('organization_id').eq('id', user.id).single();
-        if (!profile?.organization_id) return;
+        if (!user) { setLoading(false); return; }
+        const { data: profile } = await supabase
+          .from('profiles').select('organization_id').eq('id', user.id).single();
+        if (!profile?.organization_id) { setLoading(false); return; }
         const [orgRes, legalRes] = await Promise.all([
-        supabase.from('organizations').select('name').eq('id', profile.organization_id).single(),
-        supabase.from('organization_legal_info').
-        select('commercial_registration, industrial_registration, tax_identification, trademark_name').
-        eq('organization_id', profile.organization_id).maybeSingle()]
-        );
+          supabase.from('organizations').select('name').eq('id', profile.organization_id).single(),
+          supabase.from('organization_legal_info')
+            .select('commercial_registration, industrial_registration, tax_identification, trademark_name')
+            .eq('organization_id', profile.organization_id).maybeSingle()
+        ]);
         if (orgRes.data) setOrgName(orgRes.data.name);
         if (legalRes.data) setLegalInfo(legalRes.data);
+        
+        // Cache for offline use
+        try {
+          await cacheOrgInfo(orgRes.data?.name || '', legalRes.data || null);
+        } catch { /* ignore */ }
       } catch (err) {
         console.error('[InvoicePrint] fetchLegalInfo error:', err);
       } finally {

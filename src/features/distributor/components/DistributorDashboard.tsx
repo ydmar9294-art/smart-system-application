@@ -104,7 +104,7 @@ const DistributorDashboard: React.FC = () => {
       case 'returns': return <SalesReturnTab selectedCustomer={selectedCustomer} onQueueAction={offline.queueAction} isOnline={offline.isOnline} />;
       case 'collections': return <CollectionTab selectedCustomer={selectedCustomer} onQueueAction={offline.queueAction} isOnline={offline.isOnline} />;
       case 'debts': return <CustomerDebtsTab selectedCustomer={selectedCustomer} myCustomers={myCustomers} />;
-      case 'history': return <InvoiceHistoryTab />;
+      case 'history': return <InvoiceHistoryTab isOnline={offline.isOnline} />;
       default: return null;
     }
   };
