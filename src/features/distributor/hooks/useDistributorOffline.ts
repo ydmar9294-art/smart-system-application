@@ -25,6 +25,8 @@ import {
   getCachedCustomers,
   addLocalCustomer,
   addLocalInvoice,
+  retryFailedAction,
+  retryAllFailedActions,
   type OfflineAction,
   type OfflineActionType,
   type CachedInventoryItem,
@@ -462,6 +464,22 @@ export function useDistributorOffline() {
     };
   }, [refreshStats, refreshInventory, refreshSales, refreshCustomers]);
 
+  const retrySingleAction = useCallback(async (actionId: string) => {
+    await retryFailedAction(actionId);
+    await refreshStats();
+    if (navigator.onLine) {
+      triggerSync();
+    }
+  }, [refreshStats, triggerSync]);
+
+  const retryAllFailed = useCallback(async () => {
+    await retryAllFailedActions();
+    await refreshStats();
+    if (navigator.onLine) {
+      triggerSync();
+    }
+  }, [refreshStats, triggerSync]);
+
   return {
     ...state,
     queueAction,
@@ -470,5 +488,7 @@ export function useDistributorOffline() {
     refreshStats,
     refreshCustomers,
     addCustomerOffline,
+    retrySingleAction,
+    retryAllFailed,
   };
 }
