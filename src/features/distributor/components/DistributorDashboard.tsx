@@ -30,6 +30,8 @@ import CollectionTab from './CollectionTab';
 import CustomerDebtsTab from './CustomerDebtsTab';
 import DistributorInventoryTab from './DistributorInventoryTab';
 import InvoiceHistoryTab from './InvoiceHistoryTab';
+import OfflineSyncBanner from './OfflineSyncBanner';
+import { useDistributorOffline } from '../hooks/useDistributorOffline';
 import { Customer } from '@/types';
 import { CURRENCY } from '@/constants';
 
@@ -37,6 +39,7 @@ type DistributorTabType = 'inventory' | 'new-sale' | 'returns' | 'collections' |
 
 const DistributorDashboard: React.FC = () => {
   const { customers, logout, addCustomer, addNotification, refreshAllData } = useApp();
+  const offline = useDistributorOffline();
   const [activeTab, setActiveTab] = useState<DistributorTabType>('inventory');
   const [loggingOut, setLoggingOut] = useState(false);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
@@ -97,9 +100,9 @@ const DistributorDashboard: React.FC = () => {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'inventory': return <DistributorInventoryTab />;
-      case 'new-sale': return <NewSaleTab selectedCustomer={selectedCustomer} />;
+      case 'new-sale': return <NewSaleTab selectedCustomer={selectedCustomer} localInventory={offline.localInventory} onQueueAction={offline.queueAction} isOnline={offline.isOnline} />;
       case 'returns': return <SalesReturnTab selectedCustomer={selectedCustomer} />;
-      case 'collections': return <CollectionTab selectedCustomer={selectedCustomer} />;
+      case 'collections': return <CollectionTab selectedCustomer={selectedCustomer} onQueueAction={offline.queueAction} isOnline={offline.isOnline} />;
       case 'debts': return <CustomerDebtsTab selectedCustomer={selectedCustomer} myCustomers={myCustomers} />;
       case 'history': return <InvoiceHistoryTab />;
       default: return null;
@@ -182,6 +185,19 @@ const DistributorDashboard: React.FC = () => {
         </div>
 
         <WelcomeSplash />
+
+        {/* Offline Sync Status Banner */}
+        <div className="px-4 pb-2">
+          <OfflineSyncBanner
+            isOnline={offline.isOnline}
+            pendingCount={offline.pendingCount}
+            failedCount={offline.failedCount}
+            isSyncing={offline.isSyncing}
+            lastSyncMessage={offline.lastSyncMessage}
+            actions={offline.actions}
+            onTriggerSync={offline.triggerSync}
+          />
+        </div>
 
         {/* Primary Tab Navigation - mirrors AccountantDashboard */}
         <div className="px-4 pb-2">
