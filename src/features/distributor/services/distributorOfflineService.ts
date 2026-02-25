@@ -5,11 +5,13 @@
  * - Local IndexedDB cache for inventory, customers, sales
  * - Offline action queue with auto-sync
  * - Optimistic UI updates
+ * - Customer ID remapping on sync
  * 
  * Architecture:
  * - All writes go to IndexedDB first (instant)
  * - Background sync pushes to Supabase when online
  * - UI always reads from local cache
+ * - Customers sync FIRST, then dependent operations remap IDs
  */
 
 import { generateUUID } from '@/lib/uuid';
@@ -278,6 +280,95 @@ export async function updateCachedInventoryQuantity(
 }
 
 // ============================================
+// Customer Cache (offline-first)
+// ============================================
+
+export interface CachedCustomer {
+  id: string;
+  name: string;
+  phone: string | null;
+  location: string | null;
+  balance: number;
+  organization_id: string;
+  created_by: string | null;
+  isLocal?: boolean;       // true = created offline, not yet synced
+  syncStatus?: 'pending' | 'synced' | 'failed';
+  updated_at: number;
+}
+
+export async function cacheCustomers(customers: CachedCustomer[]): Promise<void> {
+  // Preserve local (unsynced) customers during server refresh
+  const existing = await getAllItems<CachedCustomer>(STORES.CUSTOMERS_CACHE);
+  const localCustomers = existing.filter(c => c.isLocal && c.syncStatus !== 'synced');
+  
+  await clearStore(STORES.CUSTOMERS_CACHE);
+  
+  // Re-add server customers
+  for (const c of customers) {
+    await putItem(STORES.CUSTOMERS_CACHE, { ...c, updated_at: Date.now() });
+  }
+  
+  // Re-add local unsynced customers (avoid duplicates by ID)
+  const serverIds = new Set(customers.map(c => c.id));
+  for (const c of localCustomers) {
+    if (!serverIds.has(c.id)) {
+      await putItem(STORES.CUSTOMERS_CACHE, c);
+    }
+  }
+}
+
+export async function getCachedCustomers(): Promise<CachedCustomer[]> {
+  return getAllItems<CachedCustomer>(STORES.CUSTOMERS_CACHE);
+}
+
+export async function addLocalCustomer(customer: CachedCustomer): Promise<void> {
+  await putItem(STORES.CUSTOMERS_CACHE, customer);
+}
+
+export async function updateCustomerSyncStatus(
+  localId: string,
+  status: 'synced' | 'failed',
+  serverId?: string
+): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.CUSTOMERS_CACHE, 'readwrite');
+    const store = tx.objectStore(STORES.CUSTOMERS_CACHE);
+    const getReq = store.get(localId);
+    
+    getReq.onsuccess = () => {
+      if (getReq.result) {
+        const c = getReq.result;
+        c.syncStatus = status;
+        if (status === 'synced' && serverId) {
+          // Remove old local entry, add with server ID
+          store.delete(localId);
+          c.id = serverId;
+          c.isLocal = false;
+          store.put(c);
+        } else {
+          store.put(c);
+        }
+      }
+    };
+    
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/** Map of local temp IDs → server IDs after sync */
+const customerIdMap = new Map<string, string>();
+
+export function getCustomerIdMap(): Map<string, string> {
+  return customerIdMap;
+}
+
+export function resolveCustomerId(id: string): string {
+  return customerIdMap.get(id) || id;
+}
+
+// ============================================
 // Sync Engine — Direct RPC Calls
 // ============================================
 
@@ -302,8 +393,10 @@ async function executeAction(action: OfflineAction): Promise<boolean> {
   try {
     switch (action.type) {
       case 'CREATE_SALE': {
+        // Remap customer ID if it was a local temp ID
+        const customerId = resolveCustomerId(action.payload.customerId);
         const { error } = await supabase.rpc('create_distributor_sale_rpc', {
-          p_customer_id: action.payload.customerId,
+          p_customer_id: customerId,
           p_items: action.payload.items,
           p_payment_type: action.payload.paymentType || 'CASH',
         });
@@ -340,14 +433,24 @@ async function executeAction(action: OfflineAction): Promise<boolean> {
       }
 
       case 'ADD_CUSTOMER': {
-        const { error } = await supabase.from('customers').insert({
+        // Sync customer and capture the server-assigned ID
+        const { data, error } = await supabase.from('customers').insert({
           name: action.payload.name,
           phone: action.payload.phone,
           location: action.payload.location,
           organization_id: action.payload.organizationId,
           created_by: action.payload.createdBy,
-        });
+        }).select('id').single();
+        
         if (error) throw error;
+        
+        // Store the mapping: local temp ID → real server ID
+        if (data?.id && action.payload.localId) {
+          customerIdMap.set(action.payload.localId, data.id);
+          // Update local cache
+          await updateCustomerSyncStatus(action.payload.localId, 'synced', data.id);
+          logger.info(`[Sync] Customer remapped: ${action.payload.localId} → ${data.id}`, 'DistributorOffline');
+        }
         return true;
       }
 
@@ -376,7 +479,13 @@ export async function syncAllPending(): Promise<{ synced: number; failed: number
     notifySyncListeners({ type: 'start', total: pending.length });
     logger.info(`[Sync] Processing ${pending.length} pending actions`, 'DistributorOffline');
 
-    for (const action of pending) {
+    // CRITICAL: Sort so ADD_CUSTOMER actions sync FIRST (dependency ordering)
+    const sorted = [...pending].sort((a, b) => {
+      const priority = (type: OfflineActionType) => type === 'ADD_CUSTOMER' ? 0 : 1;
+      return priority(a.type) - priority(b.type) || a.createdAt - b.createdAt;
+    });
+
+    for (const action of sorted) {
       await updateAction(action.id, { status: 'syncing' });
       
       const success = await executeAction(action);
@@ -394,7 +503,7 @@ export async function syncAllPending(): Promise<{ synced: number; failed: number
         }
       }
 
-      notifySyncListeners({ type: 'progress', synced, failed, total: pending.length });
+      notifySyncListeners({ type: 'progress', synced, failed, total: sorted.length });
     }
 
     // Cleanup old synced actions (keep last 24h)
@@ -406,7 +515,7 @@ export async function syncAllPending(): Promise<{ synced: number; failed: number
       }
     }
 
-    notifySyncListeners({ type: 'complete', synced, failed, total: pending.length });
+    notifySyncListeners({ type: 'complete', synced, failed, total: sorted.length });
     logger.info(`[Sync] Done: ${synced} synced, ${failed} failed`, 'DistributorOffline');
   } catch (err) {
     notifySyncListeners({ type: 'error', message: String(err) });

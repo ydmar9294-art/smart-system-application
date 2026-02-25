@@ -1,6 +1,7 @@
 /**
  * useDistributorOffline Hook
  * Provides offline-first operations and sync status for distributor components.
+ * Includes: inventory, customers, sales caching + offline add customer with ID remapping.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -18,12 +19,17 @@ import {
   cacheSales,
   getCachedSales,
   updateCachedSale,
+  cacheCustomers,
+  getCachedCustomers,
+  addLocalCustomer,
   type OfflineAction,
   type OfflineActionType,
   type CachedInventoryItem,
   type CachedSale,
+  type CachedCustomer,
 } from '../services/distributorOfflineService';
 import { supabase } from '@/integrations/supabase/client';
+import { generateUUID } from '@/lib/uuid';
 
 export interface DistributorOfflineState {
   pendingCount: number;
@@ -32,6 +38,7 @@ export interface DistributorOfflineState {
   isOnline: boolean;
   localInventory: CachedInventoryItem[];
   localSales: CachedSale[];
+  localCustomers: CachedCustomer[];
   actions: OfflineAction[];
   lastSyncMessage: string | null;
 }
@@ -44,6 +51,7 @@ export function useDistributorOffline() {
     isOnline: navigator.onLine,
     localInventory: [],
     localSales: [],
+    localCustomers: [],
     actions: [],
     lastSyncMessage: null,
   });
@@ -54,11 +62,12 @@ export function useDistributorOffline() {
   const refreshStats = useCallback(async () => {
     if (!mountedRef.current) return;
     try {
-      const [stats, actions, inventory, sales] = await Promise.all([
+      const [stats, actions, inventory, sales, customers] = await Promise.all([
         getActionStats(),
         getAllActions(),
         getCachedInventory(),
         getCachedSales(),
+        getCachedCustomers(),
       ]);
       setState(prev => ({
         ...prev,
@@ -68,6 +77,7 @@ export function useDistributorOffline() {
         actions: actions.slice(0, 50),
         localInventory: inventory,
         localSales: sales,
+        localCustomers: customers,
       }));
     } catch {
       // IndexedDB not available
@@ -88,7 +98,6 @@ export function useDistributorOffline() {
 
       if (error) throw error;
 
-      // Fetch prices
       const productIds = (data || []).map(d => d.product_id);
       if (productIds.length === 0) {
         await cacheInventory([]);
@@ -124,8 +133,49 @@ export function useDistributorOffline() {
       await cacheInventory(items);
       await refreshStats();
     } catch (err) {
-      // If offline, use cached data — no error
       console.warn('[DistributorOffline] Inventory fetch failed, using cache');
+      await refreshStats();
+    }
+  }, [refreshStats]);
+
+  // Fetch customers from server and cache locally
+  const refreshCustomers = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('id', user.id)
+        .single();
+      if (!profile?.organization_id) return;
+
+      const { data, error } = await supabase
+        .from('customers')
+        .select('id, name, phone, location, balance, organization_id, created_by')
+        .eq('organization_id', profile.organization_id)
+        .eq('created_by', user.id);
+
+      if (error) throw error;
+
+      const mapped: CachedCustomer[] = (data || []).map(c => ({
+        id: c.id,
+        name: c.name,
+        phone: c.phone,
+        location: c.location,
+        balance: Number(c.balance),
+        organization_id: c.organization_id,
+        created_by: c.created_by,
+        isLocal: false,
+        syncStatus: 'synced' as const,
+        updated_at: Date.now(),
+      }));
+
+      await cacheCustomers(mapped);
+      await refreshStats();
+    } catch {
+      console.warn('[DistributorOffline] Customers fetch failed, using cache');
       await refreshStats();
     }
   }, [refreshStats]);
@@ -162,6 +212,52 @@ export function useDistributorOffline() {
       console.warn('[DistributorOffline] Sales fetch failed, using cache');
       await refreshStats();
     }
+  }, [refreshStats]);
+
+  // Add customer offline with temp ID
+  const addCustomerOffline = useCallback(async (
+    name: string,
+    phone: string,
+    location: string,
+    organizationId: string,
+    createdBy: string
+  ): Promise<CachedCustomer> => {
+    const tempId = `local_${generateUUID()}`;
+    
+    const customer: CachedCustomer = {
+      id: tempId,
+      name,
+      phone,
+      location,
+      balance: 0,
+      organization_id: organizationId,
+      created_by: createdBy,
+      isLocal: true,
+      syncStatus: 'pending',
+      updated_at: Date.now(),
+    };
+
+    // Save to IndexedDB immediately
+    await addLocalCustomer(customer);
+
+    // Enqueue for sync
+    await enqueueAction('ADD_CUSTOMER', {
+      name,
+      phone,
+      location,
+      organizationId,
+      createdBy,
+      localId: tempId,
+    });
+
+    await refreshStats();
+
+    // Try to sync immediately if online
+    if (navigator.onLine) {
+      setTimeout(syncAllPending, 500);
+    }
+
+    return customer;
   }, [refreshStats]);
 
   // Queue an offline action and apply optimistic update
@@ -209,9 +305,10 @@ export function useDistributorOffline() {
     if (result.synced > 0) {
       await refreshInventory();
       await refreshSales();
+      await refreshCustomers();
     }
     return result;
-  }, [refreshStats, refreshInventory, refreshSales]);
+  }, [refreshStats, refreshInventory, refreshSales, refreshCustomers]);
 
   // Initialize
   useEffect(() => {
@@ -240,6 +337,7 @@ export function useDistributorOffline() {
         if (event.synced! > 0) {
           refreshInventory();
           refreshSales();
+          refreshCustomers();
         }
       } else if (event.type === 'error') {
         setState(prev => ({ ...prev, isSyncing: false }));
@@ -251,6 +349,7 @@ export function useDistributorOffline() {
     refreshStats();
     refreshInventory();
     refreshSales();
+    refreshCustomers();
 
     // Periodic stats refresh
     const statsInterval = setInterval(refreshStats, 30_000);
@@ -263,7 +362,7 @@ export function useDistributorOffline() {
       unsub();
       clearInterval(statsInterval);
     };
-  }, [refreshStats, refreshInventory, refreshSales]);
+  }, [refreshStats, refreshInventory, refreshSales, refreshCustomers]);
 
   return {
     ...state,
@@ -271,5 +370,7 @@ export function useDistributorOffline() {
     triggerSync,
     refreshInventory,
     refreshStats,
+    refreshCustomers,
+    addCustomerOffline,
   };
 }
