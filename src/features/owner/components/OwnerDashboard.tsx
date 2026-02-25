@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { copyToClipboard } from '@/lib/clipboard';
 import { 
   FileText, 
   Package, 
@@ -352,7 +353,7 @@ const OwnerDashboard: React.FC = () => {
                         {getEmployeeTypeLabel(pe.employee_type)}
                       </span>
                     </div>
-                    <div onClick={() => { navigator.clipboard.writeText(pe.activation_code); setCopiedId(pe.id); setTimeout(() => setCopiedId(null), 2000); }}
+                    <div onClick={async () => { await copyToClipboard(pe.activation_code); setCopiedId(pe.id); setTimeout(() => setCopiedId(null), 2000); }}
                       className="bg-card p-3 rounded-xl flex justify-between items-center cursor-pointer hover:bg-muted transition-colors">
                       <span className="font-mono font-bold text-blue-600 dark:text-blue-400 tracking-wider">{pe.activation_code}</span>
                       {copiedId === pe.id ? <CheckCircle2 className="w-5 h-5 text-emerald-500" /> : <Copy className="w-5 h-5 text-muted-foreground" />}
@@ -578,7 +579,7 @@ const OwnerDashboard: React.FC = () => {
                   </div>
                 )}
                 
-                <button onClick={() => { navigator.clipboard.writeText(newEmployeeCode); }}
+                <button onClick={async () => { await copyToClipboard(newEmployeeCode); }}
                   className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold flex items-center justify-center gap-2">
                   <Copy className="w-5 h-5" /> نسخ الكود
                 </button>

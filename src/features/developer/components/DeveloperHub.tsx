@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { copyToClipboard } from '@/lib/clipboard';
 import { useApp } from '@/store/AppContext';
 import { LicenseStatus, OrgStats } from '@/types';
 import { sanitizeText, sanitizePhone } from '@/lib/validation';
@@ -28,8 +29,8 @@ const DeveloperHub: React.FC = () => {
     refreshOrgStats();
   }, [refreshOrgStats]);
 
-  const copyKey = (key: string) => {
-    navigator.clipboard.writeText(key);
+  const copyKey = async (key: string) => {
+    await copyToClipboard(key);
     setCopied(key);
     setTimeout(() => setCopied(null), 2000);
   };

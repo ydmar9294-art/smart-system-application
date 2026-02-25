@@ -9,6 +9,7 @@
  * - Centralized query wrappers for consistency (Section 6)
  */
 import React, { createContext, useContext, useCallback } from 'react';
+import { generateUUID } from '@/lib/uuid';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole, Product, Customer, Sale, Payment, License, EmployeeType, LicenseStatus, OrgStats } from '@/types';
@@ -293,7 +294,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Section 4: Optimistic update — add placeholder customer
       const custKey = queryKeys.customers(orgId);
-      const tempId = crypto.randomUUID();
+      const tempId = generateUUID();
       const optimisticCustomer: Customer = {
         id: tempId, name, phone, balance: 0, location,
         organization_id: orgId, created_by: currentUser.id
@@ -351,7 +352,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Section 4: Optimistic update
       const prodKey = queryKeys.products(orgId);
-      const tempId = crypto.randomUUID();
+      const tempId = generateUUID();
       const optimisticProduct: Product = { id: tempId, organization_id: orgId, ...product };
       queryClient.setQueryData<Product[]>(prodKey, old => [optimisticProduct, ...(old || [])]);
 

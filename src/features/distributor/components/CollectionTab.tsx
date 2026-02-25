@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { generateUUID } from '@/lib/uuid';
 import { 
   Wallet, 
   Search, 
@@ -77,7 +78,7 @@ const CollectionTab: React.FC<CollectionTabProps> = ({ selectedCustomer }) => {
 
       // Store collection data for printing
       setLastCollectionData({
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         customerName: selectedSale?.customerName || '',
         amount: numAmount,
         notes: notes || undefined

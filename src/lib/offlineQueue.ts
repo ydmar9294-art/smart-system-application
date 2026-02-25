@@ -4,6 +4,8 @@
  * Supports auto-sync on reconnect with idempotency.
  */
 
+import { generateUUID } from '@/lib/uuid';
+
 const DB_NAME = 'smart_system_offline';
 const DB_VERSION = 1;
 const STORE_NAME = 'offline_queue';
@@ -44,11 +46,7 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 function generateId(): string {
-  return crypto.randomUUID ? crypto.randomUUID() : 
-    'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0;
-      return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-    });
+  return generateUUID();
 }
 
 // ============================================
