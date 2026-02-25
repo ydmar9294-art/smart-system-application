@@ -99,9 +99,9 @@ const DistributorDashboard: React.FC = () => {
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'inventory': return <DistributorInventoryTab />;
+      case 'inventory': return <DistributorInventoryTab localInventory={offline.localInventory} onQueueAction={offline.queueAction} isOnline={offline.isOnline} />;
       case 'new-sale': return <NewSaleTab selectedCustomer={selectedCustomer} localInventory={offline.localInventory} onQueueAction={offline.queueAction} isOnline={offline.isOnline} />;
-      case 'returns': return <SalesReturnTab selectedCustomer={selectedCustomer} />;
+      case 'returns': return <SalesReturnTab selectedCustomer={selectedCustomer} onQueueAction={offline.queueAction} isOnline={offline.isOnline} />;
       case 'collections': return <CollectionTab selectedCustomer={selectedCustomer} onQueueAction={offline.queueAction} isOnline={offline.isOnline} />;
       case 'debts': return <CustomerDebtsTab selectedCustomer={selectedCustomer} myCustomers={myCustomers} />;
       case 'history': return <InvoiceHistoryTab />;
