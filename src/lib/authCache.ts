@@ -1,29 +1,27 @@
 /**
- * Auth Cache - Layered caching strategy (SaaS standard)
+ * Auth Cache - Persistent offline-first caching strategy
  * 
  * Layer 1: Memory cache (instant, per-tab)
- * Layer 2: sessionStorage (survives refresh, per-tab)
+ * Layer 2: localStorage (survives app restarts, persistent)
  * 
- * TTL Strategy:
- * - Session/auth state: 5 minutes (short-lived)
- * - License status: 15 minutes (medium-lived)
- * - No permanent cache for auth decisions
+ * Boot Strategy:
+ * - On app launch, load from localStorage immediately — no TTL check for boot.
+ * - Background revalidation refreshes cache when online.
+ * - Cache is only cleared on explicit logout or server-side account invalidation.
  * 
  * Invalidation triggers:
- * - Logout
- * - Password change
- * - License change/expiration
- * - Role/permission update
+ * - Manual logout
+ * - Server confirms account deactivated / suspended / revoked
  */
 
 import { UserRole, EmployeeType, LicenseStatus } from '@/types';
 
-const CACHE_KEY = 'auth_cache_v3';
-const CACHE_VERSION = 3;
+const CACHE_KEY = 'auth_cache_v4';
+const CACHE_VERSION = 4;
 
-// Layered TTLs
-const AUTH_TTL_MS = 5 * 60 * 1000;     // 5 min for auth state
-const LICENSE_TTL_MS = 15 * 60 * 1000;  // 15 min for license
+// TTLs for ONLINE revalidation decisions only (not boot blocking)
+const REVALIDATION_TTL_MS = 5 * 60 * 1000;     // 5 min — triggers background revalidation
+const LICENSE_TTL_MS = 15 * 60 * 1000;          // 15 min for license freshness
 
 export interface CachedAuthState {
   userId: string;
@@ -42,39 +40,73 @@ export interface CachedAuthState {
 let memoryCache: CachedAuthState | null = null;
 
 /**
- * Check if auth data is still valid (short TTL)
+ * Check if cache exists and is structurally valid (no TTL — always valid for boot)
  */
-export const isAuthCacheValid = (cache: CachedAuthState | null): boolean => {
+export const isCacheStructurallyValid = (cache: CachedAuthState | null): boolean => {
   if (!cache) return false;
   if (cache.version !== CACHE_VERSION) return false;
-  return (Date.now() - cache.cachedAt) < AUTH_TTL_MS;
+  if (!cache.userId || !cache.role) return false;
+  return true;
 };
 
 /**
- * Check if license data is still valid (medium TTL)
+ * Check if cache is fresh enough to skip online revalidation
  */
-export const isLicenseCacheValid = (cache: CachedAuthState | null): boolean => {
-  if (!cache) return false;
-  if (cache.version !== CACHE_VERSION) return false;
-  return (Date.now() - cache.cachedAt) < LICENSE_TTL_MS;
+export const isAuthCacheFresh = (cache: CachedAuthState | null): boolean => {
+  if (!isCacheStructurallyValid(cache)) return false;
+  return (Date.now() - cache!.cachedAt) < REVALIDATION_TTL_MS;
 };
 
-/** @deprecated Use isAuthCacheValid instead */
-export const isCacheValid = isAuthCacheValid;
+/**
+ * Check if license data is still fresh (medium TTL)
+ */
+export const isLicenseCacheValid = (cache: CachedAuthState | null): boolean => {
+  if (!isCacheStructurallyValid(cache)) return false;
+  return (Date.now() - cache!.cachedAt) < LICENSE_TTL_MS;
+};
 
+/** @deprecated Use isAuthCacheFresh for revalidation checks */
+export const isAuthCacheValid = isAuthCacheFresh;
+/** @deprecated */
+export const isCacheValid = isAuthCacheFresh;
+
+/**
+ * Get cached auth state for BOOT — no TTL enforcement.
+ * Returns cached state as long as it's structurally valid.
+ */
 export const getCachedAuth = (): CachedAuthState | null => {
   // Memory cache first (instant)
-  if (memoryCache && isAuthCacheValid(memoryCache)) {
+  if (memoryCache && isCacheStructurallyValid(memoryCache)) {
     return memoryCache;
   }
   
   try {
-    const cached = sessionStorage.getItem(CACHE_KEY);
-    if (!cached) return null;
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (!cached) {
+      // Migration: check old sessionStorage keys
+      const oldCache = sessionStorage.getItem('auth_cache_v3');
+      if (oldCache) {
+        const parsed = JSON.parse(oldCache) as any;
+        if (parsed && parsed.userId && parsed.role) {
+          // Migrate to new format in localStorage
+          const migrated: CachedAuthState = {
+            ...parsed,
+            version: CACHE_VERSION,
+            cachedAt: Date.now(),
+          };
+          memoryCache = migrated;
+          localStorage.setItem(CACHE_KEY, JSON.stringify(migrated));
+          // Clean up old keys
+          sessionStorage.removeItem('auth_cache_v3');
+          return migrated;
+        }
+      }
+      return null;
+    }
     
     const parsed = JSON.parse(cached) as CachedAuthState;
     
-    if (!isAuthCacheValid(parsed)) {
+    if (!isCacheStructurallyValid(parsed)) {
       clearAuthCache();
       return null;
     }
@@ -89,7 +121,7 @@ export const getCachedAuth = (): CachedAuthState | null => {
 };
 
 /**
- * Get cached license status even if auth cache expired (medium TTL)
+ * Get cached license status (medium TTL for freshness)
  */
 export const getCachedLicense = (): CachedAuthState | null => {
   if (memoryCache && isLicenseCacheValid(memoryCache)) {
@@ -97,7 +129,7 @@ export const getCachedLicense = (): CachedAuthState | null => {
   }
   
   try {
-    const cached = sessionStorage.getItem(CACHE_KEY);
+    const cached = localStorage.getItem(CACHE_KEY);
     if (!cached) return null;
     const parsed = JSON.parse(cached) as CachedAuthState;
     if (!isLicenseCacheValid(parsed)) return null;
@@ -115,9 +147,9 @@ export const setCachedAuth = (state: Omit<CachedAuthState, 'cachedAt' | 'version
       version: CACHE_VERSION,
     };
     memoryCache = cacheData;
-    sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
   } catch (e) {
-    // sessionStorage might be full or unavailable
+    // localStorage might be full or unavailable
     console.warn('[AuthCache] Failed to persist:', e);
   }
 };
@@ -125,10 +157,12 @@ export const setCachedAuth = (state: Omit<CachedAuthState, 'cachedAt' | 'version
 export const clearAuthCache = (): void => {
   memoryCache = null;
   try {
-    sessionStorage.removeItem(CACHE_KEY);
-    // Also clear old cache keys
+    localStorage.removeItem(CACHE_KEY);
+    // Also clear old cache keys from both storages
     sessionStorage.removeItem('auth_cache_v1');
     sessionStorage.removeItem('auth_cache_v2');
+    sessionStorage.removeItem('auth_cache_v3');
+    localStorage.removeItem('auth_cache_v3');
   } catch {
     // Ignore
   }
