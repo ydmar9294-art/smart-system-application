@@ -20,14 +20,16 @@ import { logger } from '@/lib/logger';
 // Database Setup
 // ============================================
 
-const DB_NAME = 'distributor_offline_v2';
-const DB_VERSION = 2;
+const DB_NAME = 'distributor_offline_v3';
+const DB_VERSION = 3;
 
 const STORES = {
   ACTIONS: 'offline_actions',
   INVENTORY_CACHE: 'inventory_cache',
   CUSTOMERS_CACHE: 'customers_cache',
   SALES_CACHE: 'sales_cache',
+  INVOICES_CACHE: 'invoices_cache',
+  ORG_INFO_CACHE: 'org_info_cache',
 } as const;
 
 export type OfflineActionType = 
@@ -83,6 +85,14 @@ function openDB(): Promise<IDBDatabase> {
 
       if (!db.objectStoreNames.contains(STORES.SALES_CACHE)) {
         db.createObjectStore(STORES.SALES_CACHE, { keyPath: 'id' });
+      }
+
+      if (!db.objectStoreNames.contains(STORES.INVOICES_CACHE)) {
+        db.createObjectStore(STORES.INVOICES_CACHE, { keyPath: 'id' });
+      }
+
+      if (!db.objectStoreNames.contains(STORES.ORG_INFO_CACHE)) {
+        db.createObjectStore(STORES.ORG_INFO_CACHE, { keyPath: 'key' });
       }
     };
 
@@ -436,4 +446,83 @@ function handleOnline(): void {
 
 export function getIsSyncing(): boolean {
   return isSyncing;
+}
+
+// ============================================
+// Invoices Cache
+// ============================================
+
+export interface CachedInvoice {
+  id: string;
+  invoice_type: 'sale' | 'return' | 'collection';
+  invoice_number: string;
+  reference_id: string;
+  customer_id: string | null;
+  customer_name: string;
+  created_by: string | null;
+  created_by_name: string | null;
+  grand_total: number;
+  paid_amount: number;
+  remaining: number;
+  payment_type: 'CASH' | 'CREDIT' | null;
+  items: Array<{
+    product_name: string;
+    quantity: number;
+    unit_price: number;
+    total_price: number;
+    consumer_price?: number;
+    unit?: string;
+  }>;
+  notes: string | null;
+  reason: string | null;
+  org_name: string | null;
+  legal_info: any | null;
+  invoice_date: string;
+  created_at: string;
+}
+
+export async function cacheInvoices(invoices: CachedInvoice[]): Promise<void> {
+  await clearStore(STORES.INVOICES_CACHE);
+  for (const inv of invoices) {
+    await putItem(STORES.INVOICES_CACHE, inv);
+  }
+}
+
+export async function getCachedInvoices(): Promise<CachedInvoice[]> {
+  return getAllItems<CachedInvoice>(STORES.INVOICES_CACHE);
+}
+
+// ============================================
+// Organization Info Cache
+// ============================================
+
+export interface CachedOrgInfo {
+  key: string; // always 'org_info'
+  orgName: string;
+  legalInfo: {
+    commercial_registration: string | null;
+    industrial_registration: string | null;
+    tax_identification: string | null;
+    trademark_name: string | null;
+  } | null;
+  updatedAt: number;
+}
+
+export async function cacheOrgInfo(orgName: string, legalInfo: CachedOrgInfo['legalInfo']): Promise<void> {
+  await putItem(STORES.ORG_INFO_CACHE, {
+    key: 'org_info',
+    orgName,
+    legalInfo,
+    updatedAt: Date.now(),
+  });
+}
+
+export async function getCachedOrgInfo(): Promise<CachedOrgInfo | null> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.ORG_INFO_CACHE, 'readonly');
+    const req = tx.objectStore(STORES.ORG_INFO_CACHE).get('org_info');
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
 }

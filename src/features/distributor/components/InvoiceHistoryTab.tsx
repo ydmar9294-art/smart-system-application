@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   FileText,
   RotateCcw,
@@ -7,242 +7,189 @@ import {
   Loader2,
   Printer,
   History,
-  RefreshCw
+  RefreshCw,
+  WifiOff,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { CURRENCY } from '@/constants';
 import InvoiceHistoryPrint from './InvoiceHistoryPrint';
-
-interface InvoiceSnapshot {
-  id: string;
-  invoice_type: 'sale' | 'return' | 'collection';
-  invoice_number: string;
-  reference_id: string;
-  customer_id: string | null;
-  customer_name: string;
-  created_by: string | null;
-  created_by_name: string | null;
-  grand_total: number;
-  paid_amount: number;
-  remaining: number;
-  payment_type: 'CASH' | 'CREDIT' | null;
-  items: Array<{
-    product_name: string;
-    quantity: number;
-    unit_price: number;
-    total_price: number;
-  }>;
-  notes: string | null;
-  reason: string | null;
-  org_name: string | null;
-  legal_info: {
-    commercial_registration?: string;
-    industrial_registration?: string;
-    tax_identification?: string;
-    trademark_name?: string;
-  } | null;
-  invoice_date: string;
-  created_at: string;
-}
+import {
+  cacheInvoices,
+  getCachedInvoices,
+  type CachedInvoice,
+} from '../services/distributorOfflineService';
 
 type InvoiceFilter = 'all' | 'sale' | 'return' | 'collection';
 
-const InvoiceHistoryTab: React.FC = () => {
-  const [invoices, setInvoices] = useState<InvoiceSnapshot[]>([]);
+interface InvoiceHistoryTabProps {
+  isOnline: boolean;
+}
+
+const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
+  const [invoices, setInvoices] = useState<CachedInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<InvoiceFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Print state
-  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceSnapshot | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<CachedInvoice | null>(null);
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const loadedFromCache = useRef(false);
 
-  const fetchInvoices = useCallback(async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
+  // Load from IndexedDB first, then background-refresh from server
+  const loadInvoices = useCallback(async (isRefresh = false) => {
+    // On first load, show cached data immediately
+    if (!loadedFromCache.current) {
+      try {
+        const cached = await getCachedInvoices();
+        if (cached.length > 0) {
+          setInvoices(cached);
+          setLoading(false);
+          loadedFromCache.current = true;
+        }
+      } catch { /* IndexedDB not available */ }
     }
-    
+
+    if (isRefresh) setRefreshing(true);
+
+    if (!navigator.onLine) {
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) { setLoading(false); setRefreshing(false); return; }
 
-      const results: InvoiceSnapshot[] = [];
+      const results: CachedInvoice[] = [];
 
-      // Fetch sales with items (if filter allows)
-      if (filter === 'all' || filter === 'sale') {
-        const { data: sales } = await supabase
+      // Fetch sales
+      const { data: sales } = await supabase
+        .from('sales')
+        .select('id, customer_id, customer_name, grand_total, paid_amount, remaining, payment_type, created_by, created_at, is_voided')
+        .eq('created_by', user.id)
+        .eq('is_voided', false)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (sales && sales.length > 0) {
+        const saleIds = sales.map(s => s.id);
+        const { data: saleItems } = await supabase
+          .from('sale_items')
+          .select('sale_id, product_name, quantity, unit_price, total_price')
+          .in('sale_id', saleIds);
+
+        const itemsBySale = new Map<string, CachedInvoice['items']>();
+        (saleItems || []).forEach(item => {
+          const list = itemsBySale.get(item.sale_id) || [];
+          list.push({ product_name: item.product_name, quantity: item.quantity, unit_price: item.unit_price, total_price: item.total_price });
+          itemsBySale.set(item.sale_id, list);
+        });
+
+        sales.forEach((sale, i) => {
+          results.push({
+            id: sale.id, invoice_type: 'sale',
+            invoice_number: `INV-${String(i + 1).padStart(4, '0')}`,
+            reference_id: sale.id, customer_id: sale.customer_id,
+            customer_name: sale.customer_name, created_by: sale.created_by,
+            created_by_name: null, grand_total: sale.grand_total,
+            paid_amount: sale.paid_amount, remaining: sale.remaining,
+            payment_type: sale.payment_type as 'CASH' | 'CREDIT',
+            items: itemsBySale.get(sale.id) || [],
+            notes: null, reason: null, org_name: null, legal_info: null,
+            invoice_date: sale.created_at, created_at: sale.created_at,
+          });
+        });
+      }
+
+      // Fetch returns
+      const { data: returns } = await supabase
+        .from('sales_returns')
+        .select('id, sale_id, customer_name, total_amount, reason, created_by, created_at')
+        .eq('created_by', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (returns && returns.length > 0) {
+        const returnIds = returns.map(r => r.id);
+        const { data: returnItems } = await supabase
+          .from('sales_return_items')
+          .select('return_id, product_name, quantity, unit_price, total_price')
+          .in('return_id', returnIds);
+
+        const itemsByReturn = new Map<string, CachedInvoice['items']>();
+        (returnItems || []).forEach(item => {
+          const list = itemsByReturn.get(item.return_id) || [];
+          list.push({ product_name: item.product_name, quantity: item.quantity, unit_price: item.unit_price, total_price: item.total_price });
+          itemsByReturn.set(item.return_id, list);
+        });
+
+        returns.forEach((ret, i) => {
+          results.push({
+            id: ret.id, invoice_type: 'return',
+            invoice_number: `RET-${String(i + 1).padStart(4, '0')}`,
+            reference_id: ret.id, customer_id: null,
+            customer_name: ret.customer_name, created_by: ret.created_by,
+            created_by_name: null, grand_total: ret.total_amount,
+            paid_amount: 0, remaining: 0, payment_type: null,
+            items: itemsByReturn.get(ret.id) || [],
+            notes: null, reason: ret.reason, org_name: null, legal_info: null,
+            invoice_date: ret.created_at, created_at: ret.created_at,
+          });
+        });
+      }
+
+      // Fetch collections
+      const { data: collections } = await supabase
+        .from('collections')
+        .select('id, sale_id, amount, notes, collected_by, created_at, is_reversed')
+        .eq('collected_by', user.id)
+        .eq('is_reversed', false)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (collections && collections.length > 0) {
+        const collSaleIds = [...new Set(collections.map(c => c.sale_id))];
+        const { data: collSales } = await supabase
           .from('sales')
-          .select('id, customer_id, customer_name, grand_total, paid_amount, remaining, payment_type, created_by, created_at, is_voided')
-          .eq('created_by', user.id)
-          .eq('is_voided', false)
-          .order('created_at', { ascending: false })
-          .limit(50);
+          .select('id, customer_name')
+          .in('id', collSaleIds);
 
-        if (sales && sales.length > 0) {
-          // Fetch sale items for these sales
-          const saleIds = sales.map(s => s.id);
-          const { data: saleItems } = await supabase
-            .from('sale_items')
-            .select('sale_id, product_name, quantity, unit_price, total_price')
-            .in('sale_id', saleIds);
+        const saleNameMap = new Map<string, string>();
+        (collSales || []).forEach(s => saleNameMap.set(s.id, s.customer_name));
 
-          const itemsBySale = new Map<string, InvoiceSnapshot['items']>();
-          (saleItems || []).forEach(item => {
-            const list = itemsBySale.get(item.sale_id) || [];
-            list.push({
-              product_name: item.product_name,
-              quantity: item.quantity,
-              unit_price: item.unit_price,
-              total_price: item.total_price
-            });
-            itemsBySale.set(item.sale_id, list);
+        collections.forEach((col, i) => {
+          results.push({
+            id: col.id, invoice_type: 'collection',
+            invoice_number: `COL-${String(i + 1).padStart(4, '0')}`,
+            reference_id: col.sale_id, customer_id: null,
+            customer_name: saleNameMap.get(col.sale_id) || 'غير معروف',
+            created_by: col.collected_by, created_by_name: null,
+            grand_total: col.amount, paid_amount: col.amount,
+            remaining: 0, payment_type: 'CASH',
+            items: [], notes: col.notes, reason: null,
+            org_name: null, legal_info: null,
+            invoice_date: col.created_at, created_at: col.created_at,
           });
-
-          sales.forEach((sale, i) => {
-            results.push({
-              id: sale.id,
-              invoice_type: 'sale',
-              invoice_number: `INV-${String(i + 1).padStart(4, '0')}`,
-              reference_id: sale.id,
-              customer_id: sale.customer_id,
-              customer_name: sale.customer_name,
-              created_by: sale.created_by,
-              created_by_name: null,
-              grand_total: sale.grand_total,
-              paid_amount: sale.paid_amount,
-              remaining: sale.remaining,
-              payment_type: sale.payment_type as 'CASH' | 'CREDIT',
-              items: itemsBySale.get(sale.id) || [],
-              notes: null,
-              reason: null,
-              org_name: null,
-              legal_info: null,
-              invoice_date: sale.created_at,
-              created_at: sale.created_at
-            });
-          });
-        }
+        });
       }
 
-      // Fetch sales returns (if filter allows)
-      if (filter === 'all' || filter === 'return') {
-        const { data: returns } = await supabase
-          .from('sales_returns')
-          .select('id, sale_id, customer_name, total_amount, reason, created_by, created_at')
-          .eq('created_by', user.id)
-          .order('created_at', { ascending: false })
-          .limit(50);
-
-        if (returns && returns.length > 0) {
-          const returnIds = returns.map(r => r.id);
-          const { data: returnItems } = await supabase
-            .from('sales_return_items')
-            .select('return_id, product_name, quantity, unit_price, total_price')
-            .in('return_id', returnIds);
-
-          const itemsByReturn = new Map<string, InvoiceSnapshot['items']>();
-          (returnItems || []).forEach(item => {
-            const list = itemsByReturn.get(item.return_id) || [];
-            list.push({
-              product_name: item.product_name,
-              quantity: item.quantity,
-              unit_price: item.unit_price,
-              total_price: item.total_price
-            });
-            itemsByReturn.set(item.return_id, list);
-          });
-
-          returns.forEach((ret, i) => {
-            results.push({
-              id: ret.id,
-              invoice_type: 'return',
-              invoice_number: `RET-${String(i + 1).padStart(4, '0')}`,
-              reference_id: ret.id,
-              customer_id: null,
-              customer_name: ret.customer_name,
-              created_by: ret.created_by,
-              created_by_name: null,
-              grand_total: ret.total_amount,
-              paid_amount: 0,
-              remaining: 0,
-              payment_type: null,
-              items: itemsByReturn.get(ret.id) || [],
-              notes: null,
-              reason: ret.reason,
-              org_name: null,
-              legal_info: null,
-              invoice_date: ret.created_at,
-              created_at: ret.created_at
-            });
-          });
-        }
-      }
-
-      // Fetch collections (if filter allows)
-      if (filter === 'all' || filter === 'collection') {
-        const { data: collections } = await supabase
-          .from('collections')
-          .select('id, sale_id, amount, notes, collected_by, created_at, is_reversed')
-          .eq('collected_by', user.id)
-          .eq('is_reversed', false)
-          .order('created_at', { ascending: false })
-          .limit(50);
-
-        if (collections && collections.length > 0) {
-          // Get customer names from sales
-          const collSaleIds = [...new Set(collections.map(c => c.sale_id))];
-          const { data: collSales } = await supabase
-            .from('sales')
-            .select('id, customer_name')
-            .in('id', collSaleIds);
-
-          const saleNameMap = new Map<string, string>();
-          (collSales || []).forEach(s => saleNameMap.set(s.id, s.customer_name));
-
-          collections.forEach((col, i) => {
-            results.push({
-              id: col.id,
-              invoice_type: 'collection',
-              invoice_number: `COL-${String(i + 1).padStart(4, '0')}`,
-              reference_id: col.sale_id,
-              customer_id: null,
-              customer_name: saleNameMap.get(col.sale_id) || 'غير معروف',
-              created_by: col.collected_by,
-              created_by_name: null,
-              grand_total: col.amount,
-              paid_amount: col.amount,
-              remaining: 0,
-              payment_type: 'CASH',
-              items: [],
-              notes: col.notes,
-              reason: null,
-              org_name: null,
-              legal_info: null,
-              invoice_date: col.created_at,
-              created_at: col.created_at
-            });
-          });
-        }
-      }
-
-      // Sort all results by date descending
       results.sort((a, b) => new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime());
-      
       setInvoices(results);
+      
+      // Cache for offline use
+      try { await cacheInvoices(results); } catch { /* ignore */ }
     } catch (err) {
       console.error('Error fetching invoices:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filter]);
+  }, []);
 
   useEffect(() => {
-    fetchInvoices();
-  }, [fetchInvoices]);
+    loadInvoices();
+  }, [loadInvoices]);
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -271,7 +218,7 @@ const InvoiceHistoryTab: React.FC = () => {
     }
   };
 
-  const handlePrint = (invoice: InvoiceSnapshot) => {
+  const handlePrint = (invoice: CachedInvoice) => {
     setSelectedInvoice(invoice);
     setShowPrintModal(true);
   };
@@ -281,15 +228,14 @@ const InvoiceHistoryTab: React.FC = () => {
     setSelectedInvoice(null);
   };
 
-  // Filter by search query
-  const filteredInvoices = invoices.filter(inv => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      inv.customer_name.toLowerCase().includes(query) ||
-      inv.invoice_number.toLowerCase().includes(query)
-    );
-  });
+  // Apply filters locally
+  const filteredInvoices = invoices
+    .filter(inv => filter === 'all' || inv.invoice_type === filter)
+    .filter(inv => {
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase();
+      return inv.customer_name.toLowerCase().includes(query) || inv.invoice_number.toLowerCase().includes(query);
+    });
 
   const filterButtons: { id: InvoiceFilter; label: string; color: string }[] = [
     { id: 'all', label: 'الكل', color: 'bg-gray-600' },
@@ -300,12 +246,8 @@ const InvoiceHistoryTab: React.FC = () => {
 
   return (
     <div className="p-4 space-y-4">
-      {/* Print Modal */}
       {showPrintModal && selectedInvoice && (
-        <InvoiceHistoryPrint
-          invoice={selectedInvoice}
-          onClose={closePrintModal}
-        />
+        <InvoiceHistoryPrint invoice={selectedInvoice} onClose={closePrintModal} />
       )}
 
       {/* Header */}
@@ -313,11 +255,12 @@ const InvoiceHistoryTab: React.FC = () => {
         <h2 className="font-black text-lg flex items-center gap-2">
           <History className="w-5 h-5 text-primary" />
           سجل الفواتير
+          {!isOnline && <WifiOff className="w-4 h-4 text-amber-500" />}
         </h2>
         <button
-          onClick={() => fetchInvoices(true)}
-          disabled={refreshing}
-          className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1"
+          onClick={() => loadInvoices(true)}
+          disabled={refreshing || !isOnline}
+          className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 disabled:opacity-50"
         >
           <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           تحديث
@@ -370,10 +313,7 @@ const InvoiceHistoryTab: React.FC = () => {
       ) : (
         <div className="space-y-2">
           {filteredInvoices.map((invoice) => (
-            <div 
-              key={invoice.id} 
-              className="bg-muted rounded-2xl p-4"
-            >
+            <div key={invoice.id} className="bg-muted rounded-2xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold ${getTypeColor(invoice.invoice_type)}`}>
