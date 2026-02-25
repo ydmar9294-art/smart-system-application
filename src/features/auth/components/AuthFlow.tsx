@@ -4,6 +4,7 @@ import AppLogo from '@/components/ui/AppLogo';
 import { supabase } from '@/integrations/supabase/client';
 import { getCachedAuth, clearAuthCache } from '@/lib/authCache';
 import { checkAuthStatus } from '@/hooks/useAuthOperations';
+import { isOAuthPending, clearOAuthPending } from '@/lib/oauthState';
 import EmailPasswordAuth from './EmailPasswordAuth';
 import GoogleSignInButton from './GoogleSignInButton';
 import LicenseActivation from './LicenseActivation';
@@ -28,6 +29,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
   const [authState, setAuthState] = useState<AuthState>({ type: 'initial' });
   const [authError, setAuthError] = useState<string>('');
   const [isSlow, setIsSlow] = useState(false);
+  const [oauthPending, setOauthPending] = useState(() => isOAuthPending());
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -68,6 +70,8 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       ]);
 
       clearTimers();
+      clearOAuthPending();
+      setOauthPending(false);
 
       if (!status.authenticated) {
         setAuthState({ type: 'needs_activation', userId, email, fullName });
@@ -96,6 +100,8 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       onAuthComplete();
     } catch (err: any) {
       clearTimers();
+      clearOAuthPending();
+      setOauthPending(false);
       console.error('[AuthFlow] Check profile error:', err);
       const isTimeout = err?.message === 'VERIFY_TIMEOUT';
       setAuthState({
@@ -165,6 +171,8 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
 
   const handleLogout = async () => {
     clearAuthCache();
+    clearOAuthPending();
+    setOauthPending(false);
     await supabase.auth.signOut();
     clearTimers();
     setAuthState({ type: 'initial' });
@@ -277,7 +285,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
             </div>
             
             {/* Google OAuth */}
-            <GoogleSignInButton onError={handleAuthError} />
+            <GoogleSignInButton onError={handleAuthError} oauthInProgress={oauthPending} />
             
             {/* Divider */}
             <div className="flex items-center gap-3">
