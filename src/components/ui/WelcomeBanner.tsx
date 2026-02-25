@@ -1,5 +1,6 @@
 import React from 'react';
-import { Sparkles, Rocket, Star } from 'lucide-react';
+import { Sparkles, Star } from 'lucide-react';
+import appLogo from '@/assets/logo-buildings.png';
 
 interface WelcomeBannerProps {
   className?: string;
@@ -27,7 +28,7 @@ const WelcomeBanner: React.FC<WelcomeBannerProps> = ({ className = '' }) => {
         </div>
         
         <div className="flex items-center gap-1">
-          <Rocket className="w-5 h-5 text-white/90" />
+          <img src={appLogo} alt="Logo" className="w-6 h-6 rounded" />
           <Star className="w-4 h-4 text-yellow-300 animate-pulse delay-150" />
         </div>
       </div>
