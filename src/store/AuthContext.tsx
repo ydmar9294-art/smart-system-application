@@ -1,5 +1,5 @@
 /**
- * AuthContext - Offline-first, persistent authentication
+ * AuthContext - Offline-first, persistent authentication v2
  * 
  * Design principles:
  * - PERSISTENT LOGIN: After first successful login, user stays logged in forever.
