@@ -10,13 +10,14 @@ import {
   Check,
   Loader2,
   Package,
-  AlertCircle
+  AlertCircle,
+  WifiOff
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
-import { supabase } from '@/integrations/supabase/client';
 import { Customer } from '@/types';
 import InvoicePrint from './InvoicePrint';
 import FullScreenModal from '@/components/ui/FullScreenModal';
+import type { CachedInventoryItem } from '../services/distributorOfflineService';
 
 interface CartItem {
   product_id: string;
@@ -27,31 +28,22 @@ interface CartItem {
   unit: string;
 }
 
-interface DistributorProduct {
-  id: string;
-  product_id: string;
-  product_name: string;
-  quantity: number;
-  base_price: number;
-  consumer_price: number;
-  unit: string;
-}
-
 interface NewSaleTabProps {
   selectedCustomer: Customer | null;
+  localInventory: CachedInventoryItem[];
+  onQueueAction: (type: any, payload: any, inventoryUpdates?: { productId: string; quantityDelta: number }[]) => Promise<any>;
+  isOnline: boolean;
 }
 
 type PaymentType = 'CASH' | 'CREDIT';
 
-const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
-  const { createSale, refreshAllData, addNotification } = useApp();
+const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventory, onQueueAction, isOnline }) => {
+  const { addNotification } = useApp();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchProduct, setSearchProduct] = useState('');
   const [showProductPicker, setShowProductPicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [distributorInventory, setDistributorInventory] = useState<DistributorProduct[]>([]);
-  const [loadingInventory, setLoadingInventory] = useState(true);
   const [paymentType, setPaymentType] = useState<PaymentType>('CREDIT');
   
   // Print state
@@ -64,61 +56,14 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
     paymentType: PaymentType;
   } | null>(null);
 
-  // جلب مخزون الموزع الخاص به فقط
-  const fetchDistributorInventory = React.useCallback(async () => {
-    setLoadingInventory(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('distributor_inventory')
-        .select('id, product_id, product_name, quantity')
-        .eq('distributor_id', user.id)
-        .gt('quantity', 0);
-
-      if (error) throw error;
-
-      // جلب أسعار المنتجات من جدول المنتجات
-      const productIds = (data || []).map(d => d.product_id);
-      const { data: productsData } = await supabase
-        .from('products')
-        .select('id, base_price, consumer_price, unit')
-        .in('id', productIds);
-
-      const priceMap = new Map((productsData || []).map(p => [p.id, { base_price: Number(p.base_price), consumer_price: Number(p.consumer_price ?? 0), unit: p.unit || '' }]));
-
-      setDistributorInventory((data || []).map(item => {
-        const priceInfo = priceMap.get(item.product_id);
-        return {
-          id: item.id,
-          product_id: item.product_id,
-          product_name: item.product_name,
-          quantity: item.quantity,
-          base_price: priceInfo?.base_price || 0,
-          consumer_price: priceInfo?.consumer_price || 0,
-          unit: priceInfo?.unit || ''
-        };
-      }));
-    } catch (err) {
-      console.error('Error fetching distributor inventory:', err);
-    } finally {
-      setLoadingInventory(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchDistributorInventory();
-  }, [fetchDistributorInventory]);
-
-  // استخدام مخزون الموزع بدلاً من المخزون العام
-  const activeProducts = distributorInventory.filter(p => p.quantity > 0);
+  // Use local cached inventory (offline-first)
+  const activeProducts = localInventory.filter(p => p.quantity > 0);
   
   const filteredProducts = activeProducts.filter(p =>
     p.product_name.toLowerCase().includes(searchProduct.toLowerCase())
   );
 
-  const addToCart = (product: DistributorProduct) => {
+  const addToCart = (product: CachedInventoryItem) => {
     const existing = cart.find(item => item.product_id === product.product_id);
     if (existing) {
       if (existing.quantity < product.quantity) {
@@ -143,7 +88,7 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
   };
 
   const updateQuantity = (productId: string, delta: number) => {
-    const product = distributorInventory.find(p => p.product_id === productId);
+    const product = localInventory.find(p => p.product_id === productId);
     setCart(cart.map(item => {
       if (item.product_id === productId) {
         const newQty = item.quantity + delta;
@@ -166,22 +111,26 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
 
     setLoading(true);
     try {
-      // Call RPC with payment type
-      // Use distributor-specific RPC that deducts from distributor_inventory
-      const { data, error } = await supabase.rpc('create_distributor_sale_rpc', {
-        p_customer_id: selectedCustomer.id,
-        p_items: cart.map(item => ({
-          productId: item.product_id,
-          productName: item.product_name,
-          quantity: item.quantity,
-          unitPrice: item.unit_price,
-          totalPrice: item.quantity * item.unit_price
-        })),
-        p_payment_type: paymentType
-      });
+      const saleItems = cart.map(item => ({
+        productId: item.product_id,
+        productName: item.product_name,
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        totalPrice: item.quantity * item.unit_price
+      }));
 
-      if (error) throw error;
-      
+      // Inventory updates: deduct quantities locally
+      const inventoryUpdates = cart.map(item => ({
+        productId: item.product_id,
+        quantityDelta: -item.quantity,
+      }));
+
+      await onQueueAction('CREATE_SALE', {
+        customerId: selectedCustomer.id,
+        items: saleItems,
+        paymentType,
+      }, inventoryUpdates);
+
       // Store sale data for printing
       setLastSaleData({
         id: generateUUID(),
@@ -192,15 +141,17 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
       });
       
       setCart([]);
-      setPaymentType('CREDIT'); // Reset to default
+      setPaymentType('CREDIT');
       setSuccess(true);
-      setShowPrintModal(true); // Show print modal after success
-      await refreshAllData();
-      // Refresh local distributor inventory to reflect deducted quantities
-      await fetchDistributorInventory();
+      setShowPrintModal(true);
+      
+      addNotification(
+        isOnline ? 'تم إنشاء الفاتورة بنجاح' : 'تم حفظ الفاتورة — ستتم المزامنة عند عودة الإنترنت',
+        'success'
+      );
     } catch (error) {
       console.error('Error creating sale:', error);
-      addNotification('حدث خطأ أثناء إنشاء الفاتورة', 'error');
+      addNotification('حدث خطأ أثناء حفظ الفاتورة', 'error');
     } finally {
       setLoading(false);
     }
@@ -242,6 +193,11 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
         <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 rounded-2xl flex items-center gap-2 border border-emerald-500/20">
           <Check className="w-5 h-5" />
           <span className="font-bold">تم إنشاء الفاتورة بنجاح!</span>
+          {!isOnline && (
+            <span className="text-xs text-muted-foreground mr-auto flex items-center gap-1">
+              <WifiOff className="w-3 h-3" /> محفوظة محلياً
+            </span>
+          )}
         </div>
       )}
 
@@ -295,26 +251,17 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
             <div key={item.product_id} className="bg-muted rounded-2xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <span className="font-bold text-foreground">{item.product_name}</span>
-                <button
-                  onClick={() => removeFromCart(item.product_id)}
-                  className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"
-                >
+                <button onClick={() => removeFromCart(item.product_id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
                   <X className="w-4 h-4" />
                 </button>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 bg-card rounded-xl p-1">
-                  <button
-                    onClick={() => updateQuantity(item.product_id, -1)}
-                    className="w-9 h-9 bg-muted rounded-lg flex items-center justify-center hover:bg-accent"
-                  >
+                  <button onClick={() => updateQuantity(item.product_id, -1)} className="w-9 h-9 bg-muted rounded-lg flex items-center justify-center hover:bg-accent">
                     <Minus className="w-4 h-4 text-muted-foreground" />
                   </button>
                   <span className="font-black w-8 text-center text-lg text-foreground">{item.quantity}</span>
-                  <button
-                    onClick={() => updateQuantity(item.product_id, 1)}
-                    className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-700"
-                  >
+                  <button onClick={() => updateQuantity(item.product_id, 1)} className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-700">
                     <Plus className="w-4 h-4 text-white" />
                   </button>
                 </div>
@@ -334,26 +281,20 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
           <div className="space-y-2">
             <label className="text-xs font-black text-muted-foreground uppercase">نوع الدفع</label>
             <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setPaymentType('CASH')}
+              <button type="button" onClick={() => setPaymentType('CASH')}
                 className={`py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all border-2 ${
                   paymentType === 'CASH'
                     ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/30'
                     : 'bg-muted text-muted-foreground border-border hover:border-emerald-300'
-                }`}
-              >
+                }`}>
                 💵 نقداً
               </button>
-              <button
-                type="button"
-                onClick={() => setPaymentType('CREDIT')}
+              <button type="button" onClick={() => setPaymentType('CREDIT')}
                 className={`py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all border-2 ${
                   paymentType === 'CREDIT'
                     ? 'bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/30'
                     : 'bg-muted text-muted-foreground border-border hover:border-orange-300'
-                }`}
-              >
+                }`}>
                 📝 آجل
               </button>
             </div>
@@ -365,54 +306,29 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
               {grandTotal.toLocaleString('ar-SA')} ل.س
             </span>
           </div>
-          <button
-            onClick={handleCreateSale}
-            disabled={loading || !selectedCustomer}
-            className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none hover:bg-blue-700 transition-all"
-          >
+          <button onClick={handleCreateSale} disabled={loading || !selectedCustomer}
+            className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none hover:bg-blue-700 transition-all">
             {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                جارٍ الحفظ...
-              </>
+              <><Loader2 className="w-5 h-5 animate-spin" /> جارٍ الحفظ...</>
             ) : (
-              <>
-                <Check className="w-5 h-5" />
-                تأكيد الفاتورة
-              </>
+              <><Check className="w-5 h-5" /> تأكيد الفاتورة {!isOnline && <WifiOff className="w-4 h-4 opacity-60" />}</>
             )}
           </button>
         </div>
       )}
 
-      {/* Product Picker Modal - Full Screen */}
-      <FullScreenModal
-        isOpen={showProductPicker}
-        onClose={() => setShowProductPicker(false)}
-        title="اختر المادة"
-        icon={<Package size={24} />}
-        headerColor="primary"
-      >
-        {/* Search */}
+      {/* Product Picker Modal */}
+      <FullScreenModal isOpen={showProductPicker} onClose={() => setShowProductPicker(false)}
+        title="اختر المادة" icon={<Package size={24} />} headerColor="primary">
         <div className="relative mb-4">
           <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="بحث عن مادة..."
-            value={searchProduct}
+          <input type="text" placeholder="بحث عن مادة..." value={searchProduct}
             onChange={(e) => setSearchProduct(e.target.value)}
-            className="w-full bg-muted border border-border rounded-xl px-12 py-4 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 text-base"
-          />
+            className="w-full bg-muted border border-border rounded-xl px-12 py-4 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 text-base" />
         </div>
         
-        {/* Products List */}
         <div className="space-y-2">
-          {loadingInventory ? (
-            <div className="text-center py-16">
-              <Loader2 className="w-10 h-10 mx-auto mb-4 animate-spin text-primary" />
-              <p className="text-muted-foreground font-bold">جارٍ التحميل...</p>
-            </div>
-          ) : filteredProducts.length === 0 ? (
+          {activeProducts.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground">
               <Package className="w-20 h-20 mx-auto mb-4 opacity-30" />
               <p className="font-bold text-lg mb-2">لا توجد مواد متاحة</p>
@@ -420,11 +336,8 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
             </div>
           ) : (
             filteredProducts.map((product) => (
-              <button
-                key={product.id}
-                onClick={() => addToCart(product)}
-                className="w-full text-start p-5 bg-muted rounded-2xl hover:bg-muted/80 transition-colors active:scale-[0.98]"
-              >
+              <button key={product.product_id} onClick={() => addToCart(product)}
+                className="w-full text-start p-5 bg-muted rounded-2xl hover:bg-muted/80 transition-colors active:scale-[0.98]">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-bold text-foreground text-lg">{product.product_name}</p>
