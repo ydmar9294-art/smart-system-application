@@ -93,15 +93,16 @@ export function useDistributorOffline() {
   }, []);
 
   const resolveOfflineOrgContext = useCallback(async (): Promise<{ organizationId: string; distributorId: string } | null> => {
-    // Strict offline path: IndexedDB only
-    if (!navigator.onLine) {
-      return getOfflineOrgContext();
-    }
+    // Always try cached context first (instant, works offline)
+    const cached = await getOfflineOrgContext();
+    if (cached) return cached;
 
-    // Online path: refresh cache from server
+    // No cache yet — try server (first-time use only)
+    if (!navigator.onLine) return null;
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return getOfflineOrgContext();
+      if (!user) return null;
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -114,14 +115,18 @@ export function useDistributorOffline() {
         return { organizationId: profile.organization_id, distributorId: user.id };
       }
     } catch {
-      // fall back to cached context
+      // no network
     }
 
-    return getOfflineOrgContext();
+    return null;
   }, []);
 
   // Fetch inventory from server and cache locally
   const refreshInventory = useCallback(async () => {
+    if (!navigator.onLine) {
+      await refreshStats();
+      return;
+    }
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -176,6 +181,11 @@ export function useDistributorOffline() {
 
   // Fetch customers from server and cache locally
   const refreshCustomers = useCallback(async () => {
+    if (!navigator.onLine) {
+      // Offline: just load from cache
+      await refreshStats();
+      return;
+    }
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -186,6 +196,9 @@ export function useDistributorOffline() {
         .eq('id', user.id)
         .single();
       if (!profile?.organization_id) return;
+
+      // Cache org context every time we successfully fetch profile (ensures offline availability)
+      await cacheOfflineOrgContext(profile.organization_id, user.id);
 
       const { data, error } = await supabase
         .from('customers')
@@ -218,6 +231,10 @@ export function useDistributorOffline() {
 
   // Fetch sales from server and cache locally
   const refreshSales = useCallback(async () => {
+    if (!navigator.onLine) {
+      await refreshStats();
+      return;
+    }
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -483,8 +500,10 @@ export function useDistributorOffline() {
       }
     });
 
-    // Load initial data
+    // Load initial data — always loads from IndexedDB first (instant), then background refresh if online
     refreshStats();
+    // Cache org context eagerly on init (ensures offline customer creation works)
+    resolveOfflineOrgContext();
     refreshInventory();
     refreshSales();
     refreshCustomers();

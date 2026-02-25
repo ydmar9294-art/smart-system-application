@@ -54,14 +54,27 @@ const DistributorDashboard: React.FC = () => {
 
   useEffect(() => {
     const getCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) setCurrentUserId(user.id);
+      // Try cached auth first (works offline via Supabase local session)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setCurrentUserId(session.user.id);
+        return;
+      }
+      // Fallback to getUser (requires network)
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) setCurrentUserId(user.id);
+      } catch {
+        // offline and no cached session — customers will show all
+      }
     };
     getCurrentUser();
   }, []);
 
-  // Use offline-first cached customers instead of network-dependent customers from context
-  const myCustomers = offline.localCustomers.filter(c => c.created_by === currentUserId);
+  // Use offline-first cached customers — show ALL when userId unknown (offline fallback)
+  const myCustomers = currentUserId
+    ? offline.localCustomers.filter(c => c.created_by === currentUserId)
+    : offline.localCustomers;
   const filteredCustomers = myCustomers.filter(c => c.name.toLowerCase().includes(searchCustomer.toLowerCase()));
   const totalDebt = myCustomers.reduce((sum, c) => sum + Number(c.balance), 0);
   const totalCustomers = myCustomers.length;
@@ -78,19 +91,11 @@ const DistributorDashboard: React.FC = () => {
     if (!newCustomerLocation.trim()) { addNotification('يرجى إدخال موقع الزبون', 'warning'); return; }
     setAddingCustomer(true);
     try {
-      const orgId = organization?.id;
-      if (!orgId || !currentUserId) {
-        addNotification('لا يمكن إضافة زبون — بيانات المنشأة غير متاحة', 'error');
-        return;
-      }
-
-      // Use offline-first customer add (works offline with temp ID)
+      // addCustomerOffline resolves org context from IndexedDB — no network needed
       const newCustomer = await offline.addCustomerOffline(
         newCustomerName.trim(),
         newCustomerPhone.trim(),
         newCustomerLocation.trim(),
-        orgId,
-        currentUserId
       );
 
       setNewCustomerName(''); setNewCustomerPhone(''); setNewCustomerLocation('');
@@ -111,7 +116,10 @@ const DistributorDashboard: React.FC = () => {
         offline.isOnline ? 'تم إضافة الزبون بنجاح' : 'تم حفظ الزبون محلياً — ستتم المزامنة عند عودة الإنترنت',
         'success'
       );
-    } catch (error) { console.error('Error adding customer:', error); }
+    } catch (error: any) {
+      console.error('Error adding customer:', error);
+      addNotification(error?.message || 'فشل إضافة الزبون', 'error');
+    }
     finally { setAddingCustomer(false); }
   };
 
