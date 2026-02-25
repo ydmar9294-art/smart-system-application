@@ -13,9 +13,17 @@ interface AuthFlowProps {
   onAuthComplete: () => void;
 }
 
+type LoadingPhase = 'returning' | 'validating_license' | 'checking_status';
+
+const PHASE_LABELS: Record<LoadingPhase, string> = {
+  returning: 'جارٍ تسجيل الدخول...',
+  validating_license: 'جارٍ التحقق من الترخيص...',
+  checking_status: 'جارٍ التحقق من حالة الحساب...',
+};
+
 type AuthState =
 {type: 'initial';} |
-{type: 'loading'; startedAt: number;} |
+{type: 'loading'; startedAt: number; phase: LoadingPhase;} |
 {type: 'needs_activation';userId: string;email: string;fullName: string;} |
 {type: 'access_denied';reason: string;message: string;} |
 {type: 'error';message: string; canRetry?: boolean;};
@@ -39,9 +47,9 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
     setIsSlow(false);
   }, []);
 
-  const startVerification = useCallback(() => {
+  const startVerification = useCallback((phase: LoadingPhase = 'returning') => {
     clearTimers();
-    setAuthState({ type: 'loading', startedAt: Date.now() });
+    setAuthState({ type: 'loading', startedAt: Date.now(), phase });
     
     // Show "slow" indicator after threshold
     slowTimerRef.current = setTimeout(() => setIsSlow(true), SLOW_THRESHOLD_MS);
@@ -62,6 +70,9 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       const email = user.email || '';
       const fullName = user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0] || '';
 
+      // Phase: validating license
+      setAuthState(prev => prev.type === 'loading' ? { ...prev, phase: 'validating_license' } : prev);
+
       const status = await Promise.race([
         checkAuthStatus(),
         new Promise<never>((_, reject) => 
@@ -77,6 +88,9 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
         setAuthState({ type: 'needs_activation', userId, email, fullName });
         return;
       }
+
+      // Phase: checking account status
+      setAuthState(prev => prev.type === 'loading' ? { ...prev, phase: 'checking_status' } : prev);
 
       if (status.access_denied) {
         setAuthState({
@@ -202,7 +216,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
         return (
           <div className="flex flex-col items-center justify-center py-12 space-y-4">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
-            <p className="text-muted-foreground font-bold text-sm">جارٍ التحقق من الحساب...</p>
+            <p className="text-muted-foreground font-bold text-sm">{PHASE_LABELS[authState.phase]}</p>
             {isSlow && (
               <div className="text-center space-y-2 animate-in fade-in duration-300">
                 <p className="text-xs text-muted-foreground/70">يستغرق الأمر وقتاً أطول من المعتاد...</p>
@@ -285,7 +299,11 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
             </div>
             
             {/* Google OAuth */}
-            <GoogleSignInButton onError={handleAuthError} oauthInProgress={oauthPending} />
+            <GoogleSignInButton 
+              onError={handleAuthError} 
+              oauthInProgress={oauthPending}
+              loadingText={oauthPending ? 'جارٍ العودة من Google...' : undefined}
+            />
             
             {/* Divider */}
             <div className="flex items-center gap-3">

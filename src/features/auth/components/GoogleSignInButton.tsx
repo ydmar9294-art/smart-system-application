@@ -10,6 +10,8 @@ interface GoogleSignInButtonProps {
   onError?: (error: string) => void;
   /** When true, an external OAuth flow is in progress (shows loading) */
   oauthInProgress?: boolean;
+  /** Optional loading text to display (e.g. phase-specific) */
+  loadingText?: string;
 }
 
 const GOOGLE_SVG = (
@@ -32,7 +34,8 @@ const isNativePlatform = (): boolean => Capacitor.isNativePlatform();
 const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ 
   disabled = false, 
   onError,
-  oauthInProgress = false 
+  oauthInProgress = false,
+  loadingText
 }) => {
   const [loading, setLoading] = useState(false);
 
@@ -133,7 +136,7 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
       {isActive ? (
         <div className="flex items-center gap-3">
           <Loader2 className="w-5 h-5 animate-spin text-primary" />
-          <span className="text-muted-foreground">جارٍ تسجيل الدخول...</span>
+          <span className="text-muted-foreground">{loadingText || 'جارٍ تسجيل الدخول...'}</span>
         </div>
       ) : (
         <>
