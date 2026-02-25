@@ -15,6 +15,7 @@ import UpdateModal from '@/components/ui/UpdateModal';
 import { usePageTheme } from '@/hooks/usePageTheme';
 import { useStatusBar } from '@/platform/hooks/useStatusBar';
 import SecurityGate from '@/components/SecurityGate';
+import AccountStatusGate from '@/components/AccountStatusGate';
 import AppLoadingSkeleton from '@/components/ui/DashboardSkeleton';
 
 // ==========================================
@@ -129,7 +130,9 @@ const MainContent: React.FC = () => {
   return (
     <>
       <ToastManager />
-      <Layout><ViewManager /></Layout>
+      <AccountStatusGate>
+        <Layout><ViewManager /></Layout>
+      </AccountStatusGate>
       <OfflineIndicator isOnline={isOnline} pendingCount={pendingCount} />
       <UpdateModal
         open={showUpdateModal}

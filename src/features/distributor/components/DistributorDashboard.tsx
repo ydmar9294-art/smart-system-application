@@ -38,7 +38,7 @@ import { CURRENCY } from '@/constants';
 type DistributorTabType = 'inventory' | 'new-sale' | 'returns' | 'collections' | 'debts' | 'history';
 
 const DistributorDashboard: React.FC = () => {
-  const { customers, logout, addCustomer, addNotification, refreshAllData } = useApp();
+  const { logout, addNotification, refreshAllData, organization, user: appUser } = useApp();
   const offline = useDistributorOffline();
   const [activeTab, setActiveTab] = useState<DistributorTabType>('inventory');
   const [loggingOut, setLoggingOut] = useState(false);
@@ -60,7 +60,8 @@ const DistributorDashboard: React.FC = () => {
     getCurrentUser();
   }, []);
 
-  const myCustomers = customers.filter(c => c.created_by === currentUserId);
+  // Use offline-first cached customers instead of network-dependent customers from context
+  const myCustomers = offline.localCustomers.filter(c => c.created_by === currentUserId);
   const filteredCustomers = myCustomers.filter(c => c.name.toLowerCase().includes(searchCustomer.toLowerCase()));
   const totalDebt = myCustomers.reduce((sum, c) => sum + Number(c.balance), 0);
   const totalCustomers = myCustomers.length;
@@ -77,10 +78,39 @@ const DistributorDashboard: React.FC = () => {
     if (!newCustomerLocation.trim()) { addNotification('يرجى إدخال موقع الزبون', 'warning'); return; }
     setAddingCustomer(true);
     try {
-      await addCustomer(newCustomerName.trim(), newCustomerPhone.trim(), newCustomerLocation.trim());
+      const orgId = organization?.id;
+      if (!orgId || !currentUserId) {
+        addNotification('لا يمكن إضافة زبون — بيانات المنشأة غير متاحة', 'error');
+        return;
+      }
+
+      // Use offline-first customer add (works offline with temp ID)
+      const newCustomer = await offline.addCustomerOffline(
+        newCustomerName.trim(),
+        newCustomerPhone.trim(),
+        newCustomerLocation.trim(),
+        orgId,
+        currentUserId
+      );
+
       setNewCustomerName(''); setNewCustomerPhone(''); setNewCustomerLocation('');
       setShowAddCustomerModal(false);
-      await refreshAllData();
+      
+      // Auto-select the new customer
+      setSelectedCustomer({
+        id: newCustomer.id,
+        name: newCustomer.name,
+        phone: newCustomer.phone || '',
+        balance: 0,
+        location: newCustomer.location || undefined,
+        organization_id: newCustomer.organization_id,
+        created_by: newCustomer.created_by || undefined,
+      });
+
+      addNotification(
+        offline.isOnline ? 'تم إضافة الزبون بنجاح' : 'تم حفظ الزبون محلياً — ستتم المزامنة عند عودة الإنترنت',
+        'success'
+      );
     } catch (error) { console.error('Error adding customer:', error); }
     finally { setAddingCustomer(false); }
   };
