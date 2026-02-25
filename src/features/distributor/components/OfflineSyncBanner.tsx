@@ -30,6 +30,8 @@ interface OfflineSyncBannerProps {
   lastSyncMessage: string | null;
   actions: OfflineAction[];
   onTriggerSync: () => void;
+  onRetryAction?: (actionId: string) => void;
+  onRetryAllFailed?: () => void;
 }
 
 const OfflineSyncBanner: React.FC<OfflineSyncBannerProps> = ({
@@ -40,6 +42,8 @@ const OfflineSyncBanner: React.FC<OfflineSyncBannerProps> = ({
   lastSyncMessage,
   actions,
   onTriggerSync,
+  onRetryAction,
+  onRetryAllFailed,
 }) => {
   const [showLog, setShowLog] = useState(false);
   const hasIssues = pendingCount > 0 || failedCount > 0;
@@ -118,6 +122,16 @@ const OfflineSyncBanner: React.FC<OfflineSyncBannerProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5">
+          {isOnline && failedCount > 0 && !isSyncing && onRetryAllFailed && (
+            <button
+              onClick={onRetryAllFailed}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-destructive/10 hover:bg-destructive/20 transition-colors text-destructive text-[10px] font-bold"
+              title="إعادة محاولة الكل"
+            >
+              <RefreshCw className="w-3 h-3" />
+              <span>إعادة المحاولة</span>
+            </button>
+          )}
           {isOnline && pendingCount > 0 && !isSyncing && (
             <button
               onClick={onTriggerSync}
@@ -170,6 +184,15 @@ const OfflineSyncBanner: React.FC<OfflineSyncBannerProps> = ({
                    action.status === 'failed' ? 'فشلت' :
                    action.status === 'syncing' ? 'مزامنة' : 'بانتظار'}
                 </span>
+                {action.status === 'failed' && onRetryAction && (
+                  <button
+                    onClick={() => onRetryAction(action.id)}
+                    className="p-1 rounded-md bg-destructive/10 hover:bg-destructive/20 transition-colors mr-1"
+                    title="إعادة المحاولة"
+                  >
+                    <RefreshCw className="w-3 h-3 text-destructive" />
+                  </button>
+                )}
               </div>
             ))}
           </div>

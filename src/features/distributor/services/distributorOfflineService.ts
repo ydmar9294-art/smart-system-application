@@ -223,6 +223,19 @@ export async function updateAction(id: string, updates: Partial<OfflineAction>):
   });
 }
 
+export async function retryFailedAction(id: string): Promise<void> {
+  await updateAction(id, { status: 'pending', retryCount: 0, nextRetryAt: undefined });
+}
+
+export async function retryAllFailedActions(): Promise<void> {
+  const all = await getAllItems<OfflineAction>(STORES.ACTIONS);
+  for (const action of all) {
+    if (action.status === 'failed') {
+      await updateAction(action.id, { status: 'pending', retryCount: 0, nextRetryAt: undefined });
+    }
+  }
+}
+
 export async function clearSyncedActions(): Promise<void> {
   const all = await getAllItems<OfflineAction>(STORES.ACTIONS);
   for (const action of all) {

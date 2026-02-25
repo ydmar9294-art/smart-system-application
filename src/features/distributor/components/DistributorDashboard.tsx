@@ -226,6 +226,8 @@ const DistributorDashboard: React.FC = () => {
             lastSyncMessage={offline.lastSyncMessage}
             actions={offline.actions}
             onTriggerSync={offline.triggerSync}
+            onRetryAction={offline.retrySingleAction}
+            onRetryAllFailed={offline.retryAllFailed}
           />
         </div>
 
