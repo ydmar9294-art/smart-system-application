@@ -13,20 +13,24 @@ import {
   onSyncEvent,
   startDistributorSync,
   stopDistributorSync,
+  loadPersistedIdMaps,
   cacheInventory,
   getCachedInventory,
   updateCachedInventoryQuantity,
   cacheSales,
   getCachedSales,
   updateCachedSale,
+  addLocalSale,
   cacheCustomers,
   getCachedCustomers,
   addLocalCustomer,
+  addLocalInvoice,
   type OfflineAction,
   type OfflineActionType,
   type CachedInventoryItem,
   type CachedSale,
   type CachedCustomer,
+  type CachedInvoice,
 } from '../services/distributorOfflineService';
 import { supabase } from '@/integrations/supabase/client';
 import { generateUUID } from '@/lib/uuid';
@@ -267,6 +271,98 @@ export function useDistributorOffline() {
     inventoryUpdates?: { productId: string; quantityDelta: number }[],
     saleUpdate?: { saleId: string; paidDelta: number }
   ) => {
+    // For CREATE_SALE: generate local sale ID and store locally
+    if (type === 'CREATE_SALE') {
+      const localSaleId = `local_${generateUUID()}`;
+      payload = { ...payload, localSaleId };
+      
+      // Resolve customer name from local cache
+      const customers = await getCachedCustomers();
+      const customer = customers.find(c => c.id === payload.customerId);
+      const customerName = customer?.name || 'غير معروف';
+      
+      const grandTotal = (payload.items || []).reduce(
+        (sum: number, item: any) => sum + (item.totalPrice || item.quantity * item.unitPrice), 0
+      );
+      
+      // Add to local sales cache (optimistic)
+      const localSale: CachedSale = {
+        id: localSaleId,
+        customer_id: payload.customerId,
+        customerName,
+        grandTotal,
+        paidAmount: payload.paymentType === 'CASH' ? grandTotal : 0,
+        remaining: payload.paymentType === 'CASH' ? 0 : grandTotal,
+        paymentType: payload.paymentType || 'CASH',
+        isVoided: false,
+        timestamp: Date.now(),
+        isLocal: true,
+      };
+      await addLocalSale(localSale);
+      
+      // Add to local invoices cache (so it appears in history immediately)
+      const localInvoice: CachedInvoice = {
+        id: localSaleId,
+        invoice_type: 'sale',
+        invoice_number: `INV-${localSaleId.slice(-4).toUpperCase()}`,
+        reference_id: localSaleId,
+        customer_id: payload.customerId,
+        customer_name: customerName,
+        created_by: null,
+        created_by_name: null,
+        grand_total: grandTotal,
+        paid_amount: payload.paymentType === 'CASH' ? grandTotal : 0,
+        remaining: payload.paymentType === 'CASH' ? 0 : grandTotal,
+        payment_type: payload.paymentType || 'CASH',
+        items: (payload.items || []).map((item: any) => ({
+          product_name: item.productName,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          total_price: item.totalPrice || item.quantity * item.unitPrice,
+        })),
+        notes: null,
+        reason: null,
+        org_name: null,
+        legal_info: null,
+        invoice_date: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        isLocal: true,
+      };
+      await addLocalInvoice(localInvoice);
+    }
+    
+    // For ADD_COLLECTION with a local sale: add local invoice for history
+    if (type === 'ADD_COLLECTION') {
+      const sales = await getCachedSales();
+      const sale = sales.find(s => s.id === payload.saleId);
+      if (sale) {
+        const localCollectionId = `local_${generateUUID()}`;
+        const collectionInvoice: CachedInvoice = {
+          id: localCollectionId,
+          invoice_type: 'collection',
+          invoice_number: `COL-${localCollectionId.slice(-4).toUpperCase()}`,
+          reference_id: payload.saleId,
+          customer_id: sale.customer_id,
+          customer_name: sale.customerName,
+          created_by: null,
+          created_by_name: null,
+          grand_total: payload.amount,
+          paid_amount: payload.amount,
+          remaining: 0,
+          payment_type: 'CASH',
+          items: [],
+          notes: payload.notes || null,
+          reason: null,
+          org_name: null,
+          legal_info: null,
+          invoice_date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          isLocal: true,
+        };
+        await addLocalInvoice(collectionInvoice);
+      }
+    }
+    
     const action = await enqueueAction(type, payload);
 
     // Apply optimistic inventory updates
@@ -320,8 +416,10 @@ export function useDistributorOffline() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Start sync engine
-    startDistributorSync();
+    // Load persisted ID maps first, then start sync engine
+    loadPersistedIdMaps().then(() => {
+      startDistributorSync();
+    });
 
     // Listen for sync events
     const unsub = onSyncEvent((event) => {
