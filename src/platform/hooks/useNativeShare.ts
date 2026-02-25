@@ -1,6 +1,6 @@
 import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
-
+import { copyToClipboard } from '@/lib/clipboard';
 export const useNativeShare = () => {
   const share = async (options: {
     title: string;
@@ -12,7 +12,7 @@ export const useNativeShare = () => {
       if (navigator.share) {
         await navigator.share(options);
       } else {
-        await navigator.clipboard.writeText(`${options.title}\n${options.text}`);
+        await copyToClipboard(`${options.title}\n${options.text}`);
         alert('تم النسخ إلى الحافظة');
       }
       return;

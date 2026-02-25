@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { generateUUID } from '@/lib/uuid';
 import { 
   Plus, 
   Minus, 
@@ -183,7 +184,7 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer }) => {
       
       // Store sale data for printing
       setLastSaleData({
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         customerName: selectedCustomer.name,
         items: [...cart],
         grandTotal,

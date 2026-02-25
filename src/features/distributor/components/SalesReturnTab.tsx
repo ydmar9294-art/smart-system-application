@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { generateUUID } from '@/lib/uuid';
 import { 
   RotateCcw, 
   FileText,
@@ -175,7 +176,7 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer }) => 
       if (rpcError) throw rpcError;
 
       setLastReturnData({
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         customerName: selectedSale?.customerName || '',
         items: cart.map(item => ({
           product_name: item.product_name,

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Key, Building2, User, Loader2, CheckCircle2, AlertCircle, Sparkles, Copy, Wallet, LogOut, MessageCircle, Clock, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { copyToClipboard } from '@/lib/clipboard';
 
 interface LicenseActivationProps {
   userId: string;
@@ -27,8 +28,8 @@ const LicenseActivation: React.FC<LicenseActivationProps> = ({
   const [showPayment, setShowPayment] = useState(false);
   const [copiedPayment, setCopiedPayment] = useState(false);
 
-  const handleCopyPayment = () => {
-    navigator.clipboard.writeText(SHAMCASH_ADDRESS);
+  const handleCopyPayment = async () => {
+    await copyToClipboard(SHAMCASH_ADDRESS);
     setCopiedPayment(true);
     setTimeout(() => setCopiedPayment(false), 2000);
   };
