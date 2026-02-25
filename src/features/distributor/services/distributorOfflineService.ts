@@ -480,66 +480,68 @@ function syncPriority(type: OfflineActionType): number {
   }
 }
 
-async function executeAction(action: OfflineAction): Promise<boolean> {
+type ExecuteResult = 'synced' | 'deferred' | 'failed';
+
+async function executeAction(action: OfflineAction): Promise<ExecuteResult> {
   try {
     switch (action.type) {
       case 'CREATE_SALE': {
         const customerId = resolveCustomerId(action.payload.customerId);
-        
-        // If customer ID is still local (unresolved), skip — will retry after customer syncs
+
+        // If customer ID is still local (unresolved), defer until customer syncs
         if (customerId.startsWith('local_')) {
-          logger.info(`[Sync] Skipping CREATE_SALE — customer ${customerId} not yet synced`, 'DistributorOffline');
-          return false;
+          logger.info(`[Sync] Deferring CREATE_SALE — customer ${customerId} not yet synced`, 'DistributorOffline');
+          return 'deferred';
         }
-        
+
         const { data, error } = await supabase.rpc('create_distributor_sale_rpc', {
           p_customer_id: customerId,
           p_items: action.payload.items,
           p_payment_type: action.payload.paymentType || 'CASH',
         });
         if (error) throw error;
-        
+
         // Map local sale ID → server sale ID
         if (data && action.payload.localSaleId) {
           await persistIdMapping(action.payload.localSaleId, data as string, 'sale');
           logger.info(`[Sync] Sale remapped: ${action.payload.localSaleId} → ${data}`, 'DistributorOffline');
         }
-        return true;
+        return 'synced';
       }
 
       case 'ADD_COLLECTION': {
         const saleId = resolveSaleId(action.payload.saleId);
-        
-        // If sale ID is still local, skip — will retry after sale syncs
+
+        // If sale ID is still local, defer until sale syncs
         if (saleId.startsWith('local_')) {
-          logger.info(`[Sync] Skipping ADD_COLLECTION — sale ${saleId} not yet synced`, 'DistributorOffline');
-          return false;
+          logger.info(`[Sync] Deferring ADD_COLLECTION — sale ${saleId} not yet synced`, 'DistributorOffline');
+          return 'deferred';
         }
-        
+
         const { error } = await supabase.rpc('add_collection_rpc', {
           p_sale_id: saleId,
           p_amount: action.payload.amount,
           p_notes: action.payload.notes || null,
         });
         if (error) throw error;
-        return true;
+        return 'synced';
       }
 
       case 'CREATE_RETURN': {
         const saleId = resolveSaleId(action.payload.saleId);
-        
+
         if (saleId.startsWith('local_')) {
-          logger.info(`[Sync] Skipping CREATE_RETURN — sale ${saleId} not yet synced`, 'DistributorOffline');
-          return false;
+          logger.info(`[Sync] Deferring CREATE_RETURN — sale ${saleId} not yet synced`, 'DistributorOffline');
+          return 'deferred';
         }
-        
+
         const { error } = await supabase.rpc('create_distributor_return_rpc', {
           p_sale_id: saleId,
           p_items: action.payload.items,
           p_reason: action.payload.reason || null,
         });
         if (error) throw error;
-        return true;
+        return 'synced';
       }
 
       case 'TRANSFER_TO_WAREHOUSE': {
@@ -547,7 +549,7 @@ async function executeAction(action: OfflineAction): Promise<boolean> {
           p_items: action.payload.items,
         });
         if (error) throw error;
-        return true;
+        return 'synced';
       }
 
       case 'ADD_CUSTOMER': {
@@ -558,24 +560,24 @@ async function executeAction(action: OfflineAction): Promise<boolean> {
           organization_id: action.payload.organizationId,
           created_by: action.payload.createdBy,
         }).select('id').single();
-        
+
         if (error) throw error;
-        
+
         if (data?.id && action.payload.localId) {
           await persistIdMapping(action.payload.localId, data.id, 'customer');
           await updateCustomerSyncStatus(action.payload.localId, 'synced', data.id);
           logger.info(`[Sync] Customer remapped: ${action.payload.localId} → ${data.id}`, 'DistributorOffline');
         }
-        return true;
+        return 'synced';
       }
 
       default:
         logger.warn(`[Sync] Unknown action type: ${action.type}`, 'DistributorOffline');
-        return false;
+        return 'failed';
     }
   } catch (err: any) {
     logger.error(`[Sync] Action ${action.id} (${action.type}) failed: ${err.message}`, 'DistributorOffline');
-    return false;
+    return 'failed';
   }
 }
 
@@ -583,6 +585,8 @@ async function executeAction(action: OfflineAction): Promise<boolean> {
 function getRetryDelay(retryCount: number): number {
   return Math.min(5000 * Math.pow(3, retryCount), 300_000);
 }
+
+const DEFERRED_RETRY_MS = 5000;
 
 export async function syncAllPending(): Promise<{ synced: number; failed: number }> {
   if (isSyncing) return { synced: 0, failed: 0 };
@@ -595,7 +599,7 @@ export async function syncAllPending(): Promise<{ synced: number; failed: number
   try {
     // Load persisted ID maps so remapping works after restart
     await loadPersistedIdMaps();
-    
+
     const pending = await getPendingActions();
     if (pending.length === 0) return { synced: 0, failed: 0 };
 
@@ -610,28 +614,35 @@ export async function syncAllPending(): Promise<{ synced: number; failed: number
 
     for (const action of sorted) {
       await updateAction(action.id, { status: 'syncing' });
-      
-      const success = await executeAction(action);
 
-      if (success) {
-        await updateAction(action.id, { status: 'synced', syncedAt: Date.now() });
+      const result = await executeAction(action);
+
+      if (result === 'synced') {
+        await updateAction(action.id, { status: 'synced', syncedAt: Date.now(), error: undefined });
         synced++;
+      } else if (result === 'deferred') {
+        // Dependency not ready yet (e.g. local customer/sale not synced) → keep retry count unchanged
+        await updateAction(action.id, {
+          status: 'pending',
+          nextRetryAt: Date.now() + DEFERRED_RETRY_MS,
+        });
+        logger.info(`[Sync] Deferred action ${action.id}; waiting for parent entity sync`, 'DistributorOffline');
       } else {
         const newRetry = action.retryCount + 1;
         if (newRetry >= MAX_RETRIES) {
           // Permanently failed — stop retrying
-          await updateAction(action.id, { 
-            status: 'failed', 
-            retryCount: newRetry, 
-            error: 'تجاوز الحد الأقصى للمحاولات' 
+          await updateAction(action.id, {
+            status: 'failed',
+            retryCount: newRetry,
+            error: 'تجاوز الحد الأقصى للمحاولات',
           });
           failed++;
           logger.warn(`[Sync] Action ${action.id} permanently failed after ${MAX_RETRIES} retries`, 'DistributorOffline');
         } else {
           // Set back to pending with exponential backoff cooldown
           const delay = getRetryDelay(newRetry);
-          await updateAction(action.id, { 
-            status: 'pending', 
+          await updateAction(action.id, {
+            status: 'pending',
             retryCount: newRetry,
             nextRetryAt: Date.now() + delay,
           });
@@ -836,26 +847,58 @@ export async function addLocalInvoice(invoice: CachedInvoice): Promise<void> {
 // ============================================
 
 export interface CachedOrgInfo {
-  key: string; // always 'org_info'
-  orgName: string;
-  legalInfo: {
+  key: string; // 'org_info' | 'org_context'
+  orgName?: string;
+  legalInfo?: {
     commercial_registration: string | null;
     industrial_registration: string | null;
     tax_identification: string | null;
     trademark_name: string | null;
   } | null;
+  organizationId?: string;
+  distributorId?: string;
   updatedAt: number;
 }
 
-export async function cacheOrgInfo(orgName: string, legalInfo: CachedOrgInfo['legalInfo']): Promise<void> {
+export async function cacheOrgInfo(
+  orgName: string,
+  legalInfo: {
+    commercial_registration: string | null;
+    industrial_registration: string | null;
+    tax_identification: string | null;
+    trademark_name: string | null;
+  } | null,
+  organizationId?: string,
+  distributorId?: string,
+): Promise<void> {
   await putItem(STORES.ORG_INFO_CACHE, {
     key: 'org_info',
     orgName,
     legalInfo,
+    organizationId,
+    distributorId,
     updatedAt: Date.now(),
   });
 }
 
 export async function getCachedOrgInfo(): Promise<CachedOrgInfo | null> {
   return getItem<CachedOrgInfo>(STORES.ORG_INFO_CACHE, 'org_info');
+}
+
+export async function cacheOfflineOrgContext(organizationId: string, distributorId: string): Promise<void> {
+  await putItem(STORES.ORG_INFO_CACHE, {
+    key: 'org_context',
+    organizationId,
+    distributorId,
+    updatedAt: Date.now(),
+  } as CachedOrgInfo);
+}
+
+export async function getOfflineOrgContext(): Promise<{ organizationId: string; distributorId: string } | null> {
+  const ctx = await getItem<CachedOrgInfo>(STORES.ORG_INFO_CACHE, 'org_context');
+  if (!ctx?.organizationId || !ctx?.distributorId) return null;
+  return {
+    organizationId: ctx.organizationId,
+    distributorId: ctx.distributorId,
+  };
 }
