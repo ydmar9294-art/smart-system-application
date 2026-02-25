@@ -14,6 +14,8 @@ import {
   startDistributorSync,
   stopDistributorSync,
   loadPersistedIdMaps,
+  cacheOfflineOrgContext,
+  getOfflineOrgContext,
   cacheInventory,
   getCachedInventory,
   updateCachedInventoryQuantity,
@@ -88,6 +90,34 @@ export function useDistributorOffline() {
     } catch {
       // IndexedDB not available
     }
+  }, []);
+
+  const resolveOfflineOrgContext = useCallback(async (): Promise<{ organizationId: string; distributorId: string } | null> => {
+    // Strict offline path: IndexedDB only
+    if (!navigator.onLine) {
+      return getOfflineOrgContext();
+    }
+
+    // Online path: refresh cache from server
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return getOfflineOrgContext();
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.organization_id) {
+        await cacheOfflineOrgContext(profile.organization_id, user.id);
+        return { organizationId: profile.organization_id, distributorId: user.id };
+      }
+    } catch {
+      // fall back to cached context
+    }
+
+    return getOfflineOrgContext();
   }, []);
 
   // Fetch inventory from server and cache locally
@@ -225,19 +255,27 @@ export function useDistributorOffline() {
     name: string,
     phone: string,
     location: string,
-    organizationId: string,
-    createdBy: string
+    organizationId?: string,
+    createdBy?: string
   ): Promise<CachedCustomer> => {
+    const context = await resolveOfflineOrgContext();
+    const resolvedOrgId = organizationId || context?.organizationId;
+    const resolvedDistributorId = createdBy || context?.distributorId;
+
+    if (!resolvedOrgId || !resolvedDistributorId) {
+      throw new Error('Cannot add customer. Organization data not available.');
+    }
+
     const tempId = `local_${generateUUID()}`;
-    
+
     const customer: CachedCustomer = {
       id: tempId,
       name,
       phone,
       location,
       balance: 0,
-      organization_id: organizationId,
-      created_by: createdBy,
+      organization_id: resolvedOrgId,
+      created_by: resolvedDistributorId,
       isLocal: true,
       syncStatus: 'pending',
       updated_at: Date.now(),
@@ -251,8 +289,8 @@ export function useDistributorOffline() {
       name,
       phone,
       location,
-      organizationId,
-      createdBy,
+      organizationId: resolvedOrgId,
+      createdBy: resolvedDistributorId,
       localId: tempId,
     });
 
@@ -264,7 +302,7 @@ export function useDistributorOffline() {
     }
 
     return customer;
-  }, [refreshStats]);
+  }, [refreshStats, resolveOfflineOrgContext]);
 
   // Queue an offline action and apply optimistic update
   const queueAction = useCallback(async (
