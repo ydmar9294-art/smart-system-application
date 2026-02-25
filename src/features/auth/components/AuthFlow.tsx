@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Loader2, AlertCircle, XCircle, Zap, BarChart3, Lock, RefreshCw, ShieldCheck } from 'lucide-react';
-import appLogo from '@/assets/logo-buildings.png';
+import AppLogo from '@/components/ui/AppLogo';
 import { supabase } from '@/integrations/supabase/client';
 import { getCachedAuth, clearAuthCache } from '@/lib/authCache';
 import { checkAuthStatus } from '@/hooks/useAuthOperations';
@@ -300,8 +300,8 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
     <div className="min-h-screen flex flex-col font-tajawal relative bg-background" dir="rtl">
       <div className="bg-slate-900 pt-14 pb-16 px-6 relative overflow-hidden flex flex-col items-center shrink-0">
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
-        <div className="w-20 h-20 rounded-[1.8rem] flex items-center justify-center shadow-2xl mb-5 z-10 border-4 border-white/5 animate-float overflow-hidden">
-          <img src={appLogo} alt="Smart System" className="w-full h-full object-cover" />
+        <div className="mb-5 z-10 animate-float">
+          <AppLogo size={80} />
         </div>
         <h1 className="text-3xl font-black text-white mb-2 tracking-tight z-10">النظام الذكي</h1>
         <p className="text-white/50 text-[11px] font-bold z-10 text-center leading-relaxed max-w-[200px] my-[5px]">
