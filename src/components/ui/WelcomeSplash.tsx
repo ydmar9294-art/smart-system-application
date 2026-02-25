@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Sparkles, Rocket, Star, Zap, Shield, Cpu } from 'lucide-react';
+import { Sparkles, Star, Zap, Shield, Cpu } from 'lucide-react';
+import appLogo from '@/assets/logo-buildings.png';
 
 interface WelcomeSplashProps {
   onComplete?: () => void;
@@ -143,7 +144,7 @@ const WelcomeSplash: React.FC<WelcomeSplashProps> = ({
         {/* Logo/Icon with glow effect */}
         <div className="mb-8 animate-rocket relative">
           <div className="absolute inset-0 bg-indigo-500/30 blur-2xl rounded-full scale-150" />
-          <Rocket className="w-24 h-24 text-white mx-auto drop-shadow-2xl relative z-10" />
+          <img src={appLogo} alt="Smart System" className="w-24 h-24 mx-auto drop-shadow-2xl relative z-10 rounded-2xl" />
         </div>
 
         {/* Main text with tech styling */}
