@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import { useApp } from '@/store/AppContext';
-import { supabase } from '@/integrations/supabase/client';
 import { 
   Package, 
   Warehouse, 
@@ -10,9 +8,11 @@ import {
   X, 
   Minus, 
   Plus,
-  AlertCircle
+  AlertCircle,
+  WifiOff
 } from 'lucide-react';
 import FullScreenModal from '@/components/ui/FullScreenModal';
+import type { CachedInventoryItem, OfflineActionType } from '../services/distributorOfflineService';
 
 interface TransferItem {
   product_id: string;
@@ -21,19 +21,23 @@ interface TransferItem {
   max_quantity: number;
 }
 
-const DistributorInventoryTab: React.FC = () => {
-  const { distributorInventory, refreshAllData, addNotification } = useApp();
+interface DistributorInventoryTabProps {
+  localInventory: CachedInventoryItem[];
+  onQueueAction: (type: OfflineActionType, payload: any, inventoryUpdates?: { productId: string; quantityDelta: number }[]) => Promise<any>;
+  isOnline: boolean;
+}
+
+const DistributorInventoryTab: React.FC<DistributorInventoryTabProps> = ({ localInventory, onQueueAction, isOnline }) => {
   const [transferMode, setTransferMode] = useState(false);
   const [transferCart, setTransferCart] = useState<TransferItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const totalItems = distributorInventory.reduce((sum, item) => sum + item.quantity, 0);
+  const availableItems = localInventory.filter(item => item.quantity > 0);
+  const totalItems = availableItems.reduce((sum, item) => sum + item.quantity, 0);
 
-  // Only show items with quantity > 0
-  const availableItems = distributorInventory.filter(item => item.quantity > 0);
-
-  const toggleTransferItem = (item: typeof distributorInventory[0]) => {
+  const toggleTransferItem = (item: CachedInventoryItem) => {
     const exists = transferCart.find(c => c.product_id === item.product_id);
     if (exists) {
       setTransferCart(transferCart.filter(c => c.product_id !== item.product_id));
@@ -41,7 +45,7 @@ const DistributorInventoryTab: React.FC = () => {
       setTransferCart([...transferCart, {
         product_id: item.product_id,
         product_name: item.product_name,
-        quantity: item.quantity, // default: transfer all
+        quantity: item.quantity,
         max_quantity: item.quantity,
       }]);
     }
@@ -67,19 +71,25 @@ const DistributorInventoryTab: React.FC = () => {
         quantity: item.quantity,
       }));
 
-      const { error } = await supabase.rpc('transfer_to_main_warehouse_rpc', {
-        p_items: items,
-      });
+      // Optimistic inventory updates: deduct from local cache
+      const inventoryUpdates = transferCart.map(item => ({
+        productId: item.product_id,
+        quantityDelta: -item.quantity,
+      }));
 
-      if (error) throw error;
+      await onQueueAction('TRANSFER_TO_WAREHOUSE', { items }, inventoryUpdates);
 
-      addNotification('تم إرجاع المواد إلى المستودع الرئيسي بنجاح', 'success');
+      const msg = isOnline
+        ? 'تم إرجاع المواد إلى المستودع الرئيسي بنجاح'
+        : 'تم حفظ العملية — ستتم المزامنة عند عودة الإنترنت';
+      setSuccessMessage(msg);
       setTransferCart([]);
       setTransferMode(false);
       setShowConfirm(false);
-      await refreshAllData();
+
+      setTimeout(() => setSuccessMessage(null), 4000);
     } catch (err: any) {
-      addNotification(err.message || 'حدث خطأ أثناء التحويل', 'error');
+      setSuccessMessage(null);
     } finally {
       setLoading(false);
     }
@@ -94,6 +104,19 @@ const DistributorInventoryTab: React.FC = () => {
 
   return (
     <div className="p-4 space-y-4">
+      {/* Success Message */}
+      {successMessage && (
+        <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 rounded-2xl flex items-center gap-2 border border-emerald-500/20">
+          <Check className="w-5 h-5" />
+          <span className="font-bold">{successMessage}</span>
+          {!isOnline && (
+            <span className="text-xs text-muted-foreground mr-auto flex items-center gap-1">
+              <WifiOff className="w-3 h-3" /> محفوظة محلياً
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="font-black text-lg flex items-center gap-2">
@@ -155,7 +178,7 @@ const DistributorInventoryTab: React.FC = () => {
             const isSelected = transferCart.find(c => c.product_id === item.product_id);
             return (
               <div
-                key={item.id}
+                key={item.product_id}
                 className={`rounded-2xl p-4 flex items-center justify-between transition-colors ${
                   transferMode
                     ? isSelected
@@ -178,7 +201,7 @@ const DistributorInventoryTab: React.FC = () => {
                   <div>
                     <p className="font-bold text-foreground">{item.product_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      آخر تحديث: {new Date(item.updated_at).toLocaleDateString('ar-EG')}
+                      {item.unit || 'قطعة'}
                     </p>
                   </div>
                 </div>
@@ -259,6 +282,7 @@ const DistributorInventoryTab: React.FC = () => {
               <>
                 <ArrowUpFromLine className="w-5 h-5" />
                 تأكيد الإرجاع
+                {!isOnline && <WifiOff className="w-4 h-4 opacity-60" />}
               </>
             )}
           </button>

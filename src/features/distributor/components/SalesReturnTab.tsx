@@ -12,13 +12,15 @@ import {
   User,
   Plus,
   Minus,
-  Printer
+  Printer,
+  WifiOff
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Customer } from '@/types';
 import InvoicePrint from './InvoicePrint';
 import FullScreenModal from '@/components/ui/FullScreenModal';
+import type { OfflineActionType } from '../services/distributorOfflineService';
 
 interface ReturnCartItem {
   product_id: string;
@@ -30,9 +32,11 @@ interface ReturnCartItem {
 
 interface SalesReturnTabProps {
   selectedCustomer: Customer | null;
+  onQueueAction: (type: OfflineActionType, payload: any, inventoryUpdates?: { productId: string; quantityDelta: number }[]) => Promise<any>;
+  isOnline: boolean;
 }
 
-const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer }) => {
+const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer, onQueueAction, isOnline }) => {
   const { sales, refreshAllData, addNotification } = useApp();
   const [selectedSaleId, setSelectedSaleId] = useState<string>('');
   const [saleItems, setSaleItems] = useState<any[]>([]);
@@ -166,14 +170,18 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer }) => 
         unit_price: item.unit_price
       }));
 
-      // Use distributor-specific RPC that returns stock to distributor_inventory
-      const { error: rpcError } = await supabase.rpc('create_distributor_return_rpc', {
-        p_sale_id: selectedSaleId,
-        p_items: items,
-        p_reason: reason || null
-      });
+      // Optimistic inventory updates: returned items go back to distributor inventory
+      const inventoryUpdates = cart.map(item => ({
+        productId: item.product_id,
+        quantityDelta: item.quantity, // positive = restore stock
+      }));
 
-      if (rpcError) throw rpcError;
+      // Queue offline action instead of direct RPC
+      await onQueueAction('CREATE_RETURN', {
+        saleId: selectedSaleId,
+        items,
+        reason: reason || null,
+      }, inventoryUpdates);
 
       setLastReturnData({
         id: generateUUID(),
@@ -192,7 +200,11 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer }) => 
       setReason('');
       setSuccess(true);
       setShowPrintModal(true);
-      await refreshAllData();
+
+      addNotification(
+        isOnline ? 'تم إنشاء المرتجع بنجاح' : 'تم حفظ المرتجع — ستتم المزامنة عند عودة الإنترنت',
+        'success'
+      );
     } catch (err: any) {
       addNotification(err.message || 'حدث خطأ أثناء إنشاء المرتجع', 'error');
     } finally {
@@ -227,6 +239,11 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer }) => 
         <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 rounded-2xl flex items-center gap-2 border border-emerald-500/20">
           <Check className="w-5 h-5" />
           <span className="font-bold">تم إنشاء المرتجع بنجاح!</span>
+          {!isOnline && (
+            <span className="text-xs text-muted-foreground mr-auto flex items-center gap-1">
+              <WifiOff className="w-3 h-3" /> محفوظة محلياً
+            </span>
+          )}
         </div>
       )}
 
@@ -407,6 +424,7 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer }) => 
               <>
                 <RotateCcw className="w-5 h-5" />
                 تأكيد المرتجع
+                {!isOnline && <WifiOff className="w-4 h-4 opacity-60" />}
               </>
             )}
           </button>
