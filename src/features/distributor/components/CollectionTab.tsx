@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { generateUUID } from '@/lib/uuid';
 import { 
   Wallet, 
@@ -13,15 +13,17 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import InvoicePrint from './InvoicePrint';
+import type { CachedSale } from '../services/distributorOfflineService';
 
 interface CollectionTabProps {
   selectedCustomer: import('@/types').Customer | null;
-  onQueueAction: (type: any, payload: any) => Promise<any>;
+  onQueueAction: (type: any, payload: any, inventoryUpdates?: any, saleUpdate?: { saleId: string; paidDelta: number }) => Promise<any>;
   isOnline: boolean;
+  localSales: CachedSale[];
 }
 
-const CollectionTab: React.FC<CollectionTabProps> = ({ selectedCustomer, onQueueAction, isOnline }) => {
-  const { sales, addNotification } = useApp();
+const CollectionTab: React.FC<CollectionTabProps> = ({ selectedCustomer, onQueueAction, isOnline, localSales }) => {
+  const { addNotification } = useApp();
   const [selectedSaleId, setSelectedSaleId] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [notes, setNotes] = useState('');
@@ -39,17 +41,17 @@ const CollectionTab: React.FC<CollectionTabProps> = ({ selectedCustomer, onQueue
     notes?: string;
   } | null>(null);
 
-  const unpaidSales = sales.filter(s => {
+  const unpaidSales = useMemo(() => localSales.filter(s => {
     if (s.isVoided || Number(s.remaining) <= 0) return false;
     if (selectedCustomer) return s.customer_id === selectedCustomer.id;
     return true;
-  });
+  }), [localSales, selectedCustomer]);
   
-  const filteredSales = unpaidSales.filter(s =>
+  const filteredSales = useMemo(() => unpaidSales.filter(s =>
     s.customerName.toLowerCase().includes(searchSale.toLowerCase())
-  );
+  ), [unpaidSales, searchSale]);
 
-  const selectedSale = sales.find(s => s.id === selectedSaleId);
+  const selectedSale = localSales.find(s => s.id === selectedSaleId);
 
   const handleCollect = async () => {
     if (!selectedSaleId || !amount) return;
@@ -72,7 +74,7 @@ const CollectionTab: React.FC<CollectionTabProps> = ({ selectedCustomer, onQueue
         saleId: selectedSaleId,
         amount: numAmount,
         notes: notes || null,
-      });
+      }, undefined, { saleId: selectedSaleId, paidDelta: numAmount });
 
       setLastCollectionData({
         id: generateUUID(),
