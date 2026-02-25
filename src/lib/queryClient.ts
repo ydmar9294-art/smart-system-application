@@ -13,16 +13,17 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000,      // 5 min — reduce DB pressure
-      gcTime: 20 * 60 * 1000,         // 20 min — longer cache retention
+      gcTime: 30 * 60 * 1000,         // 30 min — longer cache retention
       refetchOnWindowFocus: false,     // Prevent refetch storms
       retry: 2,                        // Retry twice on failure
-      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000), // Exponential backoff
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
       refetchOnReconnect: 'always',
-      networkMode: 'online',
+      networkMode: 'offlineFirst',     // Use cache first, sync in background
     },
     mutations: {
       retry: 1,
       retryDelay: 1000,
+      networkMode: 'offlineFirst',
     },
   },
 });

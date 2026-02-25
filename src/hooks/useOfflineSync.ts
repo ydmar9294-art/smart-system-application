@@ -18,10 +18,10 @@ export function useOfflineSync() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Start auto sync
-    startAutoSync();
+    // Defer auto sync start to avoid blocking initial render
+    const syncTimer = setTimeout(startAutoSync, 5000);
 
-    // Refresh stats periodically
+    // Refresh stats periodically (deferred start)
     const refreshStats = async () => {
       try {
         const stats = await getQueueStats();
@@ -31,12 +31,14 @@ export function useOfflineSync() {
       }
     };
 
-    refreshStats();
-    const statsInterval = setInterval(refreshStats, 10000);
+    const statsTimer = setTimeout(refreshStats, 3000);
+    const statsInterval = setInterval(refreshStats, 15000);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      clearTimeout(syncTimer);
+      clearTimeout(statsTimer);
       clearInterval(statsInterval);
       stopAutoSync();
     };
