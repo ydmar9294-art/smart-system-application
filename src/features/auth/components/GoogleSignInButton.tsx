@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
+import { setOAuthPending, isOAuthPending, clearOAuthPending } from '@/lib/oauthState';
 
 interface GoogleSignInButtonProps {
   disabled?: boolean;
   onError?: (error: string) => void;
+  /** When true, an external OAuth flow is in progress (shows loading) */
+  oauthInProgress?: boolean;
 }
 
 const GOOGLE_SVG = (
@@ -18,21 +21,34 @@ const GOOGLE_SVG = (
   </svg>
 );
 
-/**
- * Detects if the app is running inside a Capacitor native shell
- */
-const isNativePlatform = (): boolean => {
-  return Capacitor.isNativePlatform();
-};
+const isNativePlatform = (): boolean => Capacitor.isNativePlatform();
 
 /**
- * Google Sign-In Button - Works on both Web and Capacitor (Android/iOS)
+ * Google Sign-In Button
  * 
- * Web: Uses standard Supabase OAuth redirect flow
- * Native: Opens system browser via Capacitor Browser plugin, handles deep link callback
+ * On native: persists loading state via localStorage so it survives
+ * the browser→app transition. Loading continues until auth completes.
  */
-const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ disabled = false, onError }) => {
+const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ 
+  disabled = false, 
+  onError,
+  oauthInProgress = false 
+}) => {
   const [loading, setLoading] = useState(false);
+
+  // On mount, check if we were in the middle of an OAuth flow (app resumed)
+  useEffect(() => {
+    if (isNativePlatform() && isOAuthPending()) {
+      setLoading(true);
+    }
+  }, []);
+
+  // Sync with external oauthInProgress prop
+  useEffect(() => {
+    if (!oauthInProgress && loading && !isOAuthPending()) {
+      setLoading(false);
+    }
+  }, [oauthInProgress, loading]);
 
   const handleGoogleSignIn = async () => {
     if (loading || disabled) return;
@@ -41,12 +57,14 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ disabled = fals
     try {
       if (isNativePlatform()) {
         // ═══ NATIVE (Capacitor) FLOW ═══
-        // Use deep link redirect so OAuth returns directly to the app
+        // Mark OAuth as pending BEFORE opening browser
+        setOAuthPending();
+
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
             redirectTo: 'myapp://auth/oauth-callback',
-            skipBrowserRedirect: true, // Don't redirect WebView
+            skipBrowserRedirect: true,
             queryParams: {
               access_type: 'offline',
               prompt: 'consent',
@@ -54,15 +72,30 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ disabled = fals
           },
         });
 
-        if (error) throw error;
+        if (error) {
+          clearOAuthPending();
+          throw error;
+        }
 
         if (data?.url) {
-          // Open the OAuth URL in the system browser (not WebView)
           await Browser.open({ url: data.url, windowName: '_blank' });
+
+          // Listen for browser close (user cancelled)
+          const handle = await Browser.addListener('browserFinished', () => {
+            // Small delay: if deep link already fired, session will be set
+            setTimeout(() => {
+              if (isOAuthPending()) {
+                // Still pending = user cancelled or flow didn't complete
+                clearOAuthPending();
+                setLoading(false);
+              }
+            }, 1500);
+            handle.remove();
+          });
         }
+        // Do NOT reset loading here — it persists until auth completes
       } else {
         // ═══ WEB FLOW ═══
-        // Standard redirect-based OAuth
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
@@ -75,28 +108,33 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ disabled = fals
         });
 
         if (error) throw error;
-        // Browser will redirect to Google → Supabase → /auth/callback
+        // Browser will redirect — loading stays active
       }
     } catch (err: any) {
       console.error('[GoogleAuth] Error:', err);
+      clearOAuthPending();
+      setLoading(false);
       const message = err?.message?.includes('rate limit')
         ? 'محاولات كثيرة. يرجى الانتظار قليلاً'
         : 'فشل تسجيل الدخول بجوجل. يرجى المحاولة مرة أخرى';
       onError?.(message);
-    } finally {
-      setLoading(false);
     }
   };
+
+  const isActive = loading || oauthInProgress;
 
   return (
     <button
       type="button"
       onClick={handleGoogleSignIn}
-      disabled={loading || disabled}
+      disabled={isActive || disabled}
       className="w-full py-3.5 bg-muted border border-border rounded-2xl font-bold text-sm flex items-center justify-center gap-3 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 hover:bg-accent text-foreground"
     >
-      {loading ? (
-        <Loader2 className="w-5 h-5 animate-spin" />
+      {isActive ? (
+        <div className="flex items-center gap-3">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+          <span className="text-muted-foreground">جارٍ تسجيل الدخول...</span>
+        </div>
       ) : (
         <>
           {GOOGLE_SVG}

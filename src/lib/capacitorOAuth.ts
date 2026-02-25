@@ -10,6 +10,7 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { supabase } from '@/integrations/supabase/client';
+import { clearOAuthPending } from '@/lib/oauthState';
 
 let isInitialized = false;
 
@@ -82,6 +83,7 @@ export function initCapacitorOAuth(): void {
 
     // ── OAuth Callback ──
     if (url.includes('oauth-callback')) {
+      clearOAuthPending();
       if (!tokens) {
         console.warn('[CapacitorDeepLink] No tokens found in OAuth deep link');
         return;
