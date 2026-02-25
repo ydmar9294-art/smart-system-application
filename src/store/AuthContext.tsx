@@ -1,18 +1,19 @@
 /**
- * AuthContext - SaaS-grade authentication state
+ * AuthContext - Offline-first, persistent authentication
  * 
  * Design principles:
- * - NEVER show error screens. Failures degrade to login.
- * - Cache-first for instant UI, background verify for freshness.
- * - Every async path resolves within 7s absolute max.
- * - No stuck loading states — guaranteed.
+ * - PERSISTENT LOGIN: After first successful login, user stays logged in forever.
+ * - OFFLINE-FIRST: App boots from localStorage cache instantly, no network needed.
+ * - NEVER logout offline: Only server-side account changes can force logout.
+ * - Background revalidation: When online, silently verify account status.
+ * - No stuck states: Hard timeout only applies to FIRST-EVER login (no cache).
  */
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole, User, Organization, LicenseStatus } from '@/types';
 import { resolveUserProfile } from '@/hooks/useAuthOperations';
 import { authMutex } from '@/lib/concurrency';
-import { getCachedAuth, clearAuthCache, CachedAuthState } from '@/lib/authCache';
+import { getCachedAuth, clearAuthCache, isAuthCacheFresh, CachedAuthState } from '@/lib/authCache';
 import { logger } from '@/lib/logger';
 
 interface AuthContextType {
@@ -28,7 +29,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-/** Max time for the entire auth init before forcing to login */
+/** Max time for the entire auth init before forcing to login (only when NO cache exists) */
 const HARD_TIMEOUT_MS = 5_000;
 /** Max time for profile resolution */
 const RESOLVE_TIMEOUT_MS = 4_500;
@@ -61,6 +62,11 @@ const isCacheFullyActivated = (cached: CachedAuthState): boolean => {
   return !!cached.organizationId && !!cached.role;
 };
 
+/** Check if the browser/app is currently online */
+const isNetworkAvailable = (): boolean => {
+  return typeof navigator !== 'undefined' ? navigator.onLine : true;
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
@@ -74,6 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isPasswordRecoveryFlow = useRef(false);
   const inflightResolve = useRef<Promise<boolean> | null>(null);
   const lastResolvedUid = useRef<string | null>(null);
+  const bootedFromCache = useRef(false);
 
   /** Transition to authenticated state */
   const setAuthenticatedState = useCallback((result: { user: User | null; role: UserRole | null; organization: Organization | null }) => {
@@ -97,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logger.setUser(undefined);
   }, []);
 
-  const resolveProfile = useCallback(async (uid: string): Promise<boolean> => {
+  const resolveProfile = useCallback(async (uid: string, isBackground = false): Promise<boolean> => {
     if (inflightResolve.current && lastResolvedUid.current === uid) {
       return inflightResolve.current;
     }
@@ -115,16 +122,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (!result.success) {
           // No profile or needs activation — not an error
-          setNeedsActivation(true);
-          setIsAuthenticated(true);
-          setIsLoading(false);
+          if (!isBackground) {
+            setNeedsActivation(true);
+            setIsAuthenticated(true);
+            setIsLoading(false);
+          }
           return false;
         }
 
         setAuthenticatedState({ user: result.user, role: result.role, organization: result.organization });
         return true;
       } catch (err: any) {
-        // On ANY failure (timeout, network, etc.) → degrade to login
+        // CRITICAL: If we booted from cache and this is a background revalidation,
+        // do NOT logout the user. Keep the cached state.
+        if (bootedFromCache.current || isBackground) {
+          logger.warn('Background revalidation failed, keeping cached state', 'Auth', { error: String(err) });
+          return false;
+        }
+        
+        // Only clear cache and logout if this is a foreground resolve with no cache fallback
         logger.warn('Profile resolution failed, degrading to login', 'Auth', { error: String(err) });
         clearAuthCache();
         resetToLogin();
@@ -139,8 +155,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [setAuthenticatedState, resetToLogin]);
 
   const refreshAuth = useCallback(async () => {
-    // Always clear cache and re-query to get fresh license/profile status
-    // This is critical for reactivation flows where cached status is stale
+    // Only refresh if online — never invalidate offline
+    if (!isNetworkAvailable()) {
+      logger.info('Skipping auth refresh — offline', 'Auth');
+      return;
+    }
+    
+    // Clear cache and re-query to get fresh license/profile status
     clearAuthCache();
     
     setIsLoading(true);
@@ -152,20 +173,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resetToLogin();
       }
     } catch {
-      resetToLogin();
+      // If refresh fails (e.g. network dropped), don't logout
+      const cached = getCachedAuth();
+      if (cached && isCacheFullyActivated(cached)) {
+        const built = buildUserFromCache(cached);
+        setAuthenticatedState(built);
+      } else {
+        resetToLogin();
+      }
     }
-  }, [resolveProfile, resetToLogin]);
+  }, [resolveProfile, resetToLogin, setAuthenticatedState]);
 
   // ==========================================
   // AUTH INITIALIZATION
-  // Single-pass, cache-first, guaranteed resolution
+  // Persistent, offline-first, cache-driven
   // ==========================================
   useEffect(() => {
     if (initializingAuth.current) return;
     initializingAuth.current = true;
     
     let isMounted = true;
-    let hasLoadedFromCache = false;
     let hasResolved = false;
 
     const isResetRoute = window.location.hash.includes('/reset-password');
@@ -173,7 +200,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isPasswordRecoveryFlow.current = true;
     }
 
-    // ── Phase 1: Instant cache restore ──
+    // ── Phase 1: Instant cache restore (ALWAYS — no TTL check) ──
     const cached = getCachedAuth();
     if (cached && !isPasswordRecoveryFlow.current && isCacheFullyActivated(cached)) {
       const built = buildUserFromCache(cached);
@@ -183,14 +210,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAuthenticated(true);
       setNeedsActivation(false);
       setIsLoading(false);
-      hasLoadedFromCache = true;
+      bootedFromCache.current = true;
     } else if (cached && !isCacheFullyActivated(cached)) {
       clearAuthCache();
     }
 
-    // ── Hard timeout: absolute guarantee against stuck states ──
+    // ── Hard timeout: ONLY if no cache (first-ever login) ──
     const timeoutId = setTimeout(() => {
-      if (isMounted && !hasResolved && !hasLoadedFromCache) {
+      if (isMounted && !hasResolved && !bootedFromCache.current) {
         logger.warn('Auth hard timeout — falling back to login', 'Auth');
         clearAuthCache();
         resetToLogin();
@@ -222,17 +249,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
           if (isPasswordRecoveryFlow.current) return;
           if (hasResolved && lastResolvedUid.current === session.user.id) return;
-          if (hasLoadedFromCache && cached?.userId === session.user.id) return;
+          if (bootedFromCache.current && cached?.userId === session.user.id) return;
           
-          clearAuthCache();
-          if (!hasLoadedFromCache && isMounted) setIsLoading(true);
+          // New login or different user — must resolve
+          if (!bootedFromCache.current && isMounted) setIsLoading(true);
           hasResolved = true;
           await resolveProfile(session.user.id);
         }
       }
     );
 
-    // ── Phase 3: Background session validation ──
+    // ── Phase 3: Session validation (online-aware) ──
     const validateSession = async () => {
       try {
         if (isPasswordRecoveryFlow.current) {
@@ -241,21 +268,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
+        // If we booted from cache and are OFFLINE, skip session validation entirely
+        if (bootedFromCache.current && !isNetworkAvailable()) {
+          logger.info('Offline boot with cache — skipping session validation', 'Auth');
+          initializingAuth.current = false;
+          return;
+        }
+
+        // If we booted from cache and cache is fresh, skip immediate revalidation
+        if (bootedFromCache.current && isAuthCacheFresh(cached)) {
+          logger.info('Cache is fresh — skipping immediate revalidation', 'Auth');
+          initializingAuth.current = false;
+          return;
+        }
+
         const { data } = await supabase.auth.getSession();
         
         if (!data.session?.user) {
-          // No session → show login immediately
-          if (cached) clearAuthCache();
+          // No session from Supabase
+          if (bootedFromCache.current) {
+            // We have a cache but no Supabase session — likely token expired
+            // If offline, keep cached state. If online, this means session truly expired.
+            if (!isNetworkAvailable()) {
+              logger.info('No session but offline — keeping cached auth', 'Auth');
+              initializingAuth.current = false;
+              return;
+            }
+            // Online with no session = session expired, must re-login
+            clearAuthCache();
+            if (isMounted) resetToLogin();
+            initializingAuth.current = false;
+            return;
+          }
+          // No cache, no session → login
           if (isMounted) resetToLogin();
           initializingAuth.current = false;
           return;
         }
 
         // Has session + loaded from cache → silently revalidate in background
-        if (hasLoadedFromCache && cached?.userId === data.session.user.id) {
+        if (bootedFromCache.current && cached?.userId === data.session.user.id) {
           hasResolved = true;
-          resolveProfile(data.session.user.id).catch(() => {
-            // Background revalidation failed — keep cached state, don't break UI
+          resolveProfile(data.session.user.id, true).catch(() => {
+            // Background revalidation failed — keep cached state
             logger.warn('Background revalidation failed, keeping cache', 'Auth');
           });
           initializingAuth.current = false;
@@ -263,12 +318,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // Has session but no cache → must resolve before showing UI
-        if (isMounted && !hasLoadedFromCache) setIsLoading(true);
+        if (isMounted && !bootedFromCache.current) setIsLoading(true);
         hasResolved = true;
         await resolveProfile(data.session.user.id);
       } catch (err) {
         logger.error('Session validation failed', 'Auth', { error: String(err) });
-        if (isMounted && !hasLoadedFromCache) {
+        // CRITICAL: If booted from cache, do NOT logout on validation failure
+        if (bootedFromCache.current) {
+          logger.info('Session validation error but cache exists — keeping auth', 'Auth');
+        } else if (isMounted) {
           clearAuthCache();
           resetToLogin();
         }
@@ -279,10 +337,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     validateSession();
 
+    // ── Phase 4: Listen for online events to trigger background revalidation ──
+    const handleOnline = () => {
+      if (bootedFromCache.current && cached) {
+        logger.info('Network restored — triggering background revalidation', 'Auth');
+        supabase.auth.getSession().then(({ data }) => {
+          if (data.session?.user) {
+            resolveProfile(data.session.user.id, true).catch(() => {
+              logger.warn('Online revalidation failed — keeping cache', 'Auth');
+            });
+          }
+        }).catch(() => {
+          // Ignore — will retry next time
+        });
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+
     return () => {
       isMounted = false;
       clearTimeout(timeoutId);
       listener.subscription.unsubscribe();
+      window.removeEventListener('online', handleOnline);
     };
   }, [resolveProfile, resetToLogin]);
 
@@ -294,7 +371,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isInternalAuthOp.current = true;
       try {
         clearAuthCache();
-        // Sign out first, then update UI
+        bootedFromCache.current = false;
         await supabase.auth.signOut().catch(() => {
           // Even if signOut fails, clear local state
         });
