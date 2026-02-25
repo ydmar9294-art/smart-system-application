@@ -20,7 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Customer } from '@/types';
 import InvoicePrint from './InvoicePrint';
 import FullScreenModal from '@/components/ui/FullScreenModal';
-import type { OfflineActionType } from '../services/distributorOfflineService';
+import type { OfflineActionType, CachedSale } from '../services/distributorOfflineService';
 
 interface ReturnCartItem {
   product_id: string;
@@ -34,10 +34,11 @@ interface SalesReturnTabProps {
   selectedCustomer: Customer | null;
   onQueueAction: (type: OfflineActionType, payload: any, inventoryUpdates?: { productId: string; quantityDelta: number }[]) => Promise<any>;
   isOnline: boolean;
+  localSales: CachedSale[];
 }
 
-const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer, onQueueAction, isOnline }) => {
-  const { sales, refreshAllData, addNotification } = useApp();
+const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer, onQueueAction, isOnline, localSales }) => {
+  const { addNotification } = useApp();
   const [selectedSaleId, setSelectedSaleId] = useState<string>('');
   const [saleItems, setSaleItems] = useState<any[]>([]);
   const [cart, setCart] = useState<ReturnCartItem[]>([]);
@@ -61,7 +62,7 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer, onQue
   } | null>(null);
 
   // Filter sales for the selected customer only (non-voided)
-  const customerSales = sales.filter(s => 
+  const customerSales = localSales.filter(s => 
     !s.isVoided && 
     selectedCustomer && 
     s.customer_id === selectedCustomer.id
@@ -71,7 +72,7 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer, onQue
     s.customerName.toLowerCase().includes(searchSale.toLowerCase())
   );
 
-  const selectedSale = sales.find(s => s.id === selectedSaleId);
+  const selectedSale = localSales.find(s => s.id === selectedSaleId);
 
   const loadSaleItems = async (saleId: string) => {
     setLoadingItems(true);
