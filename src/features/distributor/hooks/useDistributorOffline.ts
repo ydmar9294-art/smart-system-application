@@ -15,26 +15,24 @@ import {
   cacheInventory,
   getCachedInventory,
   updateCachedInventoryQuantity,
+  cacheSales,
+  getCachedSales,
+  updateCachedSale,
   type OfflineAction,
   type OfflineActionType,
   type CachedInventoryItem,
+  type CachedSale,
 } from '../services/distributorOfflineService';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface DistributorOfflineState {
-  /** Pending actions count */
   pendingCount: number;
-  /** Failed actions count */
   failedCount: number;
-  /** Whether sync is in progress */
   isSyncing: boolean;
-  /** Is device online */
   isOnline: boolean;
-  /** Local inventory cache */
   localInventory: CachedInventoryItem[];
-  /** All offline actions for the log */
+  localSales: CachedSale[];
   actions: OfflineAction[];
-  /** Last sync message */
   lastSyncMessage: string | null;
 }
 
@@ -45,6 +43,7 @@ export function useDistributorOffline() {
     isSyncing: false,
     isOnline: navigator.onLine,
     localInventory: [],
+    localSales: [],
     actions: [],
     lastSyncMessage: null,
   });
@@ -55,18 +54,20 @@ export function useDistributorOffline() {
   const refreshStats = useCallback(async () => {
     if (!mountedRef.current) return;
     try {
-      const [stats, actions, inventory] = await Promise.all([
+      const [stats, actions, inventory, sales] = await Promise.all([
         getActionStats(),
         getAllActions(),
         getCachedInventory(),
+        getCachedSales(),
       ]);
       setState(prev => ({
         ...prev,
         pendingCount: stats.pending,
         failedCount: stats.failed,
         isSyncing: stats.syncing > 0,
-        actions: actions.slice(0, 50), // last 50
+        actions: actions.slice(0, 50),
         localInventory: inventory,
+        localSales: sales,
       }));
     } catch {
       // IndexedDB not available
@@ -129,11 +130,46 @@ export function useDistributorOffline() {
     }
   }, [refreshStats]);
 
+  // Fetch sales from server and cache locally
+  const refreshSales = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('sales')
+        .select('id, customer_id, customer_name, grand_total, paid_amount, remaining, payment_type, is_voided, created_at')
+        .eq('created_by', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const mapped: CachedSale[] = (data || []).map(s => ({
+        id: s.id,
+        customer_id: s.customer_id,
+        customerName: s.customer_name,
+        grandTotal: Number(s.grand_total),
+        paidAmount: Number(s.paid_amount),
+        remaining: Number(s.remaining),
+        paymentType: s.payment_type,
+        isVoided: s.is_voided,
+        timestamp: new Date(s.created_at).getTime(),
+      }));
+
+      await cacheSales(mapped);
+      await refreshStats();
+    } catch {
+      console.warn('[DistributorOffline] Sales fetch failed, using cache');
+      await refreshStats();
+    }
+  }, [refreshStats]);
+
   // Queue an offline action and apply optimistic update
   const queueAction = useCallback(async (
     type: OfflineActionType,
     payload: any,
-    inventoryUpdates?: { productId: string; quantityDelta: number }[]
+    inventoryUpdates?: { productId: string; quantityDelta: number }[],
+    saleUpdate?: { saleId: string; paidDelta: number }
   ) => {
     const action = await enqueueAction(type, payload);
 
@@ -141,6 +177,18 @@ export function useDistributorOffline() {
     if (inventoryUpdates) {
       for (const update of inventoryUpdates) {
         await updateCachedInventoryQuantity(update.productId, update.quantityDelta);
+      }
+    }
+
+    // Apply optimistic sale updates (for collections)
+    if (saleUpdate) {
+      const sales = await getCachedSales();
+      const sale = sales.find(s => s.id === saleUpdate.saleId);
+      if (sale) {
+        await updateCachedSale(saleUpdate.saleId, {
+          paidAmount: sale.paidAmount + saleUpdate.paidDelta,
+          remaining: Math.max(0, sale.remaining - saleUpdate.paidDelta),
+        });
       }
     }
 
@@ -158,12 +206,12 @@ export function useDistributorOffline() {
   const triggerSync = useCallback(async () => {
     const result = await syncAllPending();
     await refreshStats();
-    // Also refresh inventory from server after sync
     if (result.synced > 0) {
       await refreshInventory();
+      await refreshSales();
     }
     return result;
-  }, [refreshStats, refreshInventory]);
+  }, [refreshStats, refreshInventory, refreshSales]);
 
   // Initialize
   useEffect(() => {
@@ -189,7 +237,10 @@ export function useDistributorOffline() {
           : null;
         setState(prev => ({ ...prev, isSyncing: false, lastSyncMessage: msg }));
         refreshStats();
-        if (event.synced! > 0) refreshInventory();
+        if (event.synced! > 0) {
+          refreshInventory();
+          refreshSales();
+        }
       } else if (event.type === 'error') {
         setState(prev => ({ ...prev, isSyncing: false }));
         refreshStats();
@@ -199,6 +250,7 @@ export function useDistributorOffline() {
     // Load initial data
     refreshStats();
     refreshInventory();
+    refreshSales();
 
     // Periodic stats refresh
     const statsInterval = setInterval(refreshStats, 30_000);
@@ -211,7 +263,7 @@ export function useDistributorOffline() {
       unsub();
       clearInterval(statsInterval);
     };
-  }, [refreshStats, refreshInventory]);
+  }, [refreshStats, refreshInventory, refreshSales]);
 
   return {
     ...state,

@@ -493,6 +493,51 @@ export async function getCachedInvoices(): Promise<CachedInvoice[]> {
 }
 
 // ============================================
+// Sales Cache (for collections tab)
+// ============================================
+
+export interface CachedSale {
+  id: string;
+  customer_id: string;
+  customerName: string;
+  grandTotal: number;
+  paidAmount: number;
+  remaining: number;
+  paymentType: string;
+  isVoided: boolean;
+  timestamp: number;
+}
+
+export async function cacheSales(sales: CachedSale[]): Promise<void> {
+  await clearStore(STORES.SALES_CACHE);
+  for (const sale of sales) {
+    await putItem(STORES.SALES_CACHE, sale);
+  }
+}
+
+export async function getCachedSales(): Promise<CachedSale[]> {
+  return getAllItems<CachedSale>(STORES.SALES_CACHE);
+}
+
+export async function updateCachedSale(saleId: string, updates: Partial<CachedSale>): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.SALES_CACHE, 'readwrite');
+    const store = tx.objectStore(STORES.SALES_CACHE);
+    const getReq = store.get(saleId);
+    
+    getReq.onsuccess = () => {
+      if (getReq.result) {
+        store.put({ ...getReq.result, ...updates });
+      }
+    };
+    
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+// ============================================
 // Organization Info Cache
 // ============================================
 
