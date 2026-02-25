@@ -37,11 +37,13 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
 
   // Load from IndexedDB first, then background-refresh from server
   const loadInvoices = useCallback(async (isRefresh = false) => {
-    // On first load, show cached data immediately
+    // On first load, show cached data immediately (includes locally-created invoices)
     if (!loadedFromCache.current) {
       try {
         const cached = await getCachedInvoices();
         if (cached.length > 0) {
+          // Sort: newest first
+          cached.sort((a, b) => new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime());
           setInvoices(cached);
           setLoading(false);
           loadedFromCache.current = true;
@@ -52,6 +54,15 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
     if (isRefresh) setRefreshing(true);
 
     if (!navigator.onLine) {
+      // Even if offline, ensure we load from cache if not loaded yet
+      if (!loadedFromCache.current) {
+        try {
+          const cached = await getCachedInvoices();
+          cached.sort((a, b) => new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime());
+          setInvoices(cached);
+          loadedFromCache.current = true;
+        } catch { /* ignore */ }
+      }
       setLoading(false);
       setRefreshing(false);
       return;
@@ -321,6 +332,11 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
                     {getTypeName(invoice.invoice_type)}
                   </span>
                   <span className="text-xs text-muted-foreground font-mono">{invoice.invoice_number}</span>
+                  {(invoice as any).isLocal && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                      <WifiOff className="w-3 h-3" /> محلي
+                    </span>
+                  )}
                 </div>
                 <div className="text-left">
                   <p className={`text-lg font-black ${invoice.invoice_type === 'return' ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'}`}>

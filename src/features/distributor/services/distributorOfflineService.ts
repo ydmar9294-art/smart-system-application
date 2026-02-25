@@ -2,16 +2,17 @@
  * Distributor Offline Service
  * 
  * Provides offline-first operations for the distributor:
- * - Local IndexedDB cache for inventory, customers, sales
+ * - Local IndexedDB cache for inventory, customers, sales, invoices
  * - Offline action queue with auto-sync
  * - Optimistic UI updates
- * - Customer ID remapping on sync
+ * - Customer & Sale ID remapping on sync
  * 
  * Architecture:
  * - All writes go to IndexedDB first (instant)
  * - Background sync pushes to Supabase when online
  * - UI always reads from local cache
- * - Customers sync FIRST, then dependent operations remap IDs
+ * - Sync order: Customers → Sales → Collections → Returns → Others
+ * - ID maps persisted in IndexedDB to survive restarts
  */
 
 import { generateUUID } from '@/lib/uuid';
@@ -22,8 +23,8 @@ import { logger } from '@/lib/logger';
 // Database Setup
 // ============================================
 
-const DB_NAME = 'distributor_offline_v3';
-const DB_VERSION = 3;
+const DB_NAME = 'distributor_offline_v4';
+const DB_VERSION = 4;
 
 const STORES = {
   ACTIONS: 'offline_actions',
@@ -32,6 +33,7 @@ const STORES = {
   SALES_CACHE: 'sales_cache',
   INVOICES_CACHE: 'invoices_cache',
   ORG_INFO_CACHE: 'org_info_cache',
+  ID_MAPS: 'id_maps',
 } as const;
 
 export type OfflineActionType = 
@@ -53,6 +55,8 @@ export interface OfflineAction {
   syncedAt?: number;
   error?: string;
   idempotencyKey: string;
+  /** Cooldown: don't retry before this timestamp */
+  nextRetryAt?: number;
 }
 
 // ============================================
@@ -67,7 +71,7 @@ function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onupgradeneeded = (event) => {
+    request.onupgradeneeded = () => {
       const db = request.result;
       
       if (!db.objectStoreNames.contains(STORES.ACTIONS)) {
@@ -95,6 +99,10 @@ function openDB(): Promise<IDBDatabase> {
 
       if (!db.objectStoreNames.contains(STORES.ORG_INFO_CACHE)) {
         db.createObjectStore(STORES.ORG_INFO_CACHE, { keyPath: 'key' });
+      }
+
+      if (!db.objectStoreNames.contains(STORES.ID_MAPS)) {
+        db.createObjectStore(STORES.ID_MAPS, { keyPath: 'localId' });
       }
     };
 
@@ -151,6 +159,16 @@ async function deleteItem(storeName: string, key: string): Promise<void> {
   });
 }
 
+async function getItem<T>(storeName: string, key: string): Promise<T | null> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readonly');
+    const req = tx.objectStore(storeName).get(key);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+}
+
 // ============================================
 // Action Queue
 // ============================================
@@ -176,8 +194,9 @@ export async function enqueueAction(
 
 export async function getPendingActions(): Promise<OfflineAction[]> {
   const all = await getAllItems<OfflineAction>(STORES.ACTIONS);
+  const now = Date.now();
   return all
-    .filter(a => a.status === 'pending')
+    .filter(a => a.status === 'pending' && (!a.nextRetryAt || a.nextRetryAt <= now))
     .sort((a, b) => a.createdAt - b.createdAt);
 }
 
@@ -291,24 +310,21 @@ export interface CachedCustomer {
   balance: number;
   organization_id: string;
   created_by: string | null;
-  isLocal?: boolean;       // true = created offline, not yet synced
+  isLocal?: boolean;
   syncStatus?: 'pending' | 'synced' | 'failed';
   updated_at: number;
 }
 
 export async function cacheCustomers(customers: CachedCustomer[]): Promise<void> {
-  // Preserve local (unsynced) customers during server refresh
   const existing = await getAllItems<CachedCustomer>(STORES.CUSTOMERS_CACHE);
   const localCustomers = existing.filter(c => c.isLocal && c.syncStatus !== 'synced');
   
   await clearStore(STORES.CUSTOMERS_CACHE);
   
-  // Re-add server customers
   for (const c of customers) {
     await putItem(STORES.CUSTOMERS_CACHE, { ...c, updated_at: Date.now() });
   }
   
-  // Re-add local unsynced customers (avoid duplicates by ID)
   const serverIds = new Set(customers.map(c => c.id));
   for (const c of localCustomers) {
     if (!serverIds.has(c.id)) {
@@ -341,7 +357,6 @@ export async function updateCustomerSyncStatus(
         const c = getReq.result;
         c.syncStatus = status;
         if (status === 'synced' && serverId) {
-          // Remove old local entry, add with server ID
           store.delete(localId);
           c.id = serverId;
           c.isLocal = false;
@@ -357,26 +372,77 @@ export async function updateCustomerSyncStatus(
   });
 }
 
-/** Map of local temp IDs → server IDs after sync */
+// ============================================
+// Persistent ID Maps (survive app restarts)
+// ============================================
+
+interface IdMapEntry {
+  localId: string;
+  serverId: string;
+  type: 'customer' | 'sale';
+  createdAt: number;
+}
+
+/** In-memory cache, loaded from IndexedDB on init */
 const customerIdMap = new Map<string, string>();
+const saleIdMap = new Map<string, string>();
 
 export function getCustomerIdMap(): Map<string, string> {
   return customerIdMap;
+}
+
+export function getSaleIdMap(): Map<string, string> {
+  return saleIdMap;
 }
 
 export function resolveCustomerId(id: string): string {
   return customerIdMap.get(id) || id;
 }
 
+export function resolveSaleId(id: string): string {
+  return saleIdMap.get(id) || id;
+}
+
+/** Persist an ID mapping to IndexedDB + in-memory */
+async function persistIdMapping(localId: string, serverId: string, type: 'customer' | 'sale'): Promise<void> {
+  const map = type === 'customer' ? customerIdMap : saleIdMap;
+  map.set(localId, serverId);
+  
+  await putItem(STORES.ID_MAPS, {
+    localId,
+    serverId,
+    type,
+    createdAt: Date.now(),
+  } as IdMapEntry);
+}
+
+/** Load all persisted ID maps from IndexedDB into memory */
+export async function loadPersistedIdMaps(): Promise<void> {
+  try {
+    const entries = await getAllItems<IdMapEntry>(STORES.ID_MAPS);
+    for (const entry of entries) {
+      if (entry.type === 'customer') {
+        customerIdMap.set(entry.localId, entry.serverId);
+      } else if (entry.type === 'sale') {
+        saleIdMap.set(entry.localId, entry.serverId);
+      }
+    }
+    if (entries.length > 0) {
+      logger.info(`[IDMap] Loaded ${entries.length} persisted ID mappings`, 'DistributorOffline');
+    }
+  } catch {
+    // IndexedDB not available
+  }
+}
+
 // ============================================
-// Sync Engine — Direct RPC Calls
+// Sync Engine
 // ============================================
 
 const MAX_RETRIES = 5;
 let isSyncing = false;
 let syncIntervalId: ReturnType<typeof setInterval> | null = null;
 
-/** Listeners for sync events */
 type SyncListener = (event: { type: 'start' | 'progress' | 'complete' | 'error'; synced?: number; failed?: number; total?: number; message?: string }) => void;
 const syncListeners: Set<SyncListener> = new Set();
 
@@ -389,24 +455,56 @@ function notifySyncListeners(event: Parameters<SyncListener>[0]) {
   syncListeners.forEach(l => l(event));
 }
 
+/** Priority ordering for sync types: customers first, then sales, then collections/returns */
+function syncPriority(type: OfflineActionType): number {
+  switch (type) {
+    case 'ADD_CUSTOMER': return 0;
+    case 'CREATE_SALE': return 1;
+    case 'ADD_COLLECTION': return 2;
+    case 'CREATE_RETURN': return 3;
+    case 'TRANSFER_TO_WAREHOUSE': return 4;
+    default: return 5;
+  }
+}
+
 async function executeAction(action: OfflineAction): Promise<boolean> {
   try {
     switch (action.type) {
       case 'CREATE_SALE': {
-        // Remap customer ID if it was a local temp ID
         const customerId = resolveCustomerId(action.payload.customerId);
-        const { error } = await supabase.rpc('create_distributor_sale_rpc', {
+        
+        // If customer ID is still local (unresolved), skip — will retry after customer syncs
+        if (customerId.startsWith('local_')) {
+          logger.info(`[Sync] Skipping CREATE_SALE — customer ${customerId} not yet synced`, 'DistributorOffline');
+          return false;
+        }
+        
+        const { data, error } = await supabase.rpc('create_distributor_sale_rpc', {
           p_customer_id: customerId,
           p_items: action.payload.items,
           p_payment_type: action.payload.paymentType || 'CASH',
         });
         if (error) throw error;
+        
+        // Map local sale ID → server sale ID
+        if (data && action.payload.localSaleId) {
+          await persistIdMapping(action.payload.localSaleId, data as string, 'sale');
+          logger.info(`[Sync] Sale remapped: ${action.payload.localSaleId} → ${data}`, 'DistributorOffline');
+        }
         return true;
       }
 
       case 'ADD_COLLECTION': {
+        const saleId = resolveSaleId(action.payload.saleId);
+        
+        // If sale ID is still local, skip — will retry after sale syncs
+        if (saleId.startsWith('local_')) {
+          logger.info(`[Sync] Skipping ADD_COLLECTION — sale ${saleId} not yet synced`, 'DistributorOffline');
+          return false;
+        }
+        
         const { error } = await supabase.rpc('add_collection_rpc', {
-          p_sale_id: action.payload.saleId,
+          p_sale_id: saleId,
           p_amount: action.payload.amount,
           p_notes: action.payload.notes || null,
         });
@@ -415,8 +513,15 @@ async function executeAction(action: OfflineAction): Promise<boolean> {
       }
 
       case 'CREATE_RETURN': {
+        const saleId = resolveSaleId(action.payload.saleId);
+        
+        if (saleId.startsWith('local_')) {
+          logger.info(`[Sync] Skipping CREATE_RETURN — sale ${saleId} not yet synced`, 'DistributorOffline');
+          return false;
+        }
+        
         const { error } = await supabase.rpc('create_distributor_return_rpc', {
-          p_sale_id: action.payload.saleId,
+          p_sale_id: saleId,
           p_items: action.payload.items,
           p_reason: action.payload.reason || null,
         });
@@ -433,7 +538,6 @@ async function executeAction(action: OfflineAction): Promise<boolean> {
       }
 
       case 'ADD_CUSTOMER': {
-        // Sync customer and capture the server-assigned ID
         const { data, error } = await supabase.from('customers').insert({
           name: action.payload.name,
           phone: action.payload.phone,
@@ -444,10 +548,8 @@ async function executeAction(action: OfflineAction): Promise<boolean> {
         
         if (error) throw error;
         
-        // Store the mapping: local temp ID → real server ID
         if (data?.id && action.payload.localId) {
-          customerIdMap.set(action.payload.localId, data.id);
-          // Update local cache
+          await persistIdMapping(action.payload.localId, data.id, 'customer');
           await updateCustomerSyncStatus(action.payload.localId, 'synced', data.id);
           logger.info(`[Sync] Customer remapped: ${action.payload.localId} → ${data.id}`, 'DistributorOffline');
         }
@@ -464,6 +566,11 @@ async function executeAction(action: OfflineAction): Promise<boolean> {
   }
 }
 
+/** Calculate exponential backoff delay: 5s, 15s, 45s, 120s, 300s */
+function getRetryDelay(retryCount: number): number {
+  return Math.min(5000 * Math.pow(3, retryCount), 300_000);
+}
+
 export async function syncAllPending(): Promise<{ synced: number; failed: number }> {
   if (isSyncing) return { synced: 0, failed: 0 };
   if (!navigator.onLine) return { synced: 0, failed: 0 };
@@ -473,16 +580,19 @@ export async function syncAllPending(): Promise<{ synced: number; failed: number
   let failed = 0;
 
   try {
+    // Load persisted ID maps so remapping works after restart
+    await loadPersistedIdMaps();
+    
     const pending = await getPendingActions();
     if (pending.length === 0) return { synced: 0, failed: 0 };
 
     notifySyncListeners({ type: 'start', total: pending.length });
     logger.info(`[Sync] Processing ${pending.length} pending actions`, 'DistributorOffline');
 
-    // CRITICAL: Sort so ADD_CUSTOMER actions sync FIRST (dependency ordering)
+    // Sort by dependency priority, then by creation time
     const sorted = [...pending].sort((a, b) => {
-      const priority = (type: OfflineActionType) => type === 'ADD_CUSTOMER' ? 0 : 1;
-      return priority(a.type) - priority(b.type) || a.createdAt - b.createdAt;
+      const pDiff = syncPriority(a.type) - syncPriority(b.type);
+      return pDiff !== 0 ? pDiff : a.createdAt - b.createdAt;
     });
 
     for (const action of sorted) {
@@ -496,10 +606,23 @@ export async function syncAllPending(): Promise<{ synced: number; failed: number
       } else {
         const newRetry = action.retryCount + 1;
         if (newRetry >= MAX_RETRIES) {
-          await updateAction(action.id, { status: 'failed', retryCount: newRetry, error: 'تجاوز الحد الأقصى للمحاولات' });
+          // Permanently failed — stop retrying
+          await updateAction(action.id, { 
+            status: 'failed', 
+            retryCount: newRetry, 
+            error: 'تجاوز الحد الأقصى للمحاولات' 
+          });
           failed++;
+          logger.warn(`[Sync] Action ${action.id} permanently failed after ${MAX_RETRIES} retries`, 'DistributorOffline');
         } else {
-          await updateAction(action.id, { status: 'pending', retryCount: newRetry });
+          // Set back to pending with exponential backoff cooldown
+          const delay = getRetryDelay(newRetry);
+          await updateAction(action.id, { 
+            status: 'pending', 
+            retryCount: newRetry,
+            nextRetryAt: Date.now() + delay,
+          });
+          logger.info(`[Sync] Action ${action.id} will retry in ${delay / 1000}s (attempt ${newRetry})`, 'DistributorOffline');
         }
       }
 
@@ -530,6 +653,9 @@ export async function syncAllPending(): Promise<{ synced: number; failed: number
 export function startDistributorSync(): void {
   if (syncIntervalId) return;
   
+  // Load ID maps immediately
+  loadPersistedIdMaps();
+  
   // Initial sync after short delay
   setTimeout(syncAllPending, 2000);
   
@@ -555,6 +681,76 @@ function handleOnline(): void {
 
 export function getIsSyncing(): boolean {
   return isSyncing;
+}
+
+// ============================================
+// Sales Cache (offline-first, includes locally-created sales)
+// ============================================
+
+export interface CachedSale {
+  id: string;
+  customer_id: string;
+  customerName: string;
+  grandTotal: number;
+  paidAmount: number;
+  remaining: number;
+  paymentType: string;
+  isVoided: boolean;
+  timestamp: number;
+  /** True if created offline, not yet synced */
+  isLocal?: boolean;
+}
+
+export async function cacheSales(sales: CachedSale[]): Promise<void> {
+  // Preserve local (unsynced) sales during server refresh
+  const existing = await getAllItems<CachedSale>(STORES.SALES_CACHE);
+  const localSales = existing.filter(s => s.isLocal);
+  
+  await clearStore(STORES.SALES_CACHE);
+  
+  for (const sale of sales) {
+    await putItem(STORES.SALES_CACHE, sale);
+  }
+  
+  // Re-add local unsynced sales (avoid duplicates)
+  const serverIds = new Set(sales.map(s => s.id));
+  for (const s of localSales) {
+    // Check if this local sale was synced (its ID was remapped)
+    const mappedId = saleIdMap.get(s.id);
+    if (mappedId && serverIds.has(mappedId)) {
+      // Already synced and present in server data — skip
+      continue;
+    }
+    if (!serverIds.has(s.id)) {
+      await putItem(STORES.SALES_CACHE, s);
+    }
+  }
+}
+
+export async function getCachedSales(): Promise<CachedSale[]> {
+  return getAllItems<CachedSale>(STORES.SALES_CACHE);
+}
+
+export async function addLocalSale(sale: CachedSale): Promise<void> {
+  await putItem(STORES.SALES_CACHE, sale);
+}
+
+export async function updateCachedSale(saleId: string, updates: Partial<CachedSale>): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.SALES_CACHE, 'readwrite');
+    const store = tx.objectStore(STORES.SALES_CACHE);
+    const getReq = store.get(saleId);
+    
+    getReq.onsuccess = () => {
+      if (getReq.result) {
+        store.put({ ...getReq.result, ...updates });
+      }
+    };
+    
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
 // ============================================
@@ -588,12 +784,29 @@ export interface CachedInvoice {
   legal_info: any | null;
   invoice_date: string;
   created_at: string;
+  /** True if created offline, not yet synced */
+  isLocal?: boolean;
 }
 
 export async function cacheInvoices(invoices: CachedInvoice[]): Promise<void> {
+  // Preserve local (unsynced) invoices during server refresh
+  const existing = await getAllItems<CachedInvoice>(STORES.INVOICES_CACHE);
+  const localInvoices = existing.filter(inv => inv.isLocal);
+  
   await clearStore(STORES.INVOICES_CACHE);
+  
   for (const inv of invoices) {
     await putItem(STORES.INVOICES_CACHE, inv);
+  }
+  
+  // Re-add local unsynced invoices
+  const serverIds = new Set(invoices.map(inv => inv.id));
+  for (const inv of localInvoices) {
+    const mappedId = saleIdMap.get(inv.id);
+    if (mappedId && serverIds.has(mappedId)) continue;
+    if (!serverIds.has(inv.id)) {
+      await putItem(STORES.INVOICES_CACHE, inv);
+    }
   }
 }
 
@@ -601,49 +814,8 @@ export async function getCachedInvoices(): Promise<CachedInvoice[]> {
   return getAllItems<CachedInvoice>(STORES.INVOICES_CACHE);
 }
 
-// ============================================
-// Sales Cache (for collections tab)
-// ============================================
-
-export interface CachedSale {
-  id: string;
-  customer_id: string;
-  customerName: string;
-  grandTotal: number;
-  paidAmount: number;
-  remaining: number;
-  paymentType: string;
-  isVoided: boolean;
-  timestamp: number;
-}
-
-export async function cacheSales(sales: CachedSale[]): Promise<void> {
-  await clearStore(STORES.SALES_CACHE);
-  for (const sale of sales) {
-    await putItem(STORES.SALES_CACHE, sale);
-  }
-}
-
-export async function getCachedSales(): Promise<CachedSale[]> {
-  return getAllItems<CachedSale>(STORES.SALES_CACHE);
-}
-
-export async function updateCachedSale(saleId: string, updates: Partial<CachedSale>): Promise<void> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORES.SALES_CACHE, 'readwrite');
-    const store = tx.objectStore(STORES.SALES_CACHE);
-    const getReq = store.get(saleId);
-    
-    getReq.onsuccess = () => {
-      if (getReq.result) {
-        store.put({ ...getReq.result, ...updates });
-      }
-    };
-    
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+export async function addLocalInvoice(invoice: CachedInvoice): Promise<void> {
+  await putItem(STORES.INVOICES_CACHE, invoice);
 }
 
 // ============================================
@@ -672,11 +844,5 @@ export async function cacheOrgInfo(orgName: string, legalInfo: CachedOrgInfo['le
 }
 
 export async function getCachedOrgInfo(): Promise<CachedOrgInfo | null> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORES.ORG_INFO_CACHE, 'readonly');
-    const req = tx.objectStore(STORES.ORG_INFO_CACHE).get('org_info');
-    req.onsuccess = () => resolve(req.result || null);
-    req.onerror = () => reject(req.error);
-  });
+  return getItem<CachedOrgInfo>(STORES.ORG_INFO_CACHE, 'org_info');
 }
