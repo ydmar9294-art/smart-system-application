@@ -15,12 +15,17 @@ export function usePageTheme() {
 
   useEffect(() => {
     const root = document.documentElement;
+    // Enable transition class before toggling
+    root.classList.add('theme-transition');
     if (isDark) {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
     }
     localStorage.setItem('app-theme', isDark ? 'dark' : 'light');
+    // Remove transition class after animation completes to avoid perf overhead
+    const timer = setTimeout(() => root.classList.remove('theme-transition'), 350);
+    return () => clearTimeout(timer);
   }, [isDark]);
 
   const toggleTheme = useCallback(() => {
