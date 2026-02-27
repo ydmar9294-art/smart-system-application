@@ -4,7 +4,7 @@
  * Flow: Invoice HTML → hidden iframe → html2canvas → jsPDF → Uint8Array
  *       → Share (Capacitor Share) or Save (Capacitor Filesystem / browser download)
  *
- * Layout: Uses 5×8 index card (127mm × 203mm) format.
+ * Layout: 80mm thermal receipt (printable area ~74mm).
  */
 
 import jsPDF from 'jspdf';
@@ -15,8 +15,8 @@ const isCapacitor = (): boolean =>
   typeof (window as any).Capacitor !== 'undefined' &&
   (window as any).Capacitor?.isNativePlatform?.() === true;
 
-// ── PDF dimensions: 5×8 index card (127mm × 203mm) ────────────────────────
-const PDF_WIDTH_MM = 127;
+// ── PDF dimensions: 80mm thermal receipt ──────────────────────────────────
+const PDF_WIDTH_MM = 80;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // generateInvoicePdf
@@ -28,13 +28,14 @@ export async function generateInvoicePdf(
   invoiceTitle = 'فاتورة'
 ): Promise<{ pdfBase64: string; pdfBlob: Blob }> {
   return new Promise((resolve, reject) => {
-    // ── 1. Create a hidden container that matches the 5×8 index card width ──
+    // ── 1. Create a hidden container that matches 80mm thermal receipt width ──
+    const RENDER_WIDTH = 302; // 80mm ≈ 302px at 96dpi
     const container = document.createElement('div');
     Object.assign(container.style, {
       position:   'fixed',
       top:        '-99999px',
       left:       '-99999px',
-      width:      '480px',   // 127mm ≈ 480px at 96dpi
+      width:      `${RENDER_WIDTH}px`,
       background: '#ffffff',
       zIndex:     '-1',
       direction:  'rtl',
@@ -44,7 +45,7 @@ export async function generateInvoicePdf(
     // ── 2. Inject invoice HTML ──────────────────────────────────────────────
     const iframe = document.createElement('iframe');
     Object.assign(iframe.style, {
-      width:  '480px',
+      width:  `${RENDER_WIDTH}px`,
       height: '1px',
       border: 'none',
     });
@@ -73,9 +74,9 @@ export async function generateInvoicePdf(
           useCORS:         true,
           backgroundColor: '#ffffff',
           logging:         false,
-          width:           480,
+          width:           RENDER_WIDTH,
           height:          body.scrollHeight,
-          windowWidth:     480,
+          windowWidth:     RENDER_WIDTH,
         });
 
         // ── 4. jsPDF: 80mm wide, auto height ────────────────────────────────
