@@ -74,6 +74,21 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
 
       const results: CachedInvoice[] = [];
 
+      // Fetch org info + legal info for all invoices
+      let orgName: string | null = null;
+      let legalInfo: any = null;
+      const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single();
+      if (profile?.organization_id) {
+        const [orgRes, legalRes] = await Promise.all([
+          supabase.from('organizations').select('name').eq('id', profile.organization_id).single(),
+          supabase.from('organization_legal_info')
+            .select('commercial_registration, industrial_registration, tax_identification, trademark_name, stamp_url')
+            .eq('organization_id', profile.organization_id).maybeSingle()
+        ]);
+        orgName = orgRes.data?.name || null;
+        legalInfo = legalRes.data || null;
+      }
+
       // Fetch sales
       const { data: sales } = await supabase
         .from('sales')
@@ -107,7 +122,7 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
             paid_amount: sale.paid_amount, remaining: sale.remaining,
             payment_type: sale.payment_type as 'CASH' | 'CREDIT',
             items: itemsBySale.get(sale.id) || [],
-            notes: null, reason: null, org_name: null, legal_info: null,
+            notes: null, reason: null, org_name: orgName, legal_info: legalInfo,
             invoice_date: sale.created_at, created_at: sale.created_at,
           });
         });
@@ -144,7 +159,7 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
             created_by_name: null, grand_total: ret.total_amount,
             paid_amount: 0, remaining: 0, payment_type: null,
             items: itemsByReturn.get(ret.id) || [],
-            notes: null, reason: ret.reason, org_name: null, legal_info: null,
+            notes: null, reason: ret.reason, org_name: orgName, legal_info: legalInfo,
             invoice_date: ret.created_at, created_at: ret.created_at,
           });
         });
@@ -179,7 +194,7 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
             grand_total: col.amount, paid_amount: col.amount,
             remaining: 0, payment_type: 'CASH',
             items: [], notes: col.notes, reason: null,
-            org_name: null, legal_info: null,
+            org_name: orgName, legal_info: legalInfo,
             invoice_date: col.created_at, created_at: col.created_at,
           });
         });
