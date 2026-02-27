@@ -947,6 +947,7 @@ export interface CachedOrgInfo {
     industrial_registration: string | null;
     tax_identification: string | null;
     trademark_name: string | null;
+    stamp_url?: string | null;
   } | null;
   organizationId?: string;
   distributorId?: string;
@@ -960,6 +961,7 @@ export async function cacheOrgInfo(
     industrial_registration: string | null;
     tax_identification: string | null;
     trademark_name: string | null;
+    stamp_url?: string | null;
   } | null,
   organizationId?: string,
   distributorId?: string,
