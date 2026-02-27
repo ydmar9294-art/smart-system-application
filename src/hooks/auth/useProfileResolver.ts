@@ -5,6 +5,7 @@
 import { useCallback, MutableRefObject } from 'react';
 import { resolveUserProfile } from '@/hooks/useAuthOperations';
 import { clearAuthCache } from '@/lib/authCache';
+import { registerDevice } from '@/lib/deviceService';
 import { logger } from '@/lib/logger';
 import { RESOLVE_TIMEOUT_MS } from './authHelpers';
 
@@ -58,6 +59,12 @@ export const useProfileResolver = (deps: ProfileResolverDeps) => {
             role: result.role,
             organization: result.organization,
           });
+
+          // Register device after successful auth (fire-and-forget, non-blocking)
+          registerDevice().catch((err) => {
+            logger.warn('Device registration failed (non-blocking)', 'Auth', { error: String(err) });
+          });
+
           return true;
         } catch (err: any) {
           // CRITICAL: If we booted from cache and this is a background revalidation,

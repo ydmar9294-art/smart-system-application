@@ -349,6 +349,39 @@ export type Database = {
           },
         ]
       }
+      devices: {
+        Row: {
+          created_at: string
+          device_id: string
+          device_name: string
+          id: string
+          is_active: boolean
+          last_seen: string
+          replaced_device_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          device_name?: string
+          id?: string
+          is_active?: boolean
+          last_seen?: string
+          replaced_device_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          device_name?: string
+          id?: string
+          is_active?: boolean
+          last_seen?: string
+          replaced_device_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       distributor_inventory: {
         Row: {
           distributor_id: string

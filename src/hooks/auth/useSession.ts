@@ -5,6 +5,7 @@
 import { useEffect, MutableRefObject } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getCachedAuth, clearAuthCache, isAuthCacheFresh, CachedAuthState } from '@/lib/authCache';
+import { verifyDevice } from '@/lib/deviceService';
 import { logger } from '@/lib/logger';
 import { buildUserFromCache, isCacheFullyActivated, isNetworkAvailable, HARD_TIMEOUT_MS } from './authHelpers';
 
@@ -185,22 +186,41 @@ export const useSession = (deps: SessionDeps) => {
     validateSession();
 
     // ── Phase 4: Listen for online events to trigger background revalidation ──
-    const handleOnline = () => {
-      if (bootedFromCache.current && cached) {
-        logger.info('Network restored — triggering background revalidation', 'Auth');
-        supabase.auth
-          .getSession()
-          .then(({ data }) => {
-            if (data.session?.user) {
-              resolveProfile(data.session.user.id, true).catch(() => {
-                logger.warn('Online revalidation failed — keeping cache', 'Auth');
-              });
-            }
-          })
-          .catch(() => {
-            // Ignore — will retry next time
-          });
+    const handleOnline = async () => {
+      if (!bootedFromCache.current || !cached) return;
+
+      logger.info('Network restored — verifying device & revalidating', 'Auth');
+
+      // Step 1: Verify device is still active
+      try {
+        const deviceResult = await verifyDevice();
+        if (!deviceResult.active) {
+          logger.warn('Device revoked while offline — forcing logout', 'Auth');
+          clearAuthCache();
+          resetToLogin();
+          // Show toast/alert via a custom event
+          window.dispatchEvent(new CustomEvent('device-revoked', {
+            detail: { message: deviceResult.message || 'تم تسجيل الدخول من جهاز آخر' }
+          }));
+          return;
+        }
+      } catch {
+        // Verification failed — don't block, continue with revalidation
       }
+
+      // Step 2: Background revalidation
+      supabase.auth
+        .getSession()
+        .then(({ data }) => {
+          if (data.session?.user) {
+            resolveProfile(data.session.user.id, true).catch(() => {
+              logger.warn('Online revalidation failed — keeping cache', 'Auth');
+            });
+          }
+        })
+        .catch(() => {
+          // Ignore — will retry next time
+        });
     };
 
     window.addEventListener('online', handleOnline);
