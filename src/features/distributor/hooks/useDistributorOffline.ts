@@ -202,24 +202,6 @@ export function useDistributorOffline() {
       // Cache org context every time we successfully fetch profile (ensures offline availability)
       await cacheOfflineOrgContext(profile.organization_id, user.id);
 
-      // Also cache org name + legal info (stamp, registrations) for offline invoices
-      try {
-        const [orgRes, legalRes] = await Promise.all([
-          supabase.from('organizations').select('name').eq('id', profile.organization_id).single(),
-          supabase.from('organization_legal_info')
-            .select('commercial_registration, industrial_registration, tax_identification, trademark_name, stamp_url')
-            .eq('organization_id', profile.organization_id).maybeSingle()
-        ]);
-        if (orgRes.data) {
-          await cacheOrgInfo(
-            orgRes.data.name,
-            legalRes.data || null,
-            profile.organization_id,
-            user.id
-          );
-        }
-      } catch { /* non-critical — don't block customer refresh */ }
-
       const { data, error } = await supabase
         .from('customers')
         .select('id, name, phone, location, balance, organization_id, created_by')
@@ -443,6 +425,46 @@ export function useDistributorOffline() {
         await addLocalInvoice(collectionInvoice);
       }
     }
+
+    // For CREATE_RETURN: add local invoice for return history
+    if (type === 'CREATE_RETURN') {
+      const sales = await getCachedSales();
+      const sale = sales.find(s => s.id === payload.saleId);
+      const localReturnId = `local_${generateUUID()}`;
+      const cachedOrg3 = await getCachedOrgInfo();
+      const grandTotal = (payload.items || []).reduce(
+        (sum: number, item: any) => sum + (item.quantity * item.unit_price), 0
+      );
+      const returnInvoice: CachedInvoice = {
+        id: localReturnId,
+        invoice_type: 'return',
+        invoice_number: `RET-${localReturnId.slice(-4).toUpperCase()}`,
+        reference_id: payload.saleId,
+        customer_id: sale?.customer_id || null,
+        customer_name: sale?.customerName || 'غير معروف',
+        created_by: null,
+        created_by_name: null,
+        grand_total: grandTotal,
+        paid_amount: 0,
+        remaining: 0,
+        payment_type: null,
+        items: (payload.items || []).map((item: any) => ({
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.quantity * item.unit_price,
+        })),
+        notes: null,
+        reason: payload.reason || null,
+        org_name: cachedOrg3?.orgName || null,
+        legal_info: cachedOrg3?.legalInfo || null,
+        invoice_date: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        isLocal: true,
+      };
+      await addLocalInvoice(returnInvoice);
+    }
     
     const action = await enqueueAction(type, payload);
 
@@ -531,6 +553,26 @@ export function useDistributorOffline() {
     refreshInventory();
     refreshSales();
     refreshCustomers();
+
+    // Cache org name + legal info (stamp, registrations) eagerly at login/init
+    (async () => {
+      if (!navigator.onLine) return;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single();
+        if (!profile?.organization_id) return;
+        const [orgRes, legalRes] = await Promise.all([
+          supabase.from('organizations').select('name').eq('id', profile.organization_id).single(),
+          supabase.from('organization_legal_info')
+            .select('commercial_registration, industrial_registration, tax_identification, trademark_name, stamp_url')
+            .eq('organization_id', profile.organization_id).maybeSingle()
+        ]);
+        if (orgRes.data) {
+          await cacheOrgInfo(orgRes.data.name, legalRes.data || null, profile.organization_id, user.id);
+        }
+      } catch { /* non-critical */ }
+    })();
 
     // Periodic stats refresh
     const statsInterval = setInterval(refreshStats, 30_000);
