@@ -18,15 +18,15 @@ type LoadingPhase = 'returning' | 'validating_license' | 'checking_status';
 const PHASE_LABELS: Record<LoadingPhase, string> = {
   returning: 'جارٍ تسجيل الدخول...',
   validating_license: 'جارٍ التحقق من الترخيص...',
-  checking_status: 'جارٍ التحقق من حالة الحساب...',
+  checking_status: 'جارٍ التحقق من حالة الحساب...'
 };
 
 type AuthState =
 {type: 'initial';} |
-{type: 'loading'; startedAt: number; phase: LoadingPhase;} |
+{type: 'loading';startedAt: number;phase: LoadingPhase;} |
 {type: 'needs_activation';userId: string;email: string;fullName: string;} |
 {type: 'access_denied';reason: string;message: string;} |
-{type: 'error';message: string; canRetry?: boolean;};
+{type: 'error';message: string;canRetry?: boolean;};
 
 /** Max time for verification before showing error */
 const VERIFY_TIMEOUT_MS = 12_000;
@@ -42,18 +42,18 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
   const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearTimers = useCallback(() => {
-    if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
-    if (slowTimerRef.current) { clearTimeout(slowTimerRef.current); slowTimerRef.current = null; }
+    if (timeoutRef.current) {clearTimeout(timeoutRef.current);timeoutRef.current = null;}
+    if (slowTimerRef.current) {clearTimeout(slowTimerRef.current);slowTimerRef.current = null;}
     setIsSlow(false);
   }, []);
 
   const startVerification = useCallback((phase: LoadingPhase = 'returning') => {
     clearTimers();
     setAuthState({ type: 'loading', startedAt: Date.now(), phase });
-    
+
     // Show "slow" indicator after threshold
     slowTimerRef.current = setTimeout(() => setIsSlow(true), SLOW_THRESHOLD_MS);
-    
+
     // Hard timeout — guaranteed error state
     timeoutRef.current = setTimeout(() => {
       setAuthState({
@@ -66,8 +66,8 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
   }, [clearTimers]);
 
   /** Yield to the renderer so loading UI paints before heavy work */
-  const yieldToRenderer = useCallback(() => 
-    new Promise<void>(resolve => requestAnimationFrame(() => setTimeout(resolve, 0))), []);
+  const yieldToRenderer = useCallback(() =>
+  new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0))), []);
 
   const checkUserProfile = useCallback(async (userId: string, user: any) => {
     try {
@@ -75,15 +75,15 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       const fullName = user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0] || '';
 
       // Phase: validating license — yield so spinner renders first
-      setAuthState(prev => prev.type === 'loading' ? { ...prev, phase: 'validating_license' } : prev);
+      setAuthState((prev) => prev.type === 'loading' ? { ...prev, phase: 'validating_license' } : prev);
       await yieldToRenderer();
 
       const status = await Promise.race([
-        checkAuthStatus(),
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('VERIFY_TIMEOUT')), VERIFY_TIMEOUT_MS - 1000)
-        )
-      ]);
+      checkAuthStatus(),
+      new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('VERIFY_TIMEOUT')), VERIFY_TIMEOUT_MS - 1000)
+      )]
+      );
 
       clearTimers();
       clearOAuthPending();
@@ -95,7 +95,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       }
 
       // Phase: checking account status — yield so phase label updates visually
-      setAuthState(prev => prev.type === 'loading' ? { ...prev, phase: 'checking_status' } : prev);
+      setAuthState((prev) => prev.type === 'loading' ? { ...prev, phase: 'checking_status' } : prev);
       await yieldToRenderer();
 
       if (status.access_denied) {
@@ -126,9 +126,9 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       const isTimeout = err?.message === 'VERIFY_TIMEOUT';
       setAuthState({
         type: 'error',
-        message: isTimeout 
-          ? 'استغرق التحقق وقتاً طويلاً. يرجى المحاولة مرة أخرى.'
-          : (err.message || 'حدث خطأ في التحقق من الحساب'),
+        message: isTimeout ?
+        'استغرق التحقق وقتاً طويلاً. يرجى المحاولة مرة أخرى.' :
+        err.message || 'حدث خطأ في التحقق من الحساب',
         canRetry: true
       });
     }
@@ -227,17 +227,17 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
           <div className="flex flex-col items-center justify-center py-12 space-y-4">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
             <p className="text-muted-foreground font-bold text-sm">{PHASE_LABELS[authState.phase]}</p>
-            {isSlow && (
-              <div className="text-center space-y-2 animate-in fade-in duration-300">
+            {isSlow &&
+            <div className="text-center space-y-2 animate-in fade-in duration-300">
                 <p className="text-xs text-muted-foreground/70">يستغرق الأمر وقتاً أطول من المعتاد...</p>
                 <button
-                  onClick={handleLogout}
-                  className="text-xs text-destructive hover:underline font-bold"
-                >
+                onClick={handleLogout}
+                className="text-xs text-destructive hover:underline font-bold">
+
                   إلغاء وتسجيل الخروج
                 </button>
               </div>
-            )}
+            }
           </div>);
 
       case 'needs_activation':
@@ -281,14 +281,14 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
               </p>
             </div>
             <div className="flex flex-col gap-3 items-center">
-              {authState.canRetry && (
-                <button
-                  onClick={handleRetry}
-                  className="px-8 py-3 bg-primary text-primary-foreground rounded-2xl font-bold text-sm hover:bg-primary/90 transition-colors flex items-center gap-2">
+              {authState.canRetry &&
+              <button
+                onClick={handleRetry}
+                className="px-8 py-3 bg-primary text-primary-foreground rounded-2xl font-bold text-sm hover:bg-primary/90 transition-colors flex items-center gap-2">
                   <RefreshCw className="w-4 h-4" />
                   إعادة المحاولة
                 </button>
-              )}
+              }
               <button
                 onClick={handleLogout}
                 className="px-8 py-3 bg-muted text-foreground rounded-2xl font-bold text-sm hover:bg-muted/80 transition-colors">
@@ -309,11 +309,11 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
             </div>
             
             {/* Google OAuth */}
-            <GoogleSignInButton 
-              onError={handleAuthError} 
+            <GoogleSignInButton
+              onError={handleAuthError}
               oauthInProgress={oauthPending}
-              loadingText={oauthPending ? 'جارٍ العودة من Google...' : undefined}
-            />
+              loadingText={oauthPending ? 'جارٍ العودة من Google...' : undefined} />
+
             
             {/* Divider */}
             <div className="flex items-center gap-3">
@@ -341,7 +341,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
         </div>
         <h1 className="text-3xl font-black text-white mb-2 tracking-tight z-10">النظام الذكي</h1>
         <p className="text-white/50 text-[11px] font-bold z-10 text-center leading-relaxed max-w-[200px] my-[5px]">
-          ✨ الخاص بإدارة  البيع و التوزيع ✨
+          ● الخاص بإدارة البيع و التوزيع ●
         </p>
         <div className="flex items-center justify-center gap-8 mt-6 z-10">
           <div className="flex flex-col items-center gap-2">
