@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { authMutex } from '@/lib/concurrency';
 import { getCachedAuth, clearAuthCache } from '@/lib/authCache';
 import { clearEncryptionKey } from '@/lib/indexedDbEncryption';
+import { clearDeviceState } from '@/lib/deviceService';
 import { logger } from '@/lib/logger';
 import { buildUserFromCache, isCacheFullyActivated, isNetworkAvailable } from './authHelpers';
 
@@ -35,6 +36,7 @@ export const useAuthActions = (deps: AuthActionsDeps) => {
       try {
         clearAuthCache();
         clearEncryptionKey();
+        clearDeviceState();
         bootedFromCache.current = false;
         await supabase.auth.signOut().catch(() => {
           // Even if signOut fails, clear local state

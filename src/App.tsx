@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect } from 'react';
+import React, { lazy, Suspense, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, Routes, Route } from 'react-router-dom';
 import { App as CapacitorApp } from '@capacitor/app';
 import { useApp } from '@/store/AppContext';
@@ -91,7 +91,7 @@ const ViewManager: React.FC = () => {
 // MAIN CONTENT
 // ==========================================
 const MainContent: React.FC = () => {
-  const { user, isLoading, refreshAuth, needsActivation } = useApp();
+  const { user, isLoading, refreshAuth, needsActivation, logout } = useApp();
   
   // Initialize theme early so loading/auth screens also get dark mode
   usePageTheme();
@@ -100,6 +100,18 @@ const MainContent: React.FC = () => {
   usePushNotifications();
   const { isOnline, pendingCount } = useOfflineSync();
   const { showUpdateModal, isForceUpdate, checkResult, dismiss } = useVersionCheck();
+
+  // Listen for device-revoked events (from useSession online handler)
+  useEffect(() => {
+    const handleDeviceRevoked = async (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      const { toast } = await import('sonner');
+      toast.error(detail?.message || 'تم تسجيل الدخول من جهاز آخر', { duration: 6000 });
+      logout();
+    };
+    window.addEventListener('device-revoked', handleDeviceRevoked);
+    return () => window.removeEventListener('device-revoked', handleDeviceRevoked);
+  }, [logout]);
 
   // Loading — show skeleton instead of spinner for instant perceived speed
   if (isLoading) return <AppLoadingSkeleton />;
