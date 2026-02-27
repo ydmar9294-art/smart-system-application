@@ -1,5 +1,5 @@
 /**
- * AuthContext - Thin composition layer (v3)
+ * AuthContext - Thin composition layer (v3.1)
  * 
  * All logic is delegated to dedicated hooks:
  *   useAuthState       → state management & transitions
