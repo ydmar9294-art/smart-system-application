@@ -4,8 +4,7 @@
  * Flow: Invoice HTML → hidden iframe → html2canvas → jsPDF → Uint8Array
  *       → Share (Capacitor Share) or Save (Capacitor Filesystem / browser download)
  *
- * Layout: Uses the EXACT same 80mm width the thermal-print HTML uses.
- *         Nothing about the invoice design is changed.
+ * Layout: Uses 5×8 index card (127mm × 203mm) format.
  */
 
 import jsPDF from 'jspdf';
@@ -16,9 +15,8 @@ const isCapacitor = (): boolean =>
   typeof (window as any).Capacitor !== 'undefined' &&
   (window as any).Capacitor?.isNativePlatform?.() === true;
 
-// ── PDF dimensions (matches the 80mm thermal invoice width) ────────────────
-// jsPDF 'mm' units; keep width exactly 80mm, height auto-calculated from content
-const PDF_WIDTH_MM = 80;
+// ── PDF dimensions: 5×8 index card (127mm × 203mm) ────────────────────────
+const PDF_WIDTH_MM = 127;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // generateInvoicePdf
@@ -30,24 +28,23 @@ export async function generateInvoicePdf(
   invoiceTitle = 'فاتورة'
 ): Promise<{ pdfBase64: string; pdfBlob: Blob }> {
   return new Promise((resolve, reject) => {
-    // ── 1. Create a hidden container that matches the invoice width ──────────
+    // ── 1. Create a hidden container that matches the 5×8 index card width ──
     const container = document.createElement('div');
     Object.assign(container.style, {
       position:   'fixed',
       top:        '-99999px',
       left:       '-99999px',
-      width:      '302px',   // 80mm ≈ 302px at 96dpi
+      width:      '480px',   // 127mm ≈ 480px at 96dpi
       background: '#ffffff',
       zIndex:     '-1',
       direction:  'rtl',
       fontFamily: "'Segoe UI', Tahoma, Arial, sans-serif",
     });
 
-    // ── 2. Inject invoice HTML (same HTML string used for printing) ──────────
-    // We render it inside a shadow iframe then capture the body
+    // ── 2. Inject invoice HTML ──────────────────────────────────────────────
     const iframe = document.createElement('iframe');
     Object.assign(iframe.style, {
-      width:  '302px',
+      width:  '480px',
       height: '1px',
       border: 'none',
     });
@@ -76,9 +73,9 @@ export async function generateInvoicePdf(
           useCORS:         true,
           backgroundColor: '#ffffff',
           logging:         false,
-          width:           302,
+          width:           480,
           height:          body.scrollHeight,
-          windowWidth:     302,
+          windowWidth:     480,
         });
 
         // ── 4. jsPDF: 80mm wide, auto height ────────────────────────────────

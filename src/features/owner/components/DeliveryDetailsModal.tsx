@@ -6,6 +6,7 @@ import { Truck, Package, Calendar, User, Hash, Loader2, Share2, Download, CheckC
 import { supabase } from '@/integrations/supabase/client';
 import FullScreenModal from '@/components/ui/FullScreenModal';
 import { escapeHtml, escapeNumber } from '@/lib/htmlEscape';
+import { buildLegalInfoHtml, buildStampHtml, INVOICE_PAGE_STYLE, INVOICE_FOOTER_HTML, type InvoiceLegalInfo } from '@/lib/invoiceHtmlHelpers';
 
 interface DeliveryItem {
   id: string;
@@ -29,8 +30,9 @@ function buildDeliveryHtml(params: {
   distributorName: string;
   items: DeliveryItem[];
   notes?: string;
+  legalInfo?: InvoiceLegalInfo | null;
 }): string {
-  const { orgName, invoiceNumber, deliveryDate, distributorName, items, notes } = params;
+  const { orgName, invoiceNumber, deliveryDate, distributorName, items, notes, legalInfo } = params;
   const totalItems = items.reduce((s, i) => s + i.quantity, 0);
 
   return `<!DOCTYPE html>
@@ -39,55 +41,50 @@ function buildDeliveryHtml(params: {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>فاتورة تسليم - ${escapeHtml(invoiceNumber)}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; width: 80mm; padding: 5mm; font-size: 12px; line-height: 1.4; }
-    @media print { body { width: 80mm; } }
-  </style>
+  <style>${INVOICE_PAGE_STYLE}</style>
 </head>
 <body>
-  <div style="text-align:center;margin-bottom:10px;border-bottom:1px dashed #000;padding-bottom:10px;">
-    <div style="font-size:16px;font-weight:bold;">${escapeHtml(orgName || 'اسم المنشأة')}</div>
+  <div style="text-align:center;margin-bottom:10px;border-bottom:1px solid #ccc;padding-bottom:10px;">
+    <div style="font-size:18px;font-weight:bold;">${escapeHtml(orgName || 'اسم المنشأة')}</div>
+    ${buildLegalInfoHtml(legalInfo)}
   </div>
-  <div style="font-size:14px;font-weight:bold;margin:10px 0;text-align:center;">فاتورة تسليم بضاعة</div>
-  <div style="display:flex;justify-content:space-between;font-size:11px;margin:3px 0;">
+  <div style="font-size:16px;font-weight:bold;margin:12px 0;text-align:center;">فاتورة تسليم بضاعة</div>
+  <div style="display:flex;justify-content:space-between;font-size:12px;margin:4px 0;">
     <span>رقم الفاتورة:</span><span>${escapeHtml(invoiceNumber)}</span>
   </div>
-  <div style="display:flex;justify-content:space-between;font-size:11px;margin:3px 0;">
+  <div style="display:flex;justify-content:space-between;font-size:12px;margin:4px 0;">
     <span>التاريخ:</span><span>${escapeHtml(deliveryDate.toLocaleDateString('ar-SA'))}</span>
   </div>
-  <div style="display:flex;justify-content:space-between;font-size:11px;margin:3px 0;">
+  <div style="display:flex;justify-content:space-between;font-size:12px;margin:4px 0;">
     <span>الوقت:</span><span>${escapeHtml(deliveryDate.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }))}</span>
   </div>
-  <div style="display:flex;justify-content:space-between;font-size:11px;margin:3px 0;">
+  <div style="display:flex;justify-content:space-between;font-size:12px;margin:4px 0;">
     <span>الموزع:</span><span>${escapeHtml(distributorName)}</span>
   </div>
-  <div style="margin:10px 0;border-top:1px dashed #000;border-bottom:1px dashed #000;padding:10px 0;">
-    <table style="width:100%;border-collapse:collapse;font-size:10px;">
+  <div style="margin:12px 0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;padding:12px 0;">
+    <table style="width:100%;border-collapse:collapse;font-size:11px;">
       <thead>
-        <tr style="font-weight:bold;font-size:9px;color:#555;border-bottom:1px dashed #ccc;">
-          <th style="text-align:right;padding:3px 2px;">الصنف</th>
-          <th style="text-align:center;padding:3px 2px;">الكمية</th>
+        <tr style="font-weight:bold;font-size:10px;color:#555;border-bottom:1px solid #ccc;">
+          <th style="text-align:right;padding:4px 2px;">الصنف</th>
+          <th style="text-align:center;padding:4px 2px;">الكمية</th>
         </tr>
       </thead>
       <tbody>
         ${items.map(item => `
           <tr>
-            <td style="text-align:right;padding:3px 2px;">${escapeHtml(item.product_name)}</td>
-            <td style="text-align:center;padding:3px 2px;font-weight:bold;">${escapeNumber(item.quantity)}</td>
+            <td style="text-align:right;padding:4px 2px;">${escapeHtml(item.product_name)}</td>
+            <td style="text-align:center;padding:4px 2px;font-weight:bold;">${escapeNumber(item.quantity)}</td>
           </tr>
         `).join('')}
       </tbody>
     </table>
   </div>
-  <div style="font-size:14px;font-weight:bold;text-align:center;margin:10px 0;">
+  <div style="font-size:16px;font-weight:bold;text-align:center;margin:12px 0;">
     إجمالي القطع: ${escapeNumber(totalItems)}
   </div>
-  ${notes ? `<div style="margin-top:10px;padding-top:10px;border-top:1px dashed #000;font-size:10px;color:#555;">ملاحظات: ${escapeHtml(notes)}</div>` : ''}
-  <div style="text-align:center;font-size:10px;color:#555;margin-top:15px;border-top:1px dashed #000;padding-top:10px;">
-    <p>شكراً لتعاملكم معنا</p>
-    <p style="margin-top:3px;">Smart Sales System</p>
-  </div>
+  ${notes ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid #ccc;font-size:11px;color:#555;">ملاحظات: ${escapeHtml(notes)}</div>` : ''}
+  ${buildStampHtml(legalInfo)}
+  ${INVOICE_FOOTER_HTML}
 </body>
 </html>`;
 }
@@ -103,6 +100,7 @@ const DeliveryDetailsModal: React.FC<DeliveryDetailsModalProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [orgName, setOrgName] = useState('');
+  const [legalInfo, setLegalInfo] = useState<InvoiceLegalInfo | null>(null);
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [actionLoading, setActionLoading] = useState<'share' | 'save' | null>(null);
@@ -126,8 +124,14 @@ const DeliveryDetailsModal: React.FC<DeliveryDetailsModalProps> = ({
         if (userRes.data?.user) {
           const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', userRes.data.user.id).single();
           if (profile?.organization_id) {
-            const { data: org } = await supabase.from('organizations').select('name').eq('id', profile.organization_id).single();
-            if (org) setOrgName(org.name);
+            const [orgRes, legalRes] = await Promise.all([
+              supabase.from('organizations').select('name').eq('id', profile.organization_id).single(),
+              supabase.from('organization_legal_info')
+                .select('commercial_registration, industrial_registration, tax_identification, trademark_name, stamp_url')
+                .eq('organization_id', profile.organization_id).maybeSingle()
+            ]);
+            if (orgRes.data) setOrgName(orgRes.data.name);
+            if (legalRes.data) setLegalInfo(legalRes.data);
           }
         }
       } catch (err: unknown) {
@@ -151,7 +155,7 @@ const DeliveryDetailsModal: React.FC<DeliveryDetailsModalProps> = ({
     if (generating || items.length === 0) return;
     setGenerating(true);
     try {
-      const html = buildDeliveryHtml({ orgName, invoiceNumber, deliveryDate, distributorName, items, notes });
+      const html = buildDeliveryHtml({ orgName, invoiceNumber, deliveryDate, distributorName, items, notes, legalInfo });
       const { generateInvoicePdf } = await import('@/lib/invoicePdfService');
       const { pdfBase64: b64 } = await generateInvoicePdf(html, 'فاتورة تسليم');
       setPdfBase64(b64);
@@ -164,7 +168,7 @@ const DeliveryDetailsModal: React.FC<DeliveryDetailsModalProps> = ({
 
   const ensurePdf = async (): Promise<string> => {
     if (pdfBase64) return pdfBase64;
-    const html = buildDeliveryHtml({ orgName, invoiceNumber, deliveryDate, distributorName, items, notes });
+    const html = buildDeliveryHtml({ orgName, invoiceNumber, deliveryDate, distributorName, items, notes, legalInfo });
     const { generateInvoicePdf } = await import('@/lib/invoicePdfService');
     const { pdfBase64: b64 } = await generateInvoicePdf(html, 'فاتورة تسليم');
     setPdfBase64(b64);

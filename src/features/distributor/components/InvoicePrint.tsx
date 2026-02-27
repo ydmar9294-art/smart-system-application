@@ -16,6 +16,7 @@ import { cacheOrgInfo, getCachedOrgInfo } from '../services/distributorOfflineSe
 import { CURRENCY } from '@/constants';
 import FullScreenModal from '@/components/ui/FullScreenModal';
 import { escapeHtml, escapeNumber } from '@/lib/htmlEscape';
+import { buildLegalInfoHtml, buildStampHtml, INVOICE_PAGE_STYLE, INVOICE_FOOTER_HTML } from '@/lib/invoiceHtmlHelpers';
 
 interface LegalInfo {
   commercial_registration: string | null;
@@ -73,13 +74,7 @@ function buildInvoiceHtml(params: {
   const dateStr = date.toLocaleDateString('ar-SA');
   const timeStr = date.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
 
-  const legalHtml = legalInfo ? `
-    <div style="font-size:9px;color:#555;margin-top:4px;">
-      ${legalInfo.trademark_name ? `<div>العلامة التجارية: ${escapeHtml(legalInfo.trademark_name)}</div>` : ''}
-      ${legalInfo.commercial_registration ? `<div>سجل تجاري: ${escapeHtml(legalInfo.commercial_registration)}</div>` : ''}
-      ${legalInfo.industrial_registration ? `<div>سجل صناعي: ${escapeHtml(legalInfo.industrial_registration)}</div>` : ''}
-      ${legalInfo.tax_identification ? `<div>رقم ضريبي: ${escapeHtml(legalInfo.tax_identification)}</div>` : ''}
-    </div>` : '';
+  const legalHtml = buildLegalInfoHtml(legalInfo);
 
   const paymentBadge = paymentType && invoiceType === 'sale' ? `
     <div style="text-align:center;padding:4px;margin:6px 0;font-weight:bold;font-size:11px;
@@ -140,11 +135,7 @@ function buildInvoiceHtml(params: {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${escapeHtml(title)}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; width: 80mm; padding: 5mm; font-size: 12px; line-height: 1.4; }
-    @media print { body { width: 80mm; } }
-  </style>
+  <style>${INVOICE_PAGE_STYLE}</style>
 </head>
 <body>
   <div style="text-align:center;margin-bottom:10px;border-bottom:1px dashed #000;padding-bottom:10px;">
@@ -168,14 +159,8 @@ function buildInvoiceHtml(params: {
   ${itemsHtml}
   ${totalsHtml}
   ${notesHtml}
-  ${legalInfo?.stamp_url ? `
-  <div style="text-align:center;margin-top:12px;padding-top:8px;">
-    <img src="${escapeHtml(legalInfo.stamp_url)}" alt="ختم الشركة" style="max-width:60mm;max-height:25mm;object-fit:contain;opacity:0.85;" crossorigin="anonymous" />
-  </div>` : ''}
-  <div style="text-align:center;font-size:10px;color:#555;margin-top:15px;border-top:1px dashed #000;padding-top:10px;">
-    <p>شكراً لتعاملكم معنا</p>
-    <p style="margin-top:3px;">Smart Sales System</p>
-  </div>
+  ${buildStampHtml(legalInfo)}
+  ${INVOICE_FOOTER_HTML}
 </body>
 </html>`;
 }
