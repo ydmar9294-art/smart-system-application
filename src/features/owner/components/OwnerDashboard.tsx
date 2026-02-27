@@ -36,6 +36,7 @@ import { NotificationCenter } from '@/features/notifications/components/Notifica
 import AIAssistant from '@/features/ai/components/AIAssistant';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
 import LegalInfoTab from './LegalInfoTab';
+import CustomersTab from './CustomersTab';
 
 type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'legal';
 
@@ -445,99 +446,7 @@ const OwnerDashboard: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'customers' && (
-          <div className="space-y-3 animate-fade-in">
-            <div className="bg-gradient-to-br from-red-500 to-red-600 p-6 rounded-3xl text-white shadow-lg">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-xs opacity-80 mb-1">إجمالي ذمم السوق</p>
-                  <p className="text-3xl font-black">{customers.reduce((s, c) => s + c.balance, 0).toLocaleString()} {CURRENCY}</p>
-                </div>
-                <div className="text-left">
-                  <p className="text-xs opacity-80 mb-1">عدد الزبائن</p>
-                  <p className="text-2xl font-black">{customers.length}</p>
-                </div>
-              </div>
-              <div className="mt-4 pt-3 border-t border-white/20 flex justify-between text-xs">
-                <span className="opacity-80">زبائن بذمم مدينة</span>
-                <span className="font-bold">{customers.filter(c => c.balance > 0).length}</span>
-              </div>
-            </div>
-
-            {customers.length === 0 ? (
-              <div className="bg-card p-8 rounded-3xl text-center">
-                <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground font-medium">لا يوجد زبائن بعد</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {customers.map(c => (
-                  <div key={c.id} className="bg-card p-4 rounded-2xl shadow-sm">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${c.balance > 0 ? 'bg-red-500/10' : 'bg-emerald-500/10'}`}>
-                          <CircleDollarSign className={`w-5 h-5 ${c.balance > 0 ? 'text-red-500' : 'text-emerald-500'}`} />
-                        </div>
-                        <div>
-                          <p className="font-bold text-foreground">{c.name}</p>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${c.balance > 0 ? 'bg-red-500/10 text-red-600 dark:text-red-400' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'}`}>
-                            {c.balance > 0 ? 'ذمة مدينة' : 'لا توجد ذمم'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-left">
-                        <p className={`font-black text-lg ${c.balance > 0 ? 'text-red-500' : 'text-emerald-500'}`}>{c.balance.toLocaleString()}</p>
-                        <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-3 pt-3 border-t border-border">
-                      {c.phone && (
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <Phone className="w-3.5 h-3.5" />
-                          <span className="text-xs font-medium" dir="ltr">{c.phone}</span>
-                        </div>
-                      )}
-                      {c.location && (
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <MapPin className="w-3.5 h-3.5" />
-                          <span className="text-xs font-medium">{c.location}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Collections History */}
-            {payments.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="font-bold text-foreground text-sm flex items-center gap-2 px-2 mt-4">
-                  <Wallet className="w-4 h-4 text-emerald-500" /> سجل التحصيلات
-                </h3>
-                {payments.filter(p => !p.isReversed).slice(0, 10).map(p => {
-                  // Find customer name from associated sale
-                  const sale = sales.find(s => s.id === p.saleId);
-                  return (
-                    <div key={p.id} className="bg-card p-3 rounded-2xl shadow-sm flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                          <Wallet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                        <div>
-                          <p className="font-bold text-foreground text-sm">{sale?.customerName || 'غير محدد'}</p>
-                          <p className="text-[10px] text-muted-foreground">{new Date(p.timestamp).toLocaleDateString('ar-SA')}</p>
-                        </div>
-                      </div>
-                      <p className="font-black text-emerald-600 dark:text-emerald-400">{p.amount.toLocaleString()} {CURRENCY}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+        {activeTab === 'customers' && <CustomersTab />}
 
         {activeTab === 'finance' && (
           <div className="space-y-4 animate-fade-in">
