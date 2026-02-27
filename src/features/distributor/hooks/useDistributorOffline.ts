@@ -16,6 +16,8 @@ import {
   loadPersistedIdMaps,
   cacheOfflineOrgContext,
   getOfflineOrgContext,
+  cacheOrgInfo,
+  getCachedOrgInfo,
   cacheInventory,
   getCachedInventory,
   updateCachedInventoryQuantity,
@@ -200,6 +202,24 @@ export function useDistributorOffline() {
       // Cache org context every time we successfully fetch profile (ensures offline availability)
       await cacheOfflineOrgContext(profile.organization_id, user.id);
 
+      // Also cache org name + legal info (stamp, registrations) for offline invoices
+      try {
+        const [orgRes, legalRes] = await Promise.all([
+          supabase.from('organizations').select('name').eq('id', profile.organization_id).single(),
+          supabase.from('organization_legal_info')
+            .select('commercial_registration, industrial_registration, tax_identification, trademark_name, stamp_url')
+            .eq('organization_id', profile.organization_id).maybeSingle()
+        ]);
+        if (orgRes.data) {
+          await cacheOrgInfo(
+            orgRes.data.name,
+            legalRes.data || null,
+            profile.organization_id,
+            user.id
+          );
+        }
+      } catch { /* non-critical — don't block customer refresh */ }
+
       const { data, error } = await supabase
         .from('customers')
         .select('id, name, phone, location, balance, organization_id, created_by')
@@ -358,6 +378,8 @@ export function useDistributorOffline() {
       await addLocalSale(localSale);
       
       // Add to local invoices cache (so it appears in history immediately)
+      // Pull org info from cache so offline invoices include stamp + legal info
+      const cachedOrg = await getCachedOrgInfo();
       const localInvoice: CachedInvoice = {
         id: localSaleId,
         invoice_type: 'sale',
@@ -380,8 +402,8 @@ export function useDistributorOffline() {
         })),
         notes: null,
         reason: null,
-        org_name: null,
-        legal_info: null,
+        org_name: cachedOrg?.orgName || null,
+        legal_info: cachedOrg?.legalInfo || null,
         invoice_date: new Date().toISOString(),
         created_at: new Date().toISOString(),
         isLocal: true,
@@ -395,6 +417,7 @@ export function useDistributorOffline() {
       const sale = sales.find(s => s.id === payload.saleId);
       if (sale) {
         const localCollectionId = `local_${generateUUID()}`;
+        const cachedOrg2 = await getCachedOrgInfo();
         const collectionInvoice: CachedInvoice = {
           id: localCollectionId,
           invoice_type: 'collection',
@@ -411,8 +434,8 @@ export function useDistributorOffline() {
           items: [],
           notes: payload.notes || null,
           reason: null,
-          org_name: null,
-          legal_info: null,
+          org_name: cachedOrg2?.orgName || null,
+          legal_info: cachedOrg2?.legalInfo || null,
           invoice_date: new Date().toISOString(),
           created_at: new Date().toISOString(),
           isLocal: true,
