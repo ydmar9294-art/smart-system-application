@@ -18,6 +18,7 @@
 import { generateUUID } from '@/lib/uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
+import { encryptData, decryptData, isEncrypted } from '@/lib/indexedDbEncryption';
 
 // ============================================
 // Database Setup
@@ -170,7 +171,72 @@ async function getItem<T>(storeName: string, key: string): Promise<T | null> {
 }
 
 // ============================================
-// Action Queue
+// Encrypted Store Helpers (for sensitive data)
+// ============================================
+
+/** Stores that contain sensitive business data and must be encrypted */
+const SENSITIVE_STORES = new Set([
+  STORES.INVOICES_CACHE,
+  STORES.ORG_INFO_CACHE,
+  STORES.SALES_CACHE,
+]);
+
+/**
+ * Put an item into a sensitive store with encryption.
+ * The item's keyPath field is preserved in plaintext for IndexedDB indexing,
+ * while all other data is encrypted.
+ */
+async function putEncryptedItem<T extends Record<string, any>>(
+  storeName: string,
+  item: T,
+  keyField: string = 'id'
+): Promise<void> {
+  const keyValue = item[keyField];
+  const encrypted = await encryptData(item);
+  // Store the key field in plaintext (required for IndexedDB keyPath)
+  // and the rest as encrypted payload
+  await putItem(storeName, { [keyField]: keyValue, _enc: encrypted });
+}
+
+/**
+ * Get all items from a sensitive store, decrypting each one.
+ * Handles legacy unencrypted data transparently.
+ */
+async function getAllEncryptedItems<T>(storeName: string): Promise<T[]> {
+  const raw = await getAllItems<any>(storeName);
+  const results: T[] = [];
+  for (const item of raw) {
+    try {
+      if (item._enc && isEncrypted(item._enc)) {
+        results.push(await decryptData<T>(item._enc));
+      } else {
+        // Legacy unencrypted data — return as-is
+        results.push(item as T);
+      }
+    } catch (err) {
+      logger.warn(`[Encryption] Failed to decrypt item in ${storeName}, skipping`, 'DistributorOffline');
+    }
+  }
+  return results;
+}
+
+/**
+ * Get a single item from a sensitive store by key, decrypting it.
+ */
+async function getEncryptedItem<T>(storeName: string, key: string): Promise<T | null> {
+  const raw = await getItem<any>(storeName, key);
+  if (!raw) return null;
+  try {
+    if (raw._enc && isEncrypted(raw._enc)) {
+      return await decryptData<T>(raw._enc);
+    }
+    // Legacy unencrypted
+    return raw as T;
+  } catch (err) {
+    logger.warn(`[Encryption] Failed to decrypt item ${key} in ${storeName}`, 'DistributorOffline');
+    return null;
+  }
+}
 // ============================================
 
 export async function enqueueAction(
@@ -819,54 +885,39 @@ export interface CachedSale {
 
 export async function cacheSales(sales: CachedSale[]): Promise<void> {
   // Preserve local (unsynced) sales during server refresh
-  const existing = await getAllItems<CachedSale>(STORES.SALES_CACHE);
+  const existing = await getAllEncryptedItems<CachedSale>(STORES.SALES_CACHE);
   const localSales = existing.filter(s => s.isLocal);
   
   await clearStore(STORES.SALES_CACHE);
   
-  for (const sale of sales) {
-    await putItem(STORES.SALES_CACHE, sale);
+  for (const s of sales) {
+    await putEncryptedItem(STORES.SALES_CACHE, s);
   }
   
-  // Re-add local unsynced sales (avoid duplicates)
+  // Re-add local unsynced sales
   const serverIds = new Set(sales.map(s => s.id));
   for (const s of localSales) {
-    // Check if this local sale was synced (its ID was remapped)
     const mappedId = saleIdMap.get(s.id);
-    if (mappedId && serverIds.has(mappedId)) {
-      // Already synced and present in server data — skip
-      continue;
-    }
+    if (mappedId && serverIds.has(mappedId)) continue;
     if (!serverIds.has(s.id)) {
-      await putItem(STORES.SALES_CACHE, s);
+      await putEncryptedItem(STORES.SALES_CACHE, s);
     }
   }
 }
 
 export async function getCachedSales(): Promise<CachedSale[]> {
-  return getAllItems<CachedSale>(STORES.SALES_CACHE);
+  return getAllEncryptedItems<CachedSale>(STORES.SALES_CACHE);
 }
 
 export async function addLocalSale(sale: CachedSale): Promise<void> {
-  await putItem(STORES.SALES_CACHE, sale);
+  await putEncryptedItem(STORES.SALES_CACHE, sale);
 }
 
 export async function updateCachedSale(saleId: string, updates: Partial<CachedSale>): Promise<void> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORES.SALES_CACHE, 'readwrite');
-    const store = tx.objectStore(STORES.SALES_CACHE);
-    const getReq = store.get(saleId);
-    
-    getReq.onsuccess = () => {
-      if (getReq.result) {
-        store.put({ ...getReq.result, ...updates });
-      }
-    };
-    
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+  const existing = await getEncryptedItem<CachedSale>(STORES.SALES_CACHE, saleId);
+  if (existing) {
+    await putEncryptedItem(STORES.SALES_CACHE, { ...existing, ...updates });
+  }
 }
 
 // ============================================
@@ -907,13 +958,13 @@ export interface CachedInvoice {
 
 export async function cacheInvoices(invoices: CachedInvoice[]): Promise<void> {
   // Preserve local (unsynced) invoices during server refresh
-  const existing = await getAllItems<CachedInvoice>(STORES.INVOICES_CACHE);
+  const existing = await getAllEncryptedItems<CachedInvoice>(STORES.INVOICES_CACHE);
   const localInvoices = existing.filter(inv => inv.isLocal);
   
   await clearStore(STORES.INVOICES_CACHE);
   
   for (const inv of invoices) {
-    await putItem(STORES.INVOICES_CACHE, inv);
+    await putEncryptedItem(STORES.INVOICES_CACHE, inv);
   }
   
   // Re-add local unsynced invoices
@@ -922,21 +973,21 @@ export async function cacheInvoices(invoices: CachedInvoice[]): Promise<void> {
     const mappedId = saleIdMap.get(inv.id);
     if (mappedId && serverIds.has(mappedId)) continue;
     if (!serverIds.has(inv.id)) {
-      await putItem(STORES.INVOICES_CACHE, inv);
+      await putEncryptedItem(STORES.INVOICES_CACHE, inv);
     }
   }
 }
 
 export async function getCachedInvoices(): Promise<CachedInvoice[]> {
-  return getAllItems<CachedInvoice>(STORES.INVOICES_CACHE);
+  return getAllEncryptedItems<CachedInvoice>(STORES.INVOICES_CACHE);
 }
 
 export async function addLocalInvoice(invoice: CachedInvoice): Promise<void> {
-  await putItem(STORES.INVOICES_CACHE, invoice);
+  await putEncryptedItem(STORES.INVOICES_CACHE, invoice);
 }
 
 // ============================================
-// Organization Info Cache
+// Organization Info Cache (Encrypted)
 // ============================================
 
 export interface CachedOrgInfo {
@@ -966,31 +1017,31 @@ export async function cacheOrgInfo(
   organizationId?: string,
   distributorId?: string,
 ): Promise<void> {
-  await putItem(STORES.ORG_INFO_CACHE, {
+  await putEncryptedItem(STORES.ORG_INFO_CACHE, {
     key: 'org_info',
     orgName,
     legalInfo,
     organizationId,
     distributorId,
     updatedAt: Date.now(),
-  });
+  }, 'key');
 }
 
 export async function getCachedOrgInfo(): Promise<CachedOrgInfo | null> {
-  return getItem<CachedOrgInfo>(STORES.ORG_INFO_CACHE, 'org_info');
+  return getEncryptedItem<CachedOrgInfo>(STORES.ORG_INFO_CACHE, 'org_info');
 }
 
 export async function cacheOfflineOrgContext(organizationId: string, distributorId: string): Promise<void> {
-  await putItem(STORES.ORG_INFO_CACHE, {
+  await putEncryptedItem(STORES.ORG_INFO_CACHE, {
     key: 'org_context',
     organizationId,
     distributorId,
     updatedAt: Date.now(),
-  } as CachedOrgInfo);
+  } as CachedOrgInfo, 'key');
 }
 
 export async function getOfflineOrgContext(): Promise<{ organizationId: string; distributorId: string } | null> {
-  const ctx = await getItem<CachedOrgInfo>(STORES.ORG_INFO_CACHE, 'org_context');
+  const ctx = await getEncryptedItem<CachedOrgInfo>(STORES.ORG_INFO_CACHE, 'org_context');
   if (!ctx?.organizationId || !ctx?.distributorId) return null;
   return {
     organizationId: ctx.organizationId,
