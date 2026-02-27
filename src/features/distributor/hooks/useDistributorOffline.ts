@@ -513,7 +513,31 @@ export function useDistributorOffline() {
   useEffect(() => {
     mountedRef.current = true;
 
-    const handleOnline = () => setState(prev => ({ ...prev, isOnline: true }));
+    // Reusable function to fetch & cache org legal info (stamp, registrations)
+    const refreshOrgLegalCache = async () => {
+      if (!navigator.onLine) return;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single();
+        if (!profile?.organization_id) return;
+        const [orgRes, legalRes] = await Promise.all([
+          supabase.from('organizations').select('name').eq('id', profile.organization_id).single(),
+          supabase.from('organization_legal_info')
+            .select('commercial_registration, industrial_registration, tax_identification, trademark_name, stamp_url')
+            .eq('organization_id', profile.organization_id).maybeSingle()
+        ]);
+        if (orgRes.data) {
+          await cacheOrgInfo(orgRes.data.name, legalRes.data || null, profile.organization_id, user.id);
+        }
+      } catch { /* non-critical */ }
+    };
+
+    const handleOnline = () => {
+      setState(prev => ({ ...prev, isOnline: true }));
+      // Auto-refresh legal info cache when connectivity is restored
+      refreshOrgLegalCache();
+    };
     const handleOffline = () => setState(prev => ({ ...prev, isOnline: false }));
 
     window.addEventListener('online', handleOnline);
@@ -555,24 +579,7 @@ export function useDistributorOffline() {
     refreshCustomers();
 
     // Cache org name + legal info (stamp, registrations) eagerly at login/init
-    (async () => {
-      if (!navigator.onLine) return;
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single();
-        if (!profile?.organization_id) return;
-        const [orgRes, legalRes] = await Promise.all([
-          supabase.from('organizations').select('name').eq('id', profile.organization_id).single(),
-          supabase.from('organization_legal_info')
-            .select('commercial_registration, industrial_registration, tax_identification, trademark_name, stamp_url')
-            .eq('organization_id', profile.organization_id).maybeSingle()
-        ]);
-        if (orgRes.data) {
-          await cacheOrgInfo(orgRes.data.name, legalRes.data || null, profile.organization_id, user.id);
-        }
-      } catch { /* non-critical */ }
-    })();
+    refreshOrgLegalCache();
 
     // Periodic stats refresh
     const statsInterval = setInterval(refreshStats, 30_000);
