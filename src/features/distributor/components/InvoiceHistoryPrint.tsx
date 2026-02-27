@@ -16,6 +16,7 @@ interface LegalInfo {
   industrial_registration?: string;
   tax_identification?: string;
   trademark_name?: string;
+  stamp_url?: string;
 }
 
 interface InvoiceItem {
@@ -146,6 +147,10 @@ function buildHistoryHtml(invoice: InvoiceSnapshot, title: string): string {
   ${itemsHtml}
   ${totalsHtml}
   ${notesHtml}
+  ${invoice.legal_info?.stamp_url ? `
+  <div style="text-align:center;margin-top:12px;padding-top:8px;">
+    <img src="${escapeHtml(invoice.legal_info.stamp_url)}" alt="ختم الشركة" style="max-width:60mm;max-height:25mm;object-fit:contain;opacity:0.85;" crossorigin="anonymous" />
+  </div>` : ''}
   <div style="text-align:center;font-size:10px;color:#555;margin-top:15px;border-top:1px dashed #000;padding-top:10px;">
     <p>شكراً لتعاملكم معنا</p>
     <p style="margin-top:3px;">Smart Sales System</p>

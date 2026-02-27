@@ -22,6 +22,7 @@ interface LegalInfo {
   industrial_registration: string | null;
   tax_identification: string | null;
   trademark_name: string | null;
+  stamp_url?: string | null;
 }
 
 interface InvoiceItem {
@@ -167,6 +168,10 @@ function buildInvoiceHtml(params: {
   ${itemsHtml}
   ${totalsHtml}
   ${notesHtml}
+  ${legalInfo?.stamp_url ? `
+  <div style="text-align:center;margin-top:12px;padding-top:8px;">
+    <img src="${escapeHtml(legalInfo.stamp_url)}" alt="ختم الشركة" style="max-width:60mm;max-height:25mm;object-fit:contain;opacity:0.85;" crossorigin="anonymous" />
+  </div>` : ''}
   <div style="text-align:center;font-size:10px;color:#555;margin-top:15px;border-top:1px dashed #000;padding-top:10px;">
     <p>شكراً لتعاملكم معنا</p>
     <p style="margin-top:3px;">Smart Sales System</p>
@@ -224,7 +229,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         const [orgRes, legalRes] = await Promise.all([
           supabase.from('organizations').select('name').eq('id', profile.organization_id).single(),
           supabase.from('organization_legal_info')
-            .select('commercial_registration, industrial_registration, tax_identification, trademark_name')
+            .select('commercial_registration, industrial_registration, tax_identification, trademark_name, stamp_url')
             .eq('organization_id', profile.organization_id).maybeSingle()
         ]);
         if (orgRes.data) setOrgName(orgRes.data.name);

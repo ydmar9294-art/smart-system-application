@@ -478,6 +478,7 @@ export type Database = {
           id: string
           industrial_registration: string | null
           organization_id: string
+          stamp_url: string | null
           tax_identification: string | null
           trademark_name: string | null
           updated_at: string
@@ -488,6 +489,7 @@ export type Database = {
           id?: string
           industrial_registration?: string | null
           organization_id: string
+          stamp_url?: string | null
           tax_identification?: string | null
           trademark_name?: string | null
           updated_at?: string
@@ -498,6 +500,7 @@ export type Database = {
           id?: string
           industrial_registration?: string | null
           organization_id?: string
+          stamp_url?: string | null
           tax_identification?: string | null
           trademark_name?: string | null
           updated_at?: string
