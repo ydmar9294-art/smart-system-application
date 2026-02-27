@@ -2,7 +2,7 @@
  * Shared invoice HTML helpers — legal info block, stamp, and page wrapper.
  * All invoice builders import from here for consistency.
  * 
- * Format: 5×8 index card (127mm × 203mm)
+ * Format: 80mm thermal receipt (printable area 72–76mm)
  */
 import { escapeHtml } from '@/lib/htmlEscape';
 
@@ -29,16 +29,20 @@ export function buildLegalInfoHtml(legalInfo: InvoiceLegalInfo | null | undefine
 /** Render the stamp image if available */
 export function buildStampHtml(legalInfo: InvoiceLegalInfo | null | undefined): string {
   if (!legalInfo?.stamp_url) return '';
-  return `<div style="text-align:center;margin-top:14px;padding-top:8px;">
-    <img src="${escapeHtml(legalInfo.stamp_url)}" alt="ختم الشركة" style="max-width:50mm;max-height:25mm;object-fit:contain;opacity:0.85;" crossorigin="anonymous" />
+  return `<div style="text-align:center;margin-top:10px;padding-top:6px;">
+    <img src="${escapeHtml(legalInfo.stamp_url)}" alt="ختم الشركة" style="max-width:40mm;max-height:20mm;object-fit:contain;opacity:0.85;" crossorigin="anonymous" />
   </div>`;
 }
 
-/** The CSS + <head> for 5×8 index card */
+/** The CSS + <head> for 80mm thermal receipt */
 export const INVOICE_PAGE_STYLE = `
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; width: 127mm; padding: 8mm; font-size: 13px; line-height: 1.5; }
-    @media print { body { width: 127mm; } }`;
+    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; width: 80mm; padding: 3mm; font-size: 12px; line-height: 1.4; }
+    @media print {
+      @page { size: 80mm auto; margin: 0; }
+      body { width: 80mm; padding: 3mm; }
+      html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }`;
 
 /** Footer HTML */
 export const INVOICE_FOOTER_HTML = `
