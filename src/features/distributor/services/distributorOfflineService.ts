@@ -597,7 +597,6 @@ export async function syncAllPending(): Promise<{ synced: number; failed: number
   let failed = 0;
 
   try {
-    // Load persisted ID maps so remapping works after restart
     await loadPersistedIdMaps();
 
     const pending = await getPendingActions();
@@ -612,45 +611,18 @@ export async function syncAllPending(): Promise<{ synced: number; failed: number
       return pDiff !== 0 ? pDiff : a.createdAt - b.createdAt;
     });
 
-    for (const action of sorted) {
-      await updateAction(action.id, { status: 'syncing' });
-
-      const result = await executeAction(action);
-
-      if (result === 'synced') {
-        await updateAction(action.id, { status: 'synced', syncedAt: Date.now(), error: undefined });
-        synced++;
-      } else if (result === 'deferred') {
-        // Dependency not ready yet (e.g. local customer/sale not synced) → keep retry count unchanged
-        await updateAction(action.id, {
-          status: 'pending',
-          nextRetryAt: Date.now() + DEFERRED_RETRY_MS,
-        });
-        logger.info(`[Sync] Deferred action ${action.id}; waiting for parent entity sync`, 'DistributorOffline');
-      } else {
-        const newRetry = action.retryCount + 1;
-        if (newRetry >= MAX_RETRIES) {
-          // Permanently failed — stop retrying
-          await updateAction(action.id, {
-            status: 'failed',
-            retryCount: newRetry,
-            error: 'تجاوز الحد الأقصى للمحاولات',
-          });
-          failed++;
-          logger.warn(`[Sync] Action ${action.id} permanently failed after ${MAX_RETRIES} retries`, 'DistributorOffline');
-        } else {
-          // Set back to pending with exponential backoff cooldown
-          const delay = getRetryDelay(newRetry);
-          await updateAction(action.id, {
-            status: 'pending',
-            retryCount: newRetry,
-            nextRetryAt: Date.now() + delay,
-          });
-          logger.info(`[Sync] Action ${action.id} will retry in ${delay / 1000}s (attempt ${newRetry})`, 'DistributorOffline');
-        }
-      }
-
-      notifySyncListeners({ type: 'progress', synced, failed, total: sorted.length });
+    // Try bulk sync first (batched server-side processing)
+    const bulkResult = await attemptBulkSync(sorted);
+    
+    if (bulkResult) {
+      synced = bulkResult.synced;
+      failed = bulkResult.failed;
+    } else {
+      // Fallback to sequential sync if bulk endpoint fails
+      logger.warn('[Sync] Bulk sync unavailable, falling back to sequential', 'DistributorOffline');
+      const seqResult = await sequentialSync(sorted);
+      synced = seqResult.synced;
+      failed = seqResult.failed;
     }
 
     // Cleanup old synced actions (keep last 24h)
@@ -669,6 +641,126 @@ export async function syncAllPending(): Promise<{ synced: number; failed: number
     logger.error('[Sync] Process error', 'DistributorOffline', { error: String(err) });
   } finally {
     isSyncing = false;
+  }
+
+  return { synced, failed };
+}
+
+/** Attempt to sync all actions via the bulk-sync edge function */
+async function attemptBulkSync(actions: OfflineAction[]): Promise<{ synced: number; failed: number } | null> {
+  try {
+    const operations = actions.map(a => ({
+      id: a.id,
+      type: a.type,
+      payload: a.payload,
+      idempotencyKey: a.idempotencyKey,
+    }));
+
+    // Mark all as syncing
+    for (const a of actions) {
+      await updateAction(a.id, { status: 'syncing' });
+    }
+
+    const { data, error } = await supabase.functions.invoke('bulk-sync', {
+      body: { operations },
+    });
+
+    if (error || !data?.results) return null;
+
+    let synced = 0;
+    let failed = 0;
+
+    // Process ID mappings from server
+    if (data.idMappings) {
+      for (const [localId, serverId] of Object.entries(data.idMappings.customers || {})) {
+        await persistIdMapping(localId, serverId as string, 'customer');
+        await updateCustomerSyncStatus(localId, 'synced', serverId as string);
+      }
+      for (const [localId, serverId] of Object.entries(data.idMappings.sales || {})) {
+        await persistIdMapping(localId, serverId as string, 'sale');
+      }
+    }
+
+    // Process per-operation results
+    for (const result of data.results as Array<{ id: string; status: string; error?: string; serverId?: string }>) {
+      if (result.status === 'synced') {
+        await updateAction(result.id, { status: 'synced', syncedAt: Date.now(), error: undefined });
+        synced++;
+      } else if (result.status === 'deferred') {
+        await updateAction(result.id, {
+          status: 'pending',
+          nextRetryAt: Date.now() + DEFERRED_RETRY_MS,
+        });
+      } else {
+        const action = actions.find(a => a.id === result.id);
+        const newRetry = (action?.retryCount || 0) + 1;
+        if (newRetry >= MAX_RETRIES) {
+          await updateAction(result.id, {
+            status: 'failed',
+            retryCount: newRetry,
+            error: result.error || 'تجاوز الحد الأقصى للمحاولات',
+          });
+          failed++;
+        } else {
+          const delay = getRetryDelay(newRetry);
+          await updateAction(result.id, {
+            status: 'pending',
+            retryCount: newRetry,
+            nextRetryAt: Date.now() + delay,
+          });
+        }
+      }
+    }
+
+    return { synced, failed };
+  } catch (err) {
+    logger.warn('[Sync] Bulk sync request failed, will fallback', 'DistributorOffline', { error: String(err) });
+    // Reset actions back to pending on bulk failure
+    for (const a of actions) {
+      await updateAction(a.id, { status: 'pending' });
+    }
+    return null;
+  }
+}
+
+/** Sequential fallback sync (original behavior) */
+async function sequentialSync(sorted: OfflineAction[]): Promise<{ synced: number; failed: number }> {
+  let synced = 0;
+  let failed = 0;
+
+  for (const action of sorted) {
+    await updateAction(action.id, { status: 'syncing' });
+
+    const result = await executeAction(action);
+
+    if (result === 'synced') {
+      await updateAction(action.id, { status: 'synced', syncedAt: Date.now(), error: undefined });
+      synced++;
+    } else if (result === 'deferred') {
+      await updateAction(action.id, {
+        status: 'pending',
+        nextRetryAt: Date.now() + DEFERRED_RETRY_MS,
+      });
+    } else {
+      const newRetry = action.retryCount + 1;
+      if (newRetry >= MAX_RETRIES) {
+        await updateAction(action.id, {
+          status: 'failed',
+          retryCount: newRetry,
+          error: 'تجاوز الحد الأقصى للمحاولات',
+        });
+        failed++;
+      } else {
+        const delay = getRetryDelay(newRetry);
+        await updateAction(action.id, {
+          status: 'pending',
+          retryCount: newRetry,
+          nextRetryAt: Date.now() + delay,
+        });
+      }
+    }
+
+    notifySyncListeners({ type: 'progress', synced, failed, total: sorted.length });
   }
 
   return { synced, failed };

@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.health-check]
 verify_jwt = false
+
+[functions.bulk-sync]
+verify_jwt = false
+
+[functions.api-gateway]
+verify_jwt = false
