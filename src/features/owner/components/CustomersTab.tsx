@@ -1,10 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Users, Phone, MapPin, CircleDollarSign, Wallet, 
-  Search, ArrowUpDown, Loader2
+  Search, ArrowUpDown, Loader2, Info
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const CustomersTab: React.FC = () => {
   const { customers = [], payments = [], sales = [] } = useApp();
@@ -13,8 +19,6 @@ const CustomersTab: React.FC = () => {
 
   const filtered = useMemo(() => {
     let list = [...customers];
-
-    // Search
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter(c =>
@@ -23,17 +27,16 @@ const CustomersTab: React.FC = () => {
         c.location?.toLowerCase().includes(q)
       );
     }
-
-    // Sort
     list.sort((a, b) => {
       if (sortBy === 'balance') return b.balance - a.balance;
       return a.name.localeCompare(b.name, 'ar');
     });
-
     return list;
   }, [customers, search, sortBy]);
 
-  const totalDebt = customers.reduce((s, c) => s + c.balance, 0);
+  const totalBalances = customers.reduce((s, c) => s + c.balance, 0);
+  const totalCollections = payments.filter(p => !p.isReversed).reduce((s, p) => s + p.amount, 0);
+  const netDebt = Math.max(0, totalBalances);
   const debtorCount = customers.filter(c => c.balance > 0).length;
 
   return (
@@ -42,17 +45,39 @@ const CustomersTab: React.FC = () => {
       <div className="bg-gradient-to-br from-destructive to-destructive/80 p-6 rounded-3xl text-destructive-foreground shadow-lg">
         <div className="flex justify-between items-start">
           <div>
-            <p className="text-xs opacity-80 mb-1">إجمالي ذمم السوق</p>
-            <p className="text-3xl font-black">{totalDebt.toLocaleString()} {CURRENCY}</p>
+            <div className="flex items-center gap-1.5 mb-1">
+              <p className="text-xs opacity-80">رصيد السوق الصافي</p>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-3.5 h-3.5 opacity-60 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p className="text-xs">إجمالي الذمم بعد طرح التحصيلات</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <p className="text-3xl font-black">{netDebt.toLocaleString()} {CURRENCY}</p>
           </div>
           <div className="text-left">
             <p className="text-xs opacity-80 mb-1">عدد الزبائن</p>
             <p className="text-2xl font-black">{customers.length}</p>
           </div>
         </div>
-        <div className="mt-4 pt-3 border-t border-destructive-foreground/20 flex justify-between text-xs">
-          <span className="opacity-80">زبائن بذمم مدينة</span>
-          <span className="font-bold">{debtorCount}</span>
+        <div className="mt-4 pt-3 border-t border-destructive-foreground/20 space-y-1.5 text-xs">
+          <div className="flex justify-between">
+            <span className="opacity-80">إجمالي الذمم</span>
+            <span className="font-bold">{totalBalances.toLocaleString()} {CURRENCY}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="opacity-80">إجمالي التحصيلات</span>
+            <span className="font-bold">{totalCollections.toLocaleString()} {CURRENCY}</span>
+          </div>
+          <div className="flex justify-between pt-1.5 border-t border-destructive-foreground/20">
+            <span className="opacity-80">زبائن بذمم مدينة</span>
+            <span className="font-bold">{debtorCount}</span>
+          </div>
         </div>
       </div>
 
