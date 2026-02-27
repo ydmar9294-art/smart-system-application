@@ -15,6 +15,7 @@ import { resolveUserProfile } from '@/hooks/useAuthOperations';
 import { authMutex } from '@/lib/concurrency';
 import { getCachedAuth, clearAuthCache, isAuthCacheFresh, CachedAuthState } from '@/lib/authCache';
 import { logger } from '@/lib/logger';
+import { clearEncryptionKey } from '@/lib/indexedDbEncryption';
 
 interface AuthContextType {
   user: User | null;
@@ -371,6 +372,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isInternalAuthOp.current = true;
       try {
         clearAuthCache();
+        clearEncryptionKey();
         bootedFromCache.current = false;
         await supabase.auth.signOut().catch(() => {
           // Even if signOut fails, clear local state
