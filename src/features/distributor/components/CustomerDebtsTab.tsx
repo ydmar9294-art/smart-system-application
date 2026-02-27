@@ -7,15 +7,15 @@ import {
   FileText,
   Calendar
 } from 'lucide-react';
-import { useApp } from '@/store/AppContext';
+import type { CachedSale } from '../services/distributorOfflineService';
 
 interface CustomerDebtsTabProps {
   selectedCustomer: import('@/types').Customer | null;
   myCustomers: import('@/types').Customer[];
+  localSales: CachedSale[];
 }
 
-const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ selectedCustomer, myCustomers }) => {
-  const { sales } = useApp();
+const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ selectedCustomer, myCustomers, localSales }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'balance' | 'name'>('balance');
@@ -32,7 +32,7 @@ const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ selectedCustomer, m
     });
 
   const totalDebt = debtCustomers.reduce((sum, c) => sum + Number(c.balance), 0);
-  const customerSales = sales.filter(s => s.customer_id === selectedCustomerId && !s.isVoided);
+  const customerSales = localSales.filter(s => s.customer_id === selectedCustomerId && !s.isVoided);
 
   return (
     <div className="p-5 space-y-5">

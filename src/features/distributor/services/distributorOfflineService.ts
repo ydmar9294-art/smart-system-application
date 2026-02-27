@@ -795,6 +795,7 @@ export interface CachedInvoice {
   remaining: number;
   payment_type: 'CASH' | 'CREDIT' | null;
   items: Array<{
+    product_id?: string;
     product_name: string;
     quantity: number;
     unit_price: number;

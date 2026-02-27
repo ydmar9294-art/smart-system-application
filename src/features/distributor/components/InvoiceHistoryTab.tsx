@@ -87,13 +87,13 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
         const saleIds = sales.map(s => s.id);
         const { data: saleItems } = await supabase
           .from('sale_items')
-          .select('sale_id, product_name, quantity, unit_price, total_price')
+          .select('sale_id, product_id, product_name, quantity, unit_price, total_price')
           .in('sale_id', saleIds);
 
         const itemsBySale = new Map<string, CachedInvoice['items']>();
         (saleItems || []).forEach(item => {
           const list = itemsBySale.get(item.sale_id) || [];
-          list.push({ product_name: item.product_name, quantity: item.quantity, unit_price: item.unit_price, total_price: item.total_price });
+          list.push({ product_id: item.product_id, product_name: item.product_name, quantity: item.quantity, unit_price: item.unit_price, total_price: item.total_price });
           itemsBySale.set(item.sale_id, list);
         });
 
