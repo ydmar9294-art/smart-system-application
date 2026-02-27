@@ -65,13 +65,18 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
     }, VERIFY_TIMEOUT_MS);
   }, [clearTimers]);
 
+  /** Yield to the renderer so loading UI paints before heavy work */
+  const yieldToRenderer = useCallback(() => 
+    new Promise<void>(resolve => requestAnimationFrame(() => setTimeout(resolve, 0))), []);
+
   const checkUserProfile = useCallback(async (userId: string, user: any) => {
     try {
       const email = user.email || '';
       const fullName = user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0] || '';
 
-      // Phase: validating license
+      // Phase: validating license — yield so spinner renders first
       setAuthState(prev => prev.type === 'loading' ? { ...prev, phase: 'validating_license' } : prev);
+      await yieldToRenderer();
 
       const status = await Promise.race([
         checkAuthStatus(),
@@ -89,8 +94,9 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
         return;
       }
 
-      // Phase: checking account status
+      // Phase: checking account status — yield so phase label updates visually
       setAuthState(prev => prev.type === 'loading' ? { ...prev, phase: 'checking_status' } : prev);
+      await yieldToRenderer();
 
       if (status.access_denied) {
         setAuthState({
@@ -148,6 +154,8 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
         }
 
         startVerification();
+        // Yield so the loading spinner renders before heavy verification
+        await yieldToRenderer();
         await checkUserProfile(session.user.id, session.user);
       } else if (event === 'SIGNED_OUT') {
         clearAuthCache();
@@ -171,6 +179,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
         }
 
         startVerification();
+        await yieldToRenderer();
         await checkUserProfile(session.user.id, session.user);
       }
     };
@@ -198,6 +207,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
       startVerification();
+      await yieldToRenderer();
       await checkUserProfile(session.user.id, session.user);
     }
   };
