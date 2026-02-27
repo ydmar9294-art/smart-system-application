@@ -21,6 +21,7 @@ import { Customer } from '@/types';
 import InvoicePrint from './InvoicePrint';
 import FullScreenModal from '@/components/ui/FullScreenModal';
 import type { OfflineActionType, CachedSale } from '../services/distributorOfflineService';
+import { getCachedInvoices } from '../services/distributorOfflineService';
 
 interface ReturnCartItem {
   product_id: string;
@@ -77,7 +78,26 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer, onQue
   const loadSaleItems = async (saleId: string) => {
     setLoadingItems(true);
     try {
-      // Fetch sale items and previous returns in parallel
+      if (!navigator.onLine) {
+        // Offline: load from cached invoices
+        const cachedInvoices = await getCachedInvoices();
+        const invoice = cachedInvoices.find(inv => inv.id === saleId || inv.reference_id === saleId);
+        if (invoice && invoice.items.length > 0) {
+          const items = invoice.items.map(item => ({
+            product_id: (item as any).product_id || saleId + '_' + item.product_name,
+            product_name: item.product_name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_price: item.total_price,
+          }));
+          setSaleItems(items);
+        } else {
+          setSaleItems([]);
+        }
+        return;
+      }
+
+      // Online: fetch from server
       const [itemsRes, returnsRes] = await Promise.all([
         supabase.from('sale_items').select('*').eq('sale_id', saleId),
         supabase.from('sales_return_items').select('product_id, quantity, return_id, sales_returns!inner(sale_id)').eq('sales_returns.sale_id', saleId)
@@ -85,7 +105,6 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer, onQue
 
       if (itemsRes.error) throw itemsRes.error;
       
-      // Calculate already returned quantities per product
       const returnedQtyMap: Record<string, number> = {};
       if (returnsRes.data) {
         for (const ri of returnsRes.data) {
@@ -93,7 +112,6 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer, onQue
         }
       }
 
-      // Adjust available quantity by subtracting already returned
       const adjustedItems = (itemsRes.data || []).map(item => ({
         ...item,
         quantity: item.quantity - (returnedQtyMap[item.product_id] || 0)
@@ -102,6 +120,21 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer, onQue
       setSaleItems(adjustedItems);
     } catch (err) {
       console.error('Error loading sale items:', err);
+      // Fallback to cached invoices on error
+      try {
+        const cachedInvoices = await getCachedInvoices();
+        const invoice = cachedInvoices.find(inv => inv.id === saleId || inv.reference_id === saleId);
+        if (invoice && invoice.items.length > 0) {
+          const items = invoice.items.map(item => ({
+            product_id: (item as any).product_id || saleId + '_' + item.product_name,
+            product_name: item.product_name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_price: item.total_price,
+          }));
+          setSaleItems(items);
+        }
+      } catch { /* ignore */ }
     } finally {
       setLoadingItems(false);
     }

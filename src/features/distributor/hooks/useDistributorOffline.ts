@@ -372,6 +372,7 @@ export function useDistributorOffline() {
         remaining: payload.paymentType === 'CASH' ? 0 : grandTotal,
         payment_type: payload.paymentType || 'CASH',
         items: (payload.items || []).map((item: any) => ({
+          product_id: item.productId,
           product_name: item.productName,
           quantity: item.quantity,
           unit_price: item.unitPrice,
