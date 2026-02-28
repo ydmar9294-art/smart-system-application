@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useApp } from '@/store/AppContext';
 import { Trash2, AlertTriangle, Clock, CheckCircle2, Ban, Loader2 } from 'lucide-react';
@@ -104,9 +105,9 @@ const OrgDeletionRequest: React.FC = () => {
       )}
 
       {/* Confirmation flow */}
-      {showConfirm && (
-        <div className="modal-overlay p-4">
-          <div className="bg-card rounded-2xl w-full max-w-md p-6 space-y-4 animate-zoom-in">
+      {showConfirm && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir="rtl">
+          <div className="bg-card rounded-2xl w-full max-w-md p-6 space-y-4 animate-zoom-in shadow-2xl border border-border max-h-[90vh] overflow-y-auto">
             <div className="text-center space-y-3">
               <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
                 <AlertTriangle size={32} className="text-destructive" />
@@ -160,7 +161,8 @@ const OrgDeletionRequest: React.FC = () => {
               إلغاء
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
