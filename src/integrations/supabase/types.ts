@@ -1224,6 +1224,33 @@ export type Database = {
           },
         ]
       }
+      user_consents: {
+        Row: {
+          accepted_at: string
+          app_version: string
+          consent_type: string
+          id: string
+          ip_address: string | null
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          app_version?: string
+          consent_type?: string
+          id?: string
+          ip_address?: string | null
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          app_version?: string
+          consent_type?: string
+          id?: string
+          ip_address?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_notifications: {
         Row: {
           created_at: string
@@ -1352,6 +1379,7 @@ export type Database = {
         Args: { p_employee_id: string }
         Returns: Json
       }
+      delete_own_account_rpc: { Args: never; Returns: Json }
       execute_org_deletion_rpc: {
         Args: { p_confirmation_org_name: string; p_deletion_request_id: string }
         Returns: Json
