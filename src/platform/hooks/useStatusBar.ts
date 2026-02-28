@@ -16,17 +16,17 @@ export function useStatusBar() {
           style: isDark ? Style.Dark : Style.Light
         });
 
-        // Match status bar background to app theme
+        // Transparent status bar background for liquid-glass effect
         await StatusBar.setBackgroundColor({
-          color: isDark ? '#0f172a' : '#f5f7fa'
+          color: '#00000000'
         });
 
         // Ensure status bar is visible
         await StatusBar.show();
 
-        // On Android, set overlay to false to prevent content from going behind status bar
+        // On Android, set overlay to true so content scrolls under status bar (liquid-glass style)
         if (Capacitor.getPlatform() === 'android') {
-          await StatusBar.setOverlaysWebView({ overlay: false });
+          await StatusBar.setOverlaysWebView({ overlay: true });
         }
       } catch (error) {
         console.error('Status bar initialization error:', error);
