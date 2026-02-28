@@ -107,7 +107,8 @@ export const transformSale = (s: any): Sale => ({
   isVoided: s.is_voided,
   voidReason: s.void_reason,
   timestamp: new Date(s.created_at).getTime(),
-  items: []
+  items: [],
+  createdBy: s.created_by || undefined,
 });
 
 export const transformPayment = (p: any): Payment => ({
@@ -117,7 +118,8 @@ export const transformPayment = (p: any): Payment => ({
   notes: p.notes,
   isReversed: p.is_reversed,
   reverseReason: p.reverse_reason,
-  timestamp: new Date(p.created_at).getTime()
+  timestamp: new Date(p.created_at).getTime(),
+  collectedBy: p.collected_by || undefined,
 });
 
 export const transformPurchase = (p: any): Purchase => ({
