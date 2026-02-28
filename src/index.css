@@ -251,6 +251,67 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* ==========================================
+   LIQUID-GLASS SCROLL-UNDER BARS
+   Content scrolls beneath translucent glass
+   bars at top and bottom of screen.
+========================================== */
+
+/* Top glass bar — sits over status bar area */
+.glass-bar-top {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9990;
+  height: calc(env(safe-area-inset-top, 0px) + 2px);
+  min-height: env(safe-area-inset-top, 0px);
+  background: hsla(216, 28%, 97%, 0.55);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  border-bottom: 1px solid hsla(216, 28%, 90%, 0.4);
+  box-shadow: 0 1px 12px hsla(220, 30%, 30%, 0.06);
+  pointer-events: none;
+}
+
+.dark .glass-bar-top {
+  background: hsla(222, 30%, 8%, 0.6);
+  border-bottom-color: hsla(222, 16%, 22%, 0.4);
+  box-shadow: 0 1px 12px hsla(222, 30%, 3%, 0.3);
+}
+
+/* Bottom glass bar — sits over gesture navigation area */
+.glass-bar-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9990;
+  height: calc(env(safe-area-inset-bottom, 0px) + 2px);
+  min-height: env(safe-area-inset-bottom, 0px);
+  background: hsla(216, 28%, 97%, 0.55);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  border-top: 1px solid hsla(216, 28%, 90%, 0.4);
+  box-shadow: 0 -1px 12px hsla(220, 30%, 30%, 0.06);
+  pointer-events: none;
+}
+
+.dark .glass-bar-bottom {
+  background: hsla(222, 30%, 8%, 0.6);
+  border-top-color: hsla(222, 16%, 22%, 0.4);
+  box-shadow: 0 -1px 12px hsla(222, 30%, 3%, 0.3);
+}
+
+/* Layout wrapper: content flows under bars with scroll padding */
+.scroll-under-layout {
+  min-height: 100vh;
+  min-height: 100dvh;
+  /* Content can scroll all the way under bars */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 @layer components {
   /* ==========================================
      LIQUID GLASS SYSTEM

@@ -43,8 +43,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   return (
     <PullToRefresh onRefresh={handlePullRefresh}>
+      {/* Liquid-glass overlay bars */}
+      <div className="glass-bar-top" aria-hidden="true" />
+      <div className="glass-bar-bottom" aria-hidden="true" />
+
       <div
-        className="min-h-screen flex bg-background text-end overflow-x-hidden font-tajawal transition-colors duration-300 safe-area-x"
+        className="scroll-under-layout flex bg-background text-end overflow-x-hidden font-tajawal transition-colors duration-300 safe-area-x"
         dir="rtl"
       >
         <main className="flex-1 relative">
@@ -97,7 +101,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               )}
             </div>
           </div>
-          <div className="p-4 md:p-8 -mt-4 safe-area-bottom">{children}</div>
+          <div className="p-4 md:p-8 -mt-4">{children}</div>
         </main>
       </div>
     </PullToRefresh>
