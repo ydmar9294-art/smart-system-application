@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   FileText, 
   RotateCcw, 
@@ -276,9 +277,9 @@ const DistributorDashboard: React.FC = () => {
       </div>
 
       {/* Customer Picker Modal */}
-      {showCustomerPicker && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowCustomerPicker(false)}>
-          <div className="bg-card w-full max-w-md rounded-3xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+      {showCustomerPicker && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir="rtl" onClick={() => setShowCustomerPicker(false)}>
+          <div className="bg-card w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border border-border" onClick={e => e.stopPropagation()}>
             <div className="p-5 border-b border-border bg-muted/50">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-black text-lg text-foreground">اختر الزبون</h3>
@@ -332,13 +333,14 @@ const DistributorDashboard: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Add Customer Modal */}
-      {showAddCustomerModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowAddCustomerModal(false)}>
-          <div className="bg-card w-full max-w-md rounded-3xl p-6 space-y-5 shadow-2xl" onClick={e => e.stopPropagation()}>
+      {showAddCustomerModal && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir="rtl" onClick={() => setShowAddCustomerModal(false)}>
+          <div className="bg-card w-full max-w-md rounded-2xl p-6 space-y-5 shadow-2xl border border-border" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h3 className="font-black text-lg text-foreground flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-blue-600 dark:text-blue-400" /> إضافة زبون جديد
@@ -388,7 +390,8 @@ const DistributorDashboard: React.FC = () => {
                 className="px-6 py-4 bg-muted rounded-xl font-bold text-muted-foreground hover:bg-accent disabled:opacity-50 transition-colors">إلغاء</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
