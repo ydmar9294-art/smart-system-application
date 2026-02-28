@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { copyToClipboard } from '@/lib/clipboard';
 import { useApp } from '@/store/AppContext';
 import { LicenseStatus, OrgStats } from '@/types';
@@ -277,9 +278,9 @@ const DeveloperHub: React.FC = () => {
       </div>
 
       {/* Issue License Modal */}
-      {showForm && (
-        <div className="modal-overlay p-4">
-          <div className="bg-card rounded-2xl md:rounded-[3rem] w-full max-w-md p-6 md:p-8 space-y-6 animate-zoom-in max-h-[90vh] overflow-y-auto">
+      {showForm && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir="rtl">
+          <div className="bg-card rounded-2xl w-full max-w-md p-6 md:p-8 space-y-6 animate-zoom-in shadow-2xl border border-border max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-black text-foreground">إصدار ترخيص جديد</h3>
             <form onSubmit={handleIssueLicense} className="space-y-4">
               <div>
@@ -316,7 +317,8 @@ const DeveloperHub: React.FC = () => {
               <button type="button" onClick={() => setShowForm(false)} className="w-full py-4 bg-muted text-muted-foreground rounded-xl font-black">إغلاق</button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
