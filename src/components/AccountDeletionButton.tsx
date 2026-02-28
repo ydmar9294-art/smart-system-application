@@ -46,8 +46,8 @@ const AccountDeletionButton: React.FC = () => {
       </button>
 
       {showModal && (
-        <div className="modal-overlay p-4" dir="rtl">
-          <div className="bg-card rounded-2xl w-full max-w-sm p-6 space-y-4 animate-zoom-in">
+        <div className="fixed inset-0 z-[9999] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4" dir="rtl">
+          <div className="bg-card rounded-2xl w-full max-w-sm p-6 space-y-4 animate-zoom-in shadow-xl border border-border">
             <div className="text-center space-y-3">
               <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
                 <AlertTriangle size={28} className="text-destructive" />
