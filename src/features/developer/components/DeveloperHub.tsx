@@ -4,13 +4,14 @@ import { useApp } from '@/store/AppContext';
 import { LicenseStatus, OrgStats } from '@/types';
 import { sanitizeText, sanitizePhone } from '@/lib/validation';
 import VersionManagement from './VersionManagement';
+import OrgDeletionManager from './OrgDeletionManager';
 
 import {
   ShieldCheck, Key, UserPlus, LogOut,
   Copy, CheckCircle2,
   Clock, Lock, Unlock, Activity,
   Users, Package, ShoppingCart, Truck,
-  BarChart3, AlertTriangle, Phone, Edit2, Save, X, Smartphone
+  BarChart3, AlertTriangle, Phone, Edit2, Save, X, Smartphone, Trash2
 } from 'lucide-react';
 
 const DeveloperHub: React.FC = () => {
@@ -26,6 +27,7 @@ const DeveloperHub: React.FC = () => {
   const [newLimit, setNewLimit] = useState<number>(10);
   const [showStats, setShowStats] = useState(true);
   const [showVersionMgmt, setShowVersionMgmt] = useState(false);
+  const [showDeletion, setShowDeletion] = useState(false);
 
   useEffect(() => {
     refreshOrgStats();
@@ -104,6 +106,7 @@ const DeveloperHub: React.FC = () => {
             <button onClick={() => setShowForm(true)} className="px-5 py-3 md:px-8 md:py-4 bg-primary rounded-xl md:rounded-2xl font-black shadow-xl flex items-center gap-2 active:scale-95 transition-all text-sm"><UserPlus size={18} /> إصدار ترخيص</button>
             <button onClick={() => { setShowStats(!showStats); if (!showStats) refreshOrgStats(); }} className="px-4 py-3 md:px-6 md:py-4 bg-white/10 rounded-xl md:rounded-2xl font-black hover:bg-white/20 active:scale-95 transition-all flex items-center gap-2 text-sm"><BarChart3 size={18} /> إحصائيات</button>
             <button onClick={() => setShowVersionMgmt(!showVersionMgmt)} className="px-4 py-3 md:px-6 md:py-4 bg-white/10 rounded-xl md:rounded-2xl font-black hover:bg-white/20 active:scale-95 transition-all flex items-center gap-2 text-sm"><Smartphone size={18} /> الإصدارات</button>
+            <button onClick={() => setShowDeletion(!showDeletion)} className="px-4 py-3 md:px-6 md:py-4 bg-white/10 rounded-xl md:rounded-2xl font-black hover:bg-destructive/20 active:scale-95 transition-all flex items-center gap-2 text-sm"><Trash2 size={18} /> حذف منشأة</button>
             <button onClick={logout} className="px-4 py-3 md:px-6 md:py-4 bg-white/10 rounded-xl md:rounded-2xl font-black hover:bg-destructive/20 active:scale-95 transition-all"><LogOut size={18} /></button>
           </div>
         </div>
@@ -178,6 +181,13 @@ const DeveloperHub: React.FC = () => {
       {showVersionMgmt && (
         <div className="bg-card rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 border shadow-sm">
           <VersionManagement />
+        </div>
+      )}
+
+      {/* Organization Deletion Panel */}
+      {showDeletion && (
+        <div className="bg-card rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 border shadow-sm">
+          <OrgDeletionManager />
         </div>
       )}
 
