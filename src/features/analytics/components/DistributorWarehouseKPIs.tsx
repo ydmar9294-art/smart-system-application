@@ -103,20 +103,24 @@ const DistributorWarehouseKPIs: React.FC = () => {
   // Employee-level KPIs (distributed equally for now since created_by isn't tracked client-side)
   const employeeKPIs: EmployeeKPISection[] = useMemo(() => {
     const allEmployees = [...distributors, ...warehouseKeepers];
-    const distCount = Math.max(distributors.length, 1);
-    const whCount = Math.max(warehouseKeepers.length, 1);
 
     return allEmployees.map(emp => {
       const isDistributor = emp.employeeType === EmployeeType.FIELD_AGENT;
-      const divisor = isDistributor ? distCount : whCount;
 
-      const salesAmount = isDistributor ? totalSalesAmount / divisor : 0;
-      const salesCount = isDistributor ? Math.round(filteredSales.length / divisor) : 0;
-      const collectionsAmt = isDistributor ? totalCollections / divisor : 0;
-      const collectionsCount = isDistributor ? Math.round(filteredPayments.length / divisor) : 0;
+      // Filter sales & payments by actual created_by / collected_by
+      const empSales = filteredSales.filter(s => s.createdBy === emp.id);
+      const empPayments = filteredPayments.filter(p => p.collectedBy === emp.id);
+
+      const salesAmount = empSales.reduce((s, v) => s + v.grandTotal, 0);
+      const salesCount = empSales.length;
+      const collectionsAmt = empPayments.reduce((s, p) => s + p.amount, 0);
+      const collectionsCount = empPayments.length;
+      const empCollectionRate = salesAmount > 0 ? (collectionsAmt / salesAmount) * 100 : 0;
+      const empCashSales = empSales.filter(s => s.paymentType === 'CASH').length;
+      const empCashRatio = salesCount > 0 ? (empCashSales / salesCount) * 100 : 0;
 
       const score = isDistributor
-        ? Math.round((salesAmount * 0.3) + (collectionsAmt * 0.3) + (salesCount * 100 * 0.2) + (collectionRate * 10 * 0.2))
+        ? Math.round((salesAmount * 0.3) + (collectionsAmt * 0.3) + (salesCount * 100 * 0.2) + (empCollectionRate * 10 * 0.2))
         : Math.round(products.length * 10 + products.filter(p => p.stock > p.minStock).length * 5);
 
       return {
@@ -128,12 +132,12 @@ const DistributorWarehouseKPIs: React.FC = () => {
           salesCount,
           collectionsAmount: collectionsAmt,
           collectionsCount,
-          collectionRate: salesAmount > 0 ? (collectionsAmt / salesAmount) * 100 : 0,
+          collectionRate: empCollectionRate,
           returnAmount: 0,
           returnRate: 0,
-          newCustomers: Math.round(customers.length / divisor),
+          newCustomers: customers.filter(c => (c as any).created_by === emp.id).length,
           avgInvoice: salesCount > 0 ? salesAmount / salesCount : 0,
-          cashRatio,
+          cashRatio: empCashRatio,
           deliveriesCount: 0,
           deliveredItems: 0,
           fulfillmentRate: 95,
@@ -144,7 +148,7 @@ const DistributorWarehouseKPIs: React.FC = () => {
         }
       };
     }).sort((a, b) => b.kpis.score - a.kpis.score);
-  }, [distributors, warehouseKeepers, filteredSales, filteredPayments, totalSalesAmount, totalCollections, customers, products, collectionRate, cashRatio]);
+  }, [distributors, warehouseKeepers, filteredSales, filteredPayments, customers, products]);
 
   const dateFilters: { id: DateFilter; label: string }[] = [
     { id: 'today', label: 'اليوم' },

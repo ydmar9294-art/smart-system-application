@@ -29,23 +29,19 @@ export const EmployeeKPIs = forwardRef<HTMLDivElement, EmployeeKPIsProps>(({ cla
     // الموظفين فقط
     const employees = users.filter(u => u.employeeType);
 
-    const performanceData: EmployeePerformance[] = employees.map(emp => {
-      // مبيعات هذا الشهر للموظف
-      const empSales = sales.filter(s => 
-        s.timestamp >= monthStart && 
-        !s.isVoided
-      );
-      
-      // تحصيلات هذا الشهر
-      const empCollections = payments.filter(p => 
-        p.timestamp >= monthStart && 
-        !p.isReversed
-      );
+    const monthSales = sales.filter(s => s.timestamp >= monthStart && !s.isVoided);
+    const monthPayments = payments.filter(p => p.timestamp >= monthStart && !p.isReversed);
 
-      // نوزع المبيعات بالتساوي مؤقتاً (يمكن تحسينه لاحقاً بإضافة created_by للمبيعات)
-      const salesPerEmployee = empSales.length > 0 ? empSales.length / Math.max(employees.length, 1) : 0;
-      const revenuePerEmployee = empSales.reduce((s, v) => s + v.grandTotal, 0) / Math.max(employees.length, 1);
-      const collectionsPerEmployee = empCollections.reduce((s, p) => s + p.amount, 0) / Math.max(employees.length, 1);
+    const performanceData: EmployeePerformance[] = employees.map(emp => {
+      // مبيعات هذا الشهر للموظف بناءً على created_by
+      const empSales = monthSales.filter(s => s.createdBy === emp.id);
+      
+      // تحصيلات هذا الشهر بناءً على collected_by
+      const empCollections = monthPayments.filter(p => p.collectedBy === emp.id);
+
+      const revenuePerEmployee = empSales.reduce((s, v) => s + v.grandTotal, 0);
+      const collectionsPerEmployee = empCollections.reduce((s, p) => s + p.amount, 0);
+      const salesPerEmployee = empSales.length;
 
       // حساب النقاط
       const score = Math.round(
@@ -60,8 +56,8 @@ export const EmployeeKPIs = forwardRef<HTMLDivElement, EmployeeKPIsProps>(({ cla
         type: emp.employeeType as EmployeeType,
         totalSales: revenuePerEmployee,
         totalCollections: collectionsPerEmployee,
-        salesCount: Math.round(salesPerEmployee),
-        collectionsCount: Math.round(empCollections.length / Math.max(employees.length, 1)),
+        salesCount: salesPerEmployee,
+        collectionsCount: empCollections.length,
         score
       };
     });

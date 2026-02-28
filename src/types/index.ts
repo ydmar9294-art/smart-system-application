@@ -87,6 +87,7 @@ export interface Sale {
   voidReason?: string;
   timestamp: number;
   items: SaleItem[];
+  createdBy?: string;
 }
 
 export interface SaleItem {
@@ -106,6 +107,7 @@ export interface Payment {
   isReversed: boolean;
   reverseReason?: string;
   timestamp: number;
+  collectedBy?: string;
 }
 
 export interface License {
