@@ -15,7 +15,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const navigate = useNavigate();
   
-  // Initialize theme from localStorage on mount
   usePageTheme();
   useRealtimeNotifications();
 
@@ -49,7 +48,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         dir="rtl"
       >
         <main className="flex-1 relative">
-          {/* Global Controls — top-left (RTL = visually top-right) */}
+          {/* Global Controls */}
           <div className="sticky top-0 z-50 flex justify-start items-center gap-2 pt-14 px-3 pb-2 pointer-events-none fixed-top-safe">
             <div className="pointer-events-auto">
               <ThemeToggle />
@@ -65,22 +64,33 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               {showSettingsMenu && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowSettingsMenu(false)} />
-                  <div className="absolute top-full mt-2 start-0 bg-card border rounded-2xl shadow-xl p-2 z-50 w-48 animate-in fade-in slide-in-from-top-2 duration-200" dir="rtl">
-                    <button
-                      onClick={() => { navigate('/privacy-policy'); setShowSettingsMenu(false); }}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold text-foreground hover:bg-muted transition-colors"
-                    >
-                      <Shield size={16} className="text-primary" /> سياسة الخصوصية
-                    </button>
-                    <button
-                      onClick={() => { navigate('/terms'); setShowSettingsMenu(false); }}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold text-foreground hover:bg-muted transition-colors"
-                    >
-                      <FileText size={16} className="text-primary" /> شروط الاستخدام
-                    </button>
-                    <div className="h-px bg-border my-1" />
-                    <div className="px-1">
-                      <AccountDeletionButton />
+                  <div className="absolute top-full mt-2 start-0 bg-card border border-border rounded-2xl shadow-xl z-50 w-56 animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden" dir="rtl">
+                    {/* Header */}
+                    <div className="px-4 py-3 bg-muted/50 border-b border-border">
+                      <p className="text-xs font-black text-foreground">الإعدادات</p>
+                    </div>
+                    
+                    <div className="p-2 space-y-0.5 max-h-[60vh] overflow-y-auto">
+                      <button
+                        onClick={() => { navigate('/privacy-policy'); setShowSettingsMenu(false); }}
+                        className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold text-foreground hover:bg-muted transition-colors"
+                      >
+                        <Shield size={16} className="text-primary flex-shrink-0" /> 
+                        <span>سياسة الخصوصية</span>
+                      </button>
+                      <button
+                        onClick={() => { navigate('/terms'); setShowSettingsMenu(false); }}
+                        className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold text-foreground hover:bg-muted transition-colors"
+                      >
+                        <FileText size={16} className="text-primary flex-shrink-0" /> 
+                        <span>شروط الاستخدام</span>
+                      </button>
+                      
+                      <div className="h-px bg-border mx-2 my-1" />
+                      
+                      <div className="px-1 py-1">
+                        <AccountDeletionButton />
+                      </div>
                     </div>
                   </div>
                 </>
