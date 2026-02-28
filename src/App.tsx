@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useCallback } from 'react';
+import React, { lazy, Suspense, useEffect, useCallback, useState } from 'react';
 import { useNavigate, useLocation, Routes, Route } from 'react-router-dom';
 import { App as CapacitorApp } from '@capacitor/app';
 import { useApp } from '@/store/AppContext';
@@ -13,6 +13,7 @@ import { useVersionCheck } from '@/hooks/useVersionCheck';
 import { useDeviceRealtime } from '@/hooks/useDeviceRealtime';
 import OfflineIndicator from '@/components/ui/OfflineIndicator';
 import UpdateModal from '@/components/ui/UpdateModal';
+import LogoutScreen from '@/components/ui/LogoutScreen';
 import { usePageTheme } from '@/hooks/usePageTheme';
 import { useStatusBar } from '@/platform/hooks/useStatusBar';
 import SecurityGate from '@/components/SecurityGate';
@@ -93,6 +94,7 @@ const ViewManager: React.FC = () => {
 // ==========================================
 const MainContent: React.FC = () => {
   const { user, isLoading, refreshAuth, needsActivation, logout } = useApp();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   
   // Initialize theme early so loading/auth screens also get dark mode
   usePageTheme();
@@ -105,6 +107,18 @@ const MainContent: React.FC = () => {
   // Real-time device session monitoring
   useDeviceRealtime(user?.id);
 
+  // Logout screen lifecycle
+  useEffect(() => {
+    const onStart = () => setIsLoggingOut(true);
+    const onFinish = () => setIsLoggingOut(false);
+    window.addEventListener('logout-started', onStart);
+    window.addEventListener('logout-finished', onFinish);
+    return () => {
+      window.removeEventListener('logout-started', onStart);
+      window.removeEventListener('logout-finished', onFinish);
+    };
+  }, []);
+
   // Listen for device-revoked events (from useSession online handler)
   useEffect(() => {
     const handleDeviceRevoked = async (e: Event) => {
@@ -116,6 +130,19 @@ const MainContent: React.FC = () => {
     window.addEventListener('device-revoked', handleDeviceRevoked);
     return () => window.removeEventListener('device-revoked', handleDeviceRevoked);
   }, [logout]);
+
+  // Global unhandled rejection safety net
+  useEffect(() => {
+    const handler = (event: PromiseRejectionEvent) => {
+      console.error('[App] Unhandled rejection:', event.reason);
+      event.preventDefault();
+    };
+    window.addEventListener('unhandledrejection', handler);
+    return () => window.removeEventListener('unhandledrejection', handler);
+  }, []);
+
+  // Logout goodbye screen — blocks everything
+  if (isLoggingOut) return <LogoutScreen />;
 
   // Loading — show skeleton instead of spinner for instant perceived speed
   if (isLoading) return <AppLoadingSkeleton />;

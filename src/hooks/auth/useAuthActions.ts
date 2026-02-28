@@ -34,14 +34,23 @@ export const useAuthActions = (deps: AuthActionsDeps) => {
     return authMutex.withLock(async () => {
       isInternalAuthOp.current = true;
       try {
+        // Dispatch event so App.tsx shows the goodbye screen immediately
+        window.dispatchEvent(new CustomEvent('logout-started'));
+
         clearAuthCache();
         clearEncryptionKey();
         clearDeviceState();
         bootedFromCache.current = false;
+
         await supabase.auth.signOut().catch(() => {
           // Even if signOut fails, clear local state
         });
+
+        // Small delay so the goodbye screen is visible
+        await new Promise((r) => setTimeout(r, 1800));
+
         resetToLogin();
+        window.dispatchEvent(new CustomEvent('logout-finished'));
       } finally {
         isInternalAuthOp.current = false;
       }
