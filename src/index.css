@@ -221,6 +221,36 @@
   padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
 }
 
+/* Margin-based safe area (for elements that need margin instead of padding) */
+.mt-safe {
+  margin-top: env(safe-area-inset-top, 0px);
+}
+.mb-safe {
+  margin-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Android gesture navigation bar overlap fix */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-area-bottom-nav {
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Notch device display cutout */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .notch-safe {
+    padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+  }
+}
+
+/* Fullscreen handling - ensures content doesn't go behind system bars */
+.fullscreen-safe {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 @layer components {
   /* ==========================================
      LIQUID GLASS SYSTEM

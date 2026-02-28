@@ -6,13 +6,18 @@ import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import { usePageTheme } from '@/hooks/usePageTheme';
 import { SUPPORT_WHATSAPP_URL, SUPPORT_PHONE_URL } from '@/constants';
+import { PullToRefresh } from '@/components/ui/PullToRefresh';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, logout, organization, refreshAuth } = useApp();
+  const { user, logout, organization, refreshAuth, refreshAllData } = useApp();
   
   // Initialize theme from localStorage on mount
   usePageTheme();
   useRealtimeNotifications();
+
+  const handlePullRefresh = useCallback(async () => {
+    await refreshAllData();
+  }, [refreshAllData]);
 
   if (!user) {
     return <>{children}</>;
@@ -34,20 +39,22 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   }
 
   return (
-    <div
-      className="min-h-screen flex bg-background text-end overflow-x-hidden font-tajawal transition-colors duration-300 safe-area-x"
-      dir="rtl"
-    >
-      <main className="flex-1 relative">
-        {/* Global Theme Toggle — top-left (RTL = visually top-right) */}
-        <div className="sticky top-0 z-50 flex justify-start pt-14 px-3 pb-2 pointer-events-none fixed-top-safe">
-          <div className="pointer-events-auto">
-            <ThemeToggle />
+    <PullToRefresh onRefresh={handlePullRefresh}>
+      <div
+        className="min-h-screen flex bg-background text-end overflow-x-hidden font-tajawal transition-colors duration-300 safe-area-x"
+        dir="rtl"
+      >
+        <main className="flex-1 relative">
+          {/* Global Theme Toggle — top-left (RTL = visually top-right) */}
+          <div className="sticky top-0 z-50 flex justify-start pt-14 px-3 pb-2 pointer-events-none fixed-top-safe">
+            <div className="pointer-events-auto">
+              <ThemeToggle />
+            </div>
           </div>
-        </div>
-        <div className="p-4 md:p-8 -mt-4 safe-area-bottom">{children}</div>
-      </main>
-    </div>
+          <div className="p-4 md:p-8 -mt-4 safe-area-bottom">{children}</div>
+        </main>
+      </div>
+    </PullToRefresh>
   );
 };
 

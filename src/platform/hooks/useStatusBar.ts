@@ -11,15 +11,23 @@ export function useStatusBar() {
 
     const initializeStatusBar = async () => {
       try {
+        // Set style based on theme
         await StatusBar.setStyle({
           style: isDark ? Style.Dark : Style.Light
         });
 
+        // Match status bar background to app theme
         await StatusBar.setBackgroundColor({
-          color: isDark ? '#0f172a' : '#ffffff'
+          color: isDark ? '#0f172a' : '#f5f7fa'
         });
 
+        // Ensure status bar is visible
         await StatusBar.show();
+
+        // On Android, set overlay to false to prevent content from going behind status bar
+        if (Capacitor.getPlatform() === 'android') {
+          await StatusBar.setOverlaysWebView({ overlay: false });
+        }
       } catch (error) {
         console.error('Status bar initialization error:', error);
       }
