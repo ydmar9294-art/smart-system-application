@@ -78,31 +78,65 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
     };
   }, [pullDistance, isRefreshing, disabled, onRefresh, haptics]);
 
-  const rotation = Math.min(pullDistance / PULL_THRESHOLD, 1) * 360;
-  const opacity = Math.min(pullDistance / PULL_THRESHOLD, 1);
+  const progress = Math.min(pullDistance / PULL_THRESHOLD, 1);
+  const rotation = progress * 360;
+  const opacity = progress;
   const translateY = Math.min(pullDistance, MAX_PULL);
+  const scale = 0.5 + progress * 0.5;
+  const ready = pullDistance >= PULL_THRESHOLD;
 
   return (
     <div id="pull-to-refresh-container" className="relative">
       {/* Pull indicator */}
       <div
         className="absolute top-0 left-0 right-0 flex justify-center z-10 pointer-events-none"
-        style={{ opacity: pullDistance > 0 ? opacity : 0 }}
+        style={{
+          opacity: pullDistance > 0 ? opacity : 0,
+          transition: pullDistance === 0 ? 'opacity 0.3s ease' : 'none',
+        }}
       >
         <div
-          className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mt-2"
-          style={{ transform: `translateY(${translateY}px)` }}
+          className="relative mt-2"
+          style={{
+            transform: `translateY(${translateY}px) scale(${scale})`,
+            transition: pullDistance === 0 ? 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none',
+          }}
         >
-          <RefreshCw
-            size={20}
-            className={`text-primary ${isRefreshing ? 'animate-spin' : ''}`}
-            style={{ transform: `rotate(${rotation}deg)` }}
+          {/* Outer ripple ring when ready */}
+          <div
+            className="absolute inset-0 rounded-full bg-primary/20"
+            style={{
+              transform: ready ? 'scale(1.6)' : 'scale(1)',
+              opacity: ready ? 0.6 : 0,
+              transition: 'transform 0.3s ease, opacity 0.3s ease',
+            }}
           />
+          {/* Inner circle */}
+          <div
+            className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors duration-200 ${
+              ready ? 'bg-primary/20 shadow-lg shadow-primary/20' : 'bg-primary/10'
+            }`}
+          >
+            <RefreshCw
+              size={20}
+              className={`transition-colors duration-200 ${
+                ready ? 'text-primary' : 'text-primary/70'
+              } ${isRefreshing ? 'animate-spin' : ''}`}
+              style={{
+                transform: `rotate(${rotation}deg)`,
+              }}
+            />
+          </div>
         </div>
       </div>
 
       {/* Content */}
-      <div style={{ transform: `translateY(${pullDistance > 0 ? translateY / 3 : 0}px)`, transition: pullDistance === 0 ? 'transform 0.3s ease' : 'none' }}>
+      <div
+        style={{
+          transform: `translateY(${pullDistance > 0 ? translateY / 3 : 0}px)`,
+          transition: pullDistance === 0 ? 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none',
+        }}
+      >
         {children}
       </div>
     </div>
