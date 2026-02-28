@@ -37,6 +37,7 @@ import AIAssistant from '@/features/ai/components/AIAssistant';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
 import LegalInfoTab from './LegalInfoTab';
 import CustomersTab from './CustomersTab';
+import OrgDeletionRequest from './OrgDeletionRequest';
 
 type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'legal';
 
@@ -455,7 +456,10 @@ const OwnerDashboard: React.FC = () => {
         )}
 
         {activeTab === 'legal' && (
-          <div className="animate-fade-in"><LegalInfoTab /></div>
+          <div className="animate-fade-in space-y-4">
+            <LegalInfoTab />
+            <OrgDeletionRequest />
+          </div>
         )}
       </div>
 
