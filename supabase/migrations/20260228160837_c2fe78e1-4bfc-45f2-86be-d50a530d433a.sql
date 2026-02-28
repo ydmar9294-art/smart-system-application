@@ -1,0 +1,1 @@
+ALTER TABLE public.deletion_requests ALTER COLUMN organization_id DROP NOT NULL;

@@ -200,7 +200,7 @@ export type Database = {
           executed_at: string | null
           executed_by: string | null
           id: string
-          organization_id: string
+          organization_id: string | null
           owner_id: string
           request_date: string
           request_method: string
@@ -218,7 +218,7 @@ export type Database = {
           executed_at?: string | null
           executed_by?: string | null
           id?: string
-          organization_id: string
+          organization_id?: string | null
           owner_id: string
           request_date?: string
           request_method: string
@@ -236,7 +236,7 @@ export type Database = {
           executed_at?: string | null
           executed_by?: string | null
           id?: string
-          organization_id?: string
+          organization_id?: string | null
           owner_id?: string
           request_date?: string
           request_method?: string
