@@ -49,7 +49,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       >
         <main className="flex-1 relative">
           {/* Global Controls */}
-          <div className="sticky top-0 z-50 flex justify-start items-center gap-2 pt-14 px-3 pb-2 pointer-events-none fixed-top-safe">
+          <div className="sticky top-0 z-50 flex justify-start items-center gap-2 pt-16 px-3 pb-2 pointer-events-none fixed-top-safe">
             <div className="pointer-events-auto">
               <ThemeToggle />
             </div>
