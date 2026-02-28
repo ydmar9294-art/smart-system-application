@@ -103,18 +103,18 @@ export function useDistributorOffline() {
     if (!navigator.onLine) return null;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return null;
 
       const { data: profile } = await supabase
         .from('profiles')
         .select('organization_id')
-        .eq('id', user.id)
+        .eq('id', session.user.id)
         .single();
 
       if (profile?.organization_id) {
-        await cacheOfflineOrgContext(profile.organization_id, user.id);
-        return { organizationId: profile.organization_id, distributorId: user.id };
+        await cacheOfflineOrgContext(profile.organization_id, session.user.id);
+        return { organizationId: profile.organization_id, distributorId: session.user.id };
       }
     } catch {
       // no network
@@ -124,19 +124,21 @@ export function useDistributorOffline() {
   }, []);
 
   // Fetch inventory from server and cache locally
+  // ALWAYS loads from IndexedDB first (offline-first), then background refreshes from server
   const refreshInventory = useCallback(async () => {
-    if (!navigator.onLine) {
-      await refreshStats();
-      return;
-    }
+    // Step 1: Always load from local cache first (instant, works offline)
+    await refreshStats();
+
+    // Step 2: If online, background-refresh from server to enhance data
+    if (!navigator.onLine) return;
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
 
       const { data, error } = await supabase
         .from('distributor_inventory')
         .select('product_id, product_name, quantity')
-        .eq('distributor_id', user.id)
+        .eq('distributor_id', session.user.id)
         .gt('quantity', 0);
 
       if (error) throw error;
@@ -177,36 +179,35 @@ export function useDistributorOffline() {
       await refreshStats();
     } catch (err) {
       console.warn('[DistributorOffline] Inventory fetch failed, using cache');
-      await refreshStats();
     }
   }, [refreshStats]);
 
-  // Fetch customers from server and cache locally
+  // Fetch customers from server and cache locally (offline-first)
   const refreshCustomers = useCallback(async () => {
-    if (!navigator.onLine) {
-      // Offline: just load from cache
-      await refreshStats();
-      return;
-    }
+    // Step 1: Always load from local cache first
+    await refreshStats();
+
+    // Step 2: If online, background-refresh from server
+    if (!navigator.onLine) return;
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
 
       const { data: profile } = await supabase
         .from('profiles')
         .select('organization_id')
-        .eq('id', user.id)
+        .eq('id', session.user.id)
         .single();
       if (!profile?.organization_id) return;
 
-      // Cache org context every time we successfully fetch profile (ensures offline availability)
-      await cacheOfflineOrgContext(profile.organization_id, user.id);
+      // Cache org context every time we successfully fetch profile
+      await cacheOfflineOrgContext(profile.organization_id, session.user.id);
 
       const { data, error } = await supabase
         .from('customers')
         .select('id, name, phone, location, balance, organization_id, created_by')
         .eq('organization_id', profile.organization_id)
-        .eq('created_by', user.id);
+        .eq('created_by', session.user.id);
 
       if (error) throw error;
 
@@ -227,24 +228,24 @@ export function useDistributorOffline() {
       await refreshStats();
     } catch {
       console.warn('[DistributorOffline] Customers fetch failed, using cache');
-      await refreshStats();
     }
   }, [refreshStats]);
 
-  // Fetch sales from server and cache locally
+  // Fetch sales from server and cache locally (offline-first)
   const refreshSales = useCallback(async () => {
-    if (!navigator.onLine) {
-      await refreshStats();
-      return;
-    }
+    // Step 1: Always load from local cache first
+    await refreshStats();
+
+    // Step 2: If online, background-refresh from server
+    if (!navigator.onLine) return;
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
 
       const { data, error } = await supabase
         .from('sales')
         .select('id, customer_id, customer_name, grand_total, paid_amount, remaining, payment_type, is_voided, created_at')
-        .eq('created_by', user.id)
+        .eq('created_by', session.user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -265,7 +266,6 @@ export function useDistributorOffline() {
       await refreshStats();
     } catch {
       console.warn('[DistributorOffline] Sales fetch failed, using cache');
-      await refreshStats();
     }
   }, [refreshStats]);
 
@@ -517,9 +517,9 @@ export function useDistributorOffline() {
     const refreshOrgLegalCache = async () => {
       if (!navigator.onLine) return;
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+        const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', session.user.id).single();
         if (!profile?.organization_id) return;
         const [orgRes, legalRes] = await Promise.all([
           supabase.from('organizations').select('name').eq('id', profile.organization_id).single(),
@@ -528,7 +528,7 @@ export function useDistributorOffline() {
             .eq('organization_id', profile.organization_id).maybeSingle()
         ]);
         if (orgRes.data) {
-          await cacheOrgInfo(orgRes.data.name, legalRes.data || null, profile.organization_id, user.id);
+          await cacheOrgInfo(orgRes.data.name, legalRes.data || null, profile.organization_id, session.user.id);
         }
       } catch { /* non-critical */ }
     };

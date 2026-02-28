@@ -54,16 +54,12 @@ const DistributorDashboard: React.FC = () => {
 
   useEffect(() => {
     const getCurrentUser = async () => {
-      // Try cached auth first (works offline via Supabase local session)
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setCurrentUserId(session.user.id);
-        return;
-      }
-      // Fallback to getUser (requires network)
+      // Use getSession (local-first, no network needed) instead of getUser
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) setCurrentUserId(user.id);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setCurrentUserId(session.user.id);
+        }
       } catch {
         // offline and no cached session — customers will show all
       }
