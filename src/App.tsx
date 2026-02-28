@@ -19,6 +19,7 @@ import { useStatusBar } from '@/platform/hooks/useStatusBar';
 import SecurityGate from '@/components/SecurityGate';
 import AccountStatusGate from '@/components/AccountStatusGate';
 import AppLoadingSkeleton from '@/components/ui/DashboardSkeleton';
+import ConsentGate from '@/components/ConsentGate';
 
 // ==========================================
 // LAZY-LOADED DASHBOARD COMPONENTS
@@ -33,6 +34,8 @@ const DistributorDashboard = lazy(() => import('@/features/distributor/component
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 const EmailConfirmed = lazy(() => import('@/pages/EmailConfirmed'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('@/pages/TermsOfService'));
+const AccountDeletion = lazy(() => import('@/pages/AccountDeletion'));
 
 // ==========================================
 // LOADING FALLBACK
@@ -173,9 +176,11 @@ const MainContent: React.FC = () => {
   return (
     <>
       <ToastManager />
-      <AccountStatusGate>
-        <Layout><ViewManager /></Layout>
-      </AccountStatusGate>
+      <ConsentGate userId={user.id}>
+        <AccountStatusGate>
+          <Layout><ViewManager /></Layout>
+        </AccountStatusGate>
+      </ConsentGate>
       <OfflineIndicator isOnline={isOnline} pendingCount={pendingCount} />
       <UpdateModal
         open={showUpdateModal}
@@ -238,6 +243,16 @@ const App: React.FC = () => {
         <Route path="/privacy-policy" element={
           <Suspense fallback={<DashboardFallback />}>
             <PrivacyPolicy />
+          </Suspense>
+        } />
+        <Route path="/terms" element={
+          <Suspense fallback={<DashboardFallback />}>
+            <TermsOfService />
+          </Suspense>
+        } />
+        <Route path="/account-deletion" element={
+          <Suspense fallback={<DashboardFallback />}>
+            <AccountDeletion />
           </Suspense>
         } />
         <Route path="*" element={<MainContent />} />

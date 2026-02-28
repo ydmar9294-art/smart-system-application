@@ -1,15 +1,19 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useApp } from '@/store/AppContext';
 import { UserRole, LicenseStatus } from '@/types';
-import { ShieldAlert, Phone, LogOut, RefreshCw } from 'lucide-react';
+import { ShieldAlert, Phone, LogOut, RefreshCw, Settings, Shield, FileText, Trash2, X } from 'lucide-react';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import { usePageTheme } from '@/hooks/usePageTheme';
 import { SUPPORT_WHATSAPP_URL, SUPPORT_PHONE_URL } from '@/constants';
 import { PullToRefresh } from '@/components/ui/PullToRefresh';
+import AccountDeletionButton from '@/components/AccountDeletionButton';
+import { useNavigate } from 'react-router-dom';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout, organization, refreshAuth, refreshAllData } = useApp();
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const navigate = useNavigate();
   
   // Initialize theme from localStorage on mount
   usePageTheme();
@@ -45,10 +49,42 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         dir="rtl"
       >
         <main className="flex-1 relative">
-          {/* Global Theme Toggle — top-left (RTL = visually top-right) */}
-          <div className="sticky top-0 z-50 flex justify-start pt-14 px-3 pb-2 pointer-events-none fixed-top-safe">
+          {/* Global Controls — top-left (RTL = visually top-right) */}
+          <div className="sticky top-0 z-50 flex justify-start items-center gap-2 pt-14 px-3 pb-2 pointer-events-none fixed-top-safe">
             <div className="pointer-events-auto">
               <ThemeToggle />
+            </div>
+            <div className="pointer-events-auto relative">
+              <button
+                onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+                className="p-2 rounded-full bg-card/80 backdrop-blur-sm shadow-md text-muted-foreground hover:text-foreground transition-all"
+                title="الإعدادات"
+              >
+                <Settings size={18} />
+              </button>
+              {showSettingsMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowSettingsMenu(false)} />
+                  <div className="absolute top-full mt-2 start-0 bg-card border rounded-2xl shadow-xl p-2 z-50 w-48 animate-in fade-in slide-in-from-top-2 duration-200" dir="rtl">
+                    <button
+                      onClick={() => { navigate('/privacy-policy'); setShowSettingsMenu(false); }}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold text-foreground hover:bg-muted transition-colors"
+                    >
+                      <Shield size={16} className="text-primary" /> سياسة الخصوصية
+                    </button>
+                    <button
+                      onClick={() => { navigate('/terms'); setShowSettingsMenu(false); }}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold text-foreground hover:bg-muted transition-colors"
+                    >
+                      <FileText size={16} className="text-primary" /> شروط الاستخدام
+                    </button>
+                    <div className="h-px bg-border my-1" />
+                    <div className="px-1">
+                      <AccountDeletionButton />
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
           <div className="p-4 md:p-8 -mt-4 safe-area-bottom">{children}</div>
