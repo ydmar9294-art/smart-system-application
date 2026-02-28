@@ -192,6 +192,71 @@ export type Database = {
           },
         ]
       }
+      deletion_requests: {
+        Row: {
+          approval_status: string
+          approved_at: string | null
+          created_at: string
+          executed_at: string | null
+          executed_by: string | null
+          id: string
+          organization_id: string
+          owner_id: string
+          request_date: string
+          request_method: string
+          request_notes: string | null
+          verification_method: string | null
+          verification_notes: string | null
+          verification_status: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          approval_status?: string
+          approved_at?: string | null
+          created_at?: string
+          executed_at?: string | null
+          executed_by?: string | null
+          id?: string
+          organization_id: string
+          owner_id: string
+          request_date?: string
+          request_method: string
+          request_notes?: string | null
+          verification_method?: string | null
+          verification_notes?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          approval_status?: string
+          approved_at?: string | null
+          created_at?: string
+          executed_at?: string | null
+          executed_by?: string | null
+          id?: string
+          organization_id?: string
+          owner_id?: string
+          request_date?: string
+          request_method?: string
+          request_notes?: string | null
+          verification_method?: string | null
+          verification_notes?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deletion_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deliveries: {
         Row: {
           created_at: string
@@ -1285,6 +1350,10 @@ export type Database = {
       }
       deactivate_employee_rpc: {
         Args: { p_employee_id: string }
+        Returns: Json
+      }
+      execute_org_deletion_rpc: {
+        Args: { p_confirmation_org_name: string; p_deletion_request_id: string }
         Returns: Json
       }
       get_my_org_id: { Args: never; Returns: string }
