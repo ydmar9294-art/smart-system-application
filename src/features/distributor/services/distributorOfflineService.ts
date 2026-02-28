@@ -61,15 +61,30 @@ export interface OfflineAction {
 }
 
 // ============================================
-// IndexedDB Connection
+// IndexedDB Connection (resilient)
 // ============================================
 
 let dbInstance: IDBDatabase | null = null;
+let dbOpenPromise: Promise<IDBDatabase> | null = null;
 
 function openDB(): Promise<IDBDatabase> {
-  if (dbInstance) return Promise.resolve(dbInstance);
-  
-  return new Promise((resolve, reject) => {
+  // Reuse existing healthy connection
+  if (dbInstance) {
+    try {
+      // Validate connection is still alive by attempting a trivial op
+      dbInstance.transaction(STORES.ACTIONS, 'readonly');
+      return Promise.resolve(dbInstance);
+    } catch {
+      // Connection is stale/closed — reset and reconnect
+      dbInstance = null;
+      dbOpenPromise = null;
+    }
+  }
+
+  // Deduplicate concurrent open calls
+  if (dbOpenPromise) return dbOpenPromise;
+
+  dbOpenPromise = new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onupgradeneeded = () => {
@@ -109,11 +124,17 @@ function openDB(): Promise<IDBDatabase> {
 
     request.onsuccess = () => {
       dbInstance = request.result;
-      dbInstance.onclose = () => { dbInstance = null; };
+      dbInstance.onclose = () => { dbInstance = null; dbOpenPromise = null; };
+      dbInstance.onerror = () => { dbInstance = null; dbOpenPromise = null; };
       resolve(dbInstance);
     };
-    request.onerror = () => reject(request.error);
+    request.onerror = () => {
+      dbOpenPromise = null;
+      reject(request.error);
+    };
   });
+
+  return dbOpenPromise;
 }
 
 // ============================================
@@ -343,10 +364,18 @@ export interface CachedInventoryItem {
 }
 
 export async function cacheInventory(items: CachedInventoryItem[]): Promise<void> {
-  await clearStore(STORES.INVENTORY_CACHE);
-  for (const item of items) {
-    await putItem(STORES.INVENTORY_CACHE, { ...item, updated_at: Date.now() });
-  }
+  // Atomic: write all items in a single transaction (no clear-then-add race)
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.INVENTORY_CACHE, 'readwrite');
+    const store = tx.objectStore(STORES.INVENTORY_CACHE);
+    store.clear();
+    for (const item of items) {
+      store.put({ ...item, updated_at: Date.now() });
+    }
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
 export async function getCachedInventory(): Promise<CachedInventoryItem[]> {
@@ -395,21 +424,29 @@ export interface CachedCustomer {
 }
 
 export async function cacheCustomers(customers: CachedCustomer[]): Promise<void> {
+  // Read existing local customers BEFORE clearing
   const existing = await getAllItems<CachedCustomer>(STORES.CUSTOMERS_CACHE);
   const localCustomers = existing.filter(c => c.isLocal && c.syncStatus !== 'synced');
   
-  await clearStore(STORES.CUSTOMERS_CACHE);
-  
-  for (const c of customers) {
-    await putItem(STORES.CUSTOMERS_CACHE, { ...c, updated_at: Date.now() });
-  }
-  
+  // Atomic: clear + re-add in single transaction
+  const db = await openDB();
   const serverIds = new Set(customers.map(c => c.id));
-  for (const c of localCustomers) {
-    if (!serverIds.has(c.id)) {
-      await putItem(STORES.CUSTOMERS_CACHE, c);
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.CUSTOMERS_CACHE, 'readwrite');
+    const store = tx.objectStore(STORES.CUSTOMERS_CACHE);
+    store.clear();
+    for (const c of customers) {
+      store.put({ ...c, updated_at: Date.now() });
     }
-  }
+    // Re-add local unsynced customers that aren't on server yet
+    for (const c of localCustomers) {
+      if (!serverIds.has(c.id)) {
+        store.put(c);
+      }
+    }
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
 export async function getCachedCustomers(): Promise<CachedCustomer[]> {
@@ -512,6 +549,31 @@ export async function loadPersistedIdMaps(): Promise<void> {
   } catch {
     // IndexedDB not available
   }
+
+  // Crash recovery: reset any stuck "syncing" actions back to "pending"
+  await recoverStuckActions();
+}
+
+/**
+ * Crash recovery: If app was killed mid-sync, actions stuck in "syncing" 
+ * status will never complete. Reset them back to "pending".
+ */
+export async function recoverStuckActions(): Promise<void> {
+  try {
+    const all = await getAllItems<OfflineAction>(STORES.ACTIONS);
+    let recovered = 0;
+    for (const action of all) {
+      if (action.status === 'syncing') {
+        await updateAction(action.id, { status: 'pending' });
+        recovered++;
+      }
+    }
+    if (recovered > 0) {
+      logger.info(`[CrashRecovery] Recovered ${recovered} stuck actions`, 'DistributorOffline');
+    }
+  } catch {
+    // non-critical
+  }
 }
 
 // ============================================
@@ -548,9 +610,30 @@ function syncPriority(type: OfflineActionType): number {
 
 type ExecuteResult = 'synced' | 'deferred' | 'failed';
 
+const SYNC_TIMEOUT_MS = 30_000; // 30s per operation
+
+/** Wrap a promise with a timeout */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Timeout: ${label} exceeded ${ms}ms`)), ms);
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); }
+    );
+  });
+}
+
 async function executeAction(action: OfflineAction): Promise<ExecuteResult> {
   try {
-    switch (action.type) {
+    return await withTimeout(executeActionInner(action), SYNC_TIMEOUT_MS, action.type);
+  } catch (err: any) {
+    logger.error(`[Sync] Action ${action.id} (${action.type}) failed: ${err.message}`, 'DistributorOffline');
+    return 'failed';
+  }
+}
+
+async function executeActionInner(action: OfflineAction): Promise<ExecuteResult> {
+  switch (action.type) {
       case 'CREATE_SALE': {
         const customerId = resolveCustomerId(action.payload.customerId);
 
@@ -641,10 +724,6 @@ async function executeAction(action: OfflineAction): Promise<ExecuteResult> {
         logger.warn(`[Sync] Unknown action type: ${action.type}`, 'DistributorOffline');
         return 'failed';
     }
-  } catch (err: any) {
-    logger.error(`[Sync] Action ${action.id} (${action.type}) failed: ${err.message}`, 'DistributorOffline');
-    return 'failed';
-  }
 }
 
 /** Calculate exponential backoff delay: 5s, 15s, 45s, 120s, 300s */
