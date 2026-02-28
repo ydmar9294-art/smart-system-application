@@ -10,6 +10,7 @@ import AuthFlow from '@/features/auth/components/AuthFlow';
 import { usePushNotifications } from '@/platform/hooks/usePushNotifications';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { useVersionCheck } from '@/hooks/useVersionCheck';
+import { useDeviceRealtime } from '@/hooks/useDeviceRealtime';
 import OfflineIndicator from '@/components/ui/OfflineIndicator';
 import UpdateModal from '@/components/ui/UpdateModal';
 import { usePageTheme } from '@/hooks/usePageTheme';
@@ -100,6 +101,9 @@ const MainContent: React.FC = () => {
   usePushNotifications();
   const { isOnline, pendingCount } = useOfflineSync();
   const { showUpdateModal, isForceUpdate, checkResult, dismiss } = useVersionCheck();
+  
+  // Real-time device session monitoring
+  useDeviceRealtime(user?.id);
 
   // Listen for device-revoked events (from useSession online handler)
   useEffect(() => {
