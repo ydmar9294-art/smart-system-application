@@ -35,18 +35,24 @@ const UpdateModal: React.FC<UpdateModalProps> = ({
   if (isForce) {
     return (
       <div
-        className="fixed inset-0 z-[9999] bg-background flex flex-col items-center justify-center safe-area-x"
+        className="fixed inset-0 z-[9999] bg-background flex flex-col items-center justify-center overflow-auto"
         dir="rtl"
+        style={{
+          paddingTop: 'max(env(safe-area-inset-top, 16px), 16px)',
+          paddingBottom: 'max(env(safe-area-inset-bottom, 16px), 16px)',
+          paddingLeft: 'max(env(safe-area-inset-left, 16px), 16px)',
+          paddingRight: 'max(env(safe-area-inset-right, 16px), 16px)',
+        }}
       >
-        <div className="flex flex-col items-center gap-6 px-6 py-8 max-w-sm w-full text-center">
-          <AppLogo size={64} />
+        <div className="flex flex-col items-center gap-5 px-5 py-6 max-w-sm w-full text-center my-auto">
+          <AppLogo size={56} />
 
-          <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
-            <AlertTriangle className="w-8 h-8 text-destructive" />
+          <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-7 h-7 text-destructive" />
           </div>
 
           <div className="space-y-2">
-            <h2 className="text-xl font-black text-foreground">تحديث إجباري مطلوب</h2>
+            <h2 className="text-lg font-black text-foreground">تحديث إجباري مطلوب</h2>
             <p className="text-sm text-muted-foreground font-bold leading-relaxed">
               يجب تحديث التطبيق للمتابعة. الإصدار الحالي ({currentVersion}) لم يعد مدعوماً.
             </p>
@@ -71,9 +77,6 @@ const UpdateModal: React.FC<UpdateModalProps> = ({
             </button>
           </div>
         </div>
-
-        {/* Safe area bottom spacer */}
-        <div className="safe-area-bottom shrink-0" />
       </div>
     );
   }
@@ -81,7 +84,10 @@ const UpdateModal: React.FC<UpdateModalProps> = ({
   // Optional update = dismissible bottom banner
   return (
     <div className="fixed inset-0 z-[9998] flex items-end justify-center bg-black/40 animate-in fade-in duration-200" dir="rtl">
-      <div className="w-full max-w-md bg-card border-t border-border rounded-t-3xl p-6 pb-8 safe-area-bottom space-y-4 animate-in slide-in-from-bottom duration-300">
+      <div
+        className="w-full max-w-md bg-card border-t border-border rounded-t-3xl p-5 space-y-4 animate-in slide-in-from-bottom duration-300"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 20px), 20px)' }}
+      >
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
             <Download className="w-5 h-5 text-primary" />
