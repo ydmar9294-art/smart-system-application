@@ -2,6 +2,7 @@
  * AccountDeletionButton - In-app account deletion (Google Play requirement)
  */
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useApp } from '@/store/AppContext';
 import { Trash2, AlertTriangle, Loader2 } from 'lucide-react';
@@ -45,14 +46,14 @@ const AccountDeletionButton: React.FC = () => {
         <Trash2 size={16} /> حذف الحساب
       </button>
 
-      {showModal && (
-        <div className="fixed inset-0 z-[9999] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4" dir="rtl">
-          <div className="bg-card rounded-2xl w-full max-w-sm p-6 space-y-4 animate-zoom-in shadow-xl border border-border">
+      {showModal && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir="rtl">
+          <div className="bg-card rounded-2xl w-full max-w-sm p-6 space-y-4 animate-zoom-in shadow-2xl border border-border">
             <div className="text-center space-y-3">
-              <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
-                <AlertTriangle size={28} className="text-destructive" />
+              <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+                <AlertTriangle size={32} className="text-destructive" />
               </div>
-              <h3 className="text-lg font-black text-destructive">حذف الحساب نهائياً</h3>
+              <h3 className="text-xl font-black text-destructive">حذف الحساب نهائياً</h3>
               <p className="text-sm text-muted-foreground font-bold leading-relaxed">
                 سيتم حذف بياناتك الشخصية وإلغاء تنشيط حسابك بشكل نهائي.
                 لا يمكن التراجع عن هذا الإجراء.
@@ -89,7 +90,8 @@ const AccountDeletionButton: React.FC = () => {
               إلغاء
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
