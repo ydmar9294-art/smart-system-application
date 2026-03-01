@@ -42,15 +42,16 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   }
 
   return (
-    <PullToRefresh onRefresh={handlePullRefresh}>
-      {/* Liquid-glass overlay bars */}
+    <>
+      {/* Liquid-glass overlay bars — OUTSIDE scroll/transform containers so they stay truly fixed */}
       <div className="glass-bar-top" aria-hidden="true" />
       <div className="glass-bar-bottom" aria-hidden="true" />
 
-      <div
-        className="scroll-under-layout flex bg-background text-end overflow-x-hidden font-tajawal transition-colors duration-300 safe-area-x"
-        dir="rtl"
-      >
+      <PullToRefresh onRefresh={handlePullRefresh}>
+        <div
+          className="scroll-under-layout flex bg-background text-end overflow-x-hidden font-tajawal transition-colors duration-300 safe-area-x"
+          dir="rtl"
+        >
         <main className="flex-1 relative">
           {/* Global Controls */}
           <div className="sticky top-0 z-50 flex justify-start items-center gap-2 pt-16 px-3 pb-2 pointer-events-none fixed-top-safe">
@@ -103,8 +104,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           </div>
           <div className="p-4 md:p-8 -mt-4">{children}</div>
         </main>
-      </div>
-    </PullToRefresh>
+        </div>
+      </PullToRefresh>
+    </>
   );
 };
 

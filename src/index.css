@@ -272,6 +272,9 @@
   border-bottom: 1px solid hsla(216, 28%, 90%, 0.4);
   box-shadow: 0 1px 12px hsla(220, 30%, 30%, 0.06);
   pointer-events: none;
+  will-change: transform;
+  transform: translateZ(0);
+  contain: layout style;
 }
 
 .dark .glass-bar-top {
@@ -295,6 +298,9 @@
   border-top: 1px solid hsla(216, 28%, 90%, 0.4);
   box-shadow: 0 -1px 12px hsla(220, 30%, 30%, 0.06);
   pointer-events: none;
+  will-change: transform;
+  transform: translateZ(0);
+  contain: layout style;
 }
 
 .dark .glass-bar-bottom {
