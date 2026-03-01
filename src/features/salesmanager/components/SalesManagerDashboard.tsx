@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import DeletionRequestsManager from '@/features/shared/components/DeletionRequestsManager';
 import { createPortal } from 'react-dom';
 // Employee limit is enforced by the backend RPC (add_employee_rpc).
 // Frontend shows clear error when backend rejects.
@@ -22,7 +23,8 @@ import {
   BarChart3,
   UserX,
   UserCheck,
-  Loader2
+  Loader2,
+  Trash2
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
@@ -369,6 +371,14 @@ const SalesManagerDashboard: React.FC = () => {
                     );
                   })
                 )}
+              </div>
+
+              {/* Deletion Requests Section */}
+              <div className="bg-card p-4 rounded-2xl shadow-sm">
+                <h3 className="font-bold text-foreground mb-3 text-sm flex items-center gap-2">
+                  <Trash2 className="w-4 h-4 text-destructive" /> طلبات حذف الحسابات
+                </h3>
+                <DeletionRequestsManager />
               </div>
             </div>
           )}

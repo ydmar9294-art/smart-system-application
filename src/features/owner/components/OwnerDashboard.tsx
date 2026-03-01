@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import DeletionRequestsManager from '@/features/shared/components/DeletionRequestsManager';
 import { createPortal } from 'react-dom';
 import { copyToClipboard } from '@/lib/clipboard';
 import { 
@@ -444,6 +445,14 @@ const OwnerDashboard: React.FC = () => {
                   );
                 })
               )}
+            </div>
+
+            {/* Deletion Requests Section */}
+            <div className="bg-card p-4 rounded-2xl shadow-sm">
+              <h3 className="font-bold text-foreground mb-3 text-sm flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-destructive" /> طلبات حذف الحسابات
+              </h3>
+              <DeletionRequestsManager />
             </div>
           </div>
         )}

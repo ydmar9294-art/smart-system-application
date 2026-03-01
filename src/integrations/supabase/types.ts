@@ -14,6 +14,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_deletion_requests: {
+        Row: {
+          approver_id: string | null
+          created_at: string
+          decided_at: string | null
+          decision_note: string | null
+          executed_at: string | null
+          id: string
+          organization_id: string
+          reason: string | null
+          requester_employee_type: string | null
+          requester_id: string
+          requester_name: string
+          requester_role: string
+          status: string
+        }
+        Insert: {
+          approver_id?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decision_note?: string | null
+          executed_at?: string | null
+          id?: string
+          organization_id: string
+          reason?: string | null
+          requester_employee_type?: string | null
+          requester_id: string
+          requester_name: string
+          requester_role: string
+          status?: string
+        }
+        Update: {
+          approver_id?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decision_note?: string | null
+          executed_at?: string | null
+          id?: string
+          organization_id?: string
+          reason?: string | null
+          requester_employee_type?: string | null
+          requester_id?: string
+          requester_name?: string
+          requester_role?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_deletion_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_versions: {
         Row: {
           created_at: string
@@ -1379,6 +1435,10 @@ export type Database = {
         Args: { p_employee_id: string }
         Returns: Json
       }
+      decide_account_deletion_request: {
+        Args: { p_decision: string; p_note?: string; p_request_id: string }
+        Returns: Json
+      }
       delete_own_account_rpc: { Args: never; Returns: Json }
       execute_org_deletion_rpc: {
         Args: { p_confirmation_org_name: string; p_deletion_request_id: string }
@@ -1431,6 +1491,10 @@ export type Database = {
       reverse_payment_rpc: {
         Args: { p_payment_id: string; p_reason: string }
         Returns: undefined
+      }
+      submit_account_deletion_request: {
+        Args: { p_reason?: string }
+        Returns: Json
       }
       transfer_to_main_warehouse_rpc: {
         Args: { p_items: Json }
