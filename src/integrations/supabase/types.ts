@@ -1444,6 +1444,21 @@ export type Database = {
         Args: { p_confirmation_org_name: string; p_deletion_request_id: string }
         Returns: Json
       }
+      get_my_license_info: {
+        Args: never
+        Returns: {
+          created_at: string
+          days_valid: number
+          expiry_date: string
+          id: string
+          license_key: string
+          max_employees: number
+          org_name: string
+          organization_id: string
+          status: string
+          type: string
+        }[]
+      }
       get_my_org_id: { Args: never; Returns: string }
       get_my_role: { Args: never; Returns: string }
       get_organization_stats_rpc: {

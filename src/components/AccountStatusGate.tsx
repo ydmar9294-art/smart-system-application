@@ -80,17 +80,16 @@ const AccountStatusGate: React.FC<{ children: React.ReactNode }> = ({ children }
           .maybeSingle();
 
         if (ownerProfile?.license_key) {
-          const { data: license } = await supabase
-            .from('developer_licenses')
-            .select('status, "expiryDate"')
-            .eq('licenseKey', ownerProfile.license_key)
-            .single();
+          const { data: licenseData } = await supabase
+            .rpc('get_my_license_info');
+
+          const license = licenseData?.[0];
 
           if (license) {
             if (license.status === 'SUSPENDED') {
               licenseActive = false;
               licenseMessage = 'تم تعليق ترخيص المنشأة. تواصل مع المطور.';
-            } else if (license.status === 'EXPIRED' || (license.expiryDate && new Date(license.expiryDate) < new Date())) {
+            } else if (license.status === 'EXPIRED' || (license.expiry_date && new Date(license.expiry_date) < new Date())) {
               licenseActive = false;
               licenseMessage = 'انتهت صلاحية ترخيص المنشأة. تواصل مع المطور.';
             }
