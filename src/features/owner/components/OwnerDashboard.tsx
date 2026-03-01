@@ -93,11 +93,9 @@ const OwnerDashboard: React.FC = () => {
       if (!ownerLicense?.licenseKey) return;
       try {
         const { supabase } = await import('@/integrations/supabase/client');
-        const { data } = await supabase.from('developer_licenses')
-          .select('max_employees,type,status,expiryDate')
-          .eq('licenseKey', ownerLicense.licenseKey)
-          .maybeSingle();
-        if (data) setLicenseInfo({ maxEmployees: data.max_employees, type: data.type, status: data.status, expiryDate: data.expiryDate });
+        const { data } = await supabase.rpc('get_my_license_info');
+        const license = data?.[0];
+        if (license) setLicenseInfo({ maxEmployees: license.max_employees, type: license.type, status: license.status, expiryDate: license.expiry_date ?? undefined });
       } catch {}
     };
     fetchLicense();
