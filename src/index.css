@@ -858,6 +858,49 @@
   animation: gradient-shift 4s ease infinite;
 }
 
+/* Glass capsule light sweep reflection */
+@keyframes glass-light-sweep {
+  0%, 75%, 100% {
+    background-position: -200% 0;
+  }
+  85% {
+    background-position: 200% 0;
+  }
+}
+
+.glass-capsule {
+  position: relative;
+  overflow: hidden;
+  background: hsla(0, 0%, 100%, 0.07);
+  backdrop-filter: blur(16px) saturate(1.6);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  border: 1px solid hsla(0, 0%, 100%, 0.12);
+  box-shadow: inset 0 1px 0 0 hsla(0, 0%, 100%, 0.1),
+              0 4px 16px hsla(220, 30%, 3%, 0.25);
+  transition: transform 150ms ease;
+}
+
+.glass-capsule::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    hsla(0, 0%, 100%, 0.12) 45%,
+    hsla(0, 0%, 100%, 0.2) 50%,
+    hsla(0, 0%, 100%, 0.12) 55%,
+    transparent 60%
+  );
+  background-size: 200% 100%;
+  animation: glass-light-sweep 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.glass-capsule:active {
+  transform: scale(0.96);
+}
+
 @keyframes bounce-slow {
   0%, 100% {
     transform: translateY(0);
