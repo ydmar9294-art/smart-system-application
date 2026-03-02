@@ -347,25 +347,19 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
         <p className="text-white/40 text-[11px] font-bold z-10 text-center leading-relaxed max-w-[200px] my-[5px]">
           ● الخاص بإدارة البيع و التوزيع ●
         </p>
-        <div className="flex items-center justify-center gap-8 mt-6 z-10">
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-              <Lock className="w-5 h-5 text-emerald-400" />
+        <div className="flex items-center justify-center gap-6 mt-6 z-10">
+          {[
+            { icon: <Lock className="w-5 h-5 text-emerald-400" />, label: 'آمن', delay: '0s' },
+            { icon: <BarChart3 className="w-5 h-5 text-cyan-400" />, label: 'دقيق', delay: '2.5s' },
+            { icon: <Zap className="w-5 h-5 text-amber-400" />, label: 'سريع', delay: '5s' },
+          ].map((item, i) => (
+            <div key={i} className="flex flex-col items-center gap-2 animate-float" style={{ animationDelay: `${i * 0.4}s` }}>
+              <div className="glass-capsule w-14 h-14 rounded-[1.2rem] flex items-center justify-center" style={{ '--sweep-delay': item.delay } as React.CSSProperties}>
+                {item.icon}
+              </div>
+              <span className="text-white/50 text-[10px] font-black">{item.label}</span>
             </div>
-            <span className="text-white/60 text-[10px] font-bold">آمن</span>
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-cyan-400" />
-            </div>
-            <span className="text-white/60 text-[10px] font-bold">دقيق</span>
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-              <Zap className="w-5 h-5 text-amber-400" />
-            </div>
-            <span className="text-white/60 text-[10px] font-bold">سريع</span>
-          </div>
+          ))}
         </div>
       </div>
 
