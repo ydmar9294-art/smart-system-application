@@ -232,6 +232,7 @@ export function useDistributorOffline() {
   }, [refreshStats]);
 
   // Fetch sales from server and cache locally (offline-first)
+  // Also fetches sale_items so returns work offline
   const refreshSales = useCallback(async () => {
     // Step 1: Always load from local cache first
     await refreshStats();
@@ -250,6 +251,32 @@ export function useDistributorOffline() {
 
       if (error) throw error;
 
+      // Fetch sale_items for all non-voided sales so returns work offline
+      const nonVoidedIds = (data || []).filter(s => !s.is_voided).map(s => s.id);
+      let itemsMap: Record<string, { product_id: string; product_name: string; quantity: number; unit_price: number; total_price: number }[]> = {};
+
+      if (nonVoidedIds.length > 0) {
+        // Fetch in chunks of 200 to avoid query limits
+        for (let i = 0; i < nonVoidedIds.length; i += 200) {
+          const chunk = nonVoidedIds.slice(i, i + 200);
+          const { data: itemsData } = await supabase
+            .from('sale_items')
+            .select('sale_id, product_id, product_name, quantity, unit_price, total_price')
+            .in('sale_id', chunk);
+          
+          for (const item of (itemsData || [])) {
+            if (!itemsMap[item.sale_id]) itemsMap[item.sale_id] = [];
+            itemsMap[item.sale_id].push({
+              product_id: item.product_id,
+              product_name: item.product_name,
+              quantity: item.quantity,
+              unit_price: Number(item.unit_price),
+              total_price: Number(item.total_price),
+            });
+          }
+        }
+      }
+
       const mapped: CachedSale[] = (data || []).map(s => ({
         id: s.id,
         customer_id: s.customer_id,
@@ -260,6 +287,7 @@ export function useDistributorOffline() {
         paymentType: s.payment_type,
         isVoided: s.is_voided,
         timestamp: new Date(s.created_at).getTime(),
+        items: itemsMap[s.id] || undefined,
       }));
 
       await cacheSales(mapped);

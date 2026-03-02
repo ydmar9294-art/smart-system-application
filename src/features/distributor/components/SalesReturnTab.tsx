@@ -75,29 +75,49 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer, onQue
 
   const selectedSale = localSales.find(s => s.id === selectedSaleId);
 
+  /**
+   * Load sale items — tries multiple offline sources:
+   * 1. CachedSale.items (populated during refreshSales)
+   * 2. Cached invoices (for locally-created sales)
+   * 3. Server (when online)
+   */
   const loadSaleItems = async (saleId: string) => {
     setLoadingItems(true);
     try {
+      // === Offline path ===
       if (!navigator.onLine) {
-        // Offline: load from cached invoices
+        // Source 1: Items from CachedSale (most reliable for server-synced sales)
+        const sale = localSales.find(s => s.id === saleId);
+        if (sale?.items && sale.items.length > 0) {
+          setSaleItems(sale.items.map(item => ({
+            product_id: item.product_id,
+            product_name: item.product_name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_price: item.total_price,
+          })));
+          return;
+        }
+
+        // Source 2: Cached invoices (for locally-created sales)
         const cachedInvoices = await getCachedInvoices();
         const invoice = cachedInvoices.find(inv => inv.id === saleId || inv.reference_id === saleId);
         if (invoice && invoice.items.length > 0) {
-          const items = invoice.items.map(item => ({
+          setSaleItems(invoice.items.map(item => ({
             product_id: (item as any).product_id || saleId + '_' + item.product_name,
             product_name: item.product_name,
             quantity: item.quantity,
             unit_price: item.unit_price,
             total_price: item.total_price,
-          }));
-          setSaleItems(items);
-        } else {
-          setSaleItems([]);
+          })));
+          return;
         }
+
+        setSaleItems([]);
         return;
       }
 
-      // Online: fetch from server
+      // === Online path ===
       const [itemsRes, returnsRes] = await Promise.all([
         supabase.from('sale_items').select('*').eq('sale_id', saleId),
         supabase.from('sales_return_items').select('product_id, quantity, return_id, sales_returns!inner(sale_id)').eq('sales_returns.sale_id', saleId)
@@ -120,19 +140,30 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer, onQue
       setSaleItems(adjustedItems);
     } catch (err) {
       console.error('Error loading sale items:', err);
-      // Fallback to cached invoices on error
+      // Fallback: try cached sale items, then cached invoices
       try {
+        const sale = localSales.find(s => s.id === saleId);
+        if (sale?.items && sale.items.length > 0) {
+          setSaleItems(sale.items.map(item => ({
+            product_id: item.product_id,
+            product_name: item.product_name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_price: item.total_price,
+          })));
+          return;
+        }
+
         const cachedInvoices = await getCachedInvoices();
         const invoice = cachedInvoices.find(inv => inv.id === saleId || inv.reference_id === saleId);
         if (invoice && invoice.items.length > 0) {
-          const items = invoice.items.map(item => ({
+          setSaleItems(invoice.items.map(item => ({
             product_id: (item as any).product_id || saleId + '_' + item.product_name,
             product_name: item.product_name,
             quantity: item.quantity,
             unit_price: item.unit_price,
             total_price: item.total_price,
-          }));
-          setSaleItems(items);
+          })));
         }
       } catch { /* ignore */ }
     } finally {
