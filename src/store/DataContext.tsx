@@ -101,7 +101,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ============================================
   // Realtime subscriptions — replaces polling for 25K+ scale
   // ============================================
-  useRealtimeSync(orgId);
+  useRealtimeSync(orgId, role);
 
   // ============================================
   // React Query hooks — automatic caching & deduplication

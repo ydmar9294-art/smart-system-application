@@ -73,10 +73,16 @@ const SubscriptionsTab: React.FC = () => {
   useEffect(() => { fetchPayments(); }, [fetchPayments]);
 
   const handleApprove = async (paymentId: string) => {
+    if (processingId) return; // Prevent double-click
     setProcessingId(paymentId);
     try {
       const { data, error } = await supabase.rpc('approve_subscription_payment', { p_payment_id: paymentId });
       if (error) throw error;
+      const result = data as any;
+      if (result && result.success === false) {
+        alert(result.message || 'فشلت العملية');
+        return;
+      }
       await Promise.all([fetchPayments(), refreshLicenses()]);
     } catch (err: any) {
       alert(err.message || 'فشلت العملية');
@@ -86,14 +92,19 @@ const SubscriptionsTab: React.FC = () => {
   };
 
   const handleReject = async () => {
-    if (!rejectModal) return;
+    if (!rejectModal || processingId) return;
     setProcessingId(rejectModal);
     try {
-      const { error } = await supabase.rpc('reject_subscription_payment', {
+      const { data, error } = await supabase.rpc('reject_subscription_payment', {
         p_payment_id: rejectModal,
         p_reason: rejectReason || 'لم يتم التحقق من الحوالة'
       });
       if (error) throw error;
+      const result = data as any;
+      if (result && result.success === false) {
+        alert(result.message || 'فشلت العملية');
+        return;
+      }
       setRejectModal(null);
       setRejectReason('');
       await fetchPayments();

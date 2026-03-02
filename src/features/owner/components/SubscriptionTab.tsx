@@ -107,11 +107,24 @@ const SubscriptionTab: React.FC = () => {
   };
 
   const handleSubmitRenewal = async () => {
-    if (!licenseInfo || !user || !organization || !receiptFile) return;
+    if (!licenseInfo || !user || !organization || !receiptFile || uploading) return;
     setUploading(true);
     try {
+      // Rate limit check
+      const { data: rlData } = await supabase.rpc('check_endpoint_rate_limit', {
+        p_identifier: user.id,
+        p_endpoint: 'submit_payment',
+        p_max_requests: 3,
+        p_window_seconds: 300,
+      });
+      if (rlData && !(rlData as any).allowed) {
+        alert('تم تجاوز الحد المسموح لطلبات الدفع. حاول لاحقاً.');
+        setUploading(false);
+        return;
+      }
+
       // Upload receipt
-      const ext = receiptFile.name.split('.').pop();
+      const ext = receiptFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
       const fileName = `${organization.id}/${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from('payment-receipts')
@@ -122,9 +135,15 @@ const SubscriptionTab: React.FC = () => {
         .from('payment-receipts')
         .getPublicUrl(fileName);
 
+      // Validate URL is from our storage
+      const receiptUrl = urlData.publicUrl;
+      if (!receiptUrl.includes('payment-receipts')) {
+        throw new Error('رابط غير صالح');
+      }
+
       const totalAmount = (licenseInfo.monthly_price || 0) * selectedDuration;
 
-      // Insert payment record
+      // Insert payment record (unique index prevents duplicates)
       const { error: insertError } = await supabase
         .from('subscription_payments')
         .insert({
@@ -134,11 +153,18 @@ const SubscriptionTab: React.FC = () => {
           duration_months: selectedDuration,
           submitted_by: user.id,
           submitted_by_role: 'OWNER',
-          receipt_url: urlData.publicUrl,
+          receipt_url: receiptUrl,
           device_id: getDeviceId(),
           is_first_subscription: false,
         });
-      if (insertError) throw insertError;
+      if (insertError) {
+        if (insertError.message?.includes('unique') || insertError.code === '23505') {
+          alert('يوجد طلب دفع معلّق بالفعل. لا يمكن إرسال طلب جديد حتى تتم مراجعة الطلب الحالي.');
+        } else {
+          throw insertError;
+        }
+        return;
+      }
 
       setShowRenewModal(false);
       setReceiptFile(null);

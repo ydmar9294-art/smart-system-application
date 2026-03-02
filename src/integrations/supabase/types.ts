@@ -1541,6 +1541,7 @@ export type Database = {
         Args: { p_confirmation_org_name: string; p_deletion_request_id: string }
         Returns: Json
       }
+      expire_overdue_licenses: { Args: never; Returns: number }
       get_my_license_info: {
         Args: never
         Returns: {
