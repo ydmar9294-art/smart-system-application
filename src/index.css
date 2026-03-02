@@ -1086,13 +1086,29 @@
    ========================================== */
 
 /* ── Button States ── */
+@keyframes google-border-glow {
+  0%, 100% {
+    border-color: hsla(217, 91%, 65%, 0.25);
+    box-shadow: var(--glass-shadow), var(--glass-highlight),
+                0 0 12px hsla(217, 91%, 60%, 0.08);
+  }
+  50% {
+    border-color: hsla(217, 91%, 65%, 0.5);
+    box-shadow: var(--glass-shadow), var(--glass-highlight),
+                0 0 22px hsla(217, 91%, 60%, 0.18),
+                0 0 44px hsla(217, 91%, 60%, 0.06);
+  }
+}
+
 .google-signin-btn {
-  border: 1px solid var(--card-glass-border);
+  border: 1.5px solid hsla(217, 91%, 65%, 0.3);
   background: var(--card-glass-bg);
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
-  box-shadow: var(--glass-shadow), var(--glass-highlight);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  box-shadow: var(--glass-shadow), var(--glass-highlight),
+              0 0 12px hsla(217, 91%, 60%, 0.08);
   will-change: transform, box-shadow;
+  animation: google-border-glow 4s ease-in-out infinite;
 }
 
 .google-signin-idle {
@@ -1104,7 +1120,8 @@
 .google-signin-idle:hover {
   box-shadow: var(--glass-shadow),
               var(--glass-highlight),
-              0 0 20px hsl(var(--primary) / 0.12);
+              0 0 28px hsla(217, 91%, 60%, 0.22),
+              0 0 56px hsla(217, 91%, 60%, 0.08);
 }
 
 /* Predictive touch — scale down instantly */
