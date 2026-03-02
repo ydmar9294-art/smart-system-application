@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Loader2, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
@@ -8,9 +8,7 @@ import { setOAuthPending, isOAuthPending, clearOAuthPending } from '@/lib/oauthS
 interface GoogleSignInButtonProps {
   disabled?: boolean;
   onError?: (error: string) => void;
-  /** When true, an external OAuth flow is in progress (shows loading) */
   oauthInProgress?: boolean;
-  /** Optional loading text to display (e.g. phase-specific) */
   loadingText?: string;
 }
 
@@ -26,10 +24,15 @@ const GOOGLE_SVG = (
 const isNativePlatform = (): boolean => Capacitor.isNativePlatform();
 
 /**
- * Google Sign-In Button
+ * Ultra Google Sign-In Button — Liquid-Glass + Predictive Motion
  * 
- * On native: persists loading state via localStorage so it survives
- * the browser→app transition. Loading continues until auth completes.
+ * Features:
+ * - Pre-warm Chrome Custom Tab on mount
+ * - Predictive touch (scale on touch-down)
+ * - Morphing portal animation
+ * - Glass glow effects
+ * - Latency illusion shimmer
+ * - Success pulse animation
  */
 const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ 
   disabled = false, 
@@ -38,29 +41,110 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
   loadingText
 }) => {
   const [loading, setLoading] = useState(false);
+  const [phase, setPhase] = useState<'idle' | 'pressed' | 'morphing' | 'waiting' | 'success'>('idle');
+  const [shimmerProgress, setShimmerProgress] = useState(0);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const shimmerInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // On mount, check if we were in the middle of an OAuth flow (app resumed)
+  // ── Pre-warm Chrome Custom Tab on mount ──
+  useEffect(() => {
+    if (isNativePlatform()) {
+      // Preconnect hint for faster Custom Tab opening
+      const link = document.createElement('link');
+      link.rel = 'preconnect';
+      link.href = 'https://accounts.google.com';
+      link.crossOrigin = 'anonymous';
+      document.head.appendChild(link);
+
+      const dnsPrefetch = document.createElement('link');
+      dnsPrefetch.rel = 'dns-prefetch';
+      dnsPrefetch.href = 'https://accounts.google.com';
+      document.head.appendChild(dnsPrefetch);
+
+      return () => {
+        link.remove();
+        dnsPrefetch.remove();
+      };
+    }
+  }, []);
+
+  // On mount, check if we were in the middle of an OAuth flow
   useEffect(() => {
     if (isNativePlatform() && isOAuthPending()) {
       setLoading(true);
+      setPhase('waiting');
+      startShimmer();
     }
   }, []);
 
   // Sync with external oauthInProgress prop
   useEffect(() => {
-    if (!oauthInProgress && loading && !isOAuthPending()) {
-      setLoading(false);
+    if (oauthInProgress && !loading) {
+      setLoading(true);
+      setPhase('waiting');
+      startShimmer();
     }
-  }, [oauthInProgress, loading]);
+    if (!oauthInProgress && loading && !isOAuthPending()) {
+      // Auth completed successfully
+      setPhase('success');
+      stopShimmer();
+      setTimeout(() => {
+        setLoading(false);
+        setPhase('idle');
+      }, 800);
+    }
+  }, [oauthInProgress]);
+
+  const startShimmer = useCallback(() => {
+    setShimmerProgress(0);
+    shimmerInterval.current = setInterval(() => {
+      setShimmerProgress(prev => {
+        // Slow asymptotic progress — never reaches 100
+        const increment = Math.max(0.3, (90 - prev) * 0.02);
+        return Math.min(prev + increment, 92);
+      });
+    }, 100);
+  }, []);
+
+  const stopShimmer = useCallback(() => {
+    if (shimmerInterval.current) {
+      clearInterval(shimmerInterval.current);
+      shimmerInterval.current = null;
+    }
+    setShimmerProgress(100);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (shimmerInterval.current) clearInterval(shimmerInterval.current);
+    };
+  }, []);
+
+  const handleTouchStart = () => {
+    if (loading || disabled) return;
+    setPhase('pressed');
+  };
+
+  const handleTouchEnd = () => {
+    if (phase === 'pressed') {
+      setPhase('idle');
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     if (loading || disabled) return;
+    
+    // Morph animation
+    setPhase('morphing');
     setLoading(true);
+
+    // Brief morph delay for visual feedback
+    await new Promise(r => setTimeout(r, 150));
+    setPhase('waiting');
+    startShimmer();
 
     try {
       if (isNativePlatform()) {
-        // ═══ NATIVE (Capacitor) FLOW ═══
-        // Mark OAuth as pending BEFORE opening browser
         setOAuthPending();
 
         const { data, error } = await supabase.auth.signInWithOAuth({
@@ -83,22 +167,19 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
         if (data?.url) {
           await Browser.open({ url: data.url, windowName: '_blank' });
 
-          // Listen for browser close (user cancelled)
           const handle = await Browser.addListener('browserFinished', () => {
-            // Small delay: if deep link already fired, session will be set
             setTimeout(() => {
               if (isOAuthPending()) {
-                // Still pending = user cancelled or flow didn't complete
                 clearOAuthPending();
+                stopShimmer();
+                setPhase('idle');
                 setLoading(false);
               }
             }, 1500);
             handle.remove();
           });
         }
-        // Do NOT reset loading here — it persists until auth completes
       } else {
-        // ═══ WEB FLOW ═══
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
@@ -111,11 +192,12 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
         });
 
         if (error) throw error;
-        // Browser will redirect — loading stays active
       }
     } catch (err: any) {
       console.error('[GoogleAuth] Error:', err);
       clearOAuthPending();
+      stopShimmer();
+      setPhase('idle');
       setLoading(false);
       const message = err?.message?.includes('rate limit')
         ? 'محاولات كثيرة. يرجى الانتظار قليلاً'
@@ -126,25 +208,89 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
 
   const isActive = loading || oauthInProgress;
 
+  const getButtonClasses = () => {
+    const base = 'google-signin-btn w-full relative overflow-hidden rounded-2xl font-bold text-sm transition-all duration-200';
+    
+    if (phase === 'success') {
+      return `${base} google-signin-success`;
+    }
+    if (phase === 'morphing') {
+      return `${base} google-signin-morphing`;
+    }
+    if (phase === 'pressed') {
+      return `${base} google-signin-pressed`;
+    }
+    if (isActive) {
+      return `${base} google-signin-active`;
+    }
+    return `${base} google-signin-idle`;
+  };
+
   return (
-    <button
-      type="button"
-      onClick={handleGoogleSignIn}
-      disabled={isActive || disabled}
-      className="w-full py-3.5 bg-muted border border-border rounded-2xl font-bold text-sm flex items-center justify-center gap-3 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 hover:bg-accent text-foreground"
-    >
-      {isActive ? (
-        <div className="flex items-center gap-3">
-          <Loader2 className="w-5 h-5 animate-spin text-primary" />
-          <span className="text-muted-foreground">{loadingText || 'جارٍ تسجيل الدخول...'}</span>
-        </div>
-      ) : (
-        <>
-          {GOOGLE_SVG}
-          <span>تسجيل الدخول عبر Google</span>
-        </>
+    <div className="relative">
+      {/* Glow backdrop when active */}
+      {isActive && phase !== 'success' && (
+        <div className="google-signin-glow-backdrop" />
       )}
-    </button>
+
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={handleGoogleSignIn}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+        onMouseDown={handleTouchStart}
+        onMouseUp={handleTouchEnd}
+        onMouseLeave={handleTouchEnd}
+        disabled={isActive || disabled}
+        className={getButtonClasses()}
+      >
+        {/* Glass highlight overlay */}
+        <div className="google-signin-glass-highlight" />
+
+        {/* Shimmer progress bar */}
+        {isActive && phase === 'waiting' && (
+          <div className="google-signin-progress-track">
+            <div 
+              className="google-signin-progress-bar"
+              style={{ width: `${shimmerProgress}%` }}
+            />
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="relative z-10 flex items-center justify-center gap-3 py-3.5 px-4">
+          {phase === 'success' ? (
+            <div className="flex items-center gap-3 google-signin-success-content">
+              <CheckCircle2 className="w-5 h-5 text-success" />
+              <span className="text-success font-black">تم تسجيل الدخول ✓</span>
+            </div>
+          ) : isActive ? (
+            <div className="flex items-center gap-3">
+              <div className="google-signin-spinner">
+                <Loader2 className="w-5 h-5 animate-spin text-primary" />
+              </div>
+              <span className="text-muted-foreground font-bold">
+                {loadingText || 'جارٍ تسجيل الدخول...'}
+              </span>
+            </div>
+          ) : (
+            <>
+              <div className="google-signin-icon">
+                {GOOGLE_SVG}
+              </div>
+              <span className="text-foreground">تسجيل الدخول عبر Google</span>
+            </>
+          )}
+        </div>
+
+        {/* Ripple effect on touch */}
+        {phase === 'morphing' && (
+          <div className="google-signin-ripple" />
+        )}
+      </button>
+    </div>
   );
 };
 
