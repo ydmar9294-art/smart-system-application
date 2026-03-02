@@ -800,6 +800,46 @@
   animation: float 3s ease-in-out infinite;
 }
 
+/* Logo glow pulse — soft glow every 6s */
+@keyframes logo-glow-pulse {
+  0%, 80%, 100% {
+    filter: drop-shadow(0 0 0px hsla(217, 91%, 60%, 0));
+  }
+  90% {
+    filter: drop-shadow(0 0 18px hsla(217, 91%, 65%, 0.55)) drop-shadow(0 0 40px hsla(217, 91%, 60%, 0.2));
+  }
+}
+
+.animate-logo-glow {
+  animation: logo-glow-pulse 6s ease-in-out infinite;
+}
+
+/* Title gradient highlight shimmer */
+@keyframes title-gradient-shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.animate-title-gradient {
+  background: linear-gradient(
+    90deg,
+    hsla(0, 0%, 100%, 1) 0%,
+    hsla(0, 0%, 100%, 1) 40%,
+    hsla(217, 91%, 75%, 1) 50%,
+    hsla(0, 0%, 100%, 1) 60%,
+    hsla(0, 0%, 100%, 1) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: title-gradient-shimmer 6s ease-in-out infinite;
+}
+
 /* Welcome Splash Animations */
 @keyframes gradient-shift {
   0% {

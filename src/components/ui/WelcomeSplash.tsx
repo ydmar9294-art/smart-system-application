@@ -85,7 +85,7 @@ const WelcomeSplash: React.FC<WelcomeSplashProps> = ({
         {/* Logo with subtle glow */}
         <div className="relative">
           <div className="absolute inset-0 bg-primary/10 rounded-full blur-2xl scale-150" />
-          <div className="relative animate-pulse">
+          <div className="relative animate-logo-glow">
             <AppLogo size={72} />
           </div>
         </div>
