@@ -14,9 +14,7 @@ const LogoutScreen: React.FC = () => {
       <div className="flex flex-col items-center gap-8 max-w-xs">
         {/* Logo with pulse */}
         <div className="animate-logo-glow">
-          <div className="glass-capsule w-[88px] h-[88px] rounded-[1.6rem] flex items-center justify-center">
-            <AppLogo size={56} />
-          </div>
+          <AppLogo size={72} />
         </div>
 
         {/* Spinner */}
