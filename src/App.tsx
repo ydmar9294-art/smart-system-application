@@ -96,7 +96,7 @@ const ViewManager: React.FC = () => {
 // MAIN CONTENT
 // ==========================================
 const MainContent: React.FC = () => {
-  const { user, isLoading, refreshAuth, needsActivation, logout } = useApp();
+  const { user, role, isLoading, refreshAuth, needsActivation, logout } = useApp();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   
   // Initialize theme early so loading/auth screens also get dark mode
@@ -173,14 +173,21 @@ const MainContent: React.FC = () => {
     );
   }
 
+  // Developers skip consent gate
+  const content = (
+    <AccountStatusGate>
+      <Layout><ViewManager /></Layout>
+    </AccountStatusGate>
+  );
+
   return (
     <>
       <ToastManager />
-      <ConsentGate userId={user.id}>
-        <AccountStatusGate>
-          <Layout><ViewManager /></Layout>
-        </AccountStatusGate>
-      </ConsentGate>
+      {role === UserRole.DEVELOPER ? content : (
+        <ConsentGate userId={user.id}>
+          {content}
+        </ConsentGate>
+      )}
       <OfflineIndicator isOnline={isOnline} pendingCount={pendingCount} />
       <UpdateModal
         open={showUpdateModal}
