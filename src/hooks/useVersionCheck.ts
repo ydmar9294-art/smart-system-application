@@ -1,22 +1,24 @@
 /**
  * Version Check Hook
- * Uses Capacitor App.getInfo() for native, or a fallback version for web.
+ * Checks version on: initial load, app resume from background, login.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
-import { checkAppVersion, type VersionCheckResult, type UpdateStatus } from '@/lib/versionCheck';
+import { checkAppVersion, type VersionCheckResult } from '@/lib/versionCheck';
 
-const FALLBACK_VERSION = '1.0.0';
+const FALLBACK_VERSION = '1.0';
 
 export function useVersionCheck() {
   const [checkResult, setCheckResult] = useState<VersionCheckResult | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const isCheckingRef = useRef(false);
 
   const performCheck = useCallback(async () => {
-    if (isChecking) return;
+    if (isCheckingRef.current) return;
+    isCheckingRef.current = true;
     setIsChecking(true);
 
     try {
@@ -27,7 +29,7 @@ export function useVersionCheck() {
         try {
           const info = await App.getInfo();
           currentVersion = info.version;
-          platform = Capacitor.getPlatform(); // 'android' | 'ios'
+          platform = Capacitor.getPlatform();
         } catch {
           console.warn('[VersionCheck] Could not get native app info');
         }
@@ -35,18 +37,41 @@ export function useVersionCheck() {
 
       const result = await checkAppVersion(currentVersion, platform);
       setCheckResult(result);
+
+      // If force update detected, reset dismiss state
+      if (result.status === 'force_update') {
+        setDismissed(false);
+      }
     } catch (err) {
       console.error('[VersionCheck] Check failed:', err);
     } finally {
+      isCheckingRef.current = false;
       setIsChecking(false);
     }
-  }, [isChecking]);
+  }, []);
 
+  // Check on mount (deferred)
   useEffect(() => {
-    // Defer version check to avoid blocking initial render
     const timer = setTimeout(performCheck, 3000);
     return () => clearTimeout(timer);
   }, []);
+
+  // Check on app resume from background (native only)
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let listener: any;
+    App.addListener('appStateChange', (state) => {
+      if (state.isActive) {
+        // App came back to foreground, re-check version
+        performCheck();
+      }
+    }).then(l => { listener = l; });
+
+    return () => {
+      if (listener) listener.remove();
+    };
+  }, [performCheck]);
 
   const dismiss = useCallback(() => {
     setDismissed(true);

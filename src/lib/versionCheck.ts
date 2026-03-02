@@ -1,9 +1,8 @@
 /**
  * Version Check Service
- * Compares local app version with server version using semantic versioning.
+ * Compares local app version with server version.
+ * Supports both X.X and X.X.X formats.
  */
-
-
 
 export interface VersionInfo {
   latestVersion: string;
@@ -23,27 +22,26 @@ export interface VersionCheckResult {
 }
 
 // ============================================
-// Semantic Version Comparison
+// Semantic Version Comparison (supports X.X and X.X.X)
 // ============================================
 
-function parseVersion(version: string): [number, number, number] {
-  const parts = version.split('.').map(Number);
-  return [parts[0] || 0, parts[1] || 0, parts[2] || 0];
+function parseVersion(version: string): number[] {
+  return version.split('.').map(Number);
 }
 
 /**
- * Returns:
- * -1 if a < b
- *  0 if a === b
- *  1 if a > b
+ * Returns: -1 if a < b, 0 if a === b, 1 if a > b
  */
 function compareVersions(a: string, b: string): number {
-  const [aMajor, aMinor, aPatch] = parseVersion(a);
-  const [bMajor, bMinor, bPatch] = parseVersion(b);
+  const aParts = parseVersion(a);
+  const bParts = parseVersion(b);
+  const maxLen = Math.max(aParts.length, bParts.length);
 
-  if (aMajor !== bMajor) return aMajor < bMajor ? -1 : 1;
-  if (aMinor !== bMinor) return aMinor < bMinor ? -1 : 1;
-  if (aPatch !== bPatch) return aPatch < bPatch ? -1 : 1;
+  for (let i = 0; i < maxLen; i++) {
+    const av = aParts[i] || 0;
+    const bv = bParts[i] || 0;
+    if (av !== bv) return av < bv ? -1 : 1;
+  }
   return 0;
 }
 
@@ -60,7 +58,6 @@ export async function checkAppVersion(
   }
 
   try {
-    // Direct fetch with query params
     const projectUrl = import.meta.env.VITE_SUPABASE_URL;
     const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     
@@ -77,7 +74,6 @@ export async function checkAppVersion(
 
     if (!response.ok) {
       if (response.status === 404) {
-        // No version configured yet
         return { status: 'up_to_date', currentVersion };
       }
       throw new Error(`Version check failed: ${response.status}`);
