@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.device-check]
 verify_jwt = false
+
+[functions.expire-licenses]
+verify_jwt = false
