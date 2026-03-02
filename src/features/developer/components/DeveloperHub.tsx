@@ -31,14 +31,14 @@ const TABS: { id: TabId; label: string; icon: React.ElementType; bgColor: string
 
 const DeveloperHub: React.FC = () => {
   const {
-    licenses, issueLicense, updateLicenseStatus, makeLicensePermanent,
+    licenses, issueLicense, updateLicenseStatus,
     updateLicenseMaxEmployees, orgStats, refreshOrgStats, logout
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<TabId>('licenses');
   const [showForm, setShowForm] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
-  const [licenseType, setLicenseType] = useState<'TRIAL' | 'PERMANENT'>('TRIAL');
+  const [licenseType] = useState<'TRIAL'>('TRIAL');
   const [editingLimit, setEditingLimit] = useState<string | null>(null);
   const [newLimit, setNewLimit] = useState<number>(10);
 
@@ -56,7 +56,6 @@ const DeveloperHub: React.FC = () => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const orgName = sanitizeText(fd.get('org') as string);
-    const type = fd.get('type') as 'TRIAL' | 'PERMANENT';
     const days = Number(fd.get('days') || 30);
     const maxEmployees = Number(fd.get('maxEmployees') || 10);
     const ownerPhone = sanitizePhone(fd.get('ownerPhone') as string || '');
@@ -69,12 +68,12 @@ const DeveloperHub: React.FC = () => {
       alert('عدد الموظفين يجب أن يكون بين 1 و 500');
       return;
     }
-    if (type === 'TRIAL' && (days < 1 || days > 365)) {
+    if (days < 1 || days > 365) {
       alert('عدد أيام التجربة يجب أن يكون بين 1 و 365');
       return;
     }
     try {
-      await issueLicense(orgName, type, days, maxEmployees, ownerPhone || undefined);
+      await issueLicense(orgName, 'TRIAL', days, maxEmployees, ownerPhone || undefined);
       setShowForm(false);
       refreshOrgStats();
     } catch (err) {
@@ -180,7 +179,6 @@ const DeveloperHub: React.FC = () => {
                 handleUpdateLimit={handleUpdateLimit}
                 copyKey={copyKey}
                 updateLicenseStatus={updateLicenseStatus}
-                makeLicensePermanent={makeLicensePermanent}
               />
             )}
             {activeTab === 'subscriptions' && <SubscriptionsTab />}
@@ -195,7 +193,8 @@ const DeveloperHub: React.FC = () => {
       {showForm && createPortal(
         <div className="modal-overlay safe-area-x safe-area-bottom" dir="rtl">
           <div className="card-elevated w-full max-w-md p-5 space-y-5 animate-zoom-in max-h-[90vh] overflow-y-auto mx-4">
-            <h3 className="text-lg font-black text-foreground">إصدار ترخيص جديد</h3>
+            <h3 className="text-lg font-black text-foreground">إصدار ترخيص تجريبي جديد</h3>
+            <p className="text-xs text-muted-foreground">بعد انتهاء الفترة التجريبية، يمكنك إنشاء اشتراك من تبويب "الاشتراكات"</p>
             <form onSubmit={handleIssueLicense} className="space-y-4">
               <div>
                 <label className="text-xs font-bold text-muted-foreground block mb-1">اسم المنشأة *</label>
@@ -206,23 +205,14 @@ const DeveloperHub: React.FC = () => {
                 <input name="ownerPhone" type="tel" placeholder="05xxxxxxxx" className="input-field" dir="ltr" />
               </div>
               <div>
-                <label className="text-xs font-bold text-muted-foreground block mb-1">نوع الترخيص</label>
-                <select name="type" className="input-field" value={licenseType} onChange={e => setLicenseType(e.target.value as any)}>
-                  <option value="TRIAL">تجريبي (Trial)</option>
-                  <option value="PERMANENT">دائم (Permanent)</option>
-                </select>
+                <label className="text-xs font-bold text-muted-foreground block mb-1">عدد أيام التجربة (1-365)</label>
+                <input name="days" type="number" defaultValue="30" min={1} max={365} className="input-field" />
               </div>
-              {licenseType === 'TRIAL' && (
-                <div>
-                  <label className="text-xs font-bold text-muted-foreground block mb-1">عدد أيام التجربة (1-365)</label>
-                  <input name="days" type="number" defaultValue="30" min={1} max={365} className="input-field" />
-                </div>
-              )}
               <div>
                 <label className="text-xs font-bold text-muted-foreground block mb-1">الحد الأقصى للموظفين (1-500)</label>
                 <input name="maxEmployees" type="number" defaultValue="10" min={1} max={500} className="input-field" />
               </div>
-              <button type="submit" className="btn-primary w-full py-3.5 text-sm">توليد الترخيص</button>
+              <button type="submit" className="btn-primary w-full py-3.5 text-sm">توليد الترخيص التجريبي</button>
               <button type="button" onClick={() => setShowForm(false)} className="btn-secondary w-full py-3.5 text-sm">إلغاء</button>
             </form>
           </div>
@@ -247,13 +237,12 @@ interface LicensesTabProps {
   handleUpdateLimit: (id: string) => void;
   copyKey: (key: string) => void;
   updateLicenseStatus: (id: string, ownerId: string | null, status: LicenseStatus) => void;
-  makeLicensePermanent: (id: string, ownerId: string | null) => void;
 }
 
 const LicensesTab: React.FC<LicensesTabProps> = ({
   licenses, editingLimit, newLimit, copied, getStatsForLicense,
   setEditingLimit, setNewLimit, handleUpdateLimit, copyKey,
-  updateLicenseStatus, makeLicensePermanent
+  updateLicenseStatus
 }) => {
   if (licenses.length === 0) {
     return (
@@ -280,8 +269,8 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
                 {license.status === LicenseStatus.ACTIVE ? 'مفعل' : license.status === LicenseStatus.READY ? 'جاهز' : 'موقوف'}
               </span>
               <span className="text-[10px] font-black text-muted-foreground flex items-center gap-1">
-                {license.type === 'TRIAL' ? <Clock size={12}/> : <ShieldCheck size={12}/>}
-                {license.type === 'TRIAL' ? 'تجريبي' : 'دائم'}
+                {license.type === 'TRIAL' ? <Clock size={12}/> : license.type === 'SUBSCRIPTION' ? <Activity size={12}/> : <ShieldCheck size={12}/>}
+                {license.type === 'TRIAL' ? 'تجريبي' : license.type === 'SUBSCRIPTION' ? 'اشتراك' : 'دائم'}
               </span>
             </div>
             
@@ -330,9 +319,12 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
                 ) : (
                   <button onClick={() => updateLicenseStatus(license.id, license.ownerId || null, LicenseStatus.ACTIVE)} className="flex-1 py-2.5 btn-success text-[10px] flex items-center justify-center gap-1"><Unlock size={14}/> تفعيل</button>
                 )}
-                {license.type === 'TRIAL' && (
-                  <button onClick={() => makeLicensePermanent(license.id, license.ownerId || null)} className="flex-1 py-2.5 btn-primary text-[10px] flex items-center justify-center gap-1"><ShieldCheck size={14}/> تمليك</button>
-                )}
+              </div>
+            )}
+
+            {license.monthlyPrice > 0 && (
+              <div className="text-[10px] text-primary font-bold mb-2">
+                💰 سعر الشهر: {license.monthlyPrice.toLocaleString()} | نوع: {license.type === 'SUBSCRIPTION' ? 'اشتراك' : license.type === 'TRIAL' ? 'تجريبي' : license.type}
               </div>
             )}
 
