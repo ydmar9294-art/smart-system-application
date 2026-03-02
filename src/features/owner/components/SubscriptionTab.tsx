@@ -9,11 +9,14 @@ import { useAuth } from '@/store/AuthContext';
 import { SubscriptionPayment } from '@/types';
 import { CURRENCY, SUPPORT_WHATSAPP_URL } from '@/constants';
 import { getDeviceId } from '@/lib/deviceId';
+import { copyToClipboard } from '@/lib/clipboard';
 import {
   CreditCard, Calendar, Clock, CheckCircle2, XCircle,
   Upload, Image as ImageIcon, Loader2, AlertTriangle,
-  RefreshCw, X, MessageCircle, DollarSign, Send
+  RefreshCw, X, MessageCircle, DollarSign, Send, Copy, Wallet
 } from 'lucide-react';
+
+const SHAMCASH_WALLET = 'efd5411a5f29e0cdb279363de2dd62b3';
 
 const DURATION_OPTIONS = [
   { months: 1, label: 'شهر واحد' },
@@ -21,6 +24,22 @@ const DURATION_OPTIONS = [
   { months: 6, label: '6 أشهر' },
   { months: 12, label: 'سنة كاملة' },
 ];
+/** Small inline component for wallet copy */
+function WalletCopyRow() {
+  const [copied, setCopied] = React.useState(false);
+  const handleCopy = async () => {
+    await copyToClipboard(SHAMCASH_WALLET);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button onClick={handleCopy}
+      className="w-full flex items-center justify-between bg-background p-3 rounded-xl border border-border hover:border-primary transition-all active:scale-[0.98]">
+      <span className="font-mono text-xs text-foreground tracking-wide select-all" dir="ltr">{SHAMCASH_WALLET}</span>
+      {copied ? <CheckCircle2 size={16} className="text-primary flex-shrink-0" /> : <Copy size={16} className="text-muted-foreground flex-shrink-0" />}
+    </button>
+  );
+}
 
 interface LicenseInfo {
   id: string;
@@ -393,6 +412,14 @@ const SubscriptionTab: React.FC = () => {
               <p className="text-[10px] text-muted-foreground mt-1">
                 {monthlyPrice.toLocaleString()} {CURRENCY} × {selectedDuration} شهر
               </p>
+            </div>
+
+            {/* Wallet Address */}
+            <div className="bg-accent/50 border border-border p-4 rounded-2xl space-y-2">
+              <p className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
+                <Wallet size={14} className="text-primary" /> عنوان محفظة شام كاش
+              </p>
+              <WalletCopyRow />
             </div>
 
             {/* Receipt Upload */}
