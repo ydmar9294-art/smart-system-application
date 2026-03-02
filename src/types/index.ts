@@ -24,7 +24,8 @@ export enum LicenseStatus {
 
 export enum LicenseType {
   TRIAL = 'TRIAL',
-  PERMANENT = 'PERMANENT'
+  PERMANENT = 'PERMANENT',
+  SUBSCRIPTION = 'SUBSCRIPTION'
 }
 
 export enum PaymentType {
@@ -122,6 +123,29 @@ export interface License {
   daysValid?: number;
   maxEmployees: number;
   ownerPhone?: string;
+  monthlyPrice?: number;
+  renewalAlertDays?: number;
+  organizationId?: string;
+}
+
+export interface SubscriptionPayment {
+  id: string;
+  organizationId: string;
+  licenseId: string;
+  amount: number;
+  durationMonths: number;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  submittedBy: string;
+  submittedByRole: string;
+  receiptUrl?: string;
+  rejectionReason?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  subscriptionStart?: string;
+  subscriptionEnd?: string;
+  isFirstSubscription?: boolean;
+  deviceId?: string;
+  createdAt: number;
 }
 
 export interface OrgStats {

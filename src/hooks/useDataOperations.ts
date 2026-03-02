@@ -176,7 +176,10 @@ export const transformLicense = (l: any): License => ({
   expiryDate: l.expiryDate ? new Date(l.expiryDate).getTime() : undefined,
   daysValid: l.days_valid,
   maxEmployees: l.max_employees ?? 10,
-  ownerPhone: l.owner_phone
+  ownerPhone: l.owner_phone,
+  monthlyPrice: l.monthly_price ?? 0,
+  renewalAlertDays: l.renewal_alert_days ?? 3,
+  organizationId: l.organization_id
 });
 
 export const transformUser = (u: any) => ({

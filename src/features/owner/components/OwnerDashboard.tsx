@@ -40,8 +40,8 @@ import WelcomeSplash from '@/components/ui/WelcomeSplash';
 import LegalInfoTab from './LegalInfoTab';
 import CustomersTab from './CustomersTab';
 import OrgDeletionRequest from './OrgDeletionRequest';
-
-type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'legal';
+import SubscriptionTab from './SubscriptionTab';
+type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'subscription' | 'legal';
 
 const OwnerDashboard: React.FC = () => {
   const { 
@@ -150,6 +150,7 @@ const OwnerDashboard: React.FC = () => {
     { id: 'team', label: 'الفريق', icon: <Users className="w-5 h-5" />, color: 'text-orange-500', bgColor: 'bg-orange-500' },
     { id: 'customers', label: 'الزبائن', icon: <span className="text-sm font-bold">ل.س</span>, color: 'text-red-500', bgColor: 'bg-red-500' },
     { id: 'finance', label: 'المالية', icon: <TrendingUp className="w-5 h-5" />, color: 'text-purple-600', bgColor: 'bg-purple-600' },
+    { id: 'subscription', label: 'الاشتراك', icon: <CircleDollarSign className="w-5 h-5" />, color: 'text-amber-600', bgColor: 'bg-amber-600' },
     { id: 'legal', label: 'القانونية', icon: <Shield className="w-5 h-5" />, color: 'text-indigo-600', bgColor: 'bg-indigo-600' },
   ];
 
@@ -297,7 +298,9 @@ const OwnerDashboard: React.FC = () => {
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">نوع الاشتراك</span>
-                  <span className="font-bold text-foreground">{licenseInfo?.type === 'PERMANENT' ? 'دائم' : licenseInfo?.type === 'TRIAL' ? 'تجريبي' : '—'}</span>
+                  <span className="font-bold text-foreground">
+                    {licenseInfo?.type === 'PERMANENT' ? 'دائم' : licenseInfo?.type === 'SUBSCRIPTION' ? 'اشتراك دوري' : licenseInfo?.type === 'TRIAL' ? 'تجريبي' : '—'}
+                  </span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">الحد الأقصى للموظفين</span>
@@ -460,6 +463,12 @@ const OwnerDashboard: React.FC = () => {
         {activeTab === 'finance' && (
           <div className="space-y-4 animate-fade-in">
             <div className="bg-card rounded-3xl shadow-sm p-4"><FinanceTab /></div>
+          </div>
+        )}
+
+        {activeTab === 'subscription' && (
+          <div className="animate-fade-in">
+            <SubscriptionTab />
           </div>
         )}
 
