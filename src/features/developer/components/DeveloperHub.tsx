@@ -269,8 +269,8 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
                 {license.status === LicenseStatus.ACTIVE ? 'مفعل' : license.status === LicenseStatus.READY ? 'جاهز' : 'موقوف'}
               </span>
               <span className="text-[10px] font-black text-muted-foreground flex items-center gap-1">
-                {license.type === 'TRIAL' ? <Clock size={12}/> : license.type === 'SUBSCRIPTION' ? <Activity size={12}/> : <ShieldCheck size={12}/>}
-                {license.type === 'TRIAL' ? 'تجريبي' : license.type === 'SUBSCRIPTION' ? 'اشتراك' : 'دائم'}
+                {license.type === 'TRIAL' ? <Clock size={12}/> : <Activity size={12}/>}
+                {license.type === 'TRIAL' ? 'تجريبي' : 'اشتراك'}
               </span>
             </div>
             

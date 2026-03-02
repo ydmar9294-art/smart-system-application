@@ -72,8 +72,9 @@ interface DataContextType {
   addProduct: (product: Omit<Product, 'id' | 'organization_id'>) => Promise<void>;
   updateProduct: (product: Product) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
-  issueLicense: (orgName: string, type: 'TRIAL' | 'PERMANENT', days: number, maxEmployees: number, ownerPhone?: string) => Promise<void>;
+  issueLicense: (orgName: string, type: 'TRIAL', days: number, maxEmployees: number, ownerPhone?: string) => Promise<void>;
   updateLicenseStatus: (id: string, ownerId: string | null, status: LicenseStatus) => Promise<void>;
+  /** @deprecated Permanent licenses no longer supported */
   makeLicensePermanent: (id: string, ownerId: string | null) => Promise<void>;
   updateLicenseMaxEmployees: (licenseId: string, maxEmployees: number) => Promise<{ currentEmployees: number; exceedsLimit: boolean } | null>;
   addPurchase: (productId: string, quantity: number, unitPrice: number, supplierName?: string, notes?: string) => Promise<void>;
@@ -454,16 +455,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e) { handleError(e); }
   }, [queryClient, handleError]);
 
-  const makeLicensePermanent = useCallback(async (id: string, _ownerId: string | null) => {
-    try {
-      validateUUID(id, 'معرف الترخيص');
-
-      await safeRpc('make_license_permanent_rpc', { p_license_id: id });
-
-      queryClient.invalidateQueries({ queryKey: queryKeys.licenses() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.orgStats() });
-    } catch (e) { handleError(e); }
-  }, [queryClient, handleError]);
+  /** @deprecated Permanent licenses no longer supported - function dropped from DB */
+  const makeLicensePermanent = useCallback(async (_id: string, _ownerId: string | null) => {
+    console.warn('makeLicensePermanent is deprecated - permanent licenses are no longer supported');
+  }, []);
 
   const updateLicenseMaxEmployees = useCallback(async (licenseId: string, maxEmployees: number) => {
     try {

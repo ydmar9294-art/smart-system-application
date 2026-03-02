@@ -1593,10 +1593,6 @@ export type Database = {
         }
         Returns: string
       }
-      make_license_permanent_rpc: {
-        Args: { p_license_id: string }
-        Returns: undefined
-      }
       reactivate_employee_rpc: {
         Args: { p_employee_id: string }
         Returns: Json

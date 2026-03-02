@@ -299,7 +299,7 @@ const OwnerDashboard: React.FC = () => {
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">نوع الاشتراك</span>
                   <span className="font-bold text-foreground">
-                    {licenseInfo?.type === 'PERMANENT' ? 'دائم' : licenseInfo?.type === 'SUBSCRIPTION' ? 'اشتراك دوري' : licenseInfo?.type === 'TRIAL' ? 'تجريبي' : '—'}
+                    {licenseInfo?.type === 'SUBSCRIPTION' ? 'اشتراك دوري' : licenseInfo?.type === 'TRIAL' ? 'تجريبي' : '—'}
                   </span>
                 </div>
                 <div className="flex justify-between text-xs">

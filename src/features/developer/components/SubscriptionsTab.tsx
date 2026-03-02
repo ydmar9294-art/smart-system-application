@@ -172,7 +172,7 @@ const SubscriptionsTab: React.FC = () => {
       )}
 
       {/* Developer Renew */}
-      {licenses.filter(l => l.type === 'SUBSCRIPTION' || l.type === 'PERMANENT').length > 0 && (
+      {licenses.filter(l => l.type === 'SUBSCRIPTION').length > 0 && (
         <div className="card-elevated p-4">
           <h3 className="font-black text-foreground text-sm mb-3 flex items-center gap-2">
             <RefreshCw size={16} className="text-primary" /> تجديد اشتراك (مطور)

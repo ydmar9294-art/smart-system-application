@@ -139,6 +139,32 @@ export function useRealtimeSync(orgId?: string | null) {
           queryClient.invalidateQueries({ queryKey: queryKeys.customers(orgId) });
         }
       )
+      // Subscription payments changes (real-time approval/rejection)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'subscription_payments',
+          filter: `organization_id=eq.${orgId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: queryKeys.licenses() });
+        }
+      )
+      // Developer licenses changes (subscription status updates)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'developer_licenses',
+          filter: `organization_id=eq.${orgId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: queryKeys.licenses() });
+        }
+      )
       .subscribe();
 
     return () => {
