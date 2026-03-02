@@ -8,6 +8,7 @@ import { isOAuthPending, clearOAuthPending } from '@/lib/oauthState';
 import EmailPasswordAuth from './EmailPasswordAuth';
 import GoogleSignInButton from './GoogleSignInButton';
 import LicenseActivation from './LicenseActivation';
+import AuthOverlay from './AuthOverlay';
 
 interface AuthFlowProps {
   onAuthComplete: () => void;
@@ -334,6 +335,9 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
 
   return (
     <div className="min-h-screen flex flex-col font-tajawal relative bg-background" dir="rtl">
+      {/* Auth overlay — shows when OAuth browser is open */}
+      <AuthOverlay visible={oauthPending && authState.type === 'initial'} />
+
       <div className="bg-slate-900 pt-14 pb-16 px-6 relative overflow-hidden flex flex-col items-center shrink-0">
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
         <div className="mb-5 z-10 animate-float">
