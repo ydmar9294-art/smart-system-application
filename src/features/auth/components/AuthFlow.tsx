@@ -338,7 +338,12 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       {/* Auth overlay — shows when OAuth browser is open */}
       <AuthOverlay visible={oauthPending && authState.type === 'initial'} />
 
-      <div className="bg-slate-900 pt-14 pb-16 px-6 relative overflow-hidden flex flex-col items-center shrink-0">
+      {/* Top bar overlay — glass blur bar so content scrolls under */}
+      <div className="auth-edge-bar auth-edge-bar--top" />
+      {/* Bottom bar overlay */}
+      <div className="auth-edge-bar auth-edge-bar--bottom" />
+
+      <div className="bg-slate-900 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] pb-16 px-6 relative overflow-hidden flex flex-col items-center shrink-0">
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
         <div className="mb-5 z-10 animate-float animate-logo-glow">
           <AppLogo size={80} />
@@ -363,7 +368,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
         </div>
       </div>
 
-      <div className="max-w-md w-full mx-auto px-6 -mt-8 z-20 flex-1 flex flex-col pb-24">
+      <div className="max-w-md w-full mx-auto px-6 -mt-8 z-20 flex-1 flex flex-col pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
         <div className="glass-surface rounded-[2.5rem] shadow-xl overflow-hidden p-6">
           {renderContent()}
         </div>
