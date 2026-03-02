@@ -27,19 +27,34 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
   const PULL_THRESHOLD = 80;
   const MAX_PULL = 130;
 
+  // Find the actual scrollable ancestor (could be window, body, or a scroll container)
+  const getScrollTop = useCallback(() => {
+    // Check the container itself
+    const el = containerRef.current;
+    if (el && el.scrollTop > 0) return el.scrollTop;
+    // Check common scrollable parents
+    if (document.documentElement.scrollTop > 0) return document.documentElement.scrollTop;
+    if (document.body.scrollTop > 0) return document.body.scrollTop;
+    // Check if any scrollable parent of the container is scrolled
+    let parent = el?.parentElement;
+    while (parent) {
+      if (parent.scrollTop > 0) return parent.scrollTop;
+      parent = parent.parentElement;
+    }
+    return 0;
+  }, []);
+
   const handleTouchStart = useCallback((e: TouchEvent) => {
     if (disabled || isRefreshing) return;
-    const el = containerRef.current;
-    if (!el || el.scrollTop > 0) return;
+    if (getScrollTop() > 0) return;
     startY.current = e.touches[0].clientY;
     isPulling.current = true;
     hapticTriggered.current = false;
-  }, [disabled, isRefreshing]);
+  }, [disabled, isRefreshing, getScrollTop]);
 
   const handleTouchMove = useCallback(async (e: TouchEvent) => {
     if (!isPulling.current || disabled || isRefreshing) return;
-    const el = containerRef.current;
-    if (el && el.scrollTop > 0) {
+    if (getScrollTop() > 0) {
       isPulling.current = false;
       setPullDistance(0);
       return;
@@ -61,7 +76,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
         await haptics.impact(ImpactStyle.Light);
       }
     }
-  }, [disabled, isRefreshing, haptics]);
+  }, [disabled, isRefreshing, haptics, getScrollTop]);
 
   const handleTouchEnd = useCallback(async () => {
     if (!isPulling.current || disabled) return;
@@ -173,17 +188,8 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
         </div>
       </div>
 
-      {/* Content with parallax shift */}
-      <div
-        style={{
-          transform: `translateY(${pullDistance > 0 ? translateY / 4 : 0}px)`,
-          transition: pullDistance === 0
-            ? 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
-            : 'none',
-        }}
-      >
-        {children}
-      </div>
+      {/* Content — no transform to avoid scroll position jumping */}
+      {children}
     </div>
   );
 };
