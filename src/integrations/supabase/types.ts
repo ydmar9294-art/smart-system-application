@@ -423,10 +423,12 @@ export type Database = {
           issuedAt: string
           licenseKey: string
           max_employees: number
+          monthly_price: number | null
           organization_id: string | null
           orgName: string
           owner_phone: string | null
           ownerId: string | null
+          renewal_alert_days: number | null
           status: string
           type: string
         }
@@ -438,10 +440,12 @@ export type Database = {
           issuedAt?: string
           licenseKey: string
           max_employees?: number
+          monthly_price?: number | null
           organization_id?: string | null
           orgName: string
           owner_phone?: string | null
           ownerId?: string | null
+          renewal_alert_days?: number | null
           status?: string
           type?: string
         }
@@ -453,10 +457,12 @@ export type Database = {
           issuedAt?: string
           licenseKey?: string
           max_employees?: number
+          monthly_price?: number | null
           organization_id?: string | null
           orgName?: string
           owner_phone?: string | null
           ownerId?: string | null
+          renewal_alert_days?: number | null
           status?: string
           type?: string
         }
@@ -1280,6 +1286,81 @@ export type Database = {
           },
         ]
       }
+      subscription_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          device_id: string | null
+          duration_months: number
+          id: string
+          is_first_subscription: boolean | null
+          license_id: string
+          organization_id: string
+          receipt_url: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_by: string
+          submitted_by_role: string
+          subscription_end: string | null
+          subscription_start: string | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          device_id?: string | null
+          duration_months?: number
+          id?: string
+          is_first_subscription?: boolean | null
+          license_id: string
+          organization_id: string
+          receipt_url?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_by: string
+          submitted_by_role?: string
+          subscription_end?: string | null
+          subscription_start?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          device_id?: string | null
+          duration_months?: number
+          id?: string
+          is_first_subscription?: boolean | null
+          license_id?: string
+          organization_id?: string
+          receipt_url?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_by?: string
+          submitted_by_role?: string
+          subscription_end?: string | null
+          subscription_start?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payments_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "developer_licenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_payments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_consents: {
         Row: {
           accepted_at: string
@@ -1388,6 +1469,10 @@ export type Database = {
         }
         Returns: string
       }
+      approve_subscription_payment: {
+        Args: { p_payment_id: string; p_start_date?: string }
+        Returns: Json
+      }
       check_and_assign_developer_role: {
         Args: { p_email: string; p_full_name?: string; p_user_id: string }
         Returns: undefined
@@ -1419,6 +1504,14 @@ export type Database = {
         Args: { p_customer_id: string; p_items: Json; p_payment_type?: string }
         Returns: string
       }
+      create_first_subscription: {
+        Args: {
+          p_duration_months: number
+          p_license_id: string
+          p_monthly_price?: number
+        }
+        Returns: Json
+      }
       create_purchase_return_rpc: {
         Args: { p_items: Json; p_reason?: string; p_supplier_name?: string }
         Returns: string
@@ -1440,6 +1533,10 @@ export type Database = {
         Returns: Json
       }
       delete_own_account_rpc: { Args: never; Returns: Json }
+      developer_renew_subscription: {
+        Args: { p_duration_months: number; p_license_id: string }
+        Returns: Json
+      }
       execute_org_deletion_rpc: {
         Args: { p_confirmation_org_name: string; p_deletion_request_id: string }
         Returns: Json
@@ -1453,6 +1550,7 @@ export type Database = {
           id: string
           license_key: string
           max_employees: number
+          monthly_price: number
           org_name: string
           organization_id: string
           status: string
@@ -1501,6 +1599,10 @@ export type Database = {
       }
       reactivate_employee_rpc: {
         Args: { p_employee_id: string }
+        Returns: Json
+      }
+      reject_subscription_payment: {
+        Args: { p_payment_id: string; p_reason?: string }
         Returns: Json
       }
       reverse_payment_rpc: {
