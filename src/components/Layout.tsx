@@ -19,12 +19,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   useRealtimeNotifications();
 
   const handlePullRefresh = useCallback(async () => {
-    // Full-screen refresh: auth + all data queries + offline cache
-    await Promise.all([
-      refreshAuth(),
-      refreshAllData(),
-    ]);
-  }, [refreshAuth, refreshAllData]);
+    // Data-only refresh: invalidate cached queries so they refetch from the server.
+    // Does NOT call refreshAuth (which sets isLoading=true and causes full UI skeleton).
+    await refreshAllData();
+  }, [refreshAllData]);
 
   if (!user) {
     return <>{children}</>;

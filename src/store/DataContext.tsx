@@ -179,8 +179,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [queryClient]);
 
   const refreshAllData = useCallback(async () => {
-    await queryClient.invalidateQueries();
-  }, [queryClient]);
+    // Only invalidate data queries — NOT auth/session queries
+    // This prevents full UI re-initialization on pull-to-refresh
+    const dataKeys = [
+      queryKeys.products(orgId),
+      queryKeys.customers(orgId),
+      queryKeys.sales(orgId),
+      queryKeys.payments(orgId),
+      queryKeys.purchases(orgId),
+      queryKeys.deliveries(orgId),
+      queryKeys.pendingEmployees(orgId),
+      queryKeys.distributorInventory(orgId),
+      queryKeys.purchaseReturns(orgId),
+      queryKeys.users(orgId),
+      queryKeys.licenses(),
+      queryKeys.orgStats(),
+    ];
+    await Promise.all(
+      dataKeys.map(key => queryClient.invalidateQueries({ queryKey: key }))
+    );
+  }, [queryClient, orgId]);
 
   // ============================================
   // Mutations with optimistic updates (Section 4) + validation (Section 9)
