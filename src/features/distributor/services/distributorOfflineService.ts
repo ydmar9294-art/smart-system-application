@@ -948,6 +948,14 @@ export function getIsSyncing(): boolean {
 // Sales Cache (offline-first, includes locally-created sales)
 // ============================================
 
+export interface CachedSaleItem {
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+}
+
 export interface CachedSale {
   id: string;
   customer_id: string;
@@ -958,6 +966,8 @@ export interface CachedSale {
   paymentType: string;
   isVoided: boolean;
   timestamp: number;
+  /** Sale line items — cached for offline returns */
+  items?: CachedSaleItem[];
   /** True if created offline, not yet synced */
   isLocal?: boolean;
 }
@@ -1084,6 +1094,26 @@ export interface CachedOrgInfo {
   updatedAt: number;
 }
 
+/**
+ * Convert an image URL to a base64 data URL for offline use.
+ * Falls back to the original URL if conversion fails.
+ */
+async function imageUrlToBase64(url: string): Promise<string> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return url;
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(url);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return url;
+  }
+}
+
 export async function cacheOrgInfo(
   orgName: string,
   legalInfo: {
@@ -1096,10 +1126,21 @@ export async function cacheOrgInfo(
   organizationId?: string,
   distributorId?: string,
 ): Promise<void> {
+  // Convert stamp URL to base64 data URL for offline rendering
+  let processedLegalInfo = legalInfo;
+  if (legalInfo?.stamp_url && !legalInfo.stamp_url.startsWith('data:')) {
+    try {
+      const base64Stamp = await imageUrlToBase64(legalInfo.stamp_url);
+      processedLegalInfo = { ...legalInfo, stamp_url: base64Stamp };
+    } catch {
+      // Keep original URL as fallback
+    }
+  }
+
   await putEncryptedItem(STORES.ORG_INFO_CACHE, {
     key: 'org_info',
     orgName,
-    legalInfo,
+    legalInfo: processedLegalInfo,
     organizationId,
     distributorId,
     updatedAt: Date.now(),
