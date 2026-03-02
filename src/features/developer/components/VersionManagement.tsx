@@ -1,6 +1,7 @@
 /**
  * Version Management Panel - Developer-controlled app version management
  * Supports unlimited Android versions with X.X format validation.
+ * Liquid-Glass UI style.
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -72,7 +73,6 @@ const VersionManagement: React.FC = () => {
 
     if (!vName) return;
 
-    // Validate X.X format
     if (!isValidVersion(vName)) {
       showToast('صيغة الإصدار يجب أن تكون X.X (مثال: 1.0, 2.3)', 'error');
       return;
@@ -143,7 +143,6 @@ const VersionManagement: React.FC = () => {
   };
 
   const updateField = async (id: string, field: string, value: string) => {
-    // Validate version fields
     if ((field === 'min_required_version' || field === 'version_name') && !isValidVersion(value)) {
       showToast('صيغة الإصدار يجب أن تكون X.X', 'error');
       return;
@@ -189,8 +188,8 @@ const VersionManagement: React.FC = () => {
     <div className="space-y-4">
       {/* Toast */}
       {toast && (
-        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[999] px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg flex items-center gap-2 animate-fade-in ${
-          toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-destructive text-destructive-foreground'
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[999] px-4 py-2.5 rounded-2xl font-bold text-sm shadow-lg flex items-center gap-2 animate-fade-in ${
+          toast.type === 'success' ? 'bg-success text-success-foreground' : 'bg-destructive text-destructive-foreground'
         }`}>
           {toast.type === 'success' ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
           {toast.message}
@@ -204,21 +203,23 @@ const VersionManagement: React.FC = () => {
         </h3>
         <button
           onClick={() => setShowAddForm(true)}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-xl font-bold text-xs flex items-center gap-1 active:scale-95 transition-all"
+          className="btn-primary px-4 py-2 text-xs flex items-center gap-1"
         >
           <Plus size={14} /> إصدار جديد
         </button>
       </div>
 
       {/* Format hint */}
-      <p className="text-[10px] text-muted-foreground font-bold bg-muted/50 px-3 py-2 rounded-xl flex items-center gap-1">
-        <AlertTriangle size={10} className="text-amber-500 shrink-0" />
-        صيغة الإصدار المطلوبة: X.X (مثال: 1.0 / 2.3 / 10.5) — غير مسموح بصيغة X.X.X
-      </p>
+      <div className="glass-surface px-4 py-2.5 rounded-2xl flex items-center gap-2">
+        <AlertTriangle size={12} className="text-warning shrink-0" />
+        <p className="text-[10px] text-muted-foreground font-bold">
+          صيغة الإصدار المطلوبة: X.X (مثال: 1.0 / 2.3 / 10.5) — غير مسموح بصيغة X.X.X
+        </p>
+      </div>
 
       {/* Add Form */}
       {showAddForm && (
-        <div className="bg-muted/50 rounded-2xl p-4 border space-y-3">
+        <div className="card-elevated p-4 space-y-3">
           <h4 className="font-bold text-foreground text-sm">إضافة إصدار جديد</h4>
           <form onSubmit={handleAddVersion} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
@@ -278,12 +279,12 @@ const VersionManagement: React.FC = () => {
 
             <div className="flex gap-2">
               <button type="submit" disabled={saving === 'new'}
-                className="flex-1 py-2.5 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2">
+                className="flex-1 btn-primary py-2.5 text-sm flex items-center justify-center gap-2">
                 {saving === 'new' ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                 حفظ
               </button>
               <button type="button" onClick={() => setShowAddForm(false)}
-                className="px-5 py-2.5 bg-muted text-muted-foreground rounded-xl font-bold text-sm">
+                className="btn-secondary px-5 py-2.5 text-sm">
                 إلغاء
               </button>
             </div>
@@ -318,7 +319,7 @@ const VersionManagement: React.FC = () => {
 };
 
 // ============================================
-// Version Card Component
+// Version Card Component — Liquid-Glass
 // ============================================
 const VersionCard: React.FC<{
   version: VersionRecord;
@@ -345,27 +346,31 @@ const VersionCard: React.FC<{
   };
 
   const platformLabel = version.platform === 'android' ? 'Android' : version.platform === 'ios' ? 'iOS' : 'Web';
-  const platformColor = version.platform === 'android' ? 'bg-green-500/10 text-green-600 dark:text-green-400' : version.platform === 'ios' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' : 'bg-purple-500/10 text-purple-600 dark:text-purple-400';
+  const platformColor = version.platform === 'android' 
+    ? 'bg-success/10 text-success' 
+    : version.platform === 'ios' 
+    ? 'bg-primary/10 text-primary' 
+    : 'bg-accent text-accent-foreground';
 
   return (
-    <div className={`p-4 rounded-2xl border transition-all ${!version.is_active ? 'opacity-50 border-border bg-muted/30' : version.force_update ? 'border-destructive/30 bg-destructive/5' : 'border-border bg-card'}`}>
+    <div className={`card-elevated p-4 transition-all ${!version.is_active ? 'opacity-50' : ''} ${version.force_update ? 'ring-2 ring-destructive/20' : ''}`}>
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${platformColor}`}>
+          <span className={`badge ${platformColor}`}>
             {platformLabel}
           </span>
           <span className="font-black text-foreground text-sm" dir="ltr">v{version.version_name}</span>
           <span className="text-[10px] text-muted-foreground">(code: {version.version_code})</span>
           {!version.is_active && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">معطّل</span>
+            <span className="badge bg-muted text-muted-foreground">معطّل</span>
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {saving && <Loader2 size={14} className="animate-spin text-primary" />}
-          <button onClick={() => setEditing(!editing)} className="text-xs text-primary font-bold px-2 py-1 rounded-lg hover:bg-primary/10">
+          <button onClick={() => setEditing(!editing)} className="p-1.5 rounded-xl hover:bg-primary/10 text-primary transition-colors">
             {editing ? <X size={14} /> : <Edit2 size={14} />}
           </button>
-          <button onClick={onDelete} className="text-xs text-destructive font-bold p-1 rounded-lg hover:bg-destructive/10">
+          <button onClick={onDelete} className="p-1.5 rounded-xl hover:bg-destructive/10 text-destructive transition-colors">
             <Trash2 size={14} />
           </button>
         </div>
@@ -381,16 +386,16 @@ const VersionCard: React.FC<{
         </button>
         <button onClick={onToggleActive} className="flex items-center gap-1.5 text-xs font-bold">
           {version.is_active 
-            ? <ToggleRight size={22} className="text-green-600 dark:text-green-400" />
+            ? <ToggleRight size={22} className="text-success" />
             : <ToggleLeft size={22} className="text-muted-foreground" />}
-          <span className={version.is_active ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}>
+          <span className={version.is_active ? 'text-success' : 'text-muted-foreground'}>
             {version.is_active ? 'مفعّل' : 'معطّل'}
           </span>
         </button>
       </div>
 
       {/* Info */}
-      <div className="text-xs space-y-1 text-muted-foreground">
+      <div className="text-xs space-y-1.5 text-muted-foreground">
         <div className="flex justify-between">
           <span>أدنى إصدار</span>
           <span className="font-bold text-foreground" dir="ltr">{version.min_required_version}</span>
@@ -405,7 +410,7 @@ const VersionCard: React.FC<{
           </div>
         )}
         {version.release_notes && (
-          <p className="text-[10px] mt-1 bg-muted/50 p-2 rounded-lg">{version.release_notes}</p>
+          <p className="text-[10px] mt-1 glass-surface p-2.5 rounded-2xl">{version.release_notes}</p>
         )}
         <div className="flex justify-between pt-1 text-[9px]">
           <span>أنشئ: {new Date(version.created_at).toLocaleDateString('ar-EG')}</span>
@@ -415,7 +420,7 @@ const VersionCard: React.FC<{
 
       {/* Edit Form */}
       {editing && (
-        <div className="mt-3 pt-3 border-t space-y-2">
+        <div className="mt-3 pt-3 border-t border-border space-y-2">
           <div>
             <label className="text-[10px] font-bold text-muted-foreground">أدنى إصدار (X.X)</label>
             <input value={editMinVersion} onChange={e => setEditMinVersion(e.target.value)}
@@ -432,7 +437,7 @@ const VersionCard: React.FC<{
               className="input-field !py-2 text-xs mt-1 resize-none" rows={2} />
           </div>
           <button onClick={handleSaveEdit}
-            className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl font-bold text-xs flex items-center justify-center gap-1">
+            className="btn-primary w-full py-2.5 text-xs flex items-center justify-center gap-1">
             <Save size={14} /> حفظ التعديلات
           </button>
         </div>
