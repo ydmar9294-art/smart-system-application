@@ -1,6 +1,6 @@
 /**
  * SubscriptionsTab - Developer subscription management
- * Create first subscriptions, view/approve/reject payment requests
+ * View/approve/reject payment requests with full details
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
@@ -11,7 +11,7 @@ import { CURRENCY } from '@/constants';
 import {
   CreditCard, CheckCircle2, XCircle, Clock, Eye,
   DollarSign, Calendar, Loader2, RefreshCw, Image as ImageIcon,
-  X, ChevronDown, Plus, AlertTriangle
+  X, Plus, AlertTriangle, Bell, User, Building2
 } from 'lucide-react';
 
 const DURATION_OPTIONS = [
@@ -73,7 +73,7 @@ const SubscriptionsTab: React.FC = () => {
   useEffect(() => { fetchPayments(); }, [fetchPayments]);
 
   const handleApprove = async (paymentId: string) => {
-    if (processingId) return; // Prevent double-click
+    if (processingId) return;
     setProcessingId(paymentId);
     try {
       const { data, error } = await supabase.rpc('approve_subscription_payment', { p_payment_id: paymentId });
@@ -116,7 +116,7 @@ const SubscriptionsTab: React.FC = () => {
   };
 
   const handleCreateFirstSub = async () => {
-    if (!showFirstSubModal) return;
+    if (!showFirstSubModal || processingId) return;
     setProcessingId('first-sub');
     try {
       const { data, error } = await supabase.rpc('create_first_subscription', {
@@ -135,7 +135,7 @@ const SubscriptionsTab: React.FC = () => {
   };
 
   const handleDevRenew = async () => {
-    if (!showRenewModal) return;
+    if (!showRenewModal || processingId) return;
     setProcessingId('dev-renew');
     try {
       const { data, error } = await supabase.rpc('developer_renew_subscription', {
@@ -157,13 +157,27 @@ const SubscriptionsTab: React.FC = () => {
   const filteredPayments = filter === 'ALL' ? payments : payments.filter(p => p.status === filter);
   const pendingCount = payments.filter(p => p.status === 'PENDING').length;
 
-  // Licenses eligible for first subscription (TRIAL or no active subscription)
   const eligibleForFirstSub = licenses.filter(l =>
     l.type === 'TRIAL' && l.status === 'ACTIVE'
   );
 
   return (
     <div className="space-y-4">
+      {/* Pending Payments Alert */}
+      {pendingCount > 0 && (
+        <div className="bg-warning/10 border border-warning/30 p-4 rounded-2xl flex items-center gap-3 animate-fade-in">
+          <div className="w-10 h-10 bg-warning/20 rounded-xl flex items-center justify-center shrink-0">
+            <Bell size={20} className="text-warning animate-pulse" />
+          </div>
+          <div>
+            <p className="font-black text-foreground text-sm">
+              {pendingCount} طلب{pendingCount > 1 ? 'ات' : ''} تجديد بانتظار المراجعة
+            </p>
+            <p className="text-[10px] text-muted-foreground">اضغط على "معلّق" لعرض الطلبات المعلّقة</p>
+          </div>
+        </div>
+      )}
+
       {/* Quick Actions */}
       {eligibleForFirstSub.length > 0 && (
         <div className="card-elevated p-4">
@@ -218,7 +232,7 @@ const SubscriptionsTab: React.FC = () => {
           <button key={f.key} onClick={() => setFilter(f.key)}
             className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
               filter === f.key ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground'
-            }`}>
+            } ${f.key === 'PENDING' && pendingCount > 0 && filter !== 'PENDING' ? 'ring-2 ring-warning/50' : ''}`}>
             {f.label} {f.count > 0 && <span className="opacity-70">({f.count})</span>}
           </button>
         ))}
@@ -243,10 +257,14 @@ const SubscriptionsTab: React.FC = () => {
               <div key={payment.id} className={`card-elevated p-4 transition-all ${
                 payment.status === 'PENDING' ? 'ring-2 ring-warning/30' : ''
               }`}>
+                {/* Header */}
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <h4 className="font-black text-foreground text-sm">{license?.orgName || 'منشأة'}</h4>
-                    <p className="text-[10px] text-muted-foreground">
+                    <h4 className="font-black text-foreground text-sm flex items-center gap-1.5">
+                      <Building2 size={14} className="text-primary" />
+                      {license?.orgName || 'منشأة'}
+                    </h4>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
                       {new Date(payment.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
@@ -254,54 +272,75 @@ const SubscriptionsTab: React.FC = () => {
                     payment.status === 'PENDING' ? 'bg-warning/20 text-warning' :
                     payment.status === 'APPROVED' ? 'badge-success' : 'badge-danger'
                   }`}>
-                    {payment.status === 'PENDING' ? 'معلّق' : payment.status === 'APPROVED' ? 'مقبول' : 'مرفوض'}
+                    {payment.status === 'PENDING' ? '⏳ معلّق' : payment.status === 'APPROVED' ? '✅ مقبول' : '❌ مرفوض'}
                   </span>
                 </div>
 
+                {/* Details Grid */}
                 <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-                  <div className="bg-muted p-2 rounded-xl">
-                    <span className="text-muted-foreground">المبلغ</span>
+                  <div className="bg-muted p-2.5 rounded-xl">
+                    <span className="text-muted-foreground block text-[10px]">المبلغ</span>
                     <p className="font-black text-foreground">{payment.amount.toLocaleString()} {CURRENCY}</p>
                   </div>
-                  <div className="bg-muted p-2 rounded-xl">
-                    <span className="text-muted-foreground">المدة</span>
+                  <div className="bg-muted p-2.5 rounded-xl">
+                    <span className="text-muted-foreground block text-[10px]">المدة</span>
                     <p className="font-black text-foreground">{payment.durationMonths} شهر</p>
                   </div>
                 </div>
 
-                {payment.isFirstSubscription && (
-                  <p className="text-[10px] font-bold text-primary mb-2">⭐ اشتراك أول</p>
-                )}
-
-                {payment.subscriptionEnd && (
-                  <p className="text-[10px] text-muted-foreground mb-2">
-                    فترة الاشتراك: {new Date(payment.subscriptionStart!).toLocaleDateString('ar-EG')} → {new Date(payment.subscriptionEnd).toLocaleDateString('ar-EG')}
-                  </p>
-                )}
+                {/* Extra Info */}
+                <div className="space-y-1 mb-3">
+                  {payment.isFirstSubscription && (
+                    <p className="text-[10px] font-bold text-primary bg-primary/5 px-2 py-1 rounded-lg inline-block">⭐ اشتراك أول</p>
+                  )}
+                  {payment.submittedByRole && (
+                    <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <User size={10} /> مقدّم من: {payment.submittedByRole === 'OWNER' ? 'المالك' : payment.submittedByRole}
+                    </p>
+                  )}
+                  {payment.subscriptionEnd && (
+                    <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <Calendar size={10} /> فترة: {new Date(payment.subscriptionStart!).toLocaleDateString('ar-EG')} → {new Date(payment.subscriptionEnd).toLocaleDateString('ar-EG')}
+                    </p>
+                  )}
+                  {license?.monthlyPrice && license.monthlyPrice > 0 && (
+                    <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <DollarSign size={10} /> سعر الشهر: {license.monthlyPrice.toLocaleString()} {CURRENCY}
+                    </p>
+                  )}
+                </div>
 
                 {payment.rejectionReason && (
-                  <p className="text-[10px] text-destructive font-bold mb-2">سبب الرفض: {payment.rejectionReason}</p>
+                  <div className="bg-destructive/10 p-2 rounded-xl mb-3">
+                    <p className="text-[10px] text-destructive font-bold">❌ سبب الرفض: {payment.rejectionReason}</p>
+                  </div>
                 )}
 
+                {/* Action Buttons */}
                 <div className="flex gap-2">
                   {payment.receiptUrl && (
                     <button onClick={() => setViewReceiptUrl(payment.receiptUrl!)}
-                      className="flex-1 py-2 bg-muted hover:bg-accent rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all">
+                      className="flex-1 py-2.5 bg-muted hover:bg-accent rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all">
                       <ImageIcon size={14} /> عرض الحوالة
                     </button>
                   )}
                   {payment.status === 'PENDING' && (
                     <>
                       <button onClick={() => handleApprove(payment.id)} disabled={!!processingId}
-                        className="flex-1 py-2 btn-success text-xs flex items-center justify-center gap-1">
+                        className="flex-1 py-2.5 btn-success text-xs flex items-center justify-center gap-1">
                         {processingId === payment.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                         موافقة
                       </button>
                       <button onClick={() => { setRejectModal(payment.id); setRejectReason(''); }} disabled={!!processingId}
-                        className="flex-1 py-2 btn-danger text-xs flex items-center justify-center gap-1">
+                        className="flex-1 py-2.5 btn-danger text-xs flex items-center justify-center gap-1">
                         <XCircle size={14} /> رفض
                       </button>
                     </>
+                  )}
+                  {payment.status === 'PENDING' && !payment.receiptUrl && (
+                    <div className="flex-1 py-2.5 bg-warning/10 rounded-xl text-[10px] font-bold text-warning flex items-center justify-center gap-1">
+                      <AlertTriangle size={12} /> بدون صورة حوالة
+                    </div>
                   )}
                 </div>
               </div>

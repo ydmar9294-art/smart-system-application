@@ -1,6 +1,6 @@
 /**
  * SubscriptionTab - Owner subscription management
- * View subscription status, renew, upload payment receipts
+ * View subscription status, renew via ShamCash, upload payment receipts
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -12,7 +12,7 @@ import { getDeviceId } from '@/lib/deviceId';
 import {
   CreditCard, Calendar, Clock, CheckCircle2, XCircle,
   Upload, Image as ImageIcon, Loader2, AlertTriangle,
-  RefreshCw, X, MessageCircle, DollarSign
+  RefreshCw, X, MessageCircle, DollarSign, Send
 } from 'lucide-react';
 
 const DURATION_OPTIONS = [
@@ -51,12 +51,10 @@ const SubscriptionTab: React.FC = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch license info
       const { data: licData } = await supabase.rpc('get_my_license_info');
       const lic = licData?.[0];
       if (lic) setLicenseInfo(lic);
 
-      // Fetch payment history
       if (organization?.id) {
         const { data: payData } = await supabase
           .from('subscription_payments')
@@ -123,9 +121,9 @@ const SubscriptionTab: React.FC = () => {
         return;
       }
 
-      // Upload receipt
+      // Upload receipt using org ID as folder
       const ext = receiptFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
-      const fileName = `${organization.id}/${Date.now()}.${ext}`;
+      const fileName = `${user.id}/${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from('payment-receipts')
         .upload(fileName, receiptFile);
@@ -135,7 +133,6 @@ const SubscriptionTab: React.FC = () => {
         .from('payment-receipts')
         .getPublicUrl(fileName);
 
-      // Validate URL is from our storage
       const receiptUrl = urlData.publicUrl;
       if (!receiptUrl.includes('payment-receipts')) {
         throw new Error('رابط غير صالح');
@@ -143,7 +140,6 @@ const SubscriptionTab: React.FC = () => {
 
       const totalAmount = (licenseInfo.monthly_price || 0) * selectedDuration;
 
-      // Insert payment record (unique index prevents duplicates)
       const { error: insertError } = await supabase
         .from('subscription_payments')
         .insert({
@@ -180,11 +176,17 @@ const SubscriptionTab: React.FC = () => {
   const monthlyPrice = licenseInfo?.monthly_price || 0;
   const totalCost = monthlyPrice * selectedDuration;
   const isSubscription = licenseInfo?.type === 'SUBSCRIPTION';
-  const isExpired = licenseInfo?.expiry_date && new Date(licenseInfo.expiry_date) < new Date();
+  const isTrial = licenseInfo?.type === 'TRIAL';
+  const isExpired = licenseInfo?.status === 'EXPIRED' || (licenseInfo?.expiry_date && new Date(licenseInfo.expiry_date) < new Date());
   const daysRemaining = licenseInfo?.expiry_date
     ? Math.max(0, Math.ceil((new Date(licenseInfo.expiry_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : null;
   const hasPendingPayment = payments.some(p => p.status === 'PENDING');
+
+  // Show renew button for: subscription type with price, or trial with price
+  const canRenew = (isSubscription || isTrial) && monthlyPrice > 0;
+  // Show contact button for: no price set yet
+  const showContactButton = !canRenew && (isSubscription || isTrial);
 
   if (loading) {
     return (
@@ -232,7 +234,7 @@ const SubscriptionTab: React.FC = () => {
           <div className="bg-muted p-3 rounded-2xl">
             <span className="text-[10px] text-muted-foreground block mb-1">نوع الاشتراك</span>
             <span className="font-black text-foreground text-sm">
-              {licenseInfo.type === 'SUBSCRIPTION' ? 'اشتراك دوري' : licenseInfo.type === 'TRIAL' ? 'تجريبي' : 'اشتراك'}
+              {isSubscription ? 'اشتراك دوري' : isTrial ? 'تجريبي' : 'اشتراك'}
             </span>
           </div>
           <div className="bg-muted p-3 rounded-2xl">
@@ -261,27 +263,33 @@ const SubscriptionTab: React.FC = () => {
             )}
             {isExpired && (
               <p className="text-xs font-bold text-destructive mt-1 flex items-center gap-1">
-                <AlertTriangle size={12} /> انتهى الاشتراك - يرجى التجديد
+                <AlertTriangle size={12} /> انتهى الاشتراك - يرجى التجديد فوراً
               </p>
             )}
           </div>
         )}
 
-        {/* Renew Button */}
-        {(isSubscription || licenseInfo.type === 'TRIAL') && monthlyPrice > 0 && (
-          <button onClick={() => setShowRenewModal(true)} disabled={hasPendingPayment}
-            className={`w-full py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all ${
-              hasPendingPayment ? 'bg-muted text-muted-foreground cursor-not-allowed' : 'bg-primary text-primary-foreground'
-            }`}>
-            {hasPendingPayment ? (
-              <><Clock size={18} /> طلب تجديد معلّق</>
-            ) : (
-              <><RefreshCw size={18} /> تجديد الاشتراك</>
-            )}
+        {/* Pending Payment Notice */}
+        {hasPendingPayment && (
+          <div className="bg-warning/10 p-3 rounded-2xl mb-4 flex items-center gap-2">
+            <Clock size={16} className="text-warning shrink-0" />
+            <div>
+              <p className="text-xs font-black text-warning">طلب تجديد معلّق</p>
+              <p className="text-[10px] text-muted-foreground">بانتظار مراجعة المطور للحوالة</p>
+            </div>
+          </div>
+        )}
+
+        {/* ShamCash Renew Button */}
+        {canRenew && !hasPendingPayment && (
+          <button onClick={() => setShowRenewModal(true)}
+            className="w-full py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all bg-primary text-primary-foreground">
+            <Send size={18} /> الدفع عبر شام كاش وتجديد الاشتراك
           </button>
         )}
 
-        {monthlyPrice === 0 && (
+        {/* Contact Developer Button */}
+        {showContactButton && (
           <a href={SUPPORT_WHATSAPP_URL} target="_blank" rel="noopener noreferrer"
             className="w-full py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all bg-green-600 text-white">
             <MessageCircle size={18} /> تواصل مع المطور للتجديد
@@ -297,7 +305,7 @@ const SubscriptionTab: React.FC = () => {
           </h3>
           <div className="space-y-2">
             {payments.map(p => (
-              <div key={p.id} className="bg-muted p-3 rounded-2xl">
+              <div key={p.id} className={`bg-muted p-3 rounded-2xl ${p.status === 'PENDING' ? 'ring-1 ring-warning/40' : ''}`}>
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <p className="font-bold text-foreground text-sm">{p.amount.toLocaleString()} {CURRENCY}</p>
@@ -306,11 +314,11 @@ const SubscriptionTab: React.FC = () => {
                   <div className="flex items-center gap-1.5">
                     {p.status === 'APPROVED' && <CheckCircle2 size={14} className="text-green-600" />}
                     {p.status === 'REJECTED' && <XCircle size={14} className="text-destructive" />}
-                    {p.status === 'PENDING' && <Clock size={14} className="text-warning" />}
+                    {p.status === 'PENDING' && <Clock size={14} className="text-warning animate-pulse" />}
                     <span className={`text-[10px] font-bold ${
                       p.status === 'APPROVED' ? 'text-green-600' : p.status === 'REJECTED' ? 'text-destructive' : 'text-warning'
                     }`}>
-                      {p.status === 'APPROVED' ? 'مقبول' : p.status === 'REJECTED' ? 'مرفوض' : 'معلّق'}
+                      {p.status === 'APPROVED' ? 'مقبول' : p.status === 'REJECTED' ? 'مرفوض' : 'قيد المراجعة'}
                     </span>
                   </div>
                 </div>
@@ -320,7 +328,9 @@ const SubscriptionTab: React.FC = () => {
                   </p>
                 )}
                 {p.rejectionReason && (
-                  <p className="text-[10px] text-destructive font-bold mt-1">سبب الرفض: {p.rejectionReason}</p>
+                  <div className="bg-destructive/10 p-2 rounded-xl mt-2">
+                    <p className="text-[10px] text-destructive font-bold">❌ سبب الرفض: {p.rejectionReason}</p>
+                  </div>
                 )}
                 {p.receiptUrl && (
                   <button onClick={() => setViewReceiptUrl(p.receiptUrl!)}
@@ -329,7 +339,7 @@ const SubscriptionTab: React.FC = () => {
                   </button>
                 )}
                 <p className="text-[9px] text-muted-foreground mt-1">
-                  {new Date(p.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  {new Date(p.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
             ))}
@@ -337,14 +347,26 @@ const SubscriptionTab: React.FC = () => {
         </div>
       )}
 
-      {/* Renew Modal */}
+      {/* Renew Modal - ShamCash Payment */}
       {showRenewModal && createPortal(
         <div className="modal-overlay safe-area-x safe-area-bottom" dir="rtl">
           <div className="card-elevated w-full max-w-md p-5 space-y-5 animate-zoom-in mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
-              <h3 className="font-black text-foreground text-lg">تجديد الاشتراك</h3>
+              <h3 className="font-black text-foreground text-lg">تجديد الاشتراك عبر شام كاش</h3>
               <button onClick={() => { setShowRenewModal(false); setReceiptFile(null); setReceiptPreview(null); }}
                 className="p-2 rounded-full hover:bg-muted"><X size={18} /></button>
+            </div>
+
+            {/* Instructions */}
+            <div className="bg-primary/5 border border-primary/20 p-4 rounded-2xl">
+              <p className="text-xs font-bold text-primary mb-2">📋 خطوات الدفع:</p>
+              <ol className="text-[11px] text-muted-foreground space-y-1 list-decimal pr-4">
+                <li>اختر مدة الاشتراك المطلوبة</li>
+                <li>قم بتحويل المبلغ عبر شام كاش</li>
+                <li>التقط صورة لإشعار الدفع (الحوالة)</li>
+                <li>ارفع الصورة وأرسل الطلب</li>
+                <li>سيتم مراجعة الطلب وتفعيل الاشتراك</li>
+              </ol>
             </div>
 
             {/* Duration Picker */}
@@ -364,7 +386,7 @@ const SubscriptionTab: React.FC = () => {
 
             {/* Cost Display */}
             <div className="bg-primary/10 p-5 rounded-2xl text-center">
-              <p className="text-xs text-muted-foreground mb-1">التكلفة الإجمالية</p>
+              <p className="text-xs text-muted-foreground mb-1">المبلغ المطلوب تحويله</p>
               <p className="text-3xl font-black text-primary">
                 {totalCost.toLocaleString()} <span className="text-sm">{CURRENCY}</span>
               </p>
@@ -375,12 +397,14 @@ const SubscriptionTab: React.FC = () => {
 
             {/* Receipt Upload */}
             <div>
-              <label className="text-xs font-bold text-muted-foreground block mb-2">صورة الحوالة (شام كاش)</label>
-              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
+              <label className="text-xs font-bold text-muted-foreground block mb-2">
+                📸 صورة إشعار الدفع (شام كاش)
+              </label>
+              <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileSelect} className="hidden" />
               
               {receiptPreview ? (
                 <div className="relative">
-                  <img src={receiptPreview} alt="الحوالة" className="w-full rounded-2xl border border-border max-h-60 object-contain bg-muted" />
+                  <img src={receiptPreview} alt="إشعار الدفع" className="w-full rounded-2xl border border-border max-h-60 object-contain bg-muted" />
                   <button onClick={() => { setReceiptFile(null); setReceiptPreview(null); }}
                     className="absolute top-2 left-2 p-1.5 bg-destructive/90 text-destructive-foreground rounded-full">
                     <X size={14} />
@@ -388,10 +412,10 @@ const SubscriptionTab: React.FC = () => {
                 </div>
               ) : (
                 <button onClick={() => fileInputRef.current?.click()}
-                  className="w-full py-8 border-2 border-dashed border-border rounded-2xl flex flex-col items-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-all">
-                  <Upload size={24} />
-                  <span className="text-sm font-bold">اضغط لرفع صورة الحوالة</span>
-                  <span className="text-[10px]">الحد الأقصى 5 MB</span>
+                  className="w-full py-8 border-2 border-dashed border-border rounded-2xl flex flex-col items-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-all active:scale-[0.98]">
+                  <Upload size={28} />
+                  <span className="text-sm font-bold">اضغط لرفع صورة إشعار الدفع</span>
+                  <span className="text-[10px]">الحد الأقصى 5 MB • JPG أو PNG</span>
                 </button>
               )}
             </div>
@@ -404,7 +428,7 @@ const SubscriptionTab: React.FC = () => {
               {uploading ? (
                 <><Loader2 size={18} className="animate-spin" /> جارٍ الرفع...</>
               ) : (
-                <><CreditCard size={18} /> إرسال طلب التجديد</>
+                <><Send size={18} /> إرسال طلب التجديد</>
               )}
             </button>
           </div>
