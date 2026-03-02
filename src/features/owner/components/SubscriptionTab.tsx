@@ -206,7 +206,7 @@ const SubscriptionTab: React.FC = () => {
           <div className="bg-muted p-3 rounded-2xl">
             <span className="text-[10px] text-muted-foreground block mb-1">نوع الاشتراك</span>
             <span className="font-black text-foreground text-sm">
-              {licenseInfo.type === 'SUBSCRIPTION' ? 'اشتراك دوري' : licenseInfo.type === 'TRIAL' ? 'تجريبي' : 'دائم'}
+              {licenseInfo.type === 'SUBSCRIPTION' ? 'اشتراك دوري' : licenseInfo.type === 'TRIAL' ? 'تجريبي' : 'اشتراك'}
             </span>
           </div>
           <div className="bg-muted p-3 rounded-2xl">

@@ -340,7 +340,7 @@ export function useLicensesQuery(role?: UserRole | null) {
       const data = await safeQuery(
         () => supabase
           .from('developer_licenses')
-          .select('id,licenseKey,orgName,type,status,ownerId,issuedAt,expiryDate,days_valid,max_employees,owner_phone')
+          .select('id,licenseKey,orgName,type,status,ownerId,issuedAt,expiryDate,days_valid,max_employees,owner_phone,monthly_price,renewal_alert_days,organization_id')
           .order('issuedAt', { ascending: false }),
         { label: 'licenses' }
       );
