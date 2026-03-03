@@ -5,6 +5,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { UserRole, User, Organization } from '@/types';
 import { logger } from '@/lib/logger';
+import { shouldStartLoading } from './authHelpers';
 
 export interface AuthState {
   user: User | null;
@@ -19,7 +20,8 @@ export const useAuthState = () => {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Only show loading skeleton if there's a reason to believe a session exists
+  const [isLoading, setIsLoading] = useState(() => shouldStartLoading());
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [needsActivation, setNeedsActivation] = useState(false);
 
