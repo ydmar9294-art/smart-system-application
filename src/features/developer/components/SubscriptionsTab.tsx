@@ -1,6 +1,6 @@
 /**
  * SubscriptionsTab - Developer subscription management
- * View/approve/reject payment requests with full details
+ * View/approve/reject payment requests + edit monthly price
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
@@ -11,7 +11,7 @@ const SUB_CURRENCY = '$';
 import {
   CreditCard, CheckCircle2, XCircle, Clock, Eye,
   DollarSign, Calendar, Loader2, RefreshCw, Image as ImageIcon,
-  X, Plus, AlertTriangle, Bell, User, Building2
+  X, Plus, AlertTriangle, Bell, User, Building2, Edit3
 } from 'lucide-react';
 
 const DURATION_OPTIONS = [
@@ -35,6 +35,11 @@ const SubscriptionsTab: React.FC = () => {
   const [firstSubPrice, setFirstSubPrice] = useState('');
   const [renewDuration, setRenewDuration] = useState(1);
   const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
+  
+  // Edit price state
+  const [editPriceLicense, setEditPriceLicense] = useState<License | null>(null);
+  const [editPriceValue, setEditPriceValue] = useState('');
+  const [savingPrice, setSavingPrice] = useState(false);
 
   const fetchPayments = useCallback(async () => {
     setLoading(true);
@@ -79,16 +84,10 @@ const SubscriptionsTab: React.FC = () => {
       const { data, error } = await supabase.rpc('approve_subscription_payment', { p_payment_id: paymentId });
       if (error) throw error;
       const result = data as any;
-      if (result && result.success === false) {
-        alert(result.message || 'فشلت العملية');
-        return;
-      }
+      if (result && result.success === false) { alert(result.message || 'فشلت العملية'); return; }
       await Promise.all([fetchPayments(), refreshLicenses()]);
-    } catch (err: any) {
-      alert(err.message || 'فشلت العملية');
-    } finally {
-      setProcessingId(null);
-    }
+    } catch (err: any) { alert(err.message || 'فشلت العملية'); }
+    finally { setProcessingId(null); }
   };
 
   const handleReject = async () => {
@@ -96,23 +95,15 @@ const SubscriptionsTab: React.FC = () => {
     setProcessingId(rejectModal);
     try {
       const { data, error } = await supabase.rpc('reject_subscription_payment', {
-        p_payment_id: rejectModal,
-        p_reason: rejectReason || 'لم يتم التحقق من الحوالة'
+        p_payment_id: rejectModal, p_reason: rejectReason || 'لم يتم التحقق من الحوالة'
       });
       if (error) throw error;
       const result = data as any;
-      if (result && result.success === false) {
-        alert(result.message || 'فشلت العملية');
-        return;
-      }
-      setRejectModal(null);
-      setRejectReason('');
+      if (result && result.success === false) { alert(result.message || 'فشلت العملية'); return; }
+      setRejectModal(null); setRejectReason('');
       await fetchPayments();
-    } catch (err: any) {
-      alert(err.message || 'فشلت العملية');
-    } finally {
-      setProcessingId(null);
-    }
+    } catch (err: any) { alert(err.message || 'فشلت العملية'); }
+    finally { setProcessingId(null); }
   };
 
   const handleCreateFirstSub = async () => {
@@ -127,11 +118,8 @@ const SubscriptionsTab: React.FC = () => {
       if (error) throw error;
       setShowFirstSubModal(null);
       await Promise.all([fetchPayments(), refreshLicenses()]);
-    } catch (err: any) {
-      alert(err.message || 'فشلت العملية');
-    } finally {
-      setProcessingId(null);
-    }
+    } catch (err: any) { alert(err.message || 'فشلت العملية'); }
+    finally { setProcessingId(null); }
   };
 
   const handleDevRenew = async () => {
@@ -139,17 +127,31 @@ const SubscriptionsTab: React.FC = () => {
     setProcessingId('dev-renew');
     try {
       const { data, error } = await supabase.rpc('developer_renew_subscription', {
-        p_license_id: showRenewModal.id,
-        p_duration_months: renewDuration
+        p_license_id: showRenewModal.id, p_duration_months: renewDuration
       });
       if (error) throw error;
       setShowRenewModal(null);
       await Promise.all([fetchPayments(), refreshLicenses()]);
-    } catch (err: any) {
-      alert(err.message || 'فشلت العملية');
-    } finally {
-      setProcessingId(null);
-    }
+    } catch (err: any) { alert(err.message || 'فشلت العملية'); }
+    finally { setProcessingId(null); }
+  };
+
+  // تعديل سعر الاشتراك الشهري
+  const handleSavePrice = async () => {
+    if (!editPriceLicense || savingPrice) return;
+    setSavingPrice(true);
+    try {
+      const newPrice = Number(editPriceValue);
+      if (isNaN(newPrice) || newPrice < 0) { alert('سعر غير صالح'); return; }
+      const { error } = await supabase
+        .from('developer_licenses')
+        .update({ monthly_price: newPrice })
+        .eq('id', editPriceLicense.id);
+      if (error) throw error;
+      setEditPriceLicense(null);
+      await refreshLicenses();
+    } catch (err: any) { alert(err.message || 'فشل التحديث'); }
+    finally { setSavingPrice(false); }
   };
 
   const getLicenseForPayment = (licenseId: string) => licenses.find(l => l.id === licenseId);
@@ -157,9 +159,7 @@ const SubscriptionsTab: React.FC = () => {
   const filteredPayments = filter === 'ALL' ? payments : payments.filter(p => p.status === filter);
   const pendingCount = payments.filter(p => p.status === 'PENDING').length;
 
-  const eligibleForFirstSub = licenses.filter(l =>
-    l.type === 'TRIAL' && l.status === 'ACTIVE'
-  );
+  const eligibleForFirstSub = licenses.filter(l => l.type === 'TRIAL' && l.status === 'ACTIVE');
 
   return (
     <div className="space-y-4">
@@ -170,10 +170,33 @@ const SubscriptionsTab: React.FC = () => {
             <Bell size={20} className="text-warning animate-pulse" />
           </div>
           <div>
-            <p className="font-black text-foreground text-sm">
-              {pendingCount} طلب{pendingCount > 1 ? 'ات' : ''} تجديد بانتظار المراجعة
-            </p>
+            <p className="font-black text-foreground text-sm">{pendingCount} طلب{pendingCount > 1 ? 'ات' : ''} تجديد بانتظار المراجعة</p>
             <p className="text-[10px] text-muted-foreground">اضغط على "معلّق" لعرض الطلبات المعلّقة</p>
+          </div>
+        </div>
+      )}
+
+      {/* تعديل تكلفة الاشتراك */}
+      {licenses.filter(l => l.type === 'SUBSCRIPTION' || l.type === 'TRIAL').length > 0 && (
+        <div className="card-elevated p-4">
+          <h3 className="font-black text-foreground text-sm mb-3 flex items-center gap-2">
+            <Edit3 size={16} className="text-primary" /> تعديل تكلفة الاشتراك
+          </h3>
+          <div className="space-y-2">
+            {licenses.map(lic => (
+              <div key={lic.id} className="flex items-center justify-between bg-muted p-3 rounded-2xl">
+                <div className="text-start min-w-0">
+                  <span className="font-bold text-sm text-foreground block truncate">{lic.orgName}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    السعر الحالي: {lic.monthlyPrice?.toLocaleString() || '0'} {SUB_CURRENCY}/شهر
+                  </span>
+                </div>
+                <button onClick={() => { setEditPriceLicense(lic); setEditPriceValue(String(lic.monthlyPrice || 0)); }}
+                  className="px-3 py-1.5 bg-primary/10 text-primary rounded-xl text-xs font-bold hover:bg-primary/20 transition-all flex items-center gap-1">
+                  <Edit3 size={12} /> تعديل
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -209,9 +232,7 @@ const SubscriptionsTab: React.FC = () => {
                 <div className="text-start">
                   <span className="font-bold text-sm text-foreground block">{lic.orgName}</span>
                   {lic.expiryDate && (
-                    <span className="text-[10px] text-muted-foreground">
-                      ينتهي: {new Date(lic.expiryDate).toLocaleDateString('ar-EG')}
-                    </span>
+                    <span className="text-[10px] text-muted-foreground">ينتهي: {new Date(lic.expiryDate).toLocaleDateString('ar-EG')}</span>
                   )}
                 </div>
                 <span className="text-xs font-bold text-primary">تجديد ←</span>
@@ -254,10 +275,7 @@ const SubscriptionsTab: React.FC = () => {
           {filteredPayments.map(payment => {
             const license = getLicenseForPayment(payment.licenseId);
             return (
-              <div key={payment.id} className={`card-elevated p-4 transition-all ${
-                payment.status === 'PENDING' ? 'ring-2 ring-warning/30' : ''
-              }`}>
-                {/* Header */}
+              <div key={payment.id} className={`card-elevated p-4 transition-all ${payment.status === 'PENDING' ? 'ring-2 ring-warning/30' : ''}`}>
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <h4 className="font-black text-foreground text-sm flex items-center gap-1.5">
@@ -276,7 +294,6 @@ const SubscriptionsTab: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Details Grid */}
                 <div className="grid grid-cols-2 gap-2 text-xs mb-3">
                   <div className="bg-muted p-2.5 rounded-xl">
                     <span className="text-muted-foreground block text-[10px]">المبلغ</span>
@@ -288,7 +305,6 @@ const SubscriptionsTab: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Extra Info */}
                 <div className="space-y-1 mb-3">
                   {payment.isFirstSubscription && (
                     <p className="text-[10px] font-bold text-primary bg-primary/5 px-2 py-1 rounded-lg inline-block">⭐ اشتراك أول</p>
@@ -303,7 +319,7 @@ const SubscriptionsTab: React.FC = () => {
                       <Calendar size={10} /> فترة: {new Date(payment.subscriptionStart!).toLocaleDateString('ar-EG')} → {new Date(payment.subscriptionEnd).toLocaleDateString('ar-EG')}
                     </p>
                   )}
-                  {license?.monthlyPrice && license.monthlyPrice > 0 && (
+                  {license?.monthlyPrice != null && license.monthlyPrice > 0 && (
                     <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                       <DollarSign size={10} /> سعر الشهر: {license.monthlyPrice.toLocaleString()} {SUB_CURRENCY}
                     </p>
@@ -316,7 +332,6 @@ const SubscriptionsTab: React.FC = () => {
                   </div>
                 )}
 
-                {/* Action Buttons */}
                 <div className="flex gap-2">
                   {payment.receiptUrl && (
                     <button onClick={() => setViewReceiptUrl(payment.receiptUrl!)}
@@ -328,8 +343,7 @@ const SubscriptionsTab: React.FC = () => {
                     <>
                       <button onClick={() => handleApprove(payment.id)} disabled={!!processingId}
                         className="flex-1 py-2.5 btn-success text-xs flex items-center justify-center gap-1">
-                        {processingId === payment.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                        موافقة
+                        {processingId === payment.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} موافقة
                       </button>
                       <button onClick={() => { setRejectModal(payment.id); setRejectReason(''); }} disabled={!!processingId}
                         className="flex-1 py-2.5 btn-danger text-xs flex items-center justify-center gap-1">
@@ -369,8 +383,7 @@ const SubscriptionsTab: React.FC = () => {
           <div className="card-elevated w-full max-w-md p-5 space-y-4 animate-zoom-in mx-4">
             <h3 className="font-black text-foreground">سبب الرفض</h3>
             <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)}
-              placeholder="اكتب سبب رفض الحوالة..." rows={3}
-              className="input-field w-full resize-none" />
+              placeholder="اكتب سبب رفض الحوالة..." rows={3} className="input-field w-full resize-none" />
             <div className="flex gap-2">
               <button onClick={handleReject} disabled={!!processingId}
                 className="flex-1 btn-danger py-3 text-sm font-bold flex items-center justify-center gap-1">
@@ -383,19 +396,40 @@ const SubscriptionsTab: React.FC = () => {
         document.body
       )}
 
+      {/* Edit Price Modal */}
+      {editPriceLicense && createPortal(
+        <div className="modal-overlay safe-area-x safe-area-bottom" dir="rtl">
+          <div className="card-elevated w-full max-w-md p-5 space-y-5 animate-zoom-in mx-4">
+            <h3 className="font-black text-foreground text-lg">تعديل سعر الاشتراك</h3>
+            <p className="text-sm text-muted-foreground">المنشأة: <span className="font-bold text-foreground">{editPriceLicense.orgName}</span></p>
+            <div>
+              <label className="text-xs font-bold text-muted-foreground block mb-1">السعر الشهري ({SUB_CURRENCY})</label>
+              <input type="number" min={0} step="0.01" value={editPriceValue} onChange={e => setEditPriceValue(e.target.value)}
+                className="input-field w-full text-lg font-black text-center" placeholder="0" />
+            </div>
+            <div className="flex gap-2">
+              <button onClick={handleSavePrice} disabled={savingPrice}
+                className="flex-1 btn-primary py-3.5 text-sm font-bold flex items-center justify-center gap-1">
+                {savingPrice ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} حفظ السعر
+              </button>
+              <button onClick={() => setEditPriceLicense(null)} className="flex-1 btn-secondary py-3.5 text-sm">إلغاء</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* First Subscription Modal */}
       {showFirstSubModal && createPortal(
         <div className="modal-overlay safe-area-x safe-area-bottom" dir="rtl">
           <div className="card-elevated w-full max-w-md p-5 space-y-5 animate-zoom-in mx-4 max-h-[90vh] overflow-y-auto">
             <h3 className="font-black text-foreground text-lg">إنشاء اشتراك أول</h3>
             <p className="text-sm text-muted-foreground">المنشأة: <span className="font-bold text-foreground">{showFirstSubModal.orgName}</span></p>
-
             <div>
               <label className="text-xs font-bold text-muted-foreground block mb-1">سعر الشهر ({SUB_CURRENCY})</label>
               <input type="number" min={0} value={firstSubPrice} onChange={e => setFirstSubPrice(e.target.value)}
                 className="input-field w-full" placeholder="0" />
             </div>
-
             <div>
               <label className="text-xs font-bold text-muted-foreground block mb-1">مدة الاشتراك</label>
               <div className="grid grid-cols-2 gap-2">
@@ -403,25 +437,20 @@ const SubscriptionsTab: React.FC = () => {
                   <button key={opt.months} onClick={() => setFirstSubDuration(opt.months)}
                     className={`py-3 rounded-2xl text-sm font-bold transition-all ${
                       firstSubDuration === opt.months ? 'bg-primary text-primary-foreground shadow-lg' : 'bg-muted text-muted-foreground hover:bg-accent'
-                    }`}>
-                    {opt.label}
-                  </button>
+                    }`}>{opt.label}</button>
                 ))}
               </div>
             </div>
-
             <div className="bg-primary/10 p-4 rounded-2xl text-center">
               <p className="text-xs text-muted-foreground mb-1">التكلفة الإجمالية</p>
               <p className="text-2xl font-black text-primary">
                 {(Number(firstSubPrice) * firstSubDuration).toLocaleString()} <span className="text-sm">{SUB_CURRENCY}</span>
               </p>
             </div>
-
             <div className="flex gap-2">
               <button onClick={handleCreateFirstSub} disabled={!!processingId}
                 className="flex-1 btn-primary py-3.5 text-sm font-bold flex items-center justify-center gap-1">
-                {processingId === 'first-sub' ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                إنشاء الاشتراك
+                {processingId === 'first-sub' ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} إنشاء الاشتراك
               </button>
               <button onClick={() => setShowFirstSubModal(null)} className="flex-1 btn-secondary py-3.5 text-sm">إلغاء</button>
             </div>
@@ -437,11 +466,8 @@ const SubscriptionsTab: React.FC = () => {
             <h3 className="font-black text-foreground text-lg">تجديد اشتراك (مطور)</h3>
             <p className="text-sm text-muted-foreground">المنشأة: <span className="font-bold text-foreground">{showRenewModal.orgName}</span></p>
             {showRenewModal.expiryDate && (
-              <p className="text-xs text-muted-foreground">
-                ينتهي حالياً: <span className="font-bold text-foreground">{new Date(showRenewModal.expiryDate).toLocaleDateString('ar-EG')}</span>
-              </p>
+              <p className="text-xs text-muted-foreground">ينتهي حالياً: <span className="font-bold text-foreground">{new Date(showRenewModal.expiryDate).toLocaleDateString('ar-EG')}</span></p>
             )}
-
             <div>
               <label className="text-xs font-bold text-muted-foreground block mb-1">مدة التجديد</label>
               <div className="grid grid-cols-2 gap-2">
@@ -449,18 +475,14 @@ const SubscriptionsTab: React.FC = () => {
                   <button key={opt.months} onClick={() => setRenewDuration(opt.months)}
                     className={`py-3 rounded-2xl text-sm font-bold transition-all ${
                       renewDuration === opt.months ? 'bg-primary text-primary-foreground shadow-lg' : 'bg-muted text-muted-foreground hover:bg-accent'
-                    }`}>
-                    {opt.label}
-                  </button>
+                    }`}>{opt.label}</button>
                 ))}
               </div>
             </div>
-
             <div className="flex gap-2">
               <button onClick={handleDevRenew} disabled={!!processingId}
                 className="flex-1 btn-primary py-3.5 text-sm font-bold flex items-center justify-center gap-1">
-                {processingId === 'dev-renew' ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-                تجديد الاشتراك
+                {processingId === 'dev-renew' ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} تجديد الاشتراك
               </button>
               <button onClick={() => setShowRenewModal(null)} className="flex-1 btn-secondary py-3.5 text-sm">إلغاء</button>
             </div>
