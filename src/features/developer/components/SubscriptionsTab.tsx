@@ -32,7 +32,7 @@ const SubscriptionsTab: React.FC = () => {
   const [rejectModal, setRejectModal] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [firstSubDuration, setFirstSubDuration] = useState(1);
-  const [firstSubPrice, setFirstSubPrice] = useState(0);
+  const [firstSubPrice, setFirstSubPrice] = useState('');
   const [renewDuration, setRenewDuration] = useState(1);
   const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
 
@@ -122,7 +122,7 @@ const SubscriptionsTab: React.FC = () => {
       const { data, error } = await supabase.rpc('create_first_subscription', {
         p_license_id: showFirstSubModal.id,
         p_duration_months: firstSubDuration,
-        p_monthly_price: firstSubPrice > 0 ? firstSubPrice : null
+        p_monthly_price: Number(firstSubPrice) > 0 ? Number(firstSubPrice) : null
       });
       if (error) throw error;
       setShowFirstSubModal(null);
@@ -186,7 +186,7 @@ const SubscriptionsTab: React.FC = () => {
           </h3>
           <div className="space-y-2">
             {eligibleForFirstSub.map(lic => (
-              <button key={lic.id} onClick={() => { setShowFirstSubModal(lic); setFirstSubPrice(lic.monthlyPrice || 0); }}
+              <button key={lic.id} onClick={() => { setShowFirstSubModal(lic); setFirstSubPrice(String(lic.monthlyPrice || 0)); }}
                 className="w-full flex items-center justify-between bg-primary/10 hover:bg-primary/20 p-3 rounded-2xl transition-all">
                 <span className="font-bold text-sm text-foreground">{lic.orgName}</span>
                 <span className="text-xs font-bold text-primary">إنشاء اشتراك ←</span>
@@ -392,7 +392,7 @@ const SubscriptionsTab: React.FC = () => {
 
             <div>
               <label className="text-xs font-bold text-muted-foreground block mb-1">سعر الشهر ({CURRENCY})</label>
-              <input type="number" min={0} value={firstSubPrice} onChange={e => setFirstSubPrice(Number(e.target.value))}
+              <input type="number" min={0} value={firstSubPrice} onChange={e => setFirstSubPrice(e.target.value)}
                 className="input-field w-full" placeholder="0" />
             </div>
 
@@ -413,7 +413,7 @@ const SubscriptionsTab: React.FC = () => {
             <div className="bg-primary/10 p-4 rounded-2xl text-center">
               <p className="text-xs text-muted-foreground mb-1">التكلفة الإجمالية</p>
               <p className="text-2xl font-black text-primary">
-                {(firstSubPrice * firstSubDuration).toLocaleString()} <span className="text-sm">{CURRENCY}</span>
+                {(Number(firstSubPrice) * firstSubDuration).toLocaleString()} <span className="text-sm">{CURRENCY}</span>
               </p>
             </div>
 

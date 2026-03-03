@@ -41,7 +41,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [purchaseProduct, setPurchaseProduct] = useState('');
   const [purchaseQty, setPurchaseQty] = useState(1);
-  const [purchasePrice, setPurchasePrice] = useState(0);
+  const [purchasePrice, setPurchasePrice] = useState('');
   const [purchaseSupplier, setPurchaseSupplier] = useState('');
   const [purchaseNotes, setPurchaseNotes] = useState('');
 
@@ -52,7 +52,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
   const [purchaseReturnSupplier, setPurchaseReturnSupplier] = useState('');
   const [selectedReturnProduct, setSelectedReturnProduct] = useState('');
   const [returnItemQty, setReturnItemQty] = useState(1);
-  const [returnItemPrice, setReturnItemPrice] = useState(0);
+  const [returnItemPrice, setReturnItemPrice] = useState('');
 
   // Delivery Modal State
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
@@ -76,14 +76,14 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
   const handlePurchaseProductChange = (productId: string) => {
     setPurchaseProduct(productId);
     const product = products.find(p => p.id === productId);
-    if (product) setPurchasePrice(product.costPrice);
+    if (product) setPurchasePrice(String(product.costPrice));
   };
 
   const handlePurchaseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!purchaseProduct || purchaseQty <= 0) return;
     try {
-      await addPurchase(purchaseProduct, purchaseQty, purchasePrice, purchaseSupplier || undefined, purchaseNotes || undefined);
+      await addPurchase(purchaseProduct, purchaseQty, Number(purchasePrice), purchaseSupplier || undefined, purchaseNotes || undefined);
       setShowPurchaseModal(false);
       resetPurchaseForm();
     } catch (err) {
@@ -94,7 +94,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
   const resetPurchaseForm = () => {
     setPurchaseProduct('');
     setPurchaseQty(1);
-    setPurchasePrice(0);
+    setPurchasePrice('');
     setPurchaseSupplier('');
     setPurchaseNotes('');
   };
@@ -160,7 +160,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
   const handleReturnProductChange = (productId: string) => {
     setSelectedReturnProduct(productId);
     const product = products.find(p => p.id === productId);
-    if (product) setReturnItemPrice(product.costPrice);
+    if (product) setReturnItemPrice(String(product.costPrice));
   };
 
   const addPurchaseReturnItem = () => {
@@ -183,12 +183,12 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
         product_id: product.id,
         product_name: product.name,
         quantity: returnItemQty,
-        unit_price: returnItemPrice
+        unit_price: Number(returnItemPrice)
       }]);
     }
     setSelectedReturnProduct('');
     setReturnItemQty(1);
-    setReturnItemPrice(0);
+    setReturnItemPrice('');
   };
 
   const removePurchaseReturnItem = (productId: string) => {
@@ -213,7 +213,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
     setPurchaseReturnSupplier('');
     setSelectedReturnProduct('');
     setReturnItemQty(1);
-    setReturnItemPrice(0);
+    setReturnItemPrice('');
   };
 
   // Product Handlers
@@ -514,7 +514,8 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
                 min="0" 
                 step="0.01" 
                 value={purchasePrice} 
-                onChange={(e) => setPurchasePrice(Number(e.target.value))} 
+                onChange={(e) => setPurchasePrice(e.target.value)}
+                placeholder="0"
                 required 
                 className="input-field text-center text-xl font-black py-4" 
               />
@@ -534,7 +535,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
           
           <div className="bg-success/10 p-5 rounded-2xl border border-success/20 flex justify-between items-center">
             <span className="font-bold text-muted-foreground">الإجمالي:</span>
-            <span className="text-3xl font-black text-success">{(purchaseQty * purchasePrice).toLocaleString()} {CURRENCY}</span>
+            <span className="text-3xl font-black text-success">{(purchaseQty * Number(purchasePrice)).toLocaleString()} {CURRENCY}</span>
           </div>
         </form>
       </FullScreenModal>
@@ -708,7 +709,8 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
                   min="0" 
                   step="0.01"
                   value={returnItemPrice} 
-                  onChange={(e) => setReturnItemPrice(Number(e.target.value))} 
+                  onChange={(e) => setReturnItemPrice(e.target.value)}
+                  placeholder="0"
                   className="input-field text-center text-xl font-black py-4" 
                 />
               </div>
