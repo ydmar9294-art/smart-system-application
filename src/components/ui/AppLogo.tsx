@@ -8,6 +8,18 @@ interface AppLogoProps {
 const AppLogo: React.FC<AppLogoProps> = ({ size = 80, className = '' }) => {
   const id = React.useId().replace(/:/g, '');
 
+  const buildingAnim = (delay: number) => ({
+    animation: `logo-building-rise 0.7s ease-out ${delay}s both`,
+  });
+  const barAnim = (delay: number, o: number) => ({
+    animation: `logo-bar-grow 0.5s ease-out ${delay}s both`,
+    transformOrigin: 'bottom',
+    opacity: o,
+  });
+  const arrowAnim = (delay: number) => ({
+    animation: `logo-arrow-shoot 0.6s ease-out ${delay}s both`,
+  });
+
   return (
     <svg
       width={size}
@@ -75,36 +87,41 @@ const AppLogo: React.FC<AppLogoProps> = ({ size = 80, className = '' }) => {
       <rect x="8" y="8" width="284" height="284" rx="56" ry="56" fill={`url(#${id}-sky)`} />
 
       <g clipPath={`url(#${id}-clip)`}>
-        {/* Stars */}
+        {/* Stars with twinkle */}
         {[
           [45, 35, 1.2], [88, 22, 0.8], [135, 18, 1], [198, 28, 0.7],
           [245, 20, 0.9], [260, 50, 0.6], [55, 65, 0.7], [170, 38, 0.5],
           [220, 42, 0.8], [110, 45, 0.6],
         ].map(([cx, cy, r], i) => (
-          <circle key={`s${i}`} cx={cx} cy={cy} r={r} fill={`url(#${id}-star)`} opacity={0.4 + (i % 3) * 0.2} />
+          <circle
+            key={`s${i}`}
+            cx={cx}
+            cy={cy}
+            r={r}
+            fill={`url(#${id}-star)`}
+            style={{ animation: `logo-star-twinkle ${2 + (i % 3)}s ease-in-out ${i * 0.3}s infinite` }}
+          />
         ))}
 
         {/* Street */}
         <rect x="0" y="228" width="300" height="72" fill={`url(#${id}-street)`} />
         <line x1="20" y1="230" x2="280" y2="230" stroke="#2880b8" strokeWidth="0.8" opacity="0.4" />
 
-        {/* Content group — centered vertically by shifting down 10px */}
+        {/* Content centered */}
         <g transform="translate(0, 10)">
 
-          {/* LEFT BAR CHARTS */}
+          {/* LEFT BAR CHARTS — grow from bottom */}
           {[
             { x: 36, h: 18, o: 0.35 },
             { x: 47, h: 28, o: 0.45 },
             { x: 58, h: 38, o: 0.6 },
             { x: 69, h: 50, o: 0.75 },
           ].map((b, i) => (
-            <g key={`lb${i}`}>
-              <rect x={b.x} y={228 - b.h} width="8" height={b.h} rx="1.5" fill={`url(#${id}-bar)`} opacity={b.o} />
-            </g>
+            <rect key={`lb${i}`} x={b.x} y={228 - b.h} width="8" height={b.h} rx="1.5" fill={`url(#${id}-bar)`} style={barAnim(0.3 + i * 0.1, b.o)} />
           ))}
 
           {/* BUILDING 1 — Left short */}
-          <g>
+          <g style={buildingAnim(0.2)}>
             <rect x="82" y="145" width="26" height="83" rx="1" fill={`url(#${id}-steel)`} />
             <path d="M108 145 L115 139 L115 222 L108 228" fill={`url(#${id}-steel-dark)`} />
             <path d="M82 145 L89 139 L115 139 L108 145Z" fill={`url(#${id}-roof)`} opacity="0.45" />
@@ -121,7 +138,7 @@ const AppLogo: React.FC<AppLogoProps> = ({ size = 80, className = '' }) => {
           </g>
 
           {/* BUILDING 2 — Center-left medium */}
-          <g>
+          <g style={buildingAnim(0.35)}>
             <rect x="114" y="115" width="28" height="113" rx="1" fill={`url(#${id}-steel)`} />
             <path d="M142 115 L150 108 L150 222 L142 228" fill={`url(#${id}-steel-dark)`} />
             <path d="M114 115 L122 108 L150 108 L142 115Z" fill={`url(#${id}-roof)`} opacity="0.5" />
@@ -138,14 +155,14 @@ const AppLogo: React.FC<AppLogoProps> = ({ size = 80, className = '' }) => {
           </g>
 
           {/* BUILDING 3 — Center tallest (hero) */}
-          <g>
+          <g style={buildingAnim(0.5)}>
             <rect x="148" y="78" width="34" height="150" rx="1" fill={`url(#${id}-steel)`} />
             <path d="M182 78 L191 70 L191 222 L182 228" fill={`url(#${id}-steel-dark)`} />
             <path d="M148 78 L157 70 L191 70 L182 78Z" fill={`url(#${id}-roof)`} opacity="0.55" />
             <rect x="148" y="78" width="34" height="150" rx="1" fill={`url(#${id}-glass)`} />
-            {/* Antenna */}
+            {/* Antenna with blink */}
             <line x1="165" y1="70" x2="165" y2="55" stroke="#5ab8e0" strokeWidth="1.2" opacity="0.6" />
-            <circle cx="165" cy="53" r="2" fill="#60e0ff" opacity="0.85" />
+            <circle cx="165" cy="53" r="2" fill="#60e0ff" style={{ animation: 'logo-antenna-blink 1.5s ease-in-out infinite' }} />
             <circle cx="165" cy="53" r="0.8" fill="#fff" opacity="0.7" />
             {Array.from({ length: 16 }, (_, i) => (
               <line key={`fl3-${i}`} x1="148" y1={86 + i * 9} x2="182" y2={86 + i * 9} stroke="#1a4060" strokeWidth="0.4" opacity="0.45" />
@@ -159,7 +176,7 @@ const AppLogo: React.FC<AppLogoProps> = ({ size = 80, className = '' }) => {
           </g>
 
           {/* BUILDING 4 — Right medium */}
-          <g>
+          <g style={buildingAnim(0.4)}>
             <rect x="188" y="125" width="24" height="103" rx="1" fill={`url(#${id}-steel)`} />
             <path d="M212 125 L219 119 L219 222 L212 228" fill={`url(#${id}-steel-dark)`} />
             <path d="M188 125 L195 119 L219 119 L212 125Z" fill={`url(#${id}-roof)`} opacity="0.45" />
@@ -175,28 +192,26 @@ const AppLogo: React.FC<AppLogoProps> = ({ size = 80, className = '' }) => {
             ))}
           </g>
 
-          {/* RIGHT BAR CHARTS */}
+          {/* RIGHT BAR CHARTS — grow from bottom */}
           {[
             { x: 220, h: 40, o: 0.45 },
             { x: 231, h: 52, o: 0.55 },
             { x: 242, h: 66, o: 0.7 },
             { x: 253, h: 82, o: 0.85 },
           ].map((b, i) => (
-            <g key={`rb${i}`}>
-              <rect x={b.x} y={228 - b.h} width="8" height={b.h} rx="1.5" fill={`url(#${id}-bar)`} opacity={b.o} />
-            </g>
+            <rect key={`rb${i}`} x={b.x} y={228 - b.h} width="8" height={b.h} rx="1.5" fill={`url(#${id}-bar)`} style={barAnim(0.6 + i * 0.1, b.o)} />
           ))}
 
-          {/* GROWTH ARROWS */}
-          <g>
+          {/* GROWTH ARROWS — shoot up */}
+          <g style={arrowAnim(0.8)}>
             <line x1="50" y1="180" x2="70" y2="150" stroke={`url(#${id}-arrow)`} strokeWidth="2.2" strokeLinecap="round" />
             <polygon points="66,146 74,143 70,153" fill="#50d8ff" />
           </g>
-          <g>
+          <g style={arrowAnim(0.95)}>
             <line x1="130" y1="118" x2="158" y2="65" stroke={`url(#${id}-arrow)`} strokeWidth="2.8" strokeLinecap="round" />
             <polygon points="153,61 163,57 158,69" fill="#58e0ff" />
           </g>
-          <g>
+          <g style={arrowAnim(1.1)}>
             <line x1="230" y1="140" x2="255" y2="92" stroke={`url(#${id}-arrow)`} strokeWidth="2.8" strokeLinecap="round" />
             <polygon points="250,88 260,84 255,96" fill="#5ce0ff" />
           </g>
