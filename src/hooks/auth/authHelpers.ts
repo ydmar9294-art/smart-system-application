@@ -48,3 +48,47 @@ export const isCacheFullyActivated = (cached: CachedAuthState): boolean => {
 export const isNetworkAvailable = (): boolean => {
   return typeof navigator !== 'undefined' ? navigator.onLine : true;
 };
+
+/**
+ * Synchronously check if Supabase has stored auth tokens in localStorage.
+ * This avoids waiting for INITIAL_SESSION to know if user might be logged in.
+ */
+export const hasSupabaseSessionInStorage = (): boolean => {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return !!parsed?.access_token || !!parsed?.user;
+        }
+      }
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return false;
+};
+
+/**
+ * Determine initial loading state synchronously.
+ * Only show skeleton if we have reason to believe a session exists (cache or stored tokens).
+ * Otherwise, show login immediately — zero delay.
+ */
+export const shouldStartLoading = (): boolean => {
+  const cached = getCachedAuthSync();
+  if (cached && isCacheFullyActivated(cached)) return false; // Cache boot — no skeleton needed
+  return hasSupabaseSessionInStorage(); // Only show skeleton if tokens exist
+};
+
+/** Sync version of getCachedAuth for use in initial state */
+function getCachedAuthSync(): CachedAuthState | null {
+  try {
+    const raw = localStorage.getItem('auth_cache_v4');
+    if (!raw) return null;
+    return JSON.parse(raw) as CachedAuthState;
+  } catch {
+    return null;
+  }
+}
