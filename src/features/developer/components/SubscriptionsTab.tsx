@@ -7,7 +7,7 @@ import { createPortal } from 'react-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useApp } from '@/store/AppContext';
 import { License, SubscriptionPayment } from '@/types';
-import { CURRENCY } from '@/constants';
+const SUB_CURRENCY = '$';
 import {
   CreditCard, CheckCircle2, XCircle, Clock, Eye,
   DollarSign, Calendar, Loader2, RefreshCw, Image as ImageIcon,
@@ -280,7 +280,7 @@ const SubscriptionsTab: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2 text-xs mb-3">
                   <div className="bg-muted p-2.5 rounded-xl">
                     <span className="text-muted-foreground block text-[10px]">المبلغ</span>
-                    <p className="font-black text-foreground">{payment.amount.toLocaleString()} {CURRENCY}</p>
+                    <p className="font-black text-foreground">{payment.amount.toLocaleString()} {SUB_CURRENCY}</p>
                   </div>
                   <div className="bg-muted p-2.5 rounded-xl">
                     <span className="text-muted-foreground block text-[10px]">المدة</span>
@@ -305,7 +305,7 @@ const SubscriptionsTab: React.FC = () => {
                   )}
                   {license?.monthlyPrice && license.monthlyPrice > 0 && (
                     <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      <DollarSign size={10} /> سعر الشهر: {license.monthlyPrice.toLocaleString()} {CURRENCY}
+                      <DollarSign size={10} /> سعر الشهر: {license.monthlyPrice.toLocaleString()} {SUB_CURRENCY}
                     </p>
                   )}
                 </div>
@@ -391,7 +391,7 @@ const SubscriptionsTab: React.FC = () => {
             <p className="text-sm text-muted-foreground">المنشأة: <span className="font-bold text-foreground">{showFirstSubModal.orgName}</span></p>
 
             <div>
-              <label className="text-xs font-bold text-muted-foreground block mb-1">سعر الشهر ({CURRENCY})</label>
+              <label className="text-xs font-bold text-muted-foreground block mb-1">سعر الشهر ({SUB_CURRENCY})</label>
               <input type="number" min={0} value={firstSubPrice} onChange={e => setFirstSubPrice(e.target.value)}
                 className="input-field w-full" placeholder="0" />
             </div>
@@ -413,7 +413,7 @@ const SubscriptionsTab: React.FC = () => {
             <div className="bg-primary/10 p-4 rounded-2xl text-center">
               <p className="text-xs text-muted-foreground mb-1">التكلفة الإجمالية</p>
               <p className="text-2xl font-black text-primary">
-                {(Number(firstSubPrice) * firstSubDuration).toLocaleString()} <span className="text-sm">{CURRENCY}</span>
+                {(Number(firstSubPrice) * firstSubDuration).toLocaleString()} <span className="text-sm">{SUB_CURRENCY}</span>
               </p>
             </div>
 
