@@ -7,7 +7,8 @@ import { createPortal } from 'react-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/store/AuthContext';
 import { SubscriptionPayment } from '@/types';
-import { CURRENCY, SUPPORT_WHATSAPP_URL } from '@/constants';
+import { SUPPORT_WHATSAPP_URL } from '@/constants';
+const SUB_CURRENCY = '$';
 import { getDeviceId } from '@/lib/deviceId';
 import { copyToClipboard } from '@/lib/clipboard';
 import {
@@ -259,7 +260,7 @@ const SubscriptionTab: React.FC = () => {
           <div className="bg-muted p-3 rounded-2xl">
             <span className="text-[10px] text-muted-foreground block mb-1">سعر الشهر</span>
             <span className="font-black text-foreground text-sm">
-              {monthlyPrice > 0 ? `${monthlyPrice.toLocaleString()} ${CURRENCY}` : 'غير محدد'}
+              {monthlyPrice > 0 ? `${monthlyPrice.toLocaleString()} ${SUB_CURRENCY}` : 'غير محدد'}
             </span>
           </div>
         </div>
@@ -327,7 +328,7 @@ const SubscriptionTab: React.FC = () => {
               <div key={p.id} className={`bg-muted p-3 rounded-2xl ${p.status === 'PENDING' ? 'ring-1 ring-warning/40' : ''}`}>
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <p className="font-bold text-foreground text-sm">{p.amount.toLocaleString()} {CURRENCY}</p>
+                    <p className="font-bold text-foreground text-sm">{p.amount.toLocaleString()} {SUB_CURRENCY}</p>
                     <p className="text-[10px] text-muted-foreground">{p.durationMonths} شهر</p>
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -407,10 +408,10 @@ const SubscriptionTab: React.FC = () => {
             <div className="bg-primary/10 p-5 rounded-2xl text-center">
               <p className="text-xs text-muted-foreground mb-1">المبلغ المطلوب تحويله</p>
               <p className="text-3xl font-black text-primary">
-                {totalCost.toLocaleString()} <span className="text-sm">{CURRENCY}</span>
+                {totalCost.toLocaleString()} <span className="text-sm">{SUB_CURRENCY}</span>
               </p>
               <p className="text-[10px] text-muted-foreground mt-1">
-                {monthlyPrice.toLocaleString()} {CURRENCY} × {selectedDuration} شهر
+                {monthlyPrice.toLocaleString()} {SUB_CURRENCY} × {selectedDuration} شهر
               </p>
             </div>
 
