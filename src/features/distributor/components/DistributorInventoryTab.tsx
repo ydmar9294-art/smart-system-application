@@ -45,7 +45,7 @@ const DistributorInventoryTab: React.FC<DistributorInventoryTabProps> = ({ local
       setTransferCart([...transferCart, {
         product_id: item.product_id,
         product_name: item.product_name,
-        quantity: item.quantity,
+        quantity: 1,
         max_quantity: item.quantity,
       }]);
     }
