@@ -162,13 +162,13 @@ const LicenseFrozenScreen: React.FC<{
         </div>
 
         <h2 className="text-3xl font-black text-foreground">
-          {isExpired ? 'انتهت فترة التجربة' : 'الترخيص موقوف مؤقتاً'}
+          {isExpired ? 'انتهى اشتراكك' : 'الاشتراك موقوف مؤقتاً'}
         </h2>
 
         <p className="text-muted-foreground font-bold text-lg">
           {isExpired
-            ? 'لقد انتهت الفترة الممنوحة لاستخدام النظام. يرجى مراجعة القسم المالي للتحويل إلى الترخيص الدائم.'
-            : 'يرجى مراجعة القسم المالي لتسوية المستحقات وإعادة تفعيل الخدمة.'}
+            ? 'لقد انتهت مدة اشتراكك في النظام. يرجى التواصل مع المطور لتجديد الاشتراك.'
+            : 'يرجى التواصل مع المطور لتسوية المستحقات وإعادة تفعيل الاشتراك.'}
         </p>
 
         <p className="text-muted-foreground/70 text-sm">
