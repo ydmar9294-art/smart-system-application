@@ -384,6 +384,13 @@ export function useDistributorOffline() {
         isVoided: false,
         timestamp: Date.now(),
         isLocal: true,
+        items: (payload.items || []).map((item: any) => ({
+          product_id: item.productId || item.product_id,
+          product_name: item.productName || item.product_name,
+          quantity: item.quantity,
+          unit_price: item.unitPrice || item.unit_price,
+          total_price: item.totalPrice || item.total_price || item.quantity * (item.unitPrice || item.unit_price),
+        })),
       };
       await addLocalSale(localSale);
       
