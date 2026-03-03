@@ -6,7 +6,7 @@ import { UserRole, User, Organization, LicenseStatus } from '@/types';
 import { CachedAuthState } from '@/lib/authCache';
 
 /** Max time for the entire auth init before forcing to login (only when NO cache exists) */
-export const HARD_TIMEOUT_MS = 5_000;
+export const HARD_TIMEOUT_MS = 3_000;
 /** Max time for profile resolution */
 export const RESOLVE_TIMEOUT_MS = 4_500;
 

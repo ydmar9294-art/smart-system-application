@@ -85,7 +85,18 @@ export const useSession = (deps: SessionDeps) => {
     // ── Phase 2: Auth event listener ──
     const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (isInternalAuthOp.current) return;
-      if (event === 'INITIAL_SESSION') return;
+
+      // Use INITIAL_SESSION to quickly show login when no session exists (avoids silent wait in Capacitor WebView)
+      if (event === 'INITIAL_SESSION') {
+        if (!session?.user && !bootedFromCache.current) {
+          logger.info('INITIAL_SESSION: no session — showing login immediately', 'Auth');
+          clearTimeout(timeoutId);
+          hasResolved = true;
+          if (isMounted) resetToLogin();
+          initializingAuth.current = false;
+        }
+        return;
+      }
 
       if (event === 'SIGNED_OUT') {
         clearAuthCache();
