@@ -22,6 +22,8 @@ interface StockMovement {
   created_at: string;
   reference_id: string | null;
   product_name?: string;
+  distributor_name?: string | null;
+  created_by?: string | null;
 }
 
 const MOVEMENT_LABELS: Record<string, string> = {
@@ -54,7 +56,7 @@ const StockMovementsTab: React.FC = () => {
       
       const { data, error } = await supabase
         .from('stock_movements')
-        .select('id,product_id,quantity,movement_type,source_type,destination_type,source_id,destination_id,notes,created_at,reference_id')
+        .select('id,product_id,quantity,movement_type,source_type,destination_type,source_id,destination_id,notes,created_at,reference_id,created_by')
         .eq('organization_id', orgId)
         .order('created_at', { ascending: false })
         .range(0, 99);
@@ -70,9 +72,25 @@ const StockMovementsTab: React.FC = () => {
 
       const productMap = new Map((products || []).map(p => [p.id, p.name]));
 
+      // Fetch distributor names for TRANSFER movements
+      const distributorIds = [...new Set(
+        (data || [])
+          .filter(m => m.movement_type === 'TRANSFER' && m.source_id)
+          .map(m => m.source_id!)
+      )];
+      let distributorMap = new Map<string, string>();
+      if (distributorIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id,full_name')
+          .in('id', distributorIds);
+        distributorMap = new Map((profiles || []).map(p => [p.id, p.full_name || 'موزع']));
+      }
+
       return (data || []).map(m => ({
         ...m,
         product_name: productMap.get(m.product_id) || 'منتج غير معروف',
+        distributor_name: m.source_id ? distributorMap.get(m.source_id) : null,
       }));
     },
     enabled: !!orgId,
@@ -149,10 +167,18 @@ const StockMovementsTab: React.FC = () => {
                 </div>
               </div>
               
-              <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2 border-t border-border">
-                <span>من: {movement.source_type === 'central' ? 'المستودع الرئيسي' : movement.source_type === 'distributor' ? 'مخزن الموزع' : movement.source_type}</span>
-                <span>←</span>
-                <span>إلى: {movement.destination_type === 'central' ? 'المستودع الرئيسي' : movement.destination_type === 'distributor' ? 'مخزن الموزع' : movement.destination_type === 'customer' ? 'العميل' : movement.destination_type}</span>
+              <div className="flex flex-col gap-1 text-xs text-muted-foreground pt-2 border-t border-border">
+                <div className="flex items-center gap-4">
+                  <span>من: {movement.source_type === 'central' ? 'المستودع الرئيسي' : movement.source_type === 'distributor' ? 'مخزن الموزع' : movement.source_type}</span>
+                  <span>←</span>
+                  <span>إلى: {movement.destination_type === 'central' ? 'المستودع الرئيسي' : movement.destination_type === 'distributor' ? 'مخزن الموزع' : movement.destination_type === 'customer' ? 'العميل' : movement.destination_type}</span>
+                </div>
+                {movement.movement_type === 'TRANSFER' && movement.distributor_name && (
+                  <div className="flex items-center gap-1">
+                    <User className="w-3 h-3" />
+                    <span>بواسطة: <span className="font-bold text-foreground">{movement.distributor_name}</span></span>
+                  </div>
+                )}
               </div>
               
               {movement.notes && (
