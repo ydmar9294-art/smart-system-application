@@ -261,7 +261,7 @@ export const PurchasesTab: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState('');
   const [quantity, setQuantity] = useState(1);
-  const [unitPrice, setUnitPrice] = useState(0);
+  const [unitPrice, setUnitPrice] = useState('');
   const [supplierName, setSupplierName] = useState('');
   const [notes, setNotes] = useState('');
   const [printPurchase, setPrintPurchase] = useState<Purchase | null>(null);
@@ -287,7 +287,7 @@ export const PurchasesTab: React.FC = () => {
     setSelectedProduct(productId);
     const product = products.find(p => p.id === productId);
     if (product) {
-      setUnitPrice(product.costPrice);
+      setUnitPrice(String(product.costPrice));
     }
   };
 
@@ -295,7 +295,7 @@ export const PurchasesTab: React.FC = () => {
     e.preventDefault();
     if (!selectedProduct || quantity <= 0) return;
     try {
-      await addPurchase(selectedProduct, quantity, unitPrice, supplierName || undefined, notes || undefined);
+      await addPurchase(selectedProduct, quantity, Number(unitPrice), supplierName || undefined, notes || undefined);
       setShowModal(false);
       resetForm();
     } catch (err) {
@@ -306,7 +306,7 @@ export const PurchasesTab: React.FC = () => {
   const resetForm = () => {
     setSelectedProduct('');
     setQuantity(1);
-    setUnitPrice(0);
+    setUnitPrice('');
     setSupplierName('');
     setNotes('');
   };
@@ -425,7 +425,8 @@ export const PurchasesTab: React.FC = () => {
                 min="0"
                 step="0.01"
                 value={unitPrice} 
-                onChange={(e) => setUnitPrice(Number(e.target.value))}
+                onChange={(e) => setUnitPrice(e.target.value)}
+                placeholder="0"
                 required
                 className="input-field text-center text-xl font-black py-4" 
               />
@@ -456,7 +457,7 @@ export const PurchasesTab: React.FC = () => {
           {/* ملخص */}
           <div className="bg-success/10 p-5 rounded-2xl border border-success/20 flex justify-between items-center">
             <span className="font-bold text-muted-foreground">الإجمالي:</span>
-            <span className="text-3xl font-black text-success">{(quantity * unitPrice).toLocaleString()} {CURRENCY}</span>
+            <span className="text-3xl font-black text-success">{(quantity * Number(unitPrice)).toLocaleString()} {CURRENCY}</span>
           </div>
         </form>
       </FullScreenModal>
