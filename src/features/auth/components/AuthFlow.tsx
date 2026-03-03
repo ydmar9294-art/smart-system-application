@@ -345,8 +345,10 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
 
       <div className="bg-slate-900 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] pb-16 px-6 relative overflow-hidden flex flex-col items-center shrink-0">
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
-        <div className="mb-5 z-10 animate-float animate-logo-glow">
-          <AppLogo size={80} />
+        <div className="mb-5 z-10 animate-float animate-logo-glow relative">
+          <div className="relative rounded-[1.8rem] p-4 logo-glass-container">
+            <AppLogo size={80} />
+          </div>
         </div>
         <h1 className="text-3xl font-black mb-2 tracking-tight z-10 animate-title-gradient">النظام الذكي</h1>
         <p className="text-white/40 text-[11px] font-bold z-10 text-center leading-relaxed max-w-[200px] my-[5px]">
