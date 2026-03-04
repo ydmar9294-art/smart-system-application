@@ -5,7 +5,8 @@ import { EmployeeType, PaymentType } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Trophy, Star, TrendingUp, Users, DollarSign, Target, Award, Medal,
-  Package, Wallet, BarChart3, Truck, ShoppingCart, Loader2
+  Package, Wallet, BarChart3, Truck, ShoppingCart, Loader2, ClipboardCheck,
+  Calculator, Warehouse, UserCheck
 } from 'lucide-react';
 
 interface EmployeePerformance {
@@ -16,6 +17,8 @@ interface EmployeePerformance {
   totalCollections: number;
   salesCount: number;
   collectionsCount: number;
+  deliveriesReceived: number;
+  purchasesCount: number;
   score: number;
 }
 
@@ -35,7 +38,6 @@ export const PerformanceTab: React.FC = () => {
     fetchDistInv();
   }, []);
 
-  // أداء الموظفين
   const performance = useMemo(() => {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
@@ -49,25 +51,61 @@ export const PerformanceTab: React.FC = () => {
       const empCollections = monthPayments.filter(p => p.collectedBy === emp.id);
       const revenuePerEmployee = empSales.reduce((s, v) => s + v.grandTotal, 0);
       const collectionsPerEmployee = empCollections.reduce((s, p) => s + p.amount, 0);
+      const empDeliveries = (deliveries || []).filter((d: any) => d.distributor_id === emp.id);
 
-      const score = Math.round(
-        (revenuePerEmployee * 0.4) + (collectionsPerEmployee * 0.4) + (empSales.length * 100 * 0.2)
-      );
+      let score = 0;
+      switch (emp.employeeType) {
+        case EmployeeType.FIELD_AGENT:
+          // الموزع: مبيعات 40% + تحصيلات 35% + عدد الفواتير 15% + عدد الزبائن المخدومين 10%
+          const uniqueCustomers = new Set(empSales.map(s => s.customer_id)).size;
+          score = Math.round(
+            (revenuePerEmployee * 0.4) + (collectionsPerEmployee * 0.35) + (empSales.length * 100 * 0.15) + (uniqueCustomers * 200 * 0.1)
+          );
+          break;
+        case EmployeeType.ACCOUNTANT:
+          // المحاسب: تحصيلات 50% + عدد عمليات التحصيل 30% + دقة (بدون عمليات معكوسة) 20%
+          const reversedCount = monthPayments.filter(p => p.collectedBy === emp.id && p.isReversed).length;
+          const accuracyScore = empCollections.length > 0 ? ((empCollections.length - reversedCount) / empCollections.length) * 1000 : 0;
+          score = Math.round(
+            (collectionsPerEmployee * 0.5) + (empCollections.length * 150 * 0.3) + (accuracyScore * 0.2)
+          );
+          break;
+        case EmployeeType.SALES_MANAGER:
+          // مدير المبيعات: إجمالي مبيعات الفريق + نسبة التحصيل + تنوع الزبائن
+          const teamDistributors = users.filter(u => u.employeeType === EmployeeType.FIELD_AGENT);
+          const teamSales = monthSales.filter(s => teamDistributors.some(d => d.id === s.createdBy));
+          const teamRevenue = teamSales.reduce((s, v) => s + v.grandTotal, 0);
+          const teamCollections = monthPayments.filter(p => teamDistributors.some(d => d.id === p.collectedBy)).reduce((s, p) => s + p.amount, 0);
+          const collectionRate = teamRevenue > 0 ? (teamCollections / teamRevenue) : 0;
+          const teamCustomers = new Set(teamSales.map(s => s.customer_id)).size;
+          score = Math.round(
+            (teamRevenue * 0.35) + (collectionRate * 5000 * 0.35) + (teamCustomers * 200 * 0.15) + (teamSales.length * 100 * 0.15)
+          );
+          break;
+        case EmployeeType.WAREHOUSE_KEEPER:
+          // أمين المستودع: عمليات التسليم + دقة المخزون + سرعة الاستجابة
+          const warehouseDeliveries = empDeliveries.length;
+          const lowStockItems = products.filter(p => p.stock <= p.minStock && !p.isDeleted).length;
+          const totalProducts = products.filter(p => !p.isDeleted).length;
+          const stockHealthScore = totalProducts > 0 ? ((totalProducts - lowStockItems) / totalProducts) * 1000 : 0;
+          score = Math.round(
+            (warehouseDeliveries * 300 * 0.4) + (stockHealthScore * 0.35) + (empSales.length * 100 * 0.25)
+          );
+          break;
+        default:
+          score = Math.round((revenuePerEmployee * 0.4) + (collectionsPerEmployee * 0.4) + (empSales.length * 100 * 0.2));
+      }
 
       return {
-        id: emp.id,
-        name: emp.name,
-        type: emp.employeeType as EmployeeType,
-        totalSales: revenuePerEmployee,
-        totalCollections: collectionsPerEmployee,
-        salesCount: empSales.length,
-        collectionsCount: empCollections.length,
-        score
+        id: emp.id, name: emp.name, type: emp.employeeType as EmployeeType,
+        totalSales: revenuePerEmployee, totalCollections: collectionsPerEmployee,
+        salesCount: empSales.length, collectionsCount: empCollections.length,
+        deliveriesReceived: empDeliveries.length, purchasesCount: 0, score
       };
     });
 
     return performanceData.sort((a, b) => b.score - a.score);
-  }, [users, sales, payments]);
+  }, [users, sales, payments, products, deliveries]);
 
   // إحصائيات المنشأة
   const orgStats = useMemo(() => {
@@ -78,25 +116,15 @@ export const PerformanceTab: React.FC = () => {
     const monthCash = monthSales.filter(s => s.paymentType === PaymentType.CASH).reduce((s, v) => s + v.grandTotal, 0);
     const monthCredit = monthSales.filter(s => s.paymentType === PaymentType.CREDIT).reduce((s, v) => s + v.grandTotal, 0);
     const monthCollections = payments.filter(p => p.timestamp >= monthStart && !p.isReversed).reduce((s, p) => s + p.amount, 0);
-    const totalDebt = customers.reduce((s, c) => s + Math.max(0, c.balance), 0);
-    const lowStockCount = products.filter(p => p.stock <= p.minStock && !p.isDeleted).length;
     const totalInventoryValue = products.filter(p => !p.isDeleted).reduce((s, p) => s + (p.costPrice * p.stock), 0);
-
-    // مخزون الموزعين
     const distInvValue = distributorInventory.reduce((s, item) => {
       const product = products.find(p => p.id === item.product_id);
       return s + (product ? product.costPrice * item.quantity : 0);
     }, 0);
 
-    return {
-      monthRevenue, monthCash, monthCredit, monthCollections, totalDebt,
-      lowStockCount, totalInventoryValue, distInvValue,
-      totalSalesCount: monthSales.length,
-      activeEmployees: users.filter(u => u.employeeType && u.isActive !== false).length,
-    };
-  }, [sales, payments, customers, products, distributorInventory, users]);
+    return { monthRevenue, monthCash, monthCredit, monthCollections, totalInventoryValue, distInvValue, totalSalesCount: monthSales.length };
+  }, [sales, payments, products, distributorInventory]);
 
-  // أداء الموزعين
   const distributors = performance.filter(e => e.type === EmployeeType.FIELD_AGENT);
   const salesManagers = performance.filter(e => e.type === EmployeeType.SALES_MANAGER);
   const accountants = performance.filter(e => e.type === EmployeeType.ACCOUNTANT);
@@ -122,7 +150,7 @@ export const PerformanceTab: React.FC = () => {
   return (
     <div className="space-y-3">
       {/* KPIs الشهرية */}
-      <div className="p-4 rounded-2xl" style={{ background: 'var(--card-glass-bg)', backdropFilter: 'blur(var(--glass-blur))', border: '1px solid var(--card-glass-border)', boxShadow: 'var(--glass-shadow)' }}>
+      <div className="p-4 rounded-2xl bg-card shadow-sm">
         <h3 className="font-black text-foreground text-sm mb-3 flex items-center gap-2">
           <BarChart3 size={16} className="text-primary" /> أداء المنشأة هذا الشهر
         </h3>
@@ -152,13 +180,13 @@ export const PerformanceTab: React.FC = () => {
 
       {/* ملخص المخزون */}
       <div className="grid grid-cols-2 gap-2">
-        <div className="p-3 rounded-2xl" style={{ background: 'var(--card-glass-bg)', border: '1px solid var(--card-glass-border)' }}>
+        <div className="p-3 rounded-2xl bg-card shadow-sm">
           <Package className="w-5 h-5 text-primary mb-1" />
-          <p className="text-[9px] text-muted-foreground font-bold">قيمة المخزون الرئيسي</p>
+          <p className="text-[9px] text-muted-foreground font-bold">المخزون الرئيسي</p>
           <p className="text-sm font-black text-foreground">{orgStats.totalInventoryValue.toLocaleString()}</p>
           <p className="text-[9px] text-muted-foreground">{CURRENCY}</p>
         </div>
-        <div className="p-3 rounded-2xl" style={{ background: 'var(--card-glass-bg)', border: '1px solid var(--card-glass-border)' }}>
+        <div className="p-3 rounded-2xl bg-card shadow-sm">
           <Truck className="w-5 h-5 text-blue-600 dark:text-blue-400 mb-1" />
           <p className="text-[9px] text-muted-foreground font-bold">مخزون الموزعين</p>
           <p className="text-sm font-black text-foreground">{orgStats.distInvValue.toLocaleString()}</p>
@@ -169,9 +197,7 @@ export const PerformanceTab: React.FC = () => {
       {/* أفضل موظف */}
       {topPerformer && topPerformer.score > 0 && (
         <div className="bg-gradient-to-br from-primary to-primary/80 p-4 rounded-2xl text-primary-foreground shadow-lg relative overflow-hidden">
-          <div className="absolute top-2 left-2 opacity-20">
-            <Trophy size={50} />
-          </div>
+          <div className="absolute top-2 left-2 opacity-20"><Trophy size={50} /></div>
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
@@ -202,64 +228,69 @@ export const PerformanceTab: React.FC = () => {
 
       {/* أداء الموزعين */}
       {distributors.length > 0 && (
-        <PerformanceSection title="أداء الموزعين" icon={<Truck size={16} />} employees={distributors} getRankIcon={getRankIcon} />
+        <PerformanceSection title="أداء الموزعين" icon={<Truck size={16} />} employees={distributors} getRankIcon={getRankIcon}
+          criteria={[
+            { label: 'مبيعات 40%', icon: <DollarSign size={12} className="text-success" /> },
+            { label: 'تحصيل 35%', icon: <Wallet size={12} className="text-primary" /> },
+            { label: 'فواتير 15%', icon: <ClipboardCheck size={12} className="text-warning" /> },
+            { label: 'زبائن 10%', icon: <UserCheck size={12} className="text-blue-500" /> },
+          ]}
+        />
       )}
 
       {/* أداء مديري المبيعات */}
       {salesManagers.length > 0 && (
-        <PerformanceSection title="مديرو المبيعات" icon={<Target size={16} />} employees={salesManagers} getRankIcon={getRankIcon} />
+        <PerformanceSection title="مديرو المبيعات" icon={<Target size={16} />} employees={salesManagers} getRankIcon={getRankIcon}
+          criteria={[
+            { label: 'مبيعات الفريق 35%', icon: <DollarSign size={12} className="text-success" /> },
+            { label: 'نسبة التحصيل 35%', icon: <Wallet size={12} className="text-primary" /> },
+            { label: 'تنوع الزبائن 15%', icon: <Users size={12} className="text-blue-500" /> },
+            { label: 'عدد العمليات 15%', icon: <ClipboardCheck size={12} className="text-warning" /> },
+          ]}
+        />
       )}
 
       {/* المحاسبين */}
       {accountants.length > 0 && (
-        <PerformanceSection title="المحاسبون" icon={<DollarSign size={16} />} employees={accountants} getRankIcon={getRankIcon} />
+        <PerformanceSection title="المحاسبون" icon={<Calculator size={16} />} employees={accountants} getRankIcon={getRankIcon}
+          criteria={[
+            { label: 'تحصيلات 50%', icon: <Wallet size={12} className="text-success" /> },
+            { label: 'عمليات 30%', icon: <ClipboardCheck size={12} className="text-primary" /> },
+            { label: 'دقة 20%', icon: <Target size={12} className="text-warning" /> },
+          ]}
+        />
       )}
 
       {/* أمناء المستودعات */}
       {warehouseKeepers.length > 0 && (
-        <PerformanceSection title="أمناء المستودعات" icon={<Package size={16} />} employees={warehouseKeepers} getRankIcon={getRankIcon} />
+        <PerformanceSection title="أمناء المستودعات" icon={<Warehouse size={16} />} employees={warehouseKeepers} getRankIcon={getRankIcon}
+          criteria={[
+            { label: 'تسليمات 40%', icon: <Truck size={12} className="text-success" /> },
+            { label: 'صحة المخزون 35%', icon: <Package size={12} className="text-primary" /> },
+            { label: 'عمليات 25%', icon: <ClipboardCheck size={12} className="text-warning" /> },
+          ]}
+        />
       )}
 
       {performance.length === 0 && (
-        <div className="p-8 rounded-2xl text-center" style={{ background: 'var(--card-glass-bg)', border: '1px solid var(--card-glass-border)' }}>
+        <div className="p-8 rounded-2xl text-center bg-card shadow-sm">
           <Users size={40} className="mx-auto text-muted-foreground mb-3" />
           <p className="text-muted-foreground font-bold text-sm">لا يوجد موظفين لعرض أدائهم</p>
-        </div>
-      )}
-
-      {/* معايير التقييم */}
-      {performance.length > 0 && (
-        <div className="bg-muted p-4 rounded-2xl border">
-          <h4 className="font-black text-foreground mb-2 flex items-center gap-2 text-sm">
-            <Star size={14} className="text-warning" /> معايير التقييم
-          </h4>
-          <div className="grid grid-cols-3 gap-2 text-[10px]">
-            <div className="flex items-center gap-1">
-              <DollarSign size={12} className="text-success" />
-              <span className="text-muted-foreground">مبيعات 40%</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Target size={12} className="text-primary" />
-              <span className="text-muted-foreground">تحصيل 40%</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <TrendingUp size={12} className="text-warning" />
-              <span className="text-muted-foreground">فواتير 20%</span>
-            </div>
-          </div>
         </div>
       )}
     </div>
   );
 };
 
+/* ========== Performance Section ========== */
 const PerformanceSection: React.FC<{
   title: string;
   icon: React.ReactNode;
   employees: EmployeePerformance[];
   getRankIcon: (rank: number) => React.ReactNode;
-}> = ({ title, icon, employees, getRankIcon }) => (
-  <div className="p-4 rounded-2xl" style={{ background: 'var(--card-glass-bg)', backdropFilter: 'blur(var(--glass-blur))', border: '1px solid var(--card-glass-border)' }}>
+  criteria: { label: string; icon: React.ReactNode }[];
+}> = ({ title, icon, employees, getRankIcon, criteria }) => (
+  <div className="p-4 rounded-2xl bg-card shadow-sm">
     <h3 className="font-black text-foreground mb-3 flex items-center gap-2 text-sm">
       {icon} {title}
     </h3>
@@ -285,6 +316,20 @@ const PerformanceSection: React.FC<{
           </div>
         </div>
       ))}
+    </div>
+    {/* معايير التقييم لهذا الدور */}
+    <div className="mt-3 bg-muted/50 p-3 rounded-xl">
+      <p className="text-[10px] font-bold text-foreground mb-2 flex items-center gap-1">
+        <Star size={10} className="text-warning" /> معايير التقييم
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {criteria.map((c, i) => (
+          <div key={i} className="flex items-center gap-1 text-[9px] text-muted-foreground">
+            {c.icon}
+            <span>{c.label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   </div>
 );
