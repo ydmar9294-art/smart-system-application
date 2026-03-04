@@ -428,7 +428,7 @@ const SubscriptionTab: React.FC = () => {
               <label className="text-xs font-bold text-muted-foreground block mb-2">
                 📸 صورة إشعار الدفع (شام كاش)
               </label>
-              <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileSelect} className="hidden" />
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
               
               {receiptPreview ? (
                 <div className="relative">
