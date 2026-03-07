@@ -1,13 +1,6 @@
 /**
  * InvoicePrint — builds a CLEAN HTML string from data (never from DOM.innerHTML).
- *
- * ROOT CAUSE FIX:
- *   The previous implementation used `printRef.current.innerHTML` which sends
- *   Tailwind utility classes, React event bindings, and browser-computed styles
- *   into the @capgo/capacitor-printer WebView → crash on Android APK.
- *
- *   This version builds the print HTML entirely from the data model using
- *   plain inline-styled HTML — guaranteed to render in any WebView.
+ * Supports discount display in preview and PDF export.
  */
 import React, { useState, useEffect } from 'react';
 import { Share2, Download, Loader2, Receipt, CheckCircle2 } from 'lucide-react';
@@ -42,6 +35,10 @@ interface InvoicePrintProps {
   date: Date;
   items?: InvoiceItem[];
   grandTotal: number;
+  subtotal?: number;
+  discountType?: 'percentage' | 'fixed' | null;
+  discountPercentage?: number;
+  discountValue?: number;
   paidAmount?: number;
   remaining?: number;
   notes?: string;
@@ -61,6 +58,10 @@ function buildInvoiceHtml(params: {
   paymentType?: 'CASH' | 'CREDIT';
   items: InvoiceItem[];
   grandTotal: number;
+  subtotal?: number;
+  discountType?: 'percentage' | 'fixed' | null;
+  discountPercentage?: number;
+  discountValue?: number;
   paidAmount?: number;
   remaining?: number;
   notes?: string;
@@ -68,7 +69,8 @@ function buildInvoiceHtml(params: {
   const {
     title, orgName, legalInfo, invoiceId, date,
     customerName, invoiceType, paymentType,
-    items, grandTotal, paidAmount, remaining, notes
+    items, grandTotal, subtotal, discountType, discountPercentage, discountValue,
+    paidAmount, remaining, notes
   } = params;
 
   const dateStr = date.toLocaleDateString('ar-SA');
@@ -111,9 +113,23 @@ function buildInvoiceHtml(params: {
       </table>
     </div>` : '';
 
+  // Discount HTML for PDF
+  const hasDiscount = discountValue && discountValue > 0;
+  const discountHtml = hasDiscount ? `
+    <div style="font-size:11px;margin:5px 0;">
+      <div style="display:flex;justify-content:space-between;margin:3px 0;">
+        <span>المجموع قبل الخصم:</span><span>${escapeNumber(subtotal || grandTotal + discountValue)} ${escapeHtml(CURRENCY)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin:3px 0;color:#7c3aed;font-weight:bold;">
+        <span>الخصم ${discountType === 'percentage' ? `(${(discountPercentage || 0).toFixed(1)}%)` : ''}:</span>
+        <span>-${escapeNumber(discountValue)} ${escapeHtml(CURRENCY)}</span>
+      </div>
+    </div>` : '';
+
   const totalsHtml = `
-    <div style="font-size:14px;font-weight:bold;text-align:center;margin:10px 0;">
-      ${invoiceType === 'collection' ? 'المبلغ المحصّل' : 'الإجمالي'}: ${escapeNumber(grandTotal)} ${escapeHtml(CURRENCY)}
+    ${discountHtml}
+    <div style="font-size:14px;font-weight:bold;text-align:center;margin:10px 0;${hasDiscount ? 'border-top:1px dashed #7c3aed;padding-top:8px;' : ''}">
+      ${invoiceType === 'collection' ? 'المبلغ المحصّل' : 'الإجمالي الصافي'}: ${escapeNumber(grandTotal)} ${escapeHtml(CURRENCY)}
     </div>
     ${invoiceType === 'sale' && paymentType === 'CREDIT' && paidAmount !== undefined ? `
       <div style="display:flex;justify-content:space-between;font-size:11px;margin:3px 0;">
@@ -174,6 +190,10 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
   date,
   items = [],
   grandTotal,
+  subtotal,
+  discountType,
+  discountPercentage,
+  discountValue,
   paidAmount,
   remaining,
   notes,
@@ -192,7 +212,6 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
     const fetchLegalInfo = async () => {
       setLoading(true);
       try {
-        // Try cached org info first for instant render
         const cached = await getCachedOrgInfo();
         if (cached) {
           setOrgName(cached.orgName);
@@ -200,7 +219,6 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           setLoading(false);
         }
 
-        // Background refresh from server if online
         if (!navigator.onLine) {
           setLoading(false);
           return;
@@ -220,7 +238,6 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         if (orgRes.data) setOrgName(orgRes.data.name);
         if (legalRes.data) setLegalInfo(legalRes.data);
         
-        // Cache for offline use
         try {
           await cacheOrgInfo(orgRes.data?.name || '', legalRes.data || null);
         } catch { /* ignore */ }
@@ -235,21 +252,21 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
 
   const getInvoiceTitle = () => {
     switch (invoiceType) {
-      case 'sale':return 'فاتورة مبيعات';
-      case 'return':return 'إشعار مرتجع';
-      case 'collection':return 'سند قبض';
-      default:return 'فاتورة';
+      case 'sale': return 'فاتورة مبيعات';
+      case 'return': return 'إشعار مرتجع';
+      case 'collection': return 'سند قبض';
+      default: return 'فاتورة';
     }
   };
 
-  // ── Generate PDF once, cache it ──────────────────────────────────────────
   const ensurePdf = async (): Promise<string> => {
     if (pdfBase64) return pdfBase64;
 
     const html = buildInvoiceHtml({
       title: getInvoiceTitle(), orgName, legalInfo, invoiceId,
       date, customerName, invoiceType, paymentType,
-      items, grandTotal, paidAmount, remaining, notes
+      items, grandTotal, subtotal, discountType, discountPercentage, discountValue,
+      paidAmount, remaining, notes
     });
 
     const { generateInvoicePdf } = await import('@/lib/invoicePdfService');
@@ -270,7 +287,6 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
     }
   };
 
-  // Auto-generate when modal opens (after legal info loads)
   useEffect(() => {
     if (!loading) handleGeneratePdf();
   }, [loading]); // eslint-disable-line
@@ -303,6 +319,8 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
     }
   };
 
+  const hasDiscount = discountValue && discountValue > 0;
+
   if (loading) {
     return (
       <FullScreenModal isOpen={true} onClose={onClose} title="تحميل الفاتورة"
@@ -312,7 +330,6 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           <p className="font-bold text-muted-foreground">جارٍ تحميل بيانات الفاتورة...</p>
         </div>
       </FullScreenModal>);
-
   }
 
   return (
@@ -320,32 +337,25 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
     title="تصدير الفاتورة" icon={<Receipt size={24} />} headerColor="primary"
     footer={
     <div className="space-y-3">
-          {/* PDF generation indicator */}
           {generating &&
       <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-2">
               <Loader2 className="w-4 h-4 animate-spin" />
               جارٍ إنشاء ملف PDF...
             </div>
       }
-
-          {/* Share button */}
           <button
         onClick={handleShare}
         disabled={generating || actionLoading !== null}
         className="w-full bg-primary text-primary-foreground font-black py-5 rounded-2xl flex items-center justify-center gap-3 hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-50">
-
             {actionLoading === 'share' ?
         <><Loader2 className="w-6 h-6 animate-spin" /> جارٍ المشاركة...</> :
         <><Share2 className="w-6 h-6" /> مشاركة الفاتورة</>
         }
           </button>
-
-          {/* Save button */}
           <button
         onClick={handleSave}
         disabled={generating || actionLoading !== null}
         className="w-full bg-muted text-foreground font-black py-5 rounded-2xl flex items-center justify-center gap-3 hover:bg-muted/80 transition-all active:scale-[0.98] disabled:opacity-50">
-
             {actionLoading === 'save' ?
         <><Loader2 className="w-6 h-6 animate-spin" /> جارٍ الحفظ...</> :
         savedOk ?
@@ -356,7 +366,6 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         </div>
     }>
 
-      {/* PDF ready indicator */}
       {pdfBase64 && !generating &&
       <div className="flex items-center justify-center gap-2 text-sm text-green-600 mb-3">
           <CheckCircle2 className="w-4 h-4" />
@@ -364,7 +373,6 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         </div>
       }
 
-      {/* Invoice preview — always rendered from data, Tailwind OK here */}
       <p className="text-sm text-muted-foreground text-center mb-4">معاينة الفاتورة</p>
       <div className="bg-card border rounded-2xl p-5 text-sm" style={{ fontFamily: 'Segoe UI, Tahoma, sans-serif' }}>
         {/* Header */}
@@ -435,8 +443,21 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         }
 
         <div className="text-sm space-y-2">
-          <div className="text-center font-black text-lg py-3 bg-muted rounded-xl">
-            {invoiceType === 'collection' ? 'المبلغ المحصّل' : 'الإجمالي'}: {grandTotal.toLocaleString()} {CURRENCY}
+          {/* Discount display */}
+          {hasDiscount && (
+            <>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">المجموع قبل الخصم</span>
+                <span className="font-bold">{(subtotal || grandTotal + (discountValue || 0)).toLocaleString()} {CURRENCY}</span>
+              </div>
+              <div className="flex justify-between text-xs text-purple-600 dark:text-purple-400">
+                <span>الخصم {discountType === 'percentage' ? `(${(discountPercentage || 0).toFixed(1)}%)` : ''}</span>
+                <span className="font-bold">-{(discountValue || 0).toLocaleString()} {CURRENCY}</span>
+              </div>
+            </>
+          )}
+          <div className={`text-center font-black text-lg py-3 rounded-xl ${hasDiscount ? 'bg-purple-500/10 text-purple-700 dark:text-purple-300' : 'bg-muted'}`}>
+            {invoiceType === 'collection' ? 'المبلغ المحصّل' : 'الإجمالي الصافي'}: {grandTotal.toLocaleString()} {CURRENCY}
           </div>
           {paidAmount !== undefined && invoiceType === 'sale' && paymentType === 'CREDIT' &&
           <div className="grid grid-cols-2 gap-3 mt-3">
@@ -460,7 +481,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
 
         <div className="text-center text-xs text-muted-foreground mt-6 pt-4 border-t border-dashed">
           <p>شكراً لتعاملكم معنا</p>
-          <p className="mt-1">Smart  System </p>
+          <p className="mt-1">Smart System</p>
         </div>
       </div>
     </FullScreenModal>);
