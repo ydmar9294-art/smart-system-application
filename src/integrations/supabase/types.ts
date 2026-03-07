@@ -746,6 +746,60 @@ export type Database = {
           },
         ]
       }
+      price_change_history: {
+        Row: {
+          changed_by: string
+          changed_by_name: string
+          created_at: string
+          field_changed: string
+          id: string
+          new_value: number
+          old_value: number
+          organization_id: string
+          product_id: string
+          product_name: string
+        }
+        Insert: {
+          changed_by: string
+          changed_by_name: string
+          created_at?: string
+          field_changed: string
+          id?: string
+          new_value?: number
+          old_value?: number
+          organization_id: string
+          product_id: string
+          product_name: string
+        }
+        Update: {
+          changed_by?: string
+          changed_by_name?: string
+          created_at?: string
+          field_changed?: string
+          id?: string
+          new_value?: number
+          old_value?: number
+          organization_id?: string
+          product_id?: string
+          product_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_change_history_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_change_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           base_price: number
@@ -1073,6 +1127,9 @@ export type Database = {
           created_by: string | null
           customer_id: string
           customer_name: string
+          discount_percentage: number | null
+          discount_type: string | null
+          discount_value: number | null
           grand_total: number
           id: string
           is_voided: boolean
@@ -1087,6 +1144,9 @@ export type Database = {
           created_by?: string | null
           customer_id: string
           customer_name: string
+          discount_percentage?: number | null
+          discount_type?: string | null
+          discount_value?: number | null
           grand_total?: number
           id?: string
           is_voided?: boolean
@@ -1101,6 +1161,9 @@ export type Database = {
           created_by?: string | null
           customer_id?: string
           customer_name?: string
+          discount_percentage?: number | null
+          discount_type?: string | null
+          discount_value?: number | null
           grand_total?: number
           id?: string
           is_voided?: boolean
