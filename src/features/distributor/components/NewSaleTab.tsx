@@ -11,7 +11,9 @@ import {
   Loader2,
   Package,
   AlertCircle,
-  WifiOff
+  WifiOff,
+  Percent,
+  Tag
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { Customer } from '@/types';
@@ -36,6 +38,7 @@ interface NewSaleTabProps {
 }
 
 type PaymentType = 'CASH' | 'CREDIT';
+type DiscountType = 'percentage' | 'fixed' | null;
 
 const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventory, onQueueAction, isOnline }) => {
   const { addNotification } = useApp();
@@ -46,6 +49,10 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
   const [success, setSuccess] = useState(false);
   const [paymentType, setPaymentType] = useState<PaymentType>('CREDIT');
   
+  // Discount state
+  const [discountType, setDiscountType] = useState<DiscountType>(null);
+  const [discountInput, setDiscountInput] = useState('');
+  
   // Print state
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [lastSaleData, setLastSaleData] = useState<{
@@ -53,6 +60,10 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
     customerName: string;
     items: CartItem[];
     grandTotal: number;
+    subtotal: number;
+    discountType: DiscountType;
+    discountPercentage: number;
+    discountValue: number;
     paymentType: PaymentType;
   } | null>(null);
 
@@ -104,7 +115,15 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
     setCart(cart.filter(item => item.product_id !== productId));
   };
 
-  const grandTotal = cart.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+  const subtotal = cart.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+  
+  // Calculate discount
+  const discountPercentage = discountType === 'percentage' ? Math.min(100, Math.max(0, Number(discountInput) || 0)) : 
+    subtotal > 0 ? ((Number(discountInput) || 0) / subtotal) * 100 : 0;
+  const discountValue = discountType === 'percentage' 
+    ? subtotal * (discountPercentage / 100)
+    : Math.min(subtotal, Math.max(0, Number(discountInput) || 0));
+  const grandTotal = Math.max(0, subtotal - discountValue);
 
   const handleCreateSale = async () => {
     if (!selectedCustomer?.id || cart.length === 0) return;
@@ -129,6 +148,9 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
         customerId: selectedCustomer.id,
         items: saleItems,
         paymentType,
+        discountType: discountType || undefined,
+        discountPercentage: discountPercentage || 0,
+        discountValue: discountValue || 0,
       }, inventoryUpdates);
 
       // Store sale data for printing
@@ -137,11 +159,17 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
         customerName: selectedCustomer.name,
         items: [...cart],
         grandTotal,
+        subtotal,
+        discountType,
+        discountPercentage,
+        discountValue,
         paymentType
       });
       
       setCart([]);
       setPaymentType('CREDIT');
+      setDiscountType(null);
+      setDiscountInput('');
       setSuccess(true);
       setShowPrintModal(true);
       
@@ -181,6 +209,10 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
             unit: item.unit
           }))}
           grandTotal={lastSaleData.grandTotal}
+          subtotal={lastSaleData.subtotal}
+          discountType={lastSaleData.discountType}
+          discountPercentage={lastSaleData.discountPercentage}
+          discountValue={lastSaleData.discountValue}
           paidAmount={lastSaleData.paymentType === 'CASH' ? lastSaleData.grandTotal : 0}
           remaining={lastSaleData.paymentType === 'CASH' ? 0 : lastSaleData.grandTotal}
           paymentType={lastSaleData.paymentType}
@@ -300,12 +332,79 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-muted-foreground">الإجمالي</span>
-            <span className="font-black text-blue-600 text-2xl">
-              {grandTotal.toLocaleString('ar-SA')} ل.س
-            </span>
+          {/* Discount Section */}
+          <div className="space-y-2">
+            <label className="text-xs font-black text-muted-foreground uppercase">الخصم (اختياري)</label>
+            <div className="grid grid-cols-3 gap-2">
+              <button type="button" onClick={() => { setDiscountType(null); setDiscountInput(''); }}
+                className={`py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1 transition-all border-2 ${
+                  discountType === null
+                    ? 'bg-muted border-primary text-primary'
+                    : 'bg-muted text-muted-foreground border-border'
+                }`}>
+                بدون
+              </button>
+              <button type="button" onClick={() => { setDiscountType('percentage'); setDiscountInput(''); }}
+                className={`py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1 transition-all border-2 ${
+                  discountType === 'percentage'
+                    ? 'bg-purple-500 text-white border-purple-500 shadow-lg'
+                    : 'bg-muted text-muted-foreground border-border'
+                }`}>
+                <Percent className="w-3.5 h-3.5" /> نسبة
+              </button>
+              <button type="button" onClick={() => { setDiscountType('fixed'); setDiscountInput(''); }}
+                className={`py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1 transition-all border-2 ${
+                  discountType === 'fixed'
+                    ? 'bg-purple-500 text-white border-purple-500 shadow-lg'
+                    : 'bg-muted text-muted-foreground border-border'
+                }`}>
+                <Tag className="w-3.5 h-3.5" /> مبلغ
+              </button>
+            </div>
+            {discountType && (
+              <div className="relative">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  max={discountType === 'percentage' ? '100' : String(subtotal)}
+                  value={discountInput}
+                  onChange={(e) => setDiscountInput(e.target.value)}
+                  placeholder={discountType === 'percentage' ? 'نسبة الخصم %' : 'قيمة الخصم'}
+                  className="w-full bg-muted border border-border rounded-xl px-4 py-3 font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-base"
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-bold">
+                  {discountType === 'percentage' ? '%' : 'ل.س'}
+                </span>
+              </div>
+            )}
           </div>
+
+          {/* Totals */}
+          <div className="space-y-2">
+            {discountValue > 0 && (
+              <>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">المجموع قبل الخصم</span>
+                  <span className="font-bold text-foreground">{subtotal.toLocaleString('ar-SA')} ل.س</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                    <Tag className="w-3.5 h-3.5" />
+                    الخصم {discountType === 'percentage' ? `(${discountPercentage.toFixed(1)}%)` : ''}
+                  </span>
+                  <span className="font-bold text-purple-600 dark:text-purple-400">-{discountValue.toLocaleString('ar-SA')} ل.س</span>
+                </div>
+              </>
+            )}
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-muted-foreground">الإجمالي الصافي</span>
+              <span className="font-black text-blue-600 text-2xl">
+                {grandTotal.toLocaleString('ar-SA')} ل.س
+              </span>
+            </div>
+          </div>
+
           <button onClick={handleCreateSale} disabled={loading || !selectedCustomer}
             className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none hover:bg-blue-700 transition-all">
             {loading ? (

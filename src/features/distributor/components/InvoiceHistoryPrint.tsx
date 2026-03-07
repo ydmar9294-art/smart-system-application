@@ -44,6 +44,11 @@ interface InvoiceSnapshot {
   org_name: string | null;
   legal_info: LegalInfo | null;
   invoice_date: string;
+  // Discount fields
+  discount_type?: 'percentage' | 'fixed' | null;
+  discount_percentage?: number;
+  discount_value?: number;
+  subtotal?: number;
 }
 
 interface InvoiceHistoryPrintProps {
@@ -51,7 +56,6 @@ interface InvoiceHistoryPrintProps {
   onClose: () => void;
 }
 
-// ── Build the same 80mm HTML as InvoicePrint ─────────────────────────────────
 function buildHistoryHtml(invoice: InvoiceSnapshot, title: string): string {
   const invoiceDate = new Date(invoice.invoice_date);
   const dateStr = invoiceDate.toLocaleDateString('ar-SA');
@@ -92,9 +96,22 @@ function buildHistoryHtml(invoice: InvoiceSnapshot, title: string): string {
       </table>
     </div>` : '';
 
+  const hasDiscount = invoice.discount_value && invoice.discount_value > 0;
+  const discountHtml = hasDiscount ? `
+    <div style="font-size:11px;margin:5px 0;">
+      <div style="display:flex;justify-content:space-between;margin:3px 0;">
+        <span>المجموع قبل الخصم:</span><span>${escapeNumber(invoice.subtotal || invoice.grand_total + (invoice.discount_value || 0))} ${escapeHtml(CURRENCY)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin:3px 0;color:#7c3aed;font-weight:bold;">
+        <span>الخصم ${invoice.discount_type === 'percentage' ? `(${(invoice.discount_percentage || 0).toFixed(1)}%)` : ''}:</span>
+        <span>-${escapeNumber(invoice.discount_value || 0)} ${escapeHtml(CURRENCY)}</span>
+      </div>
+    </div>` : '';
+
   const totalsHtml = `
-    <div style="font-size:14px;font-weight:bold;text-align:center;margin:10px 0;">
-      ${invoice.invoice_type === 'collection' ? 'المبلغ المحصّل' : 'الإجمالي'}: ${escapeNumber(invoice.grand_total)} ${escapeHtml(CURRENCY)}
+    ${discountHtml}
+    <div style="font-size:14px;font-weight:bold;text-align:center;margin:10px 0;${hasDiscount ? 'border-top:1px dashed #7c3aed;padding-top:8px;' : ''}">
+      ${invoice.invoice_type === 'collection' ? 'المبلغ المحصّل' : 'الإجمالي الصافي'}: ${escapeNumber(invoice.grand_total)} ${escapeHtml(CURRENCY)}
     </div>
     ${invoice.invoice_type === 'sale' && invoice.payment_type === 'CREDIT' ? `
       <div style="display:flex;justify-content:space-between;font-size:11px;margin:3px 0;">
@@ -144,7 +161,6 @@ function buildHistoryHtml(invoice: InvoiceSnapshot, title: string): string {
 </html>`;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
 const InvoiceHistoryPrint: React.FC<InvoiceHistoryPrintProps> = ({ invoice, onClose }) => {
   const [generating, setGenerating]       = useState(false);
   const [pdfBase64, setPdfBase64]         = useState<string | null>(null);
@@ -161,7 +177,6 @@ const InvoiceHistoryPrint: React.FC<InvoiceHistoryPrintProps> = ({ invoice, onCl
     }
   };
 
-  // Auto-generate PDF on mount
   useEffect(() => {
     const generate = async () => {
       setGenerating(true);
@@ -223,48 +238,35 @@ const InvoiceHistoryPrint: React.FC<InvoiceHistoryPrintProps> = ({ invoice, onCl
   };
 
   const invoiceDate = new Date(invoice.invoice_date);
+  const hasDiscount = invoice.discount_value && invoice.discount_value > 0;
 
   const footerContent = (
     <div className="space-y-3">
-      <button
-        onClick={handleShare}
-        disabled={generating || actionLoading !== null}
-        className="w-full bg-primary text-primary-foreground font-black py-4 rounded-2xl flex items-center justify-center gap-3 hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-50"
-      >
+      <button onClick={handleShare} disabled={generating || actionLoading !== null}
+        className="w-full bg-primary text-primary-foreground font-black py-4 rounded-2xl flex items-center justify-center gap-3 hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-50">
         {actionLoading === 'share'
           ? <><Loader2 className="w-6 h-6 animate-spin" /> جارٍ المشاركة...</>
-          : <><Share2 className="w-6 h-6" /> مشاركة الفاتورة</>
-        }
+          : <><Share2 className="w-6 h-6" /> مشاركة الفاتورة</>}
       </button>
-      <button
-        onClick={handleSave}
-        disabled={generating || actionLoading !== null}
-        className="w-full bg-muted text-foreground font-black py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-muted/80 transition-all active:scale-[0.98] disabled:opacity-50"
-      >
+      <button onClick={handleSave} disabled={generating || actionLoading !== null}
+        className="w-full bg-muted text-foreground font-black py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-muted/80 transition-all active:scale-[0.98] disabled:opacity-50">
         {actionLoading === 'save'
           ? <><Loader2 className="w-6 h-6 animate-spin" /> جارٍ الحفظ...</>
           : savedOk
             ? <><CheckCircle2 className="w-6 h-6 text-green-600" /> تم الحفظ بنجاح!</>
-            : <><Download className="w-6 h-6" /> حفظ في جهازك</>
-        }
+            : <><Download className="w-6 h-6" /> حفظ في جهازك</>}
       </button>
     </div>
   );
 
   return (
-    <FullScreenModal
-      isOpen={true}
-      onClose={onClose}
+    <FullScreenModal isOpen={true} onClose={onClose}
       title={`تصدير الفاتورة - ${invoice.invoice_number}`}
       icon={<FileText className="w-5 h-5" />}
-      headerColor="primary"
-      footer={footerContent}
-    >
-      {/* PDF generation status */}
+      headerColor="primary" footer={footerContent}>
       {generating && (
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-2">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          جارٍ إنشاء ملف PDF...
+          <Loader2 className="w-4 h-4 animate-spin" /> جارٍ إنشاء ملف PDF...
         </div>
       )}
       {pdfBase64 && !generating && (
@@ -280,12 +282,8 @@ const InvoiceHistoryPrint: React.FC<InvoiceHistoryPrintProps> = ({ invoice, onCl
         </div>
       )}
 
-      {/* Invoice Preview */}
       <p className="text-sm text-muted-foreground text-center">معاينة الفاتورة</p>
-      <div
-        className="bg-background border rounded-xl p-4 text-xs"
-        style={{ fontFamily: 'Segoe UI, Tahoma, sans-serif' }}
-      >
+      <div className="bg-background border rounded-xl p-4 text-xs" style={{ fontFamily: 'Segoe UI, Tahoma, sans-serif' }}>
         <div className="text-center border-b border-dashed pb-3 mb-3">
           <div className="text-base font-bold mb-2">{invoice.org_name || 'اسم المنشأة'}</div>
           {invoice.legal_info && (
@@ -343,8 +341,20 @@ const InvoiceHistoryPrint: React.FC<InvoiceHistoryPrintProps> = ({ invoice, onCl
         )}
 
         <div className="text-[11px] space-y-1">
-          <div className="text-center font-bold text-sm py-2">
-            {invoice.invoice_type === 'collection' ? 'المبلغ المحصّل' : 'الإجمالي'}: {Number(invoice.grand_total).toLocaleString()} {CURRENCY}
+          {hasDiscount && (
+            <>
+              <div className="flex justify-between">
+                <span>المجموع قبل الخصم:</span>
+                <span>{Number(invoice.subtotal || invoice.grand_total + (invoice.discount_value || 0)).toLocaleString()} {CURRENCY}</span>
+              </div>
+              <div className="flex justify-between text-purple-600 font-bold">
+                <span>الخصم {invoice.discount_type === 'percentage' ? `(${(invoice.discount_percentage || 0).toFixed(1)}%)` : ''}:</span>
+                <span>-{Number(invoice.discount_value || 0).toLocaleString()} {CURRENCY}</span>
+              </div>
+            </>
+          )}
+          <div className={`text-center font-bold text-sm py-2 ${hasDiscount ? 'border-t border-purple-300 mt-1' : ''}`}>
+            {invoice.invoice_type === 'collection' ? 'المبلغ المحصّل' : 'الإجمالي الصافي'}: {Number(invoice.grand_total).toLocaleString()} {CURRENCY}
           </div>
           {invoice.invoice_type === 'sale' && invoice.payment_type === 'CREDIT' && (
             <>
@@ -363,7 +373,7 @@ const InvoiceHistoryPrint: React.FC<InvoiceHistoryPrintProps> = ({ invoice, onCl
 
         <div className="text-center text-[9px] text-muted-foreground mt-4 pt-3 border-t border-dashed">
           <p>شكراً لتعاملكم معنا</p>
-          <p className="mt-1">Smart Sales System</p>
+          <p className="mt-1">Smart System</p>
         </div>
       </div>
     </FullScreenModal>
