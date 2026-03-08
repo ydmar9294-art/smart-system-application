@@ -13,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { queryKeys } from '@/lib/queryClient';
 import { logger } from '@/lib/logger';
+import { performanceMonitor } from '@/utils/monitoring/performanceMonitor';
 
 const FALLBACK_POLL_MS = 30_000; // 30s fallback polling if realtime fails
 const MAX_RECONNECT_ATTEMPTS = 5;
