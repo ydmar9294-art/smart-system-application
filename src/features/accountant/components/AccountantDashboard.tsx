@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   FileText, ShoppingCart, RotateCcw, Wallet, Users,
   BarChart3, LogOut, MessageCircle, Home, PieChart, Settings

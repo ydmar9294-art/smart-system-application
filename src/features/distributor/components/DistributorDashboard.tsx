@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { 
   FileText, RotateCcw, Wallet, Users, LogOut, UserPlus, X, User, Phone,

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, lazy, Suspense } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   Package, LogOut, LayoutDashboard, Truck, RotateCcw, ShoppingCart,
   MessageCircle, AlertTriangle, ArrowDownCircle, ArrowUpCircle, ArrowUpDown,
