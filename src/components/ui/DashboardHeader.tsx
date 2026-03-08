@@ -29,30 +29,30 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     <header className="native-header safe-area-top" dir={isRTL ? 'rtl' : 'ltr'}>
       <motion.div
         className="native-header-inner"
-        initial={{ y: -40, opacity: 0, scale: 0.92 }}
+        initial={{ y: -32, opacity: 0, scale: 0.94 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
-        transition={{ type: 'spring', stiffness: 260, damping: 24, delay: 0.05 }}
+        transition={{ type: 'spring', stiffness: 280, damping: 26, delay: 0.05 }}
       >
-        {/* Profile capsule */}
+        {/* Left: Profile capsule */}
         <div className="flex items-center gap-2.5 min-w-0 flex-1 relative z-[2]">
           {icon && (
             <div className="native-header-avatar">
-              <div className={`w-8 h-8 ${iconBgClass} rounded-full flex items-center justify-center`}>
+              <div className={`w-8 h-8 ${iconBgClass} rounded-full flex items-center justify-center shadow-sm`}>
                 {icon}
               </div>
-              <div className="absolute -bottom-0.5 -end-0.5 w-2 h-2 rounded-full bg-success border-[1.5px] border-background" />
+              <div className="native-header-online-dot" />
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="font-black text-foreground text-[12px] leading-tight truncate">{greeting}</p>
+            <p className="font-black text-foreground text-[12.5px] leading-tight truncate">{greeting}</p>
             {subtitle && (
               <p className="text-[9px] text-muted-foreground font-bold mt-0.5 truncate">{subtitle}</p>
             )}
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-1.5 flex-shrink-0 relative z-[2]">
+        {/* Right: Actions */}
+        <div className="flex items-center gap-1 flex-shrink-0 relative z-[2]">
           <div className="native-header-icon-btn">
             <NotificationCenter />
           </div>

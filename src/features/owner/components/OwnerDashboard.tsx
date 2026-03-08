@@ -28,6 +28,7 @@ import { DashboardHeader } from '@/components/ui/DashboardHeader';
 import { BottomTabNav } from '@/components/ui/BottomTabNav';
 import { GlassCard, GlassKPI } from '@/components/ui/GlassCard';
 import { lazy, Suspense } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 
@@ -173,6 +174,11 @@ const OwnerDashboard: React.FC = () => {
       case 'subscription': return <SubscriptionTab />;
       case 'legal': return <><LegalInfoTab /><OrgDeletionRequest /></>;
       case 'backup': return <BackupTab />;
+      case 'app-settings': return (
+        <Suspense fallback={<div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}>
+          <SettingsPage />
+        </Suspense>
+      );
       default: return null;
     }
   };
@@ -218,11 +224,19 @@ const OwnerDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Tab Content */}
+        {/* Tab Content with transitions */}
         <div className="px-4 pb-4">
-          <div className="animate-fade-in">
-            {renderTabContent()}
-          </div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+            >
+              {renderTabContent()}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
 
