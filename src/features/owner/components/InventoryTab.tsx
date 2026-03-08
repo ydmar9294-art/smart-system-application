@@ -730,7 +730,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
 
           {purchaseReturnItems.length > 0 && (
             <div className="space-y-3 bg-muted p-4 rounded-2xl">
-              <p className="text-xs font-black text-muted-foreground uppercase">أصناف المرتجع ({purchaseReturnItems.length}):</p>
+              <p className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.returnItems')} ({purchaseReturnItems.length}):</p>
               {purchaseReturnItems.map((item) => (
                 <div key={item.product_id} className="flex justify-between items-center bg-card p-4 rounded-xl">
                   <span className="font-bold">{item.product_name}</span>
