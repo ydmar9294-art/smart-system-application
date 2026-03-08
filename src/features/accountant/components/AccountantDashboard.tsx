@@ -52,16 +52,16 @@ const AccountantDashboard: React.FC = () => {
   const getSectionTabs = () => {
     switch (bottomNav) {
       case 'home': return [
-        { id: 'sales', label: 'المبيعات', icon: <FileText className="w-4 h-4" />, bgColor: 'bg-emerald-600' },
-        { id: 'purchases', label: 'المشتريات', icon: <ShoppingCart className="w-4 h-4" />, bgColor: 'bg-primary' },
+        { id: 'sales', label: t('accountant.salesInvoices'), icon: <FileText className="w-4 h-4" />, bgColor: 'bg-emerald-600' },
+        { id: 'purchases', label: t('accountant.purchases'), icon: <ShoppingCart className="w-4 h-4" />, bgColor: 'bg-primary' },
       ];
       case 'operations': return [
-        { id: 'collections', label: 'التحصيلات', icon: <Wallet className="w-4 h-4" />, bgColor: 'bg-purple-600' },
-        { id: 'debts', label: 'الديون', icon: <Users className="w-4 h-4" />, bgColor: 'bg-destructive' },
+        { id: 'collections', label: t('accountant.collections'), icon: <Wallet className="w-4 h-4" />, bgColor: 'bg-purple-600' },
+        { id: 'debts', label: t('accountant.debts'), icon: <Users className="w-4 h-4" />, bgColor: 'bg-destructive' },
       ];
       case 'returns': return [
-        { id: 'sales-returns', label: 'مرتجع بيع', icon: <RotateCcw className="w-4 h-4" />, bgColor: 'bg-warning' },
-        { id: 'purchase-returns', label: 'مرتجع شراء', icon: <RotateCcw className="w-4 h-4" />, bgColor: 'bg-warning' },
+        { id: 'sales-returns', label: t('accountant.salesReturns'), icon: <RotateCcw className="w-4 h-4" />, bgColor: 'bg-warning' },
+        { id: 'purchase-returns', label: t('accountant.purchaseReturns'), icon: <RotateCcw className="w-4 h-4" />, bgColor: 'bg-warning' },
       ];
       default: return null;
     }
