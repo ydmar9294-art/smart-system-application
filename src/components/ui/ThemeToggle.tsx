@@ -1,11 +1,14 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 import { Sun, Moon } from 'lucide-react';
 import { usePageTheme } from '@/hooks/usePageTheme';
 
+/**
+ * ThemeToggle — reusable dark/light mode toggle button.
+ * Uses the usePageTheme hook for state + localStorage persistence.
+ * Drop into any page header or toolbar.
+ */
 const ThemeToggle: React.FC = () => {
   const { isDark, toggleTheme } = usePageTheme();
-  const { t } = useTranslation();
 
   return (
     <button
@@ -14,17 +17,17 @@ const ThemeToggle: React.FC = () => {
                  bg-card border border-border shadow-sm
                  text-foreground text-xs font-bold
                  transition-all duration-300 hover:shadow-md hover:scale-105 active:scale-95"
-      aria-label={t('theme.toggleLabel')}
+      aria-label="تبديل المظهر"
     >
       {isDark ? (
         <>
           <Sun size={16} className="text-warning" />
-          <span className="hidden sm:inline">{t('theme.light')}</span>
+          <span className="hidden sm:inline">الوضع الفاتح</span>
         </>
       ) : (
         <>
           <Moon size={16} className="text-primary" />
-          <span className="hidden sm:inline">{t('theme.dark')}</span>
+          <span className="hidden sm:inline">الوضع الداكن</span>
         </>
       )}
     </button>

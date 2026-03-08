@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
 import DeletionRequestsManager from '@/features/shared/components/DeletionRequestsManager';
 import { createPortal } from 'react-dom';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -8,7 +7,7 @@ import {
   Receipt, Wallet, UserPlus, X, Copy, CheckCircle2, Clock,
   ShieldCheck, MessageCircle, AlertTriangle, Phone, MapPin,
   CircleDollarSign, Shield, UserX, UserCheck, Loader2,
-  BarChart3, CreditCard, Banknote, Database, Home, PieChart, Settings
+  BarChart3, CreditCard, Banknote, Database
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
@@ -24,18 +23,8 @@ import OrgDeletionRequest from './OrgDeletionRequest';
 import SubscriptionTab from './SubscriptionTab';
 import { PerformanceTab } from './PerformanceTab';
 import BackupTab from './BackupTab';
-import { DashboardHeader } from '@/components/ui/DashboardHeader';
-import { BottomTabNav } from '@/components/ui/BottomTabNav';
-import { GlassCard, GlassKPI } from '@/components/ui/GlassCard';
-import { lazy, Suspense } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 
-const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
-
-type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup' | 'app-settings';
-
-// Bottom nav maps to tab groups
-type BottomNavType = 'home' | 'operations' | 'reports' | 'settings';
+type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup';
 
 const OwnerDashboard: React.FC = () => {
   const { 
@@ -44,22 +33,16 @@ const OwnerDashboard: React.FC = () => {
     deactivateEmployee, reactivateEmployee, organization
   } = useApp();
   
-  const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<OwnerTabType>('daily');
-  const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
+  const [loggingOut, setLoggingOut] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
   const [newEmployeeCode, setNewEmployeeCode] = useState<string | null>(null);
   const [newEmployeeData, setNewEmployeeData] = useState<any | null>(null);
   const [togglingEmployee, setTogglingEmployee] = useState<string | null>(null);
 
-  React.useEffect(() => {
-    // Sync bottom nav with active tab
-    if (['daily'].includes(activeTab)) setBottomNav('home');
-    else if (['team', 'customers'].includes(activeTab)) setBottomNav('operations');
-    else if (['finance', 'performance'].includes(activeTab)) setBottomNav('reports');
-    else if (['subscription', 'legal', 'backup'].includes(activeTab)) setBottomNav('settings');
-  }, [activeTab]);
+  React.useEffect(() => { setIsMounted(true); }, []);
 
   const stats = useMemo(() => {
     const todayStart = new Date().setHours(0, 0, 0, 0);
@@ -68,10 +51,12 @@ const OwnerDashboard: React.FC = () => {
     const todayCash = todaySales.filter(s => s.paymentType === PaymentType.CASH).reduce((s, i) => s + i.grandTotal, 0);
     const todayCredit = todaySales.filter(s => s.paymentType === PaymentType.CREDIT).reduce((s, i) => s + i.grandTotal, 0);
     const totalCollections = payments.filter(c => c.timestamp >= todayStart && !c.isReversed).reduce((s, i) => s + i.amount, 0);
+    
     const allValidSales = sales.filter(s => !s.isVoided);
     const totalAllSales = allValidSales.reduce((s, i) => s + i.grandTotal, 0);
     const totalCashSales = allValidSales.filter(s => s.paymentType === PaymentType.CASH).reduce((s, i) => s + i.grandTotal, 0);
     const totalCreditSales = allValidSales.filter(s => s.paymentType === PaymentType.CREDIT).reduce((s, i) => s + i.grandTotal, 0);
+
     return { todayRevenue, todayCash, todayCredit, totalCollections, totalAllSales, totalCashSales, totalCreditSales };
   }, [sales, payments]);
 
@@ -96,8 +81,10 @@ const OwnerDashboard: React.FC = () => {
   const remainingSlots = Math.max(0, maxEmployees - activeEmployeeCount);
   const usagePercent = maxEmployees > 0 ? (activeEmployeeCount / maxEmployees) * 100 : 0;
 
-
-
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try { await logout(); } finally { setLoggingOut(false); }
+  };
 
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,45 +104,31 @@ const OwnerDashboard: React.FC = () => {
   };
 
   const getEmployeeTypeLabel = (type: EmployeeType) => {
-    return t(`employeeType.${type}`, type);
+    switch (type) {
+      case EmployeeType.SALES_MANAGER: return 'مدير مبيعات';
+      case EmployeeType.ACCOUNTANT: return 'محاسب';
+      case EmployeeType.FIELD_AGENT: return 'موزع ميداني';
+      case EmployeeType.WAREHOUSE_KEEPER: return 'أمين مستودع';
+      default: return type;
+    }
   };
 
   const myPendingEmployees = pendingEmployees.filter(pe => !pe.is_used);
   const myActivatedEmployees = pendingEmployees.filter(pe => pe.is_used);
 
-  const handleBottomNavChange = (navId: string) => {
-    setBottomNav(navId as BottomNavType);
-    switch (navId) {
-      case 'home': setActiveTab('daily'); break;
-      case 'operations': setActiveTab('team'); break;
-      case 'reports': setActiveTab('finance'); break;
-      case 'settings': setActiveTab('app-settings'); break;
-    }
-  };
+  const primaryTabs: { id: OwnerTabType; label: string; icon: React.ReactNode; color: string; bgColor: string }[] = [
+    { id: 'daily', label: 'الرئيسية', icon: <LayoutDashboard className="w-5 h-5" />, color: 'text-emerald-600', bgColor: 'bg-emerald-600' },
+    { id: 'team', label: 'الفريق', icon: <Users className="w-5 h-5" />, color: 'text-blue-600', bgColor: 'bg-blue-600' },
+    { id: 'customers', label: 'الزبائن', icon: <CircleDollarSign className="w-5 h-5" />, color: 'text-purple-600', bgColor: 'bg-purple-600' },
+    { id: 'finance', label: 'المالية', icon: <TrendingUp className="w-5 h-5" />, color: 'text-red-500', bgColor: 'bg-red-500' },
+    { id: 'performance', label: 'الأداء', icon: <BarChart3 className="w-5 h-5" />, color: 'text-indigo-600', bgColor: 'bg-indigo-600' },
+  ];
 
-  // Section tabs for each bottom nav section
-  const getSectionTabs = () => {
-    switch (bottomNav) {
-      case 'home': return null;
-      case 'operations': return [
-        { id: 'team', label: t('owner.team'), icon: <Users className="w-4 h-4" />, bgColor: 'bg-blue-600' },
-        { id: 'customers', label: t('owner.customers'), icon: <CircleDollarSign className="w-4 h-4" />, bgColor: 'bg-purple-600' },
-      ];
-      case 'reports': return [
-        { id: 'finance', label: t('owner.finance'), icon: <TrendingUp className="w-4 h-4" />, bgColor: 'bg-red-500' },
-        { id: 'performance', label: t('owner.performance'), icon: <BarChart3 className="w-4 h-4" />, bgColor: 'bg-indigo-600' },
-      ];
-      case 'settings': return [
-        { id: 'app-settings', label: t('common.settings'), icon: <Settings className="w-4 h-4" />, bgColor: 'bg-primary' },
-        { id: 'subscription', label: t('owner.subscription'), icon: <Shield className="w-4 h-4" />, bgColor: 'bg-primary' },
-        { id: 'legal', label: t('owner.legal'), icon: <ShieldCheck className="w-4 h-4" />, bgColor: 'bg-amber-600' },
-        { id: 'backup', label: t('owner.backup'), icon: <Database className="w-4 h-4" />, bgColor: 'bg-emerald-600' },
-      ];
-      default: return null;
-    }
-  };
-
-  const sectionTabs = getSectionTabs();
+  const secondaryTabs: { id: OwnerTabType; label: string; icon: React.ReactNode }[] = [
+    { id: 'backup', label: 'النسخ الاحتياطي', icon: <Database className="w-4 h-4" /> },
+    { id: 'subscription', label: 'الاشتراك', icon: <Shield className="w-4 h-4" /> },
+    { id: 'legal', label: 'القانونية', icon: <ShieldCheck className="w-4 h-4" /> },
+  ];
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -174,81 +147,94 @@ const OwnerDashboard: React.FC = () => {
       case 'subscription': return <SubscriptionTab />;
       case 'legal': return <><LegalInfoTab /><OrgDeletionRequest /></>;
       case 'backup': return <BackupTab />;
-      case 'app-settings': return (
-        <Suspense fallback={<div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}>
-          <SettingsPage />
-        </Suspense>
-      );
       default: return null;
     }
   };
 
-  const bottomTabs = [
-    { id: 'home', label: t('nav.home'), icon: <Home className="w-5 h-5" /> },
-    { id: 'operations', label: t('nav.operations'), icon: <Users className="w-5 h-5" /> },
-    { id: 'reports', label: t('nav.reports'), icon: <PieChart className="w-5 h-5" /> },
-    { id: 'settings', label: t('nav.settings'), icon: <Settings className="w-5 h-5" /> },
-  ];
-
   return (
-    <div className="min-h-screen bg-background has-bottom-nav" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen bg-background" dir="rtl">
       <div className="max-w-lg mx-auto">
-        <DashboardHeader
-          userName={user?.name || t('owner.owner')}
-          subtitle={t('owner.title')}
-          icon={<ShieldCheck className="w-4 h-4 text-primary-foreground" />}
-          iconBgClass="bg-primary"
-        />
+        {/* Header */}
+        <div className="bg-background pt-4 px-4 relative">
+          <div className="absolute -top-1 left-1 z-10"><NotificationCenter /></div>
+
+          <div className="flex justify-center pt-4 mb-3">
+            <div className="flex items-center gap-3 bg-card px-4 py-2 rounded-full shadow-sm">
+              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                <ShieldCheck className="w-4 h-4 text-primary-foreground" />
+              </div>
+              <div className="text-end">
+                <p className="font-bold text-foreground text-sm">{user?.name || 'المالك'}</p>
+                <p className="text-[10px] text-muted-foreground">لوحة الإدارة</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-1.5 bg-card/80 backdrop-blur-sm px-2 py-1.5 rounded-xl shadow-sm">
+              <AIAssistant className="!p-1.5 !rounded-lg" />
+              <div className="w-px h-5 bg-border" />
+              <a href="https://wa.me/963947744162" target="_blank" rel="noopener noreferrer"
+                className="p-1.5 bg-gradient-to-br from-green-400 to-green-600 rounded-lg text-white hover:shadow-md transition-all active:scale-95" title="فريق الدعم">
+                <MessageCircle className="w-4 h-4" />
+              </a>
+            </div>
+            <button onClick={handleLogout} disabled={loggingOut}
+              className="p-2.5 bg-card/80 backdrop-blur-sm rounded-full shadow-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all" title="تسجيل الخروج">
+              <LogOut className={`w-5 h-5 ${loggingOut ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </div>
 
         <WelcomeSplash />
 
-        {/* Section Tabs (when bottom nav has sub-tabs) */}
-        {sectionTabs && (
-          <div className="px-4 pb-3">
-            <div className="glass-section-tabs">
-              {sectionTabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as OwnerTabType)}
-                  className={`glass-section-tab ${
-                    activeTab === tab.id
-                      ? `glass-section-tab-active ${tab.bgColor}`
-                      : 'glass-section-tab-inactive'
-                  }`}
-                >
-                  {tab.icon}
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+        {/* Primary Tab Navigation - Same as Accountant */}
+        <div className="px-4 pb-2">
+          <div className="bg-card rounded-3xl p-2 shadow-sm flex gap-1">
+            {primaryTabs.map((tab) => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl transition-all duration-300 ${
+                  activeTab === tab.id ? `${tab.bgColor} text-white shadow-lg` : 'text-muted-foreground hover:bg-muted'
+                }`}>
+                <div className={`${activeTab === tab.id ? 'scale-110' : ''} transition-transform duration-300`}>{tab.icon}</div>
+                <span className="text-[10px] font-bold">{tab.label}</span>
+              </button>
+            ))}
           </div>
-        )}
+        </div>
 
-        {/* Tab Content with transitions */}
+        {/* Secondary Tabs */}
         <div className="px-4 pb-4">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-            >
-              {renderTabContent()}
-            </motion.div>
-          </AnimatePresence>
+          <div className="flex gap-2">
+            {secondaryTabs.map((tab) => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-warning text-white shadow-md'
+                    : 'bg-card text-muted-foreground hover:bg-muted shadow-sm'
+                }`}>
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        <div className="px-4 pb-8">
+          <div className="animate-fade-in">
+            {renderTabContent()}
+          </div>
         </div>
       </div>
 
-      <BottomTabNav tabs={bottomTabs} activeTab={bottomNav} onTabChange={handleBottomNavChange} />
-
       {/* Add Employee Modal */}
       {showAddUserModal && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
+        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir="rtl">
           <div className="bg-card rounded-2xl w-full max-w-md p-6 space-y-4 animate-zoom-in shadow-2xl border border-border max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold text-foreground">
-                {newEmployeeCode ? t('activation.activationCodeGenerated') : t('owner.addNewEmployee')}
+                {newEmployeeCode ? 'تم إنشاء كود التفعيل' : 'إضافة موظف جديد'}
               </h2>
               <button onClick={closeEmployeeModal} className="p-2 bg-muted rounded-full hover:bg-accent">
                 <X className="w-5 h-5 text-muted-foreground" />
@@ -304,68 +290,78 @@ const DailyContent: React.FC<{
   activeEmployeeCount: number; maxEmployees: number;
 }> = ({ stats, sales, products, customers, activeEmployeeCount, maxEmployees }) => (
   <div className="space-y-3">
-    {/* Hero KPI */}
-    <GlassCard className="!p-5" glow>
+    {/* مبيعات اليوم */}
+    <div className="p-4 rounded-2xl bg-card shadow-sm">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 bg-primary/10 rounded-xl flex items-center justify-center">
+        <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
           <Receipt className="w-4 h-4 text-primary" />
         </div>
-        <span className="text-xs font-black text-foreground">مبيعات اليوم</span>
+        <span className="text-xs font-bold text-foreground">مبيعات اليوم</span>
       </div>
-      <p className="text-3xl font-black text-foreground mb-3">{stats.todayRevenue.toLocaleString()} <span className="text-xs font-medium text-muted-foreground">{CURRENCY}</span></p>
+      <p className="text-2xl font-black text-foreground mb-2">{stats.todayRevenue.toLocaleString()} <span className="text-xs font-medium text-muted-foreground">{CURRENCY}</span></p>
       <div className="grid grid-cols-2 gap-2">
-        <div className="bg-success/10 p-2.5 rounded-xl flex items-center gap-2">
-          <Banknote className="w-4 h-4 text-success" />
+        <div className="bg-emerald-500/10 p-2.5 rounded-xl flex items-center gap-2">
+          <Banknote className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           <div>
             <p className="text-[8px] text-muted-foreground font-bold">نقدي</p>
-            <p className="text-sm font-black text-success">{stats.todayCash.toLocaleString()}</p>
+            <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">{stats.todayCash.toLocaleString()}</p>
           </div>
         </div>
-        <div className="bg-warning/10 p-2.5 rounded-xl flex items-center gap-2">
-          <CreditCard className="w-4 h-4 text-warning" />
+        <div className="bg-amber-500/10 p-2.5 rounded-xl flex items-center gap-2">
+          <CreditCard className="w-4 h-4 text-amber-600 dark:text-amber-400" />
           <div>
             <p className="text-[8px] text-muted-foreground font-bold">آجل</p>
-            <p className="text-sm font-black text-warning">{stats.todayCredit.toLocaleString()}</p>
+            <p className="text-sm font-black text-amber-600 dark:text-amber-400">{stats.todayCredit.toLocaleString()}</p>
           </div>
         </div>
       </div>
-    </GlassCard>
+    </div>
 
-    {/* Total Sales */}
-    <GlassCard>
+    {/* إجمالي المبيعات */}
+    <div className="p-4 rounded-2xl bg-card shadow-sm">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 bg-primary/10 rounded-xl flex items-center justify-center">
-          <TrendingUp className="w-4 h-4 text-primary" />
+        <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center">
+          <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
         </div>
-        <span className="text-xs font-black text-foreground">إجمالي المبيعات</span>
+        <span className="text-xs font-bold text-foreground">إجمالي المبيعات</span>
       </div>
       <p className="text-2xl font-black text-foreground mb-2">{stats.totalAllSales.toLocaleString()} <span className="text-xs font-medium text-muted-foreground">{CURRENCY}</span></p>
       <div className="grid grid-cols-2 gap-2">
-        <div className="bg-success/10 p-2.5 rounded-xl flex items-center gap-2">
-          <Banknote className="w-4 h-4 text-success" />
+        <div className="bg-emerald-500/10 p-2.5 rounded-xl flex items-center gap-2">
+          <Banknote className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           <div>
             <p className="text-[8px] text-muted-foreground font-bold">نقدي</p>
-            <p className="text-sm font-black text-success">{stats.totalCashSales.toLocaleString()}</p>
+            <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">{stats.totalCashSales.toLocaleString()}</p>
           </div>
         </div>
-        <div className="bg-warning/10 p-2.5 rounded-xl flex items-center gap-2">
-          <CreditCard className="w-4 h-4 text-warning" />
+        <div className="bg-amber-500/10 p-2.5 rounded-xl flex items-center gap-2">
+          <CreditCard className="w-4 h-4 text-amber-600 dark:text-amber-400" />
           <div>
             <p className="text-[8px] text-muted-foreground font-bold">آجل</p>
-            <p className="text-sm font-black text-warning">{stats.totalCreditSales.toLocaleString()}</p>
+            <p className="text-sm font-black text-amber-600 dark:text-amber-400">{stats.totalCreditSales.toLocaleString()}</p>
           </div>
         </div>
       </div>
-    </GlassCard>
-
-    {/* Quick Stats Grid */}
-    <div className="grid grid-cols-2 gap-2">
-      <GlassKPI icon={<Wallet className="w-5 h-5 text-success" />} label="تحصيلات اليوم" value={stats.totalCollections.toLocaleString()} subValue={CURRENCY} iconBgClass="bg-success/10" />
-      <GlassKPI icon={<Users className="w-5 h-5 text-primary" />} label="الموظفين" value={activeEmployeeCount} subValue={`من ${maxEmployees}`} iconBgClass="bg-primary/10" />
     </div>
 
-    {/* System Summary */}
-    <GlassCard>
+    {/* تحصيلات + موظفين */}
+    <div className="grid grid-cols-2 gap-2">
+      <div className="p-3 rounded-2xl bg-card shadow-sm">
+        <Wallet className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mb-1" />
+        <p className="text-[9px] text-muted-foreground font-bold">تحصيلات اليوم</p>
+        <p className="text-lg font-black text-foreground">{stats.totalCollections.toLocaleString()}</p>
+        <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
+      </div>
+      <div className="p-3 rounded-2xl bg-card shadow-sm">
+        <Users className="w-5 h-5 text-primary mb-1" />
+        <p className="text-[9px] text-muted-foreground font-bold">الموظفين النشطين</p>
+        <p className="text-lg font-black text-foreground">{activeEmployeeCount}</p>
+        <p className="text-[10px] text-muted-foreground">من {maxEmployees}</p>
+      </div>
+    </div>
+
+    {/* ملخص النظام */}
+    <div className="p-4 rounded-2xl bg-card shadow-sm">
       <h3 className="font-bold text-foreground mb-3 text-sm">ملخص النظام</h3>
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-primary/5 p-3 rounded-xl text-center">
@@ -383,17 +379,17 @@ const DailyContent: React.FC<{
           <p className="text-lg font-black text-foreground">{customers.length}</p>
           <p className="text-[8px] text-muted-foreground font-bold">إجمالي الزبائن</p>
         </div>
-        <div className="bg-warning/5 p-3 rounded-xl text-center">
-          <Package className="w-5 h-5 mx-auto text-warning mb-1" />
+        <div className="bg-orange-500/5 p-3 rounded-xl text-center">
+          <Package className="w-5 h-5 mx-auto text-orange-600 dark:text-orange-400 mb-1" />
           <p className="text-lg font-black text-foreground">{products.filter(p => !p.isDeleted).length}</p>
           <p className="text-[8px] text-muted-foreground font-bold">المنتجات</p>
         </div>
       </div>
-    </GlassCard>
+    </div>
 
-    {/* Low Stock Warning */}
+    {/* تحذير منتجات منخفضة */}
     {products.filter(p => p.stock <= p.minStock && !p.isDeleted).length > 0 && (
-      <GlassCard accentColor="hsl(0, 84%, 60%)">
+      <div className="p-4 rounded-2xl bg-card shadow-sm border-r-4 border-destructive">
         <h3 className="font-bold text-foreground mb-3 text-sm flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-destructive" /> منتجات قاربت على النفاد
         </h3>
@@ -408,7 +404,7 @@ const DailyContent: React.FC<{
             </div>
           ))}
         </div>
-      </GlassCard>
+      </div>
     )}
   </div>
 );
@@ -420,7 +416,8 @@ const TeamContent: React.FC<any> = ({
   copiedId, setCopiedId, togglingEmployee, handleToggleEmployee, getEmployeeTypeLabel
 }) => (
   <div className="space-y-4">
-    <GlassCard>
+    {/* Organization Status */}
+    <div className="p-4 rounded-2xl bg-card shadow-sm">
       <h3 className="font-bold text-foreground text-sm mb-3 flex items-center gap-2">
         <ShieldCheck className="w-4 h-4 text-primary" /> حالة المنشأة
       </h3>
@@ -447,7 +444,7 @@ const TeamContent: React.FC<any> = ({
           </p>
         )}
       </div>
-    </GlassCard>
+    </div>
 
     <button onClick={() => setShowAddUserModal(true)} disabled={remainingSlots <= 0}
       className={`w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all ${
@@ -462,7 +459,7 @@ const TeamContent: React.FC<any> = ({
           <Clock className="w-4 h-4 text-warning" /> أكواد تفعيل معلقة
         </h3>
         {myPendingEmployees.map((pe: any) => (
-          <GlassCard key={pe.id} className="!border-warning/20">
+          <div key={pe.id} className="bg-warning/10 p-4 rounded-2xl border border-warning/20">
             <div className="flex justify-between items-start mb-2">
               <div>
                 <p className="font-bold text-foreground">{pe.name}</p>
@@ -473,11 +470,11 @@ const TeamContent: React.FC<any> = ({
               </span>
             </div>
             <div onClick={async () => { await copyToClipboard(pe.activation_code); setCopiedId(pe.id); setTimeout(() => setCopiedId(null), 2000); }}
-              className="bg-muted/50 p-3 rounded-xl flex justify-between items-center cursor-pointer hover:bg-accent transition-colors">
+              className="bg-card p-3 rounded-xl flex justify-between items-center cursor-pointer hover:bg-muted transition-colors">
               <span className="font-mono font-bold text-primary tracking-wider">{pe.activation_code}</span>
               {copiedId === pe.id ? <CheckCircle2 className="w-5 h-5 text-success" /> : <Copy className="w-5 h-5 text-muted-foreground" />}
             </div>
-          </GlassCard>
+          </div>
         ))}
       </div>
     )}
@@ -488,7 +485,7 @@ const TeamContent: React.FC<any> = ({
           <CheckCircle2 className="w-4 h-4 text-success" /> أكواد مفعّلة
         </h3>
         {myActivatedEmployees.map((pe: any) => (
-          <GlassCard key={pe.id} className="!border-success/20">
+          <div key={pe.id} className="bg-success/10 p-4 rounded-2xl border border-success/20">
             <div className="flex justify-between items-start mb-2">
               <div>
                 <p className="font-bold text-foreground">{pe.name}</p>
@@ -496,7 +493,7 @@ const TeamContent: React.FC<any> = ({
               </div>
               <span className="bg-success/15 text-success px-2 py-1 rounded-lg text-xs font-bold">مفعّل ✓</span>
             </div>
-            <div className="bg-muted/50 p-3 rounded-xl">
+            <div className="bg-card p-3 rounded-xl">
               <span className="font-mono text-muted-foreground text-xs line-through">{pe.activation_code}</span>
               {pe.activated_at && (
                 <p className="text-[10px] text-muted-foreground mt-1">
@@ -504,23 +501,23 @@ const TeamContent: React.FC<any> = ({
                 </p>
               )}
             </div>
-          </GlassCard>
+          </div>
         ))}
       </div>
     )}
 
     <div className="space-y-3">
       {teamMembers.length === 0 && myPendingEmployees.length === 0 ? (
-        <GlassCard className="!p-8 text-center">
+        <div className="p-8 rounded-3xl text-center bg-card shadow-sm">
           <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground font-medium">لا يوجد موظفين</p>
-        </GlassCard>
+        </div>
       ) : (
         teamMembers.map((u: any) => {
           const isActive = u.isActive !== false;
           const canManage = u.employeeType === 'SALES_MANAGER' || u.employeeType === 'ACCOUNTANT';
           return (
-            <GlassCard key={u.id} className={!isActive ? 'opacity-60' : ''}>
+            <div key={u.id} className={`p-4 rounded-2xl bg-card shadow-sm ${!isActive ? 'opacity-60' : ''}`}>
               <div className="flex justify-between items-center mb-2">
                 <div className="flex items-center gap-3">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black ${isActive ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
@@ -544,18 +541,19 @@ const TeamContent: React.FC<any> = ({
                     isActive ? <><UserX className="w-4 h-4" /> إيقاف الموظف</> : <><UserCheck className="w-4 h-4" /> إعادة التنشيط</>}
                 </button>
               )}
-            </GlassCard>
+            </div>
           );
         })
       )}
     </div>
 
-    <GlassCard>
+    {/* Deletion Requests */}
+    <div className="p-4 rounded-2xl bg-card shadow-sm">
       <h3 className="font-bold text-foreground mb-3 text-sm flex items-center gap-2">
         <AlertTriangle className="w-4 h-4 text-destructive" /> طلبات حذف الحسابات
       </h3>
       <DeletionRequestsManager />
-    </GlassCard>
+    </div>
   </div>
 );
 

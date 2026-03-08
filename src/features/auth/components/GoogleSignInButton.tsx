@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Loader2, CheckCircle2 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
@@ -24,17 +23,33 @@ const GOOGLE_SVG = (
 
 const isNativePlatform = (): boolean => Capacitor.isNativePlatform();
 
-const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ disabled = false, onError, oauthInProgress = false, loadingText }) => {
-  const { t } = useTranslation();
+/**
+ * Ultra Google Sign-In Button — Liquid-Glass + Predictive Motion
+ * 
+ * Features:
+ * - Pre-warm Chrome Custom Tab on mount
+ * - Predictive touch (scale on touch-down)
+ * - Morphing portal animation
+ * - Glass glow effects
+ * - Latency illusion shimmer
+ * - Success pulse animation
+ */
+const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ 
+  disabled = false, 
+  onError,
+  oauthInProgress = false,
+  loadingText
+}) => {
   const [loading, setLoading] = useState(false);
   const [phase, setPhase] = useState<'idle' | 'pressed' | 'morphing' | 'waiting' | 'success'>('idle');
   const [shimmerProgress, setShimmerProgress] = useState(0);
-  const buttonRef = React.useRef<HTMLButtonElement>(null);
-  const shimmerInterval = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const shimmerInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Pre-warm Chrome Custom Tab on mount ──
   useEffect(() => {
     if (isNativePlatform()) {
+      // Preconnect hint for faster Custom Tab opening
       const link = document.createElement('link');
       link.rel = 'preconnect';
       link.href = 'https://accounts.google.com';
@@ -185,8 +200,8 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ disabled = fals
       setPhase('idle');
       setLoading(false);
       const message = err?.message?.includes('rate limit')
-        ? t('auth.rateLimited')
-        : t('auth.googleSignInFailed');
+        ? 'محاولات كثيرة. يرجى الانتظار قليلاً'
+        : 'فشل تسجيل الدخول بجوجل. يرجى المحاولة مرة أخرى';
       onError?.(message);
     }
   };
@@ -249,7 +264,7 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ disabled = fals
           {phase === 'success' ? (
             <div className="flex items-center gap-3 google-signin-success-content">
               <CheckCircle2 className="w-5 h-5 text-success" />
-              <span className="text-success font-black">{t('auth.signedInSuccess')}</span>
+              <span className="text-success font-black">تم تسجيل الدخول ✓</span>
             </div>
           ) : isActive ? (
             <div className="flex items-center gap-3">
@@ -257,7 +272,7 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ disabled = fals
                 <Loader2 className="w-5 h-5 animate-spin text-primary" />
               </div>
               <span className="text-muted-foreground font-bold">
-                {loadingText || t('auth.signingIn')}
+                {loadingText || 'جارٍ تسجيل الدخول...'}
               </span>
             </div>
           ) : (
@@ -265,7 +280,7 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ disabled = fals
               <div className="google-signin-icon">
                 {GOOGLE_SVG}
               </div>
-              <span className="text-foreground">{t('auth.signInWithGoogle')}</span>
+              <span className="text-foreground">تسجيل الدخول عبر Google</span>
             </>
           )}
         </div>
