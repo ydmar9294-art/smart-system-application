@@ -11,8 +11,35 @@ import { App as CapApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { supabase } from '@/integrations/supabase/client';
 import { clearOAuthPending } from '@/lib/oauthState';
+import { logger } from '@/lib/logger';
 
 let isInitialized = false;
+
+/**
+ * Sanitize a URL by redacting sensitive token parameters.
+ * Prevents accidental token exposure in logs.
+ */
+function sanitizeUrl(url: string): string {
+  try {
+    const fragmentIndex = url.indexOf('#');
+    if (fragmentIndex === -1) return url;
+    
+    const base = url.substring(0, fragmentIndex);
+    const fragment = url.substring(fragmentIndex + 1);
+    const params = new URLSearchParams(fragment);
+    
+    const sensitiveKeys = ['access_token', 'refresh_token', 'token', 'code', 'id_token'];
+    for (const key of sensitiveKeys) {
+      if (params.has(key)) {
+        params.set(key, '[REDACTED]');
+      }
+    }
+    
+    return `${base}#${params.toString()}`;
+  } catch {
+    return '[URL_PARSE_ERROR]';
+  }
+}
 
 /**
  * Parse tokens from a URL fragment like:
@@ -33,14 +60,13 @@ function parseTokensFromFragment(fragment: string): { accessToken: string; refre
  */
 async function handleOAuthTokens(accessToken: string, refreshToken: string): Promise<boolean> {
   try {
-    // Close the browser FIRST for perceived speed — user sees the app instantly
     try {
       await Browser.close();
     } catch {
       // Browser might already be closed
     }
 
-    console.log('[CapacitorDeepLink] Setting session from deep link tokens');
+    logger.info('Setting session from deep link tokens', 'CapacitorDeepLink');
     
     const { data, error } = await supabase.auth.setSession({
       access_token: accessToken,
@@ -48,14 +74,14 @@ async function handleOAuthTokens(accessToken: string, refreshToken: string): Pro
     });
 
     if (error) {
-      console.error('[CapacitorDeepLink] Failed to set session:', error.message);
+      logger.error('Failed to set session from deep link', 'CapacitorDeepLink', { reason: error.message });
       return false;
     }
 
-    console.log('[CapacitorDeepLink] Session set successfully for user:', data.user?.id);
+    logger.info('Session set successfully', 'CapacitorDeepLink', { userId: data.user?.id });
     return true;
   } catch (err) {
-    console.error('[CapacitorDeepLink] Error setting session:', err);
+    logger.error('Error setting session from deep link', 'CapacitorDeepLink');
     return false;
   }
 }
@@ -70,12 +96,17 @@ export function initCapacitorOAuth(): void {
   if (!Capacitor.isNativePlatform()) return;
   
   isInitialized = true;
-  console.log('[CapacitorDeepLink] Initializing deep link listeners');
+  logger.info('Initializing deep link listeners', 'CapacitorDeepLink');
 
   // ── Deep Link Listener ──
-  // Catches: myapp://auth/oauth-callback, myapp://auth/reset-password, myapp://auth/email-confirmed
   CapApp.addListener('appUrlOpen', async ({ url }) => {
-    console.log('[CapacitorDeepLink] Deep link received:', url);
+    logger.info('Deep link received', 'CapacitorDeepLink', { url: sanitizeUrl(url) });
+
+    // Validate deep link origin scheme
+    if (!url.startsWith('myapp://')) {
+      logger.warn('Rejected deep link with unexpected scheme', 'CapacitorDeepLink');
+      return;
+    }
 
     const fragmentIndex = url.indexOf('#');
     const fragment = fragmentIndex !== -1 ? url.substring(fragmentIndex) : '';
@@ -85,7 +116,7 @@ export function initCapacitorOAuth(): void {
     if (url.includes('oauth-callback')) {
       clearOAuthPending();
       if (!tokens) {
-        console.warn('[CapacitorDeepLink] No tokens found in OAuth deep link');
+        logger.warn('No tokens found in OAuth deep link', 'CapacitorDeepLink');
         return;
       }
       await handleOAuthTokens(tokens.accessToken, tokens.refreshToken);
@@ -95,46 +126,40 @@ export function initCapacitorOAuth(): void {
     // ── Reset Password ──
     if (url.includes('reset-password')) {
       if (tokens) {
-        // Set the recovery session so updateUser works on /reset-password page
         await supabase.auth.setSession({
           access_token: tokens.accessToken,
           refresh_token: tokens.refreshToken,
         });
         try { await Browser.close(); } catch {}
       }
-      // Navigate to reset password page (HashRouter)
       window.location.hash = '#/reset-password';
       return;
     }
 
     // ── Email Confirmed ──
     if (url.includes('email-confirmed')) {
-      // Clear any auto-created session (we don't want auto-login)
       if (tokens) {
         try {
           await supabase.auth.signOut();
         } catch {}
       }
       try { await Browser.close(); } catch {}
-      // Navigate to email confirmed page (HashRouter)
       window.location.hash = '#/email-confirmed';
       return;
     }
   });
 
   // ── Browser Finished Listener ──
-  // If user closes the browser manually, check if session was already established
   Browser.addListener('browserFinished', async () => {
-    console.log('[CapacitorDeepLink] Browser closed, checking session...');
+    logger.info('Browser closed, checking session...', 'CapacitorDeepLink');
     
-    // Small delay to let any pending auth state changes propagate
     await new Promise(resolve => setTimeout(resolve, 500));
     
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
-      console.log('[CapacitorDeepLink] Session found after browser close');
+      logger.info('Session found after browser close', 'CapacitorDeepLink');
     } else {
-      console.log('[CapacitorDeepLink] No session after browser close');
+      logger.info('No session after browser close', 'CapacitorDeepLink');
     }
   });
 
@@ -143,22 +168,28 @@ export function initCapacitorOAuth(): void {
     if (!result?.url) return;
     
     const url = result.url;
+
+    if (!url.startsWith('myapp://')) {
+      logger.warn('Rejected launch URL with unexpected scheme', 'CapacitorDeepLink');
+      return;
+    }
+
     const fragmentIndex = url.indexOf('#');
     const fragment = fragmentIndex !== -1 ? url.substring(fragmentIndex) : '';
     const tokens = fragment ? parseTokensFromFragment(fragment) : null;
 
     if (url.includes('oauth-callback') && tokens) {
-      console.log('[CapacitorDeepLink] Found OAuth tokens in launch URL');
+      logger.info('Found OAuth tokens in launch URL', 'CapacitorDeepLink');
       handleOAuthTokens(tokens.accessToken, tokens.refreshToken);
     } else if (url.includes('reset-password') && tokens) {
-      console.log('[CapacitorDeepLink] Found recovery tokens in launch URL');
+      logger.info('Found recovery tokens in launch URL', 'CapacitorDeepLink');
       await supabase.auth.setSession({
         access_token: tokens.accessToken,
         refresh_token: tokens.refreshToken,
       });
       window.location.hash = '#/reset-password';
     } else if (url.includes('email-confirmed')) {
-      console.log('[CapacitorDeepLink] Email confirmed via launch URL');
+      logger.info('Email confirmed via launch URL', 'CapacitorDeepLink');
       if (tokens) { try { await supabase.auth.signOut(); } catch {} }
       window.location.hash = '#/email-confirmed';
     }

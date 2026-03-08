@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { logger } from '@/lib/logger';
 import {
   enqueueAction,
   syncAllPending,
@@ -178,7 +179,7 @@ export function useDistributorOffline() {
       await cacheInventory(items);
       await refreshStats();
     } catch (err) {
-      console.warn('[DistributorOffline] Inventory fetch failed, using cache');
+      logger.warn('Inventory fetch failed, using cache', 'DistributorOffline');
     }
   }, [refreshStats]);
 
@@ -227,7 +228,7 @@ export function useDistributorOffline() {
       await cacheCustomers(mapped);
       await refreshStats();
     } catch {
-      console.warn('[DistributorOffline] Customers fetch failed, using cache');
+      logger.warn('Customers fetch failed, using cache', 'DistributorOffline');
     }
   }, [refreshStats]);
 
@@ -293,7 +294,7 @@ export function useDistributorOffline() {
       await cacheSales(mapped);
       await refreshStats();
     } catch {
-      console.warn('[DistributorOffline] Sales fetch failed, using cache');
+      logger.warn('Sales fetch failed, using cache', 'DistributorOffline');
     }
   }, [refreshStats]);
 

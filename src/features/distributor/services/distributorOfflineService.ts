@@ -18,7 +18,7 @@
 import { generateUUID } from '@/lib/uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
-import { encryptData, decryptData, isEncrypted } from '@/lib/indexedDbEncryption';
+import { encryptData, decryptData, isEncrypted, computeHMAC, verifyHMAC, isEncryptionAvailable } from '@/lib/indexedDbEncryption';
 
 // ============================================
 // Database Setup
@@ -58,6 +58,8 @@ export interface OfflineAction {
   idempotencyKey: string;
   /** Cooldown: don't retry before this timestamp */
   nextRetryAt?: number;
+  /** HMAC signature for integrity verification */
+  _signature?: string;
 }
 
 // ============================================
@@ -297,13 +299,64 @@ export async function enqueueAction(
     idempotencyKey: generateUUID(),
   };
   
-  await putItem(STORES.ACTIONS, action);
+  // Sign the action payload for integrity verification
+  if (isEncryptionAvailable()) {
+    try {
+      const signableData = JSON.stringify({ type: action.type, payload: action.payload, idempotencyKey: action.idempotencyKey });
+      action._signature = await computeHMAC(signableData);
+    } catch {
+      logger.warn('Failed to sign offline action — storing unsigned', 'DistributorOffline');
+    }
+  }
+
+  // Encrypt the entire action before storing
+  if (isEncryptionAvailable()) {
+    try {
+      const encrypted = await encryptData(action);
+      await putItem(STORES.ACTIONS, { id: action.id, _enc: encrypted });
+    } catch {
+      // Fallback: store unencrypted if encryption fails
+      await putItem(STORES.ACTIONS, action);
+    }
+  } else {
+    await putItem(STORES.ACTIONS, action);
+  }
+  
   logger.info(`[OfflineQueue] Enqueued ${type}`, 'DistributorOffline');
   return action;
 }
 
+/**
+ * Decrypt an action record from IndexedDB.
+ */
+async function decryptAction(raw: any): Promise<OfflineAction | null> {
+  try {
+    if (raw._enc && isEncrypted(raw._enc)) {
+      return await decryptData<OfflineAction>(raw._enc);
+    }
+    // Legacy unencrypted action
+    return raw as OfflineAction;
+  } catch {
+    logger.warn('Failed to decrypt offline action, skipping', 'DistributorOffline');
+    return null;
+  }
+}
+
+/**
+ * Get all raw actions and decrypt them.
+ */
+async function getAllActionsDecrypted(): Promise<OfflineAction[]> {
+  const rawAll = await getAllItems<any>(STORES.ACTIONS);
+  const results: OfflineAction[] = [];
+  for (const raw of rawAll) {
+    const action = await decryptAction(raw);
+    if (action) results.push(action);
+  }
+  return results;
+}
+
 export async function getPendingActions(): Promise<OfflineAction[]> {
-  const all = await getAllItems<OfflineAction>(STORES.ACTIONS);
+  const all = await getAllActionsDecrypted();
   const now = Date.now();
   return all
     .filter(a => a.status === 'pending' && (!a.nextRetryAt || a.nextRetryAt <= now))
@@ -311,26 +364,39 @@ export async function getPendingActions(): Promise<OfflineAction[]> {
 }
 
 export async function getAllActions(): Promise<OfflineAction[]> {
-  const all = await getAllItems<OfflineAction>(STORES.ACTIONS);
+  const all = await getAllActionsDecrypted();
   return all.sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export async function updateAction(id: string, updates: Partial<OfflineAction>): Promise<void> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORES.ACTIONS, 'readwrite');
-    const store = tx.objectStore(STORES.ACTIONS);
-    const getReq = store.get(id);
-    
-    getReq.onsuccess = () => {
-      if (getReq.result) {
-        store.put({ ...getReq.result, ...updates });
-      }
-    };
-    
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+  // Read and decrypt outside the write transaction
+  const raw = await getItem<any>(STORES.ACTIONS, id);
+  if (!raw) return;
+
+  let existing: OfflineAction;
+  try {
+    if (raw._enc && isEncrypted(raw._enc)) {
+      existing = await decryptData<OfflineAction>(raw._enc);
+    } else {
+      existing = raw as OfflineAction;
+    }
+  } catch {
+    return;
+  }
+
+  const updated = { ...existing, ...updates };
+
+  // Re-encrypt before storing
+  if (isEncryptionAvailable()) {
+    try {
+      const encrypted = await encryptData(updated);
+      await putItem(STORES.ACTIONS, { id: updated.id, _enc: encrypted });
+      return;
+    } catch {
+      // fallback
+    }
+  }
+  await putItem(STORES.ACTIONS, updated);
 }
 
 export async function retryFailedAction(id: string): Promise<void> {
@@ -338,7 +404,7 @@ export async function retryFailedAction(id: string): Promise<void> {
 }
 
 export async function retryAllFailedActions(): Promise<void> {
-  const all = await getAllItems<OfflineAction>(STORES.ACTIONS);
+  const all = await getAllActionsDecrypted();
   for (const action of all) {
     if (action.status === 'failed') {
       await updateAction(action.id, { status: 'pending', retryCount: 0, nextRetryAt: undefined });
@@ -347,7 +413,7 @@ export async function retryAllFailedActions(): Promise<void> {
 }
 
 export async function clearSyncedActions(): Promise<void> {
-  const all = await getAllItems<OfflineAction>(STORES.ACTIONS);
+  const all = await getAllActionsDecrypted();
   const syncedIds = all.filter(a => a.status === 'synced').map(a => a.id);
   if (syncedIds.length === 0) return;
 
@@ -371,7 +437,7 @@ export async function getActionStats(): Promise<{
   failed: number;
   total: number;
 }> {
-  const all = await getAllItems<OfflineAction>(STORES.ACTIONS);
+  const all = await getAllActionsDecrypted();
   return {
     pending: all.filter(a => a.status === 'pending').length,
     syncing: all.filter(a => a.status === 'syncing').length,
@@ -602,7 +668,7 @@ export async function loadPersistedIdMaps(): Promise<void> {
  */
 export async function recoverStuckActions(): Promise<void> {
   try {
-    const all = await getAllItems<OfflineAction>(STORES.ACTIONS);
+    const all = await getAllActionsDecrypted();
     let recovered = 0;
     for (const action of all) {
       if (action.status === 'syncing') {
@@ -657,7 +723,7 @@ async function cleanupStaleCacheData(): Promise<void> {
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000; // 30 days
     
     // Clean old synced actions
-    const allActions = await getAllItems<OfflineAction>(STORES.ACTIONS);
+    const allActions = await getAllActionsDecrypted();
     for (const a of allActions) {
       if (a.status === 'synced' && a.createdAt < cutoff) {
         await deleteItem(STORES.ACTIONS, a.id);
@@ -717,6 +783,16 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 
 async function executeAction(action: OfflineAction): Promise<ExecuteResult> {
   try {
+    // Verify HMAC integrity before processing
+    if (action._signature && isEncryptionAvailable()) {
+      const signableData = JSON.stringify({ type: action.type, payload: action.payload, idempotencyKey: action.idempotencyKey });
+      const isValid = await verifyHMAC(signableData, action._signature);
+      if (!isValid) {
+        logger.error(`[Sync] HMAC verification failed for action ${action.id} — possible tampering`, 'DistributorOffline');
+        return 'failed';
+      }
+    }
+
     return await withTimeout(executeActionInner(action), SYNC_TIMEOUT_MS, action.type);
   } catch (err: any) {
     logger.error(`[Sync] Action ${action.id} (${action.type}) failed: ${err.message}`, 'DistributorOffline');

@@ -5,11 +5,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-}
+import { getCorsHeaders, handleCorsPreflightIfNeeded } from '../_shared/cors.ts'
 
 interface UserContext {
   userId: string;
@@ -20,23 +16,23 @@ interface UserContext {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const preflightResponse = handleCorsPreflightIfNeeded(req);
+  if (preflightResponse) return preflightResponse;
 
+  const corsHeaders = getCorsHeaders(req);
   const url = new URL(req.url);
   const action = url.searchParams.get('action');
 
   try {
     // === Public endpoints (no auth required) ===
     if (action === 'health') {
-      return json({ status: 'ok', timestamp: new Date().toISOString() });
+      return json({ status: 'ok', timestamp: new Date().toISOString() }, 200, corsHeaders);
     }
 
     // === Auth required from here ===
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return json({ error: 'Unauthorized' }, 401);
+      return json({ error: 'Unauthorized' }, 401, corsHeaders);
     }
 
     const supabase = createClient(
@@ -45,13 +41,13 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claims, error: claimsErr } = await supabase.auth.getClaims(token);
-    if (claimsErr || !claims?.claims) {
-      return json({ error: 'Invalid token' }, 401);
+    // Full server-side user validation (checks user exists, not banned, token not revoked)
+    const { data: { user }, error: userErr } = await supabase.auth.getUser();
+    if (userErr || !user) {
+      return json({ error: 'Invalid token' }, 401, corsHeaders);
     }
 
-    const userId = claims.claims.sub as string;
+    const userId = user.id;
 
     // Rate limit per user: 120 requests/minute for general gateway
     const { data: rlData } = await supabase.rpc('check_endpoint_rate_limit', {
@@ -61,7 +57,7 @@ Deno.serve(async (req) => {
       p_window_seconds: 60,
     });
     if (rlData && !rlData.allowed) {
-      return json({ error: 'Rate limited', retryAfter: 60 }, 429);
+      return json({ error: 'Rate limited', retryAfter: 60 }, 429, corsHeaders);
     }
 
     // Load user context (role, org, type)
@@ -72,11 +68,11 @@ Deno.serve(async (req) => {
       .single();
 
     if (!profile) {
-      return json({ error: 'Profile not found' }, 403);
+      return json({ error: 'Profile not found' }, 403, corsHeaders);
     }
 
     if (!profile.is_active) {
-      return json({ error: 'Account deactivated' }, 403);
+      return json({ error: 'Account deactivated' }, 403, corsHeaders);
     }
 
     const ctx: UserContext = {
@@ -95,10 +91,10 @@ Deno.serve(async (req) => {
           role: ctx.role,
           organizationId: ctx.organizationId,
           employeeType: ctx.employeeType,
-        });
+        }, 200, corsHeaders);
 
       case 'tenant-info': {
-        if (!ctx.organizationId) return json({ error: 'No organization' }, 403);
+        if (!ctx.organizationId) return json({ error: 'No organization' }, 403, corsHeaders);
         
         const { data: org } = await supabase
           .from('organizations')
@@ -113,13 +109,12 @@ Deno.serve(async (req) => {
           .limit(1)
           .single();
 
-        return json({ organization: org, license });
+        return json({ organization: org, license }, 200, corsHeaders);
       }
 
       case 'audit-log': {
-        // Only owners and developers can view audit logs
         if (ctx.role !== 'OWNER' && ctx.role !== 'DEVELOPER') {
-          return json({ error: 'Insufficient permissions' }, 403);
+          return json({ error: 'Insufficient permissions' }, 403, corsHeaders);
         }
 
         const body = await req.json().catch(() => ({}));
@@ -132,7 +127,6 @@ Deno.serve(async (req) => {
           .order('created_at', { ascending: false })
           .range(offset, offset + limit - 1);
 
-        // Scope to org unless developer
         if (ctx.role !== 'DEVELOPER' && ctx.organizationId) {
           query = query.eq('organization_id', ctx.organizationId);
         }
@@ -141,33 +135,33 @@ Deno.serve(async (req) => {
         if (body.entity_type) query = query.eq('entity_type', body.entity_type);
 
         const { data, error } = await query;
-        if (error) return json({ error: error.message }, 500);
-        return json({ logs: data, count: data?.length || 0 });
+        if (error) return json({ error: error.message }, 500, corsHeaders);
+        return json({ logs: data, count: data?.length || 0 }, 200, corsHeaders);
       }
 
       case 'tenant-stats': {
         if (ctx.role !== 'DEVELOPER') {
-          return json({ error: 'Developer only' }, 403);
+          return json({ error: 'Developer only' }, 403, corsHeaders);
         }
 
         const { data, error } = await supabase.rpc('get_organization_stats_rpc');
-        if (error) return json({ error: error.message }, 500);
-        return json({ stats: data });
+        if (error) return json({ error: error.message }, 500, corsHeaders);
+        return json({ stats: data }, 200, corsHeaders);
       }
 
       default:
-        return json({ error: `Unknown action: ${action}` }, 400);
+        return json({ error: `Unknown action: ${action}` }, 400, corsHeaders);
     }
 
   } catch (err) {
     console.error('[api-gateway] Error:', err);
-    return json({ error: 'Internal server error' }, 500);
+    return json({ error: 'Internal server error' }, 500, getCorsHeaders(req));
   }
 });
 
-function json(data: unknown, status = 200) {
+function json(data: unknown, status = 200, headers: Record<string, string> = {}) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...headers, 'Content-Type': 'application/json' },
   });
 }

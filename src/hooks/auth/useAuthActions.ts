@@ -40,7 +40,7 @@ export const useAuthActions = (deps: AuthActionsDeps) => {
         window.dispatchEvent(new CustomEvent('logout-started'));
 
         clearAuthCache();
-        clearEncryptionKey();
+        clearEncryptionKey().catch(() => {});
         clearDeviceState();
         clearAllCachedData().catch(() => {});
         clearDistributorOfflineData().catch(() => {});

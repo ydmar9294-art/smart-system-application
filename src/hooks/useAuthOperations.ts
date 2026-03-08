@@ -8,6 +8,7 @@
  * - Circuit breaker for cascading failure prevention
  */
 import { useRef, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole, User, EmployeeType, LicenseStatus, Organization } from '@/types';
 import { getCachedAuth, setCachedAuth, clearAuthCache, CachedAuthState } from '@/lib/authCache';
@@ -59,7 +60,7 @@ const callAuthStatus = async (accessToken: string): Promise<AuthStatusResponse> 
     clearTimeout(timeoutId);
     // Single retry on network/timeout errors
     if (err?.name === 'AbortError' || err?.message?.includes('fetch')) {
-      console.warn('[AuthOps] Retrying auth-status after failure...');
+      logger.warn('Retrying auth-status after failure...', 'AuthOps');
       const { data, error } = await supabase.functions.invoke('auth-status', {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
@@ -107,7 +108,7 @@ export const checkAuthStatus = async (): Promise<AuthStatusResponse> => {
         }
       );
     } catch (err) {
-      console.error('[AuthOps] checkAuthStatus failed:', err);
+      logger.error('checkAuthStatus failed', 'AuthOps');
       return { authenticated: false, reason: 'ERROR' };
     } finally {
       inflightAuthStatus = null;
@@ -176,7 +177,7 @@ export const resolveUserProfile = async (uid: string): Promise<ProfileResolution
 
     return { user, role, organization, success: true, fromCache: false };
   } catch (err) {
-    console.error('[Auth] resolveProfile error:', err);
+    logger.error('resolveProfile error', 'Auth');
     clearAuthCache();
     return { user: null, role: null, organization: null, success: false };
   }
