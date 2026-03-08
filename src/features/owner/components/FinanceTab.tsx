@@ -1,7 +1,6 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
-import { supabase } from '@/integrations/supabase/client';
 import { 
   TrendingUp, TrendingDown, DollarSign, CreditCard, AlertTriangle, 
   Package, ArrowUpRight, ArrowDownRight, BarChart3, PieChart,
