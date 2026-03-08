@@ -155,7 +155,7 @@ export async function shareInvoicePdf(
 
       return;
     } catch (err) {
-      console.error('[invoicePdfService] Capacitor share failed:', err);
+      logger.error('Capacitor share failed', 'InvoicePdf');
       // fall through to browser fallback
     }
   }
