@@ -183,11 +183,11 @@ const OwnerDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background has-bottom-nav" dir="rtl">
+    <div className="min-h-screen bg-background has-bottom-nav" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       <div className="max-w-lg mx-auto">
         <DashboardHeader
-          userName={user?.name || 'المالك'}
-          subtitle="لوحة الإدارة"
+          userName={user?.name || t('owner.owner')}
+          subtitle={t('owner.title')}
           icon={<ShieldCheck className="w-4 h-4 text-primary-foreground" />}
           iconBgClass="bg-primary"
           onLogout={handleLogout}
