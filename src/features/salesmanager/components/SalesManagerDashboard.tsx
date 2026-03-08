@@ -32,7 +32,6 @@ const SalesManagerDashboard: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<SalesManagerTabType>('dashboard');
   const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
-  const [loggingOut, setLoggingOut] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [newEmployeeCode, setNewEmployeeCode] = useState<string | null>(null);
