@@ -90,6 +90,7 @@ export function useRealtimeSync(orgId?: string | null, role?: string | null) {
           logger.info(`[Realtime] Org channel connected: ${orgId}`, 'RealtimeSync');
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           reconnectAttemptsRef.current++;
+          performanceMonitor.recordReconnect(`org-rt-${orgId}`, reconnectAttemptsRef.current);
           logger.warn(`[Realtime] Org channel error (attempt ${reconnectAttemptsRef.current}): ${err}`, 'RealtimeSync');
           if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
             startFallbackPolling();
