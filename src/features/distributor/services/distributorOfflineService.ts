@@ -424,7 +424,7 @@ export async function getActionStats(): Promise<{
   failed: number;
   total: number;
 }> {
-  const all = await getAllItems<OfflineAction>(STORES.ACTIONS);
+  const all = await getAllActionsDecrypted();
   return {
     pending: all.filter(a => a.status === 'pending').length,
     syncing: all.filter(a => a.status === 'syncing').length,
