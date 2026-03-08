@@ -416,7 +416,8 @@ const TeamContent: React.FC<any> = ({
   showAddUserModal, setShowAddUserModal, myPendingEmployees, myActivatedEmployees,
   copiedId, setCopiedId, togglingEmployee, handleToggleEmployee, getEmployeeTypeLabel
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language === 'ar';
   return (
   <div className="space-y-4">
     <div className="p-4 rounded-2xl bg-card shadow-sm">
