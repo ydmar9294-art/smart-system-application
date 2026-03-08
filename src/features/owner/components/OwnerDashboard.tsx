@@ -224,11 +224,19 @@ const OwnerDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Tab Content */}
+        {/* Tab Content with transitions */}
         <div className="px-4 pb-4">
-          <div className="animate-fade-in">
-            {renderTabContent()}
-          </div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+            >
+              {renderTabContent()}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
 
