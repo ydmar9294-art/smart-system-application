@@ -175,6 +175,10 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
 
   const handleActivationSuccess = () => { onAuthComplete(); };
   const handleAuthError = (error: string) => { setAuthError(error); };
+  const handleGuestSelect = (role: GuestRole) => {
+    setShowRoleSelector(false);
+    enterGuest(role);
+  };
 
   const renderContent = () => {
     switch (authState.type) {
