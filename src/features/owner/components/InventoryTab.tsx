@@ -681,15 +681,15 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
           </div>
 
           <div className="space-y-3">
-            <label className="text-xs font-black text-muted-foreground uppercase">إضافة أصناف للمرتجع</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.addReturnItems')}</label>
             <select 
               value={selectedReturnProduct} 
               onChange={(e) => handleReturnProductChange(e.target.value)} 
               className="input-field py-4"
             >
-              <option value="">اختر المنتج...</option>
+              <option value="">{t('ownerInventory.selectProductForReturn')}</option>
               {products.filter(p => p.stock > 0).map(p => (
-                <option key={p.id} value={p.id}>{p.name} (متوفر: {p.stock})</option>
+                <option key={p.id} value={p.id}>{p.name} ({t('ownerInventory.availableQty')} {p.stock})</option>
               ))}
             </select>
             
