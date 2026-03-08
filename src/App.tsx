@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useEffect, useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation, Routes, Route } from 'react-router-dom';
 import { App as CapacitorApp } from '@capacitor/app';
 import { useApp } from '@/store/AppContext';
