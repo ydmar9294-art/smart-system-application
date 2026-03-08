@@ -205,6 +205,9 @@ async function processOperation(
         p_customer_id: customerId,
         p_items: op.payload.items,
         p_payment_type: (op.payload.paymentType as string) || 'CASH',
+        p_discount_type: (op.payload.discountType as string) || null,
+        p_discount_percentage: (op.payload.discountPercentage as number) || 0,
+        p_discount_value: (op.payload.discountValue as number) || 0,
       });
 
       if (error) return { id: op.id, status: 'failed', error: error.message };

@@ -837,8 +837,7 @@ export async function syncAllPending(): Promise<{ synced: number; failed: number
   let failed = 0;
 
   try {
-    await loadPersistedIdMaps();
-
+    // ID maps already loaded by startDistributorSync; skip redundant load
     const pending = await getPendingActions();
     if (pending.length === 0) return { synced: 0, failed: 0 };
 
