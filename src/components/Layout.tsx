@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { WifiOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '@/store/AppContext';
 import { UserRole, LicenseStatus } from '@/types';
