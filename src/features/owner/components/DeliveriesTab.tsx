@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { logger } from '@/lib/logger';
 import { useApp } from '@/store/AppContext';
 import { Truck, Plus, Package, Calendar, User, Check, Trash2, Loader2, AlertCircle, Eye } from 'lucide-react';
 import { EmployeeType } from '@/types';
