@@ -140,7 +140,7 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer, onQue
 
       setSaleItems(adjustedItems);
     } catch (err) {
-      console.error('Error loading sale items:', err);
+      logger.error('Error loading sale items', 'SalesReturnTab');
       // Fallback: try cached sale items, then cached invoices
       try {
         const sale = localSales.find(s => s.id === saleId);

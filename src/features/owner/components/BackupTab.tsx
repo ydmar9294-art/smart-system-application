@@ -457,7 +457,7 @@ const BackupTab: React.FC = () => {
       await generateBackupPdf(backupData, getPdfTranslations(), lang, setProgress);
       setProgress('');
     } catch (err) {
-      console.error('[Backup PDF]:', err);
+      logger.error('Backup PDF export error', 'BackupTab');
       setProgress(t('backup.errorPdf'));
     } finally {
       setLoading(false);

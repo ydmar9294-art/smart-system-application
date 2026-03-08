@@ -212,7 +212,7 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
       
       try { await cacheInvoices(results); } catch { /* ignore */ }
     } catch (err) {
-      console.error('Error fetching invoices:', err);
+      logger.error('Error fetching invoices', 'InvoiceHistoryTab');
     } finally {
       setLoading(false);
       setRefreshing(false);
