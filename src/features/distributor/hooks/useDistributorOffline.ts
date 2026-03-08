@@ -178,7 +178,7 @@ export function useDistributorOffline() {
       await cacheInventory(items);
       await refreshStats();
     } catch (err) {
-      console.warn('[DistributorOffline] Inventory fetch failed, using cache');
+      logger.warn('Inventory fetch failed, using cache', 'DistributorOffline');
     }
   }, [refreshStats]);
 
