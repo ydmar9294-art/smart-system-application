@@ -2,14 +2,15 @@
  * IndexedDB Encryption Layer
  * 
  * Encrypts sensitive data before storing in IndexedDB using AES-GCM.
- * Key is derived from a random device key stored in localStorage,
- * separate from IndexedDB to add a layer of defense-in-depth.
+ * Key is derived from a random device key stored via secure key store
+ * (native Keystore/Keychain on mobile, localStorage fallback on web).
  * 
- * If Web Crypto API is unavailable (some mobile WebViews),
- * falls back to a basic obfuscation layer rather than storing plaintext.
+ * If Web Crypto API is unavailable, sensitive offline storage is DISABLED
+ * rather than using weak encryption. This prevents false security guarantees.
  */
 
-const DEVICE_KEY_STORAGE = 'ss_dek_v1';
+import { logger } from '@/lib/logger';
+
 const ALGO = 'AES-GCM';
 const IV_LENGTH = 12; // 96-bit IV for AES-GCM
 
@@ -31,26 +32,32 @@ function isWebCryptoAvailable(): boolean {
   }
 }
 
-/** Get or generate a per-device encryption key */
+/**
+ * Get or create the device encryption key using the secure key store.
+ * On native platforms, keys are stored in Android Keystore / iOS Keychain.
+ * On web, keys fall back to localStorage (acceptable for browser context).
+ */
 async function getDeviceKey(): Promise<CryptoKey> {
   if (cachedKey) return cachedKey;
 
-  const stored = localStorage.getItem(DEVICE_KEY_STORAGE);
+  // Dynamically import to avoid circular dependencies
+  const { getSecureKey, storeSecureKey } = await import('@/services/secureKeyStore');
+  
+  const storedKeyB64 = await getSecureKey();
 
-  if (stored) {
-    // Import existing key
-    const rawKey = base64ToBuffer(stored);
+  if (storedKeyB64) {
+    const rawKey = base64ToBuffer(storedKeyB64);
     cachedKey = await crypto.subtle.importKey(
       'raw', rawKey, { name: ALGO }, false, ['encrypt', 'decrypt']
     );
   } else {
-    // Generate new random key
+    // Generate new random 256-bit key
     cachedKey = await crypto.subtle.generateKey(
       { name: ALGO, length: 256 }, true, ['encrypt', 'decrypt']
     );
-    // Export and persist
+    // Export and persist via secure store
     const exported = await crypto.subtle.exportKey('raw', cachedKey);
-    localStorage.setItem(DEVICE_KEY_STORAGE, bufferToBase64(exported));
+    await storeSecureKey(bufferToBase64(exported));
   }
 
   return cachedKey;
@@ -79,31 +86,47 @@ function base64ToBuffer(base64: string): ArrayBuffer {
 }
 
 // ============================================
-// Obfuscation Fallback (no Web Crypto)
+// HMAC Integrity (for offline queue)
 // ============================================
 
-function obfuscate(text: string): string {
-  // Simple XOR + Base64 — NOT cryptographic, just prevents casual reading
-  const key = 'SmartSalesSecureKey2024';
-  let result = '';
-  for (let i = 0; i < text.length; i++) {
-    result += String.fromCharCode(
-      text.charCodeAt(i) ^ key.charCodeAt(i % key.length)
-    );
+/**
+ * Compute HMAC-SHA256 of data using the device encryption key material.
+ */
+export async function computeHMAC(data: string): Promise<string> {
+  if (!isWebCryptoAvailable()) {
+    throw new Error('Web Crypto unavailable — cannot compute HMAC');
   }
-  return btoa(unescape(encodeURIComponent(result)));
+
+  const { getSecureKey } = await import('@/services/secureKeyStore');
+  const keyB64 = await getSecureKey();
+  if (!keyB64) throw new Error('No device key available for HMAC');
+
+  const keyBuffer = base64ToBuffer(keyB64);
+  const hmacKey = await crypto.subtle.importKey(
+    'raw', keyBuffer, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+
+  const dataBuffer = new TextEncoder().encode(data);
+  const signature = await crypto.subtle.sign('HMAC', hmacKey, dataBuffer);
+  return bufferToBase64(signature);
 }
 
-function deobfuscate(encoded: string): string {
-  const key = 'SmartSalesSecureKey2024';
-  const decoded = decodeURIComponent(escape(atob(encoded)));
-  let result = '';
-  for (let i = 0; i < decoded.length; i++) {
-    result += String.fromCharCode(
-      decoded.charCodeAt(i) ^ key.charCodeAt(i % key.length)
-    );
+/**
+ * Verify HMAC-SHA256 signature.
+ */
+export async function verifyHMAC(data: string, expectedSignature: string): Promise<boolean> {
+  try {
+    const computed = await computeHMAC(data);
+    // Constant-time comparison
+    if (computed.length !== expectedSignature.length) return false;
+    let result = 0;
+    for (let i = 0; i < computed.length; i++) {
+      result |= computed.charCodeAt(i) ^ expectedSignature.charCodeAt(i);
+    }
+    return result === 0;
+  } catch {
+    return false;
   }
-  return result;
 }
 
 // ============================================
@@ -114,49 +137,49 @@ export interface EncryptedPayload {
   __encrypted: true;
   /** IV + ciphertext, base64-encoded */
   data: string;
-  /** 'aes-gcm' | 'obfuscated' */
-  algo: string;
+  /** Algorithm used */
+  algo: 'aes-gcm';
+}
+
+/**
+ * Check if Web Crypto is available for encryption.
+ * UI should check this before attempting offline storage of sensitive data.
+ */
+export function isEncryptionAvailable(): boolean {
+  return isWebCryptoAvailable();
 }
 
 /**
  * Encrypt a JSON-serializable object.
  * Returns an EncryptedPayload that can be stored in IndexedDB.
+ * 
+ * THROWS if Web Crypto is unavailable — caller must handle gracefully.
  */
 export async function encryptData<T>(obj: T): Promise<EncryptedPayload> {
-  const json = JSON.stringify(obj);
-
-  if (isWebCryptoAvailable()) {
-    try {
-      const key = await getDeviceKey();
-      const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
-      const encoded = new TextEncoder().encode(json);
-
-      const ciphertext = await crypto.subtle.encrypt(
-        { name: ALGO, iv },
-        key,
-        encoded
-      );
-
-      // Prepend IV to ciphertext
-      const combined = new Uint8Array(IV_LENGTH + ciphertext.byteLength);
-      combined.set(iv, 0);
-      combined.set(new Uint8Array(ciphertext), IV_LENGTH);
-
-      return {
-        __encrypted: true,
-        data: bufferToBase64(combined.buffer),
-        algo: 'aes-gcm',
-      };
-    } catch (err) {
-      console.warn('[Encryption] AES-GCM failed, falling back to obfuscation:', err);
-    }
+  if (!isWebCryptoAvailable()) {
+    throw new Error('Web Crypto API unavailable — cannot encrypt data. Sensitive offline storage is disabled.');
   }
 
-  // Fallback: obfuscation
+  const json = JSON.stringify(obj);
+  const key = await getDeviceKey();
+  const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
+  const encoded = new TextEncoder().encode(json);
+
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: ALGO, iv },
+    key,
+    encoded
+  );
+
+  // Prepend IV to ciphertext
+  const combined = new Uint8Array(IV_LENGTH + ciphertext.byteLength);
+  combined.set(iv, 0);
+  combined.set(new Uint8Array(ciphertext), IV_LENGTH);
+
   return {
     __encrypted: true,
-    data: obfuscate(json),
-    algo: 'obfuscated',
+    data: bufferToBase64(combined.buffer),
+    algo: 'aes-gcm',
   };
 }
 
@@ -188,22 +211,18 @@ export async function decryptData<T>(stored: any): Promise<T> {
       const json = new TextDecoder().decode(decrypted);
       return JSON.parse(json) as T;
     } catch (err) {
-      console.error('[Encryption] Decryption failed:', err);
+      logger.error('Decryption failed', 'Encryption');
       throw new Error('فشل فك تشفير البيانات المحلية');
     }
   }
 
-  if (payload.algo === 'obfuscated') {
-    try {
-      const json = deobfuscate(payload.data);
-      return JSON.parse(json) as T;
-    } catch (err) {
-      console.error('[Encryption] Deobfuscation failed:', err);
-      throw new Error('فشل فك تشفير البيانات المحلية');
-    }
+  // Legacy obfuscated data — attempt migration by returning raw
+  if ((payload as any).algo === 'obfuscated') {
+    logger.warn('Found legacy obfuscated data — returning raw for migration', 'Encryption');
+    return stored as T;
   }
 
-  // Unknown algo — return raw (shouldn't happen)
+  // Unknown algo
   return stored as T;
 }
 
@@ -215,10 +234,15 @@ export function isEncrypted(obj: any): obj is EncryptedPayload {
 }
 
 /**
- * Clear the device encryption key.
+ * Clear the device encryption key from memory and secure storage.
  * Should be called on logout to ensure data is irrecoverable.
  */
-export function clearEncryptionKey(): void {
+export async function clearEncryptionKey(): Promise<void> {
   cachedKey = null;
-  localStorage.removeItem(DEVICE_KEY_STORAGE);
+  try {
+    const { deleteSecureKey } = await import('@/services/secureKeyStore');
+    await deleteSecureKey();
+  } catch {
+    // Best-effort cleanup
+  }
 }

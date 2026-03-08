@@ -7,11 +7,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-}
+import { getCorsHeaders, handleCorsPreflightIfNeeded } from '../_shared/cors.ts'
 
 interface SyncOperation {
   id: string;
@@ -28,9 +24,10 @@ interface SyncResult {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const preflightResponse = handleCorsPreflightIfNeeded(req);
+  if (preflightResponse) return preflightResponse;
+
+  const corsHeaders = getCorsHeaders(req);
 
   try {
     const authHeader = req.headers.get('Authorization');
@@ -46,16 +43,15 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    // Validate token using getClaims (signing-keys compatible)
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claims, error: claimsErr } = await supabase.auth.getClaims(token);
-    if (claimsErr || !claims?.claims) {
+    // Full server-side user validation
+    const { data: { user }, error: userErr } = await supabase.auth.getUser();
+    if (userErr || !user) {
       return new Response(JSON.stringify({ error: 'Invalid token' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const userId = claims.claims.sub as string;
+    const userId = user.id;
 
     // Rate limit: 10 bulk-sync calls per minute per user
     const { data: rlData } = await supabase.rpc('check_endpoint_rate_limit', {
@@ -87,7 +83,6 @@ Deno.serve(async (req) => {
     }
 
     // --- Idempotency check ---
-    // Collect all idempotency keys and check against audit_logs
     const idempotencyKeys = operations
       .map(op => op.idempotencyKey)
       .filter(Boolean);
@@ -113,7 +108,6 @@ Deno.serve(async (req) => {
     const results: SyncResult[] = [];
 
     for (const op of operations) {
-      // Skip already-processed operations (idempotency)
       if (op.idempotencyKey && processedKeys.has(op.idempotencyKey)) {
         results.push({ id: op.id, status: 'duplicate' });
         continue;
@@ -123,7 +117,6 @@ Deno.serve(async (req) => {
         const result = await processOperation(supabase, op, customerIdMap, saleIdMap);
         results.push(result);
 
-        // Record idempotency key on success
         if (result.status === 'synced' && op.idempotencyKey) {
           await supabase.from('audit_logs').insert({
             action: 'BULK_SYNC_OP',
@@ -131,7 +124,7 @@ Deno.serve(async (req) => {
             entity_id: op.idempotencyKey,
             user_id: userId,
             details: { serverId: result.serverId },
-          }).then(() => {});  // fire-and-forget
+          }).then(() => {});
         }
       } catch (err) {
         results.push({
@@ -142,12 +135,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Write audit summary
     const syncedCount = results.filter(r => r.status === 'synced').length;
     const failedCount = results.filter(r => r.status === 'failed').length;
     const duplicateCount = results.filter(r => r.status === 'duplicate').length;
 
-    console.log(`[bulk-sync] user=${userId} total=${operations.length} synced=${syncedCount} failed=${failedCount} duplicates=${duplicateCount}`);
+    console.log(`[bulk-sync] user=${userId.substring(0, 8)}... total=${operations.length} synced=${syncedCount} failed=${failedCount} duplicates=${duplicateCount}`);
 
     return new Response(JSON.stringify({
       results,
@@ -163,7 +155,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     console.error('[bulk-sync] Error:', err);
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 });
@@ -194,7 +186,6 @@ async function processOperation(
 
     case 'CREATE_SALE': {
       let customerId = op.payload.customerId as string;
-      // Resolve within-batch customer mapping
       if (customerId.startsWith('local_')) {
         const mapped = customerIdMap.get(customerId);
         if (!mapped) return { id: op.id, status: 'deferred', error: 'Customer not yet synced' };
