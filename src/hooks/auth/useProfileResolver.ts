@@ -47,8 +47,15 @@ export const useProfileResolver = (deps: ProfileResolverDeps) => {
           ]);
 
           if (!result.success) {
-            // No profile or needs activation — not an error
-            if (!isBackground) {
+            // Account deactivated, license expired, or needs activation
+            // For background checks: update state silently (triggers AccountStatusGate)
+            // For foreground: show activation screen
+            if (isBackground) {
+              // If user was previously authenticated but now fails,
+              // let AccountStatusGate handle it — it will re-check and show blocking screen.
+              // We don't force logout here to avoid disrupting the user.
+              logger.info('Background revalidation: account status changed', 'Auth');
+            } else {
               setActivationRequired();
             }
             return false;
@@ -61,9 +68,11 @@ export const useProfileResolver = (deps: ProfileResolverDeps) => {
           });
 
           // Register device after successful auth (fire-and-forget, non-blocking)
-          registerDevice().catch((err) => {
-            logger.warn('Device registration failed (non-blocking)', 'Auth', { error: String(err) });
-          });
+          if (!isBackground) {
+            registerDevice().catch((err) => {
+              logger.warn('Device registration failed (non-blocking)', 'Auth', { error: String(err) });
+            });
+          }
 
           return true;
         } catch (err: any) {
