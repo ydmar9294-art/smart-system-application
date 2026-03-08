@@ -116,6 +116,52 @@ const CustomersTab: React.FC = () => {
           <Search className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
           <p className="text-muted-foreground font-medium text-sm">لا توجد نتائج للبحث</p>
         </div>
+      ) : filtered.length > 50 ? (
+        /* VirtualList for large datasets (50+ customers) */
+        <VirtualList
+          items={filtered}
+          itemHeight={120}
+          containerHeight={400}
+          className="rounded-2xl"
+          renderItem={(c) => {
+            const status = getStatusLabel(c.balance);
+            return (
+              <div className={`bg-card p-4 rounded-2xl shadow-sm mx-1 ${c.balance > 0 ? 'border-r-4 border-destructive' : ''}`}>
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${c.balance > 0 ? 'bg-destructive/10' : 'bg-success/10'}`}>
+                      <CircleDollarSign className={`w-5 h-5 ${c.balance > 0 ? 'text-destructive' : 'text-success'}`} />
+                    </div>
+                    <div>
+                      <p className={`font-bold ${c.balance > 0 ? 'text-destructive' : 'text-foreground'}`}>{c.name}</p>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${status.color}`}>
+                        {status.text}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-left">
+                    <p className={`font-black text-lg ${c.balance > 0 ? 'text-destructive' : 'text-success'}`}>{c.balance.toLocaleString()}</p>
+                    <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-3 pt-3 border-t border-border">
+                  {c.phone && (
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Phone className="w-3.5 h-3.5" />
+                      <span className="text-xs font-medium" dir="ltr">{c.phone}</span>
+                    </div>
+                  )}
+                  {c.location && (
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span className="text-xs font-medium">{c.location}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }}
+        />
       ) : (
         <div className="space-y-2">
           {filtered.map(c => {
