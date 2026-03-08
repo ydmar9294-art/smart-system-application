@@ -25,10 +25,12 @@ export const BottomTabNav: React.FC<BottomTabNavProps> = ({ tabs, activeTab, onT
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
               className={`bottom-tab-item ${isActive ? 'bottom-tab-active' : 'bottom-tab-inactive'}`}
+              aria-selected={isActive}
+              role="tab"
             >
               <div className={`bottom-tab-icon-wrap ${isActive ? 'bottom-tab-icon-active' : ''}`}>
                 {isActive && tab.activeIcon ? tab.activeIcon : tab.icon}
-                {tab.badge && tab.badge > 0 && (
+                {tab.badge != null && tab.badge > 0 && (
                   <span className="bottom-tab-badge">{tab.badge > 99 ? '99+' : tab.badge}</span>
                 )}
               </div>

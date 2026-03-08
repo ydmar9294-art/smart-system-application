@@ -34,7 +34,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
       </div>
 
       {/* Profile capsule */}
-      <div className="flex justify-center pt-2 mb-3">
+      <div className="flex justify-center pt-1 mb-2.5">
         <div className="glass-profile-capsule">
           <div className={`w-9 h-9 ${iconBgClass} rounded-full flex items-center justify-center shadow-sm`}>
             {icon}
