@@ -386,27 +386,27 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
             onClick={() => setShowPurchaseReturnModal(true)} 
             className="w-full py-4 bg-destructive text-white rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
           >
-            <RotateCcw size={18}/> تسجيل مرتجع شراء
+            <RotateCcw size={18}/> {t('ownerInventory.registerPurchaseReturn')}
           </button>
 
           <div className="bg-destructive/10 p-4 rounded-2xl border border-destructive/20">
-            <p className="text-xs text-destructive font-bold mb-2">⚠️ تنبيه هام</p>
+            <p className="text-xs text-destructive font-bold mb-2">{t('ownerInventory.importantWarning')}</p>
             <p className="text-xs text-muted-foreground">
-              مرتجع الشراء يؤدي إلى خصم الكمية من المخزون. تأكد من توفر الكمية قبل التسجيل.
+              {t('ownerInventory.purchaseReturnWarning')}
             </p>
           </div>
 
           {purchaseReturns.length === 0 ? (
             <div className="bg-card p-8 rounded-[2.5rem] border text-center">
               <RotateCcw size={48} className="mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground font-bold">لا توجد مرتجعات مشتريات</p>
+              <p className="text-muted-foreground font-bold">{t('ownerInventory.noPurchaseReturns')}</p>
             </div>
           ) : (
             purchaseReturns.map((ret) => (
               <div key={ret.id} className="bg-card p-4 rounded-[1.8rem] border shadow-sm">
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <h3 className="font-black text-foreground text-sm">{ret.supplier_name || 'مورد غير محدد'}</h3>
+                    <h3 className="font-black text-foreground text-sm">{ret.supplier_name || t('ownerInventory.unknownSupplier')}</h3>
                     <p className="text-[9px] text-muted-foreground flex items-center gap-1">
                       <Calendar size={10} />
                       {new Date(ret.created_at).toLocaleDateString('ar-EG')}
@@ -417,7 +417,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
                   </span>
                 </div>
                 {ret.reason && (
-                  <p className="text-xs text-muted-foreground mt-1">السبب: {ret.reason}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t('ownerInventory.reason')} {ret.reason}</p>
                 )}
               </div>
             ))
