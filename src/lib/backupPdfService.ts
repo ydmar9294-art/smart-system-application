@@ -1,8 +1,8 @@
 /**
- * backupPdfService — Generates a professional Arabic/English backup PDF
+ * backupPdfService — Generates a professional bilingual backup PDF
  * 
- * Uses html2canvas + jsPDF to properly render Arabic text with RTL support.
- * Flow: Build HTML → render offscreen → capture pages → assemble PDF
+ * Uses html2canvas + jsPDF to properly render Arabic/English text.
+ * Accepts a translations object so all labels follow the current app language.
  */
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -35,12 +35,75 @@ interface PdfBackupData {
   }>;
 }
 
+export interface PdfTranslations {
+  pdfFullBackup: string;
+  pdfExportDate: string;
+  pdfTotalRevenue: string;
+  pdfTotalCollections: string;
+  pdfTotalRemaining: string;
+  pdfTotalDebts: string;
+  pdfCashCreditVoided: string;
+  pdfCustomerDatabase: string;
+  pdfId: string;
+  pdfCustomerName: string;
+  pdfPhone: string;
+  pdfLocation: string;
+  pdfDistributor: string;
+  pdfBalance: string;
+  pdfCustomersPage: string;
+  pdfInvoiceLog: string;
+  pdfNumber: string;
+  pdfCustomer: string;
+  pdfDate: string;
+  pdfType: string;
+  pdfTotal: string;
+  pdfDiscount: string;
+  pdfNet: string;
+  pdfPaid: string;
+  pdfRemaining: string;
+  pdfInvoicesPage: string;
+  pdfInvoiceItemsDetail: string;
+  pdfInvoice: string;
+  pdfProduct: string;
+  pdfQuantity: string;
+  pdfUnitPrice: string;
+  pdfItemTotal: string;
+  pdfItemsPage: string;
+  pdfCollectionLog: string;
+  pdfInvoiceNumber: string;
+  pdfAmount: string;
+  pdfCollector: string;
+  pdfStatus: string;
+  pdfNotes: string;
+  pdfCollectionsPage: string;
+  pdfActivityLog: string;
+  pdfOperation: string;
+  pdfUser: string;
+  pdfDetails: string;
+  pdfLogsPage: string;
+  pdfAdditionalRecords: string;
+  pdfCash: string;
+  pdfCredit: string;
+  pdfVoided: string;
+  pdfActive: string;
+  pdfReversed: string;
+  pdfPreparingDoc: string;
+  pdfSavingFile: string;
+  customers: string;
+  invoices: string;
+  collections: string;
+  activityLog: string;
+}
+
 // ── Shared styles ────────────────────────────────────────────────
-const baseStyles = `
+function getBaseStyles(isRtl: boolean): string {
+  const dir = isRtl ? 'rtl' : 'ltr';
+  const textAlign = isRtl ? 'right' : 'left';
+  return `
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body, html { 
-    font-family: 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif;
-    direction: rtl; text-align: right; color: #1e293b;
+    font-family: ${isRtl ? "'Tajawal', " : ""}'Segoe UI', Tahoma, Arial, sans-serif;
+    direction: ${dir}; text-align: ${textAlign}; color: #1e293b;
     background: #fff; font-size: 11px; line-height: 1.5;
   }
   .page { 
@@ -70,7 +133,6 @@ const baseStyles = `
   .text-danger { color: #dc2626; }
   .text-success { color: #16a34a; }
   .text-muted { color: #94a3b8; font-size: 9px; }
-  .text-warning { color: #d97706; }
   .badge {
     display: inline-block; padding: 2px 8px; border-radius: 10px;
     font-size: 9px; font-weight: 700;
@@ -103,21 +165,24 @@ const baseStyles = `
     padding-top: 8px; border-top: 1px solid #f1f5f9; margin-top: 16px;
   }
 `;
+}
 
-function fmtDate(iso: string): string {
+function fmtDate(iso: string, locale: string): string {
   try {
-    return new Date(iso).toLocaleDateString('ar-SA', {
+    return new Date(iso).toLocaleDateString(locale, {
       year: 'numeric', month: 'short', day: 'numeric',
     });
   } catch { return iso; }
 }
 
-function fmtNum(n: number): string {
-  return n.toLocaleString('ar-SA');
+function fmtNum(n: number, locale: string): string {
+  return n.toLocaleString(locale);
 }
 
 // ── Build HTML pages ─────────────────────────────────────────────
-function buildBackupHtml(data: PdfBackupData): string {
+function buildBackupHtml(data: PdfBackupData, t: PdfTranslations, lang: string): string {
+  const isRtl = lang === 'ar';
+  const locale = isRtl ? 'ar-SA' : 'en-US';
   const totalDebt = data.customers.reduce((s, c) => s + c.balance, 0);
   const totalRevenue = data.invoices.reduce((s, i) => s + i.grand_total, 0);
   const totalCollected = data.collections.filter(c => !c.is_reversed).reduce((s, c) => s + c.amount, 0);
@@ -125,27 +190,29 @@ function buildBackupHtml(data: PdfBackupData): string {
   const voidedCount = data.invoices.filter(i => i.is_voided).length;
   const cashCount = data.invoices.filter(i => i.payment_type === 'CASH' && !i.is_voided).length;
   const creditCount = data.invoices.filter(i => i.payment_type === 'CREDIT' && !i.is_voided).length;
+  const alignEnd = isRtl ? 'right' : 'left';
+  const alignStart = isRtl ? 'left' : 'right';
 
   // ── Cover page ──────────────────────────────────────────────
   const coverPage = `
     <div class="page">
       <div class="cover-center">
         <div style="font-size: 32px; font-weight: 900; color: #1e293b; margin-bottom: 8px;">${data.orgName}</div>
-        <div style="font-size: 16px; color: #64748b; margin-bottom: 4px;">نسخة احتياطية شاملة لبيانات المنشأة</div>
-        <div style="font-size: 12px; color: #94a3b8; margin-bottom: 24px;">تاريخ التصدير: ${data.exportDate}</div>
+        <div style="font-size: 16px; color: #64748b; margin-bottom: 4px;">${t.pdfFullBackup}</div>
+        <div style="font-size: 12px; color: #94a3b8; margin-bottom: 24px;">${t.pdfExportDate}: ${data.exportDate}</div>
         <div class="stat-grid">
-          <div class="stat-card"><div class="stat-value">${data.customers.length}</div><div class="stat-label">الزبائن</div></div>
-          <div class="stat-card"><div class="stat-value">${data.invoices.length}</div><div class="stat-label">الفواتير</div></div>
-          <div class="stat-card"><div class="stat-value">${data.collections.length}</div><div class="stat-label">التحصيلات</div></div>
-          <div class="stat-card"><div class="stat-value">${data.logs.length}</div><div class="stat-label">سجل العمليات</div></div>
+          <div class="stat-card"><div class="stat-value">${data.customers.length}</div><div class="stat-label">${t.customers}</div></div>
+          <div class="stat-card"><div class="stat-value">${data.invoices.length}</div><div class="stat-label">${t.invoices}</div></div>
+          <div class="stat-card"><div class="stat-value">${data.collections.length}</div><div class="stat-label">${t.collections}</div></div>
+          <div class="stat-card"><div class="stat-value">${data.logs.length}</div><div class="stat-label">${t.activityLog}</div></div>
         </div>
         <div style="margin-top: 24px; max-width: 500px;">
           <table>
-            <tr><td style="text-align: right; font-weight: 700;">إجمالي الإيرادات</td><td style="text-align: left; font-weight: 800;">${fmtNum(totalRevenue)} ${CURRENCY}</td></tr>
-            <tr><td style="text-align: right; font-weight: 700;">إجمالي التحصيلات</td><td style="text-align: left; font-weight: 800; color: #16a34a;">${fmtNum(totalCollected)} ${CURRENCY}</td></tr>
-            <tr><td style="text-align: right; font-weight: 700;">إجمالي المتبقي</td><td style="text-align: left; font-weight: 800; color: #dc2626;">${fmtNum(totalRemaining)} ${CURRENCY}</td></tr>
-            <tr><td style="text-align: right; font-weight: 700;">إجمالي الديون</td><td style="text-align: left; font-weight: 800; color: #d97706;">${fmtNum(totalDebt)} ${CURRENCY}</td></tr>
-            <tr><td style="text-align: right; font-weight: 700;">فواتير نقدية / آجلة / ملغاة</td><td style="text-align: left;">${cashCount} / ${creditCount} / ${voidedCount}</td></tr>
+            <tr><td style="text-align: ${alignEnd}; font-weight: 700;">${t.pdfTotalRevenue}</td><td style="text-align: ${alignStart}; font-weight: 800;">${fmtNum(totalRevenue, locale)} ${CURRENCY}</td></tr>
+            <tr><td style="text-align: ${alignEnd}; font-weight: 700;">${t.pdfTotalCollections}</td><td style="text-align: ${alignStart}; font-weight: 800; color: #16a34a;">${fmtNum(totalCollected, locale)} ${CURRENCY}</td></tr>
+            <tr><td style="text-align: ${alignEnd}; font-weight: 700;">${t.pdfTotalRemaining}</td><td style="text-align: ${alignStart}; font-weight: 800; color: #dc2626;">${fmtNum(totalRemaining, locale)} ${CURRENCY}</td></tr>
+            <tr><td style="text-align: ${alignEnd}; font-weight: 700;">${t.pdfTotalDebts}</td><td style="text-align: ${alignStart}; font-weight: 800; color: #d97706;">${fmtNum(totalDebt, locale)} ${CURRENCY}</td></tr>
+            <tr><td style="text-align: ${alignEnd}; font-weight: 700;">${t.pdfCashCreditVoided}</td><td style="text-align: ${alignStart};">${cashCount} / ${creditCount} / ${voidedCount}</td></tr>
           </table>
         </div>
       </div>
@@ -159,39 +226,39 @@ function buildBackupHtml(data: PdfBackupData): string {
       <td>${c.phone || '—'}</td>
       <td>${c.location || '—'}</td>
       <td>${c.distributor_name || '—'}</td>
-      <td style="font-weight: 800; color: ${c.balance > 0 ? '#dc2626' : '#16a34a'};">${fmtNum(c.balance)} ${CURRENCY}</td>
+      <td style="font-weight: 800; color: ${c.balance > 0 ? '#dc2626' : '#16a34a'};">${fmtNum(c.balance, locale)} ${CURRENCY}</td>
     </tr>`).join('');
 
   const customersPage = `
     <div class="page">
       <div class="header-bar"><span>${data.exportDate}</span><span>${data.orgName}</span></div>
-      <div class="section-title">📋 قاعدة بيانات الزبائن (${data.customers.length})</div>
+      <div class="section-title">📋 ${t.pdfCustomerDatabase} (${data.customers.length})</div>
       <table>
         <thead><tr>
-          <th>المعرّف</th><th>اسم الزبون</th><th>رقم الهاتف</th>
-          <th>الموقع</th><th>الموزع</th><th>الرصيد</th>
+          <th>${t.pdfId}</th><th>${t.pdfCustomerName}</th><th>${t.pdfPhone}</th>
+          <th>${t.pdfLocation}</th><th>${t.pdfDistributor}</th><th>${t.pdfBalance}</th>
         </tr></thead>
         <tbody>${custRows}</tbody>
       </table>
-      <div class="footer">صفحة الزبائن — ${data.orgName}</div>
+      <div class="footer">${t.pdfCustomersPage} — ${data.orgName}</div>
     </div>`;
 
   // ── Invoices page ───────────────────────────────────────────
   const invRows = data.invoices.map(inv => {
     const subtotal = inv.grand_total + (inv.discount_value || 0);
     const typeClass = inv.is_voided ? 'badge-void' : inv.payment_type === 'CASH' ? 'badge-cash' : 'badge-credit';
-    const typeLabel = inv.is_voided ? 'ملغاة' : inv.payment_type === 'CASH' ? 'نقدي' : 'آجل';
+    const typeLabel = inv.is_voided ? t.pdfVoided : inv.payment_type === 'CASH' ? t.pdfCash : t.pdfCredit;
     return `
     <tr ${inv.is_voided ? 'style="opacity: 0.5;"' : ''}>
       <td>${inv.id.slice(0, 8)}</td>
       <td style="font-weight: 700;">${inv.customer_name}</td>
-      <td>${fmtDate(inv.created_at)}</td>
+      <td>${fmtDate(inv.created_at, locale)}</td>
       <td><span class="badge ${typeClass}">${typeLabel}</span></td>
-      <td>${fmtNum(subtotal)}</td>
-      <td>${inv.discount_value > 0 ? fmtNum(inv.discount_value) : '—'}</td>
-      <td style="font-weight: 800;">${fmtNum(inv.grand_total)}</td>
-      <td class="text-success">${fmtNum(inv.paid_amount)}</td>
-      <td class="${inv.remaining > 0 ? 'text-danger' : ''}" style="font-weight: 700;">${fmtNum(inv.remaining)}</td>
+      <td>${fmtNum(subtotal, locale)}</td>
+      <td>${(inv.discount_value ?? 0) > 0 ? fmtNum(inv.discount_value!, locale) : '—'}</td>
+      <td style="font-weight: 800;">${fmtNum(inv.grand_total, locale)}</td>
+      <td class="text-success">${fmtNum(inv.paid_amount, locale)}</td>
+      <td class="${inv.remaining > 0 ? 'text-danger' : ''}" style="font-weight: 700;">${fmtNum(inv.remaining, locale)}</td>
       <td>${inv.distributor_name || '—'}</td>
     </tr>`;
   }).join('');
@@ -199,16 +266,16 @@ function buildBackupHtml(data: PdfBackupData): string {
   const invoicesPage = `
     <div class="page">
       <div class="header-bar"><span>${data.exportDate}</span><span>${data.orgName}</span></div>
-      <div class="section-title">🧾 سجل الفواتير (${data.invoices.length})</div>
+      <div class="section-title">🧾 ${t.pdfInvoiceLog} (${data.invoices.length})</div>
       <table>
         <thead><tr>
-          <th>الرقم</th><th>الزبون</th><th>التاريخ</th><th>النوع</th>
-          <th>المجموع</th><th>الخصم</th><th>الصافي</th>
-          <th>المدفوع</th><th>المتبقي</th><th>الموزع</th>
+          <th>${t.pdfNumber}</th><th>${t.pdfCustomer}</th><th>${t.pdfDate}</th><th>${t.pdfType}</th>
+          <th>${t.pdfTotal}</th><th>${t.pdfDiscount}</th><th>${t.pdfNet}</th>
+          <th>${t.pdfPaid}</th><th>${t.pdfRemaining}</th><th>${t.pdfDistributor}</th>
         </tr></thead>
         <tbody>${invRows}</tbody>
       </table>
-      <div class="footer">صفحة الفواتير — ${data.orgName}</div>
+      <div class="footer">${t.pdfInvoicesPage} — ${data.orgName}</div>
     </div>`;
 
   // ── Invoice Items Detail pages ──────────────────────────────
@@ -218,15 +285,15 @@ function buildBackupHtml(data: PdfBackupData): string {
     const groupsHtml = invoicesWithItems.map(inv => {
       const rows = inv.items.map(it => `
         <tr>
-          <td style="text-align: right; font-weight: 600;">${it.product_name}</td>
+          <td style="text-align: ${alignEnd}; font-weight: 600;">${it.product_name}</td>
           <td>${it.quantity}</td>
-          <td>${fmtNum(it.unit_price)} ${CURRENCY}</td>
-          <td style="font-weight: 700;">${fmtNum(it.total_price)} ${CURRENCY}</td>
+          <td>${fmtNum(it.unit_price, locale)} ${CURRENCY}</td>
+          <td style="font-weight: 700;">${fmtNum(it.total_price, locale)} ${CURRENCY}</td>
         </tr>`).join('');
       return `
-        <div class="inv-group-title">فاتورة: ${inv.id.slice(0, 8)} | ${inv.customer_name} | ${fmtDate(inv.created_at)} | ${inv.payment_type === 'CASH' ? 'نقدي' : 'آجل'}</div>
+        <div class="inv-group-title">${t.pdfInvoice}: ${inv.id.slice(0, 8)} | ${inv.customer_name} | ${fmtDate(inv.created_at, locale)} | ${inv.payment_type === 'CASH' ? t.pdfCash : t.pdfCredit}</div>
         <table>
-          <thead><tr><th style="text-align: right;">المنتج</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead>
+          <thead><tr><th style="text-align: ${alignEnd};">${t.pdfProduct}</th><th>${t.pdfQuantity}</th><th>${t.pdfUnitPrice}</th><th>${t.pdfItemTotal}</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>`;
     }).join('');
@@ -234,22 +301,22 @@ function buildBackupHtml(data: PdfBackupData): string {
     itemsHtml = `
       <div class="page">
         <div class="header-bar"><span>${data.exportDate}</span><span>${data.orgName}</span></div>
-        <div class="section-title">📦 تفاصيل أصناف الفواتير</div>
+        <div class="section-title">📦 ${t.pdfInvoiceItemsDetail}</div>
         ${groupsHtml}
-        <div class="footer">صفحة تفاصيل الأصناف — ${data.orgName}</div>
+        <div class="footer">${t.pdfItemsPage} — ${data.orgName}</div>
       </div>`;
   }
 
   // ── Collections page ────────────────────────────────────────
   const colRows = data.collections.map(c => {
     const statusClass = c.is_reversed ? 'badge-reversed' : 'badge-active';
-    const statusLabel = c.is_reversed ? 'معكوسة' : 'نشطة';
+    const statusLabel = c.is_reversed ? t.pdfReversed : t.pdfActive;
     return `
     <tr ${c.is_reversed ? 'style="opacity: 0.5;"' : ''}>
       <td>${c.sale_id.slice(0, 8)}</td>
       <td style="font-weight: 700;">${c.customer_name || '—'}</td>
-      <td>${fmtDate(c.created_at)}</td>
-      <td style="font-weight: 800; color: #16a34a;">${fmtNum(c.amount)} ${CURRENCY}</td>
+      <td>${fmtDate(c.created_at, locale)}</td>
+      <td style="font-weight: 800; color: #16a34a;">${fmtNum(c.amount, locale)} ${CURRENCY}</td>
       <td>${c.collector_name || '—'}</td>
       <td><span class="badge ${statusClass}">${statusLabel}</span></td>
       <td class="text-muted">${c.notes || '—'}</td>
@@ -259,15 +326,15 @@ function buildBackupHtml(data: PdfBackupData): string {
   const collectionsPage = `
     <div class="page">
       <div class="header-bar"><span>${data.exportDate}</span><span>${data.orgName}</span></div>
-      <div class="section-title">💰 سجل التحصيلات (${data.collections.length})</div>
+      <div class="section-title">💰 ${t.pdfCollectionLog} (${data.collections.length})</div>
       <table>
         <thead><tr>
-          <th>رقم الفاتورة</th><th>الزبون</th><th>التاريخ</th>
-          <th>المبلغ</th><th>المحصّل</th><th>الحالة</th><th>ملاحظات</th>
+          <th>${t.pdfInvoiceNumber}</th><th>${t.pdfCustomer}</th><th>${t.pdfDate}</th>
+          <th>${t.pdfAmount}</th><th>${t.pdfCollector}</th><th>${t.pdfStatus}</th><th>${t.pdfNotes}</th>
         </tr></thead>
         <tbody>${colRows}</tbody>
       </table>
-      <div class="footer">صفحة التحصيلات — ${data.orgName}</div>
+      <div class="footer">${t.pdfCollectionsPage} — ${data.orgName}</div>
     </div>`;
 
   // ── Logs page ───────────────────────────────────────────────
@@ -276,26 +343,32 @@ function buildBackupHtml(data: PdfBackupData): string {
       <td><span class="badge" style="background: #eff6ff; color: #3b82f6;">${l.type}</span></td>
       <td style="font-weight: 600;">${l.user_name}</td>
       <td>${l.date}</td>
-      <td style="text-align: right; font-size: 9px;">${l.details.length > 80 ? l.details.slice(0, 78) + '...' : l.details}</td>
+      <td style="text-align: ${alignEnd}; font-size: 9px;">${l.details.length > 80 ? l.details.slice(0, 78) + '...' : l.details}</td>
     </tr>`).join('');
 
   const logsPage = `
     <div class="page">
       <div class="header-bar"><span>${data.exportDate}</span><span>${data.orgName}</span></div>
-      <div class="section-title">📊 سجل العمليات والنشاطات (${Math.min(data.logs.length, 300)})</div>
+      <div class="section-title">📊 ${t.pdfActivityLog} (${Math.min(data.logs.length, 300)})</div>
       <table>
-        <thead><tr><th>العملية</th><th>المستخدم</th><th>التاريخ</th><th style="text-align: right;">التفاصيل</th></tr></thead>
+        <thead><tr><th>${t.pdfOperation}</th><th>${t.pdfUser}</th><th>${t.pdfDate}</th><th style="text-align: ${alignEnd};">${t.pdfDetails}</th></tr></thead>
         <tbody>${logRows}</tbody>
       </table>
-      ${data.logs.length > 300 ? '<p style="text-align: center; color: #94a3b8; font-size: 9px;">... و ' + (data.logs.length - 300) + ' سجل إضافي</p>' : ''}
-      <div class="footer">صفحة سجل العمليات — ${data.orgName}</div>
+      ${data.logs.length > 300 ? '<p style="text-align: center; color: #94a3b8; font-size: 9px;">... ' + (data.logs.length - 300) + ' ' + t.pdfAdditionalRecords + '</p>' : ''}
+      <div class="footer">${t.pdfLogsPage} — ${data.orgName}</div>
     </div>`;
 
-  return `<!DOCTYPE html><html dir="rtl" lang="ar">
+  const dir = isRtl ? 'rtl' : 'ltr';
+  const htmlLang = isRtl ? 'ar' : 'en';
+  const fontLink = isRtl 
+    ? '<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">'
+    : '';
+
+  return `<!DOCTYPE html><html dir="${dir}" lang="${htmlLang}">
     <head>
       <meta charset="UTF-8">
-      <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
-      <style>${baseStyles}</style>
+      ${fontLink}
+      <style>${getBaseStyles(isRtl)}</style>
     </head>
     <body>${coverPage}${customersPage}${invoicesPage}${itemsHtml}${collectionsPage}${logsPage}</body>
     </html>`;
@@ -304,11 +377,13 @@ function buildBackupHtml(data: PdfBackupData): string {
 // ── Main export function ─────────────────────────────────────────
 export async function generateBackupPdf(
   data: PdfBackupData,
+  translations: PdfTranslations,
+  lang: string,
   onProgress?: (msg: string) => void
 ): Promise<void> {
-  const html = buildBackupHtml(data);
+  const html = buildBackupHtml(data, translations, lang);
 
-  onProgress?.('جاري تجهيز المستند...');
+  onProgress?.(translations.pdfPreparingDoc);
 
   // Create hidden container
   const container = document.createElement('div');
@@ -346,7 +421,7 @@ export async function generateBackupPdf(
     throw new Error('Failed to create PDF document');
   }
 
-  // Wait for Tajawal font
+  // Wait for font
   try {
     await (iframeDoc as any).fonts?.ready;
   } catch { /* fallback */ }
@@ -362,10 +437,9 @@ export async function generateBackupPdf(
   const pageH = pdf.internal.pageSize.getHeight();
 
   for (let i = 0; i < pages.length; i++) {
-    onProgress?.(`جاري معالجة الصفحة ${i + 1} من ${pages.length}...`);
+    onProgress?.(`${translations.pdfPreparingDoc} (${i + 1}/${pages.length})`);
 
     const pageEl = pages[i] as HTMLElement;
-    // Ensure page is visible for rendering
     pageEl.style.pageBreakAfter = 'auto';
 
     const canvas = await html2canvas(pageEl, {
@@ -384,7 +458,7 @@ export async function generateBackupPdf(
     pdf.addImage(imgData, 'JPEG', 0, 0, imgW, Math.min(imgH, pageH));
   }
 
-  onProgress?.('جاري حفظ الملف...');
+  onProgress?.(translations.pdfSavingFile);
 
   const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 16);
   pdf.save(`backup_${data.orgName}_${ts}.pdf`);
