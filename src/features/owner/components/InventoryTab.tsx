@@ -650,7 +650,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
       <FullScreenModal
         isOpen={showPurchaseReturnModal}
         onClose={() => { setShowPurchaseReturnModal(false); resetPurchaseReturnForm(); }}
-        title="مرتجع شراء"
+        title={t('ownerInventory.purchaseReturn')}
         icon={<RotateCcw size={24} />}
         headerColor="destructive"
         footer={
@@ -664,7 +664,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
             className="w-full bg-destructive text-white font-black py-5 rounded-2xl shadow-lg active:scale-[0.98] transition-all disabled:opacity-50 text-lg flex items-center justify-center gap-2"
           >
             <Check size={22} />
-            تأكيد المرتجع
+            {t('ownerInventory.confirmReturn')}
           </button>
         }
       >
