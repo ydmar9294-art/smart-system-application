@@ -32,13 +32,13 @@ export function useOfflineQuery<T>(options: OfflineQueryOptions<T>) {
     ...restOptions
   } = options;
 
-  const hasSeedRef = useRef(false);
+  const lastSeededKeyRef = useRef<string | null>(null);
   const queryKeyStr = JSON.stringify(queryKey);
 
-  // Seed React Query from IndexedDB on first mount
+  // Seed React Query from IndexedDB on first mount or when queryKey changes
   useEffect(() => {
-    if (skipOfflineCache || hasSeedRef.current) return;
-    hasSeedRef.current = true;
+    if (skipOfflineCache || lastSeededKeyRef.current === queryKeyStr) return;
+    lastSeededKeyRef.current = queryKeyStr;
 
     getCachedQueryData<T>(queryKey as readonly unknown[]).then((cached) => {
       if (cached != null) {

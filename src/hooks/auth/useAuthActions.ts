@@ -9,6 +9,7 @@ import { getCachedAuth, clearAuthCache } from '@/lib/authCache';
 import { clearEncryptionKey } from '@/lib/indexedDbEncryption';
 import { clearDeviceState } from '@/lib/deviceService';
 import { clearAllCachedData } from '@/lib/offlineCache';
+import { clearDistributorOfflineData } from '@/features/distributor/services/distributorOfflineService';
 import { logger } from '@/lib/logger';
 import { buildUserFromCache, isCacheFullyActivated, isNetworkAvailable } from './authHelpers';
 
@@ -42,6 +43,7 @@ export const useAuthActions = (deps: AuthActionsDeps) => {
         clearEncryptionKey();
         clearDeviceState();
         clearAllCachedData().catch(() => {});
+        clearDistributorOfflineData().catch(() => {});
         bootedFromCache.current = false;
 
         await supabase.auth.signOut().catch(() => {
