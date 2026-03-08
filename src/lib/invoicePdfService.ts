@@ -197,7 +197,7 @@ export async function saveInvoicePdf(
       });
       return;
     } catch (err) {
-      console.warn('[invoicePdfService] Documents directory failed, trying ExternalStorage:', err);
+      logger.warn('Documents directory failed, trying ExternalStorage', 'InvoicePdf');
     }
 
     try {
