@@ -41,6 +41,7 @@ const OwnerDashboard: React.FC = () => {
   } = useApp();
   
   const { t, i18n } = useTranslation();
+  const [activeTab, setActiveTab] = useState<OwnerTabType>('daily');
   const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
   const [loggingOut, setLoggingOut] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
