@@ -870,11 +870,11 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
           </div>
           
           <div className="space-y-2">
-            <label className="text-xs font-black text-muted-foreground uppercase">الوحدة</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.unitLabel')}</label>
             <input 
               name="unit" 
-              defaultValue={editingProduct?.unit ?? 'قطعة'} 
-              placeholder="قطعة" 
+              defaultValue={editingProduct?.unit ?? t('ownerInventory.piece')} 
+              placeholder={t('ownerInventory.piece')} 
               className="input-field py-4" 
             />
           </div>
