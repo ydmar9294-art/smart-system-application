@@ -8,6 +8,7 @@
  */
 
 import jsPDF from 'jspdf';
+import { logger } from '@/lib/logger';
 import html2canvas from 'html2canvas';
 
 // ── Detect Capacitor Android ────────────────────────────────────────────────
