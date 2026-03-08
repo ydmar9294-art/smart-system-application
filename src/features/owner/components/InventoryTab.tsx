@@ -467,7 +467,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
       <FullScreenModal
         isOpen={showPurchaseModal}
         onClose={() => { setShowPurchaseModal(false); resetPurchaseForm(); }}
-        title="شراء مواد"
+        title={t('ownerInventory.purchaseMaterials')}
         icon={<ShoppingCart size={24} />}
         headerColor="success"
         footer={
@@ -479,20 +479,20 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
             }}
             className="w-full bg-success text-white font-black py-5 rounded-2xl shadow-lg active:scale-[0.98] transition-all text-lg"
           >
-            تأكيد الشراء
+            {t('ownerInventory.confirmPurchase')}
           </button>
         }
       >
         <form id="purchase-form" onSubmit={handlePurchaseSubmit} className="space-y-5">
           <div className="space-y-2">
-            <label className="text-xs font-black text-muted-foreground uppercase">المادة</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.selectProduct')}</label>
             <select 
               value={purchaseProduct} 
               onChange={(e) => handlePurchaseProductChange(e.target.value)} 
               required 
               className="input-field text-base py-4"
             >
-              <option value="">اختر المادة...</option>
+              <option value="">{t('ownerInventory.selectProduct')}</option>
               {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
