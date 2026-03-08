@@ -670,12 +670,12 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
       >
         <form id="purchase-return-form" onSubmit={handlePurchaseReturnSubmit} className="space-y-5">
           <div className="space-y-2">
-            <label className="text-xs font-black text-muted-foreground uppercase">المورد (اختياري)</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.supplierOptional')}</label>
             <input 
               type="text" 
               value={purchaseReturnSupplier} 
               onChange={(e) => setPurchaseReturnSupplier(e.target.value)} 
-              placeholder="اسم المورد" 
+              placeholder={t('ownerInventory.supplierName')} 
               className="input-field py-4" 
             />
           </div>
