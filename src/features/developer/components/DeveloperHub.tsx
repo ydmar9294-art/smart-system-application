@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import AnimatedTabContent from '@/components/ui/AnimatedTabContent';
 import { createPortal } from 'react-dom';
 import { copyToClipboard } from '@/lib/clipboard';
 import { useApp } from '@/store/AppContext';
