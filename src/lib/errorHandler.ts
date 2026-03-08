@@ -90,7 +90,7 @@ export const createErrorHandler = (
   logPrefix: string = '[App Error]'
 ) => {
   return (error: unknown) => {
-    console.error(logPrefix, error);
+    logger.error(`${logPrefix} ${error instanceof Error ? error.message : String(error)}`, 'ErrorHandler');
     const message = extractErrorMessage(error);
     notifyFn(message, 'error');
   };
