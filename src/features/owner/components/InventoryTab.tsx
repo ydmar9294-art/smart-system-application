@@ -546,7 +546,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
       <FullScreenModal
         isOpen={showDeliveryModal}
         onClose={() => { setShowDeliveryModal(false); resetDeliveryForm(); }}
-        title="تسليم للموزع"
+        title={t('ownerInventory.deliverToAgent')}
         icon={<Truck size={24} />}
         headerColor="primary"
         footer={
@@ -560,13 +560,13 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
             className="w-full bg-primary text-primary-foreground font-black py-5 rounded-2xl shadow-lg active:scale-[0.98] transition-all disabled:opacity-50 text-lg flex items-center justify-center gap-2"
           >
             <Check size={22} />
-            تأكيد التسليم
+            {t('ownerInventory.confirmDelivery')}
           </button>
         }
       >
         <form id="delivery-form" onSubmit={handleDeliverySubmit} className="space-y-5">
           <div className="space-y-2">
-            <label className="text-xs font-black text-muted-foreground uppercase">الموزع</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.selectDistributor')}</label>
             {distributors.length > 0 ? (
               <select
                 value={selectedDistributorId}
@@ -579,12 +579,12 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
                 required
                 className="input-field text-base py-4"
               >
-                <option value="">اختر الموزع...</option>
+                <option value="">{t('ownerInventory.selectDistributor')}</option>
                 {distributors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             ) : (
               <div className="bg-muted p-4 rounded-2xl text-sm text-muted-foreground font-bold text-center">
-                لا يوجد موزعين مُفعّلين حالياً. أضف موزع جديد ثم فعّل حسابه قبل تنفيذ التسليم.
+                {t('ownerInventory.noDistributors')}
               </div>
             )}
           </div>
