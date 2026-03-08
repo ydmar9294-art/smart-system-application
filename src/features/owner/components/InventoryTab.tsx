@@ -259,25 +259,25 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
             onClick={() => setSubTab('products')} 
             className={`py-2.5 rounded-xl font-black text-[10px] flex items-center justify-center gap-1 transition-all ${subTab === 'products' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
           >
-            <Package size={12} /> المواد
+            <Package size={12} /> {t('ownerInventory.products')}
           </button>
           <button 
             onClick={() => setSubTab('purchases')} 
             className={`py-2.5 rounded-xl font-black text-[10px] flex items-center justify-center gap-1 transition-all ${subTab === 'purchases' ? 'bg-card shadow-sm text-success' : 'text-muted-foreground'}`}
           >
-            <ShoppingCart size={12} /> شراء
+            <ShoppingCart size={12} /> {t('ownerInventory.purchases')}
           </button>
           <button 
             onClick={() => setSubTab('purchase-returns')} 
             className={`py-2.5 rounded-xl font-black text-[10px] flex items-center justify-center gap-1 transition-all ${subTab === 'purchase-returns' ? 'bg-card shadow-sm text-destructive' : 'text-muted-foreground'}`}
           >
-            <RotateCcw size={12} /> مرتجع
+            <RotateCcw size={12} /> {t('ownerInventory.purchaseReturns')}
           </button>
           <button 
             onClick={() => setSubTab('deliveries')} 
             className={`py-2.5 rounded-xl font-black text-[10px] flex items-center justify-center gap-1 transition-all ${subTab === 'deliveries' ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground'}`}
           >
-            <Truck size={12} /> تسليم
+            <Truck size={12} /> {t('ownerInventory.deliveries')}
           </button>
         </div>
       )}
