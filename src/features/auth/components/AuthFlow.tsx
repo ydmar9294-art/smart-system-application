@@ -10,6 +10,8 @@ import EmailPasswordAuth from './EmailPasswordAuth';
 import GoogleSignInButton from './GoogleSignInButton';
 import LicenseActivation from './LicenseActivation';
 import AuthOverlay from './AuthOverlay';
+import { GuestRoleSelector } from '@/features/guest';
+import { useGuest, GuestRole } from '@/store/GuestContext';
 
 interface AuthFlowProps {
   onAuthComplete: () => void;
