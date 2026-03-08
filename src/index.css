@@ -1316,3 +1316,31 @@
 }
 .dark .auth-overlay-backdrop { background: hsla(224, 28%, 4%, 0.4); }
 .dark .auth-overlay-orb { opacity: 0.06; }
+
+/* ==========================================
+   SETTINGS PAGE
+   ========================================== */
+.settings-row {
+  @apply w-full flex items-center justify-between px-4 py-3.5 transition-all active:scale-[0.98] active:bg-muted/50;
+}
+.settings-icon-box {
+  @apply w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0;
+}
+.settings-toggle {
+  @apply relative w-12 h-7 rounded-full transition-colors duration-300;
+}
+.settings-toggle-on {
+  @apply bg-primary;
+}
+.settings-toggle-off {
+  @apply bg-muted-foreground/20;
+}
+.settings-toggle-thumb {
+  @apply absolute top-0.5 w-6 h-6 rounded-full bg-background shadow-md transition-all duration-300;
+}
+.settings-toggle-on .settings-toggle-thumb {
+  inset-inline-start: calc(100% - 1.625rem);
+}
+.settings-toggle-off .settings-toggle-thumb {
+  inset-inline-start: 0.125rem;
+}
