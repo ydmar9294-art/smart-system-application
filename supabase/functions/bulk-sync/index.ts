@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
 
     const processedKeys = new Set<string>();
     if (idempotencyKeys.length > 0) {
-      const { data: existingLogs } = await supabase
+      const { data: existingLogs } = await serviceClient
         .from('audit_logs')
         .select('entity_id')
         .eq('action', 'BULK_SYNC_OP')
