@@ -59,6 +59,17 @@ const ar = {
     supportTeam: 'فريق الدعم',
     secureLogin: 'تسجيل دخول آمن ومشفر',
     secureEncrypted: 'اتصال آمن ومشفّر',
+    details: 'التفاصيل',
+    print: 'طباعة',
+    filterByDate: 'فلترة بالتاريخ',
+    filterOptions: 'خيارات الفلترة',
+    showCancelled: 'إظهار الملغاة',
+    operationCount: 'عدد العمليات',
+    returnOperation: 'عملية إرجاع',
+    noSupplier: 'بدون مورد',
+    unspecified: 'غير محدد',
+    cancelledReason: 'سبب الإلغاء',
+    items: 'الأصناف',
   },
 
   // ==========================================
@@ -238,6 +249,36 @@ const ar = {
   },
 
   // ==========================================
+  // FINANCE TAB (Owner)
+  // ==========================================
+  finance: {
+    weeklySales: 'مبيعات الأسبوع',
+    collections: 'التحصيلات',
+    totalDebts: 'إجمالي الذمم',
+    returns: 'المرتجعات',
+    discountAnalytics: 'تحليلات الخصومات',
+    totalDiscounts: 'إجمالي الخصومات',
+    cashDiscounts: 'خصومات نقدي',
+    creditDiscounts: 'خصومات آجل',
+    topDiscountCustomers: '🏆 أكثر الزبائن حصولاً على خصم',
+    smartRecommendation: '💡 توصية ذكية',
+    cashDiscountsHighInsight: 'الخصومات تتركز على المبيعات النقدية. فكر في تقليلها لتحسين هامش الربح.',
+    creditDiscountsHighInsight: 'الخصومات على المبيعات الآجلة أعلى. راجع سياسة الخصم للبيع بالآجل.',
+    customerHighDiscountWarning: ' ⚠️ الزبون "{{name}}" يحصل على أكثر من 30% من إجمالي الخصومات.',
+    weeklyComparison: 'مقارنة أسبوعية',
+    sales: 'المبيعات',
+    invoiceCount: 'عدد الفواتير',
+    systemSummary: 'ملخص النظام',
+    weekInvoices: 'فواتير الأسبوع',
+    collectionOps: 'عمليات تحصيل',
+    debtCustomers: 'زبائن بذمم',
+    lowStockProducts: 'منتجات منخفضة',
+    topCustomersByVolume: 'أعلى الزبائن حجماً',
+    thisWeek: 'هذا الأسبوع',
+    lastWeek: 'السابق',
+  },
+
+  // ==========================================
   // ACCOUNTANT DASHBOARD
   // ==========================================
   accountant: {
@@ -252,6 +293,74 @@ const ar = {
       salesReturns: 'مرتجع بيع',
       purchaseReturns: 'مرتجع شراء',
     },
+    // Sales Invoices Tab
+    searchByCustomer: 'بحث بالعميل...',
+    statusAll: 'الكل',
+    statusPaid: 'مدفوعة',
+    statusPartial: 'جزئي',
+    statusCredit: 'آجل',
+    statusVoided: 'ملغاة',
+    totalLabel: 'الإجمالي',
+    collectedLabel: 'المحصّل',
+    remainingLabel: 'المتبقي',
+    paidLabel: 'المدفوع',
+    invoiceDetails: 'تفاصيل الفاتورة',
+    printInvoice: 'طباعة الفاتورة',
+    customerLabel: 'العميل',
+    dateLabel: 'التاريخ',
+    subtotalBeforeDiscount: 'المجموع قبل الخصم',
+    discountLabel: 'الخصم',
+    voidedInvoice: 'فاتورة ملغاة',
+    noInvoices: 'لا توجد فواتير',
+    // Purchases Tab
+    searchByProductOrSupplier: 'بحث بالمنتج أو المورد...',
+    totalPurchases: 'إجمالي المشتريات',
+    noPurchases: 'لا توجد مشتريات',
+    // Collections Tab
+    totalCollections: 'إجمالي التحصيلات',
+    noCollections: 'لا توجد تحصيلات',
+    cancelled: 'ملغى',
+    done: 'تم',
+    // Sales Returns Tab
+    searchByCustomerReturns: 'بحث بالعميل...',
+    totalSalesReturns: 'إجمالي مرتجعات المبيعات',
+    noSalesReturns: 'لا توجد مرتجعات مبيعات',
+    // Purchase Returns Tab
+    searchBySupplier: 'بحث بالمورد...',
+    totalPurchaseReturns: 'إجمالي مرتجعات المشتريات',
+    noPurchaseReturns: 'لا توجد مرتجعات مشتريات',
+    // Debts Tab
+    totalCustomerDebts: 'إجمالي ديون العملاء',
+    customersWithDebts: 'عميل لديهم ديون مستحقة',
+    searchCustomer: 'بحث عن عميل...',
+    sortByDebt: 'الأعلى ديناً',
+    sortByName: 'الاسم',
+    noDebts: 'لا يوجد عملاء بديون مستحقة',
+  },
+
+  // ==========================================
+  // REPORTS TAB
+  // ==========================================
+  reports: {
+    netSales: 'صافي المبيعات',
+    netPurchases: 'صافي المشتريات',
+    totalDiscounts: 'إجمالي الخصومات',
+    revenueImpact: 'التأثير على الإيرادات',
+    profitLoss: 'الربح / الخسارة',
+    salesCost: 'تكلفة المبيعات',
+    inventoryValue: 'قيمة المخزون',
+    purchases: 'المشتريات',
+    collections: 'التحصيلات',
+    debts: 'الديون',
+    currentInventoryValue: 'قيمة المخزون الحالي',
+    mainWarehouse: 'المخزن الرئيسي',
+    distributorWarehouses: 'مخازن الموزعين',
+    financialSummary: 'ملخص الحركة المالية',
+    totalSales: 'إجمالي المبيعات',
+    salesCostLabel: 'تكلفة المبيعات',
+    salesReturns: 'مرتجعات المبيعات',
+    totalPurchases: 'إجمالي المشتريات',
+    purchaseReturns: 'مرتجعات المشتريات',
   },
 
   // ==========================================
@@ -282,6 +391,7 @@ const ar = {
     warehouseKeepers: 'أمناء المستودع',
     customerStats: 'إحصائيات الزبائن',
     debtors: 'ذمم مدينة',
+    discount: 'خصم',
   },
 
   // ==========================================
@@ -352,6 +462,31 @@ const ar = {
     customerAdded: 'تم إضافة الزبون بنجاح',
     customerAddedOffline: 'تم حفظ الزبون محلياً — ستتم المزامنة عند عودة الإنترنت',
     customerAddFailed: 'فشل إضافة الزبون',
+  },
+
+  // ==========================================
+  // OFFLINE SYNC
+  // ==========================================
+  offlineSync: {
+    offlineMode: 'وضع عدم الاتصال — العمليات محفوظة محلياً',
+    syncing: 'جارٍ المزامنة...',
+    failedOps: '{{count}} عملية فشلت في المزامنة',
+    pendingOps: '{{count}} عملية بانتظار المزامنة',
+    autoSync: 'ستتم المزامنة تلقائياً',
+    syncOnReconnect: 'ستتم المزامنة عند عودة الإنترنت',
+    retryAll: 'إعادة المحاولة',
+    syncNow: 'مزامنة الآن',
+    operationsLog: 'سجل العمليات',
+    saleInvoice: 'فاتورة بيع',
+    collection: 'تحصيل',
+    returnOp: 'مرتجع',
+    warehouseTransfer: 'نقل مستودع',
+    addCustomerOp: 'إضافة زبون',
+    statusDone: 'تمت',
+    statusFailed: 'فشلت',
+    statusSyncing: 'مزامنة',
+    statusPending: 'بانتظار',
+    retry: 'إعادة المحاولة',
   },
 
   // ==========================================
