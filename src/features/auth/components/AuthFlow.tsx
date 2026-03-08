@@ -251,6 +251,13 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
               <div className="flex-1 h-px bg-border" />
             </div>
             <EmailPasswordAuth onError={handleAuthError} />
+            {/* Guest preview button */}
+            <button
+              onClick={() => setShowRoleSelector(true)}
+              className="w-full py-3 rounded-2xl border-2 border-dashed border-border text-muted-foreground font-bold text-sm hover:border-primary/40 hover:text-foreground active:scale-[0.97] transition-all duration-200"
+            >
+              {t('guest.loginAsGuest')}
+            </button>
             <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground">
               <ShieldCheck className="w-4 h-4" />
               <span>{t('auth.secureLogin')}</span>
