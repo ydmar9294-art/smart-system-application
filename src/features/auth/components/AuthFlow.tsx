@@ -32,6 +32,8 @@ const SLOW_THRESHOLD_MS = 5_000;
 const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
   const { t } = useTranslation();
   const [authState, setAuthState] = useState<AuthState>({ type: 'initial' });
+  const [showRoleSelector, setShowRoleSelector] = useState(false);
+  const { enterGuest } = useGuest();
   const [authError, setAuthError] = useState<string>('');
   const [isSlow, setIsSlow] = useState(false);
   const [oauthPending, setOauthPending] = useState(() => isOAuthPending());
