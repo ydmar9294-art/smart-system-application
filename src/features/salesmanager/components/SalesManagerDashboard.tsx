@@ -28,6 +28,7 @@ const SalesManagerDashboard: React.FC = () => {
     logout, addDistributor, pendingEmployees = [],
     deactivateEmployee, reactivateEmployee
   } = useApp();
+  const { t, i18n } = useTranslation();
   
   const [activeTab, setActiveTab] = useState<SalesManagerTabType>('dashboard');
   const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
