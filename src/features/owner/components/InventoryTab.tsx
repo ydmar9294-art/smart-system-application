@@ -431,13 +431,13 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
             onClick={() => setShowDeliveryModal(true)} 
             className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
           >
-            <Truck size={18}/> تسليم بضاعة للموزع
+            <Truck size={18}/> {t('ownerInventory.deliverToDistributor')}
           </button>
 
           {deliveries.length === 0 ? (
             <div className="bg-card p-8 rounded-[2.5rem] border text-center">
               <Truck size={48} className="mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground font-bold">لا توجد تسليمات</p>
+              <p className="text-muted-foreground font-bold">{t('ownerInventory.noDeliveries')}</p>
             </div>
           ) : (
             deliveries.map((delivery) => (
@@ -454,7 +454,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
                     </p>
                   </div>
                   <span className={`badge text-[9px] ${delivery.status === 'completed' ? 'badge-success' : 'badge-warning'}`}>
-                    {delivery.status === 'completed' ? 'مكتمل' : 'معلق'}
+                    {delivery.status === 'completed' ? t('ownerInventory.completed') : t('common.pending')}
                   </span>
                 </div>
               </div>
