@@ -141,18 +141,18 @@ const DistributorDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background has-bottom-nav" dir="rtl">
+    <div className="min-h-screen bg-background has-bottom-nav" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       <div className="max-w-lg mx-auto">
         <DashboardHeader
-          userName="لوحة الموزع"
-          subtitle="إدارة المبيعات الميدانية"
+          userName={t('distributor.title')}
+          subtitle={t('distributor.subtitle')}
           icon={<ShoppingBag className="w-4 h-4 text-primary-foreground" />}
           iconBgClass="bg-primary"
           onLogout={handleLogout}
           loggingOut={loggingOut}
           rightActions={
             <button onClick={() => setShowAddCustomerModal(true)}
-              className="p-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-all" title="إضافة زبون جديد">
+              className="p-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-all" title={t('distributor.addNewCustomer')}>
               <UserPlus className="w-4 h-4" />
             </button>
           }
