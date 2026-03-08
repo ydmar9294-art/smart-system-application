@@ -1,11 +1,13 @@
 /**
  * Domain Query Hooks - React Query based data fetching
  * 
+ * NOW OFFLINE-FIRST: All queries persist results to IndexedDB via useOfflineQuery.
+ * On app restart, cached data is served instantly while background fetch occurs.
+ * 
  * Security: Every org-scoped query includes .eq('organization_id', orgId) (Section 1)
  * Performance: Partial selects to reduce payload size (Section 5)
  * Safety: Queries only run with valid org context (Section 2)
  */
-import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole, EmployeeType, Product, Customer, Sale, Payment, License, OrgStats } from '@/types';
 import {
@@ -16,6 +18,7 @@ import {
 } from '@/hooks/useDataOperations';
 import { queryKeys } from '@/lib/queryClient';
 import { safeQuery, canExecuteQuery, requireOrgContext } from '@/lib/safeQuery';
+import { useOfflineQuery } from '@/hooks/useOfflineQuery';
 
 // Domain-specific stale times (Section 7)
 const STALE = {
@@ -24,19 +27,26 @@ const STALE = {
   slow: 10 * 60 * 1000,    // 10 min - licenses, org stats
 };
 
+// Offline TTL per domain
+const OFFLINE_TTL = {
+  fast: 12 * 60 * 60 * 1000,   // 12 hours - sales, payments
+  normal: 24 * 60 * 60 * 1000, // 24 hours - products, customers
+  slow: 48 * 60 * 60 * 1000,   // 48 hours - licenses, org stats
+};
+
 // Max rows per query to prevent hitting Supabase 1000-row default
 const PAGE_LIMIT = 500;
 
 // ============================================
-// Product Queries — Section 1: org filter + Section 5: partial select
+// Product Queries
 // ============================================
 
 export function useProductsQuery(orgId?: string | null, role?: UserRole | null) {
-  return useQuery({
+  return useOfflineQuery({
     queryKey: queryKeys.products(orgId),
+    offlineTtlMs: OFFLINE_TTL.normal,
     queryFn: async (): Promise<Product[]> => {
       requireOrgContext(orgId, role);
-      // Section 5: partial select — only fields needed by UI
       let query = supabase
         .from('products')
         .select('id,name,category,cost_price,base_price,consumer_price,stock,min_stock,unit,is_deleted,organization_id')
@@ -51,7 +61,6 @@ export function useProductsQuery(orgId?: string | null, role?: UserRole | null) 
       const data = await safeQuery(() => query, { label: 'products' });
       return (data || []).map(transformProduct);
     },
-    // Section 2: safe enable condition
     enabled: canExecuteQuery(orgId, role),
     staleTime: STALE.normal,
   });
@@ -62,8 +71,9 @@ export function useProductsQuery(orgId?: string | null, role?: UserRole | null) 
 // ============================================
 
 export function useCustomersQuery(orgId?: string | null, role?: UserRole | null) {
-  return useQuery({
+  return useOfflineQuery({
     queryKey: queryKeys.customers(orgId),
+    offlineTtlMs: OFFLINE_TTL.normal,
     queryFn: async (): Promise<Customer[]> => {
       requireOrgContext(orgId, role);
       let query = supabase
@@ -89,8 +99,9 @@ export function useCustomersQuery(orgId?: string | null, role?: UserRole | null)
 // ============================================
 
 export function useSalesQuery(orgId?: string | null, role?: UserRole | null) {
-  return useQuery({
+  return useOfflineQuery({
     queryKey: queryKeys.sales(orgId),
+    offlineTtlMs: OFFLINE_TTL.fast,
     queryFn: async (): Promise<Sale[]> => {
       requireOrgContext(orgId, role);
       let query = supabase
@@ -116,8 +127,9 @@ export function useSalesQuery(orgId?: string | null, role?: UserRole | null) {
 // ============================================
 
 export function usePaymentsQuery(orgId?: string | null, role?: UserRole | null) {
-  return useQuery({
+  return useOfflineQuery({
     queryKey: queryKeys.payments(orgId),
+    offlineTtlMs: OFFLINE_TTL.fast,
     queryFn: async (): Promise<Payment[]> => {
       requireOrgContext(orgId, role);
       let query = supabase
@@ -143,8 +155,9 @@ export function usePaymentsQuery(orgId?: string | null, role?: UserRole | null) 
 // ============================================
 
 export function usePurchasesQuery(orgId?: string | null, role?: UserRole | null) {
-  return useQuery({
+  return useOfflineQuery({
     queryKey: queryKeys.purchases(orgId),
+    offlineTtlMs: OFFLINE_TTL.normal,
     queryFn: async (): Promise<Purchase[]> => {
       requireOrgContext(orgId, role);
       let query = supabase
@@ -170,8 +183,9 @@ export function usePurchasesQuery(orgId?: string | null, role?: UserRole | null)
 // ============================================
 
 export function useDeliveriesQuery(orgId?: string | null, role?: UserRole | null) {
-  return useQuery({
+  return useOfflineQuery({
     queryKey: queryKeys.deliveries(orgId),
+    offlineTtlMs: OFFLINE_TTL.normal,
     queryFn: async (): Promise<Delivery[]> => {
       requireOrgContext(orgId, role);
       let query = supabase
@@ -204,8 +218,9 @@ export function usePendingEmployeesQuery(
   const canView = role === UserRole.OWNER || 
     (role === UserRole.EMPLOYEE && employeeType === EmployeeType.SALES_MANAGER);
 
-  return useQuery({
+  return useOfflineQuery({
     queryKey: queryKeys.pendingEmployees(orgId),
+    offlineTtlMs: OFFLINE_TTL.normal,
     queryFn: async (): Promise<PendingEmployee[]> => {
       requireOrgContext(orgId, role);
       let query = supabase
@@ -213,7 +228,6 @@ export function usePendingEmployeesQuery(
         .select('id,name,phone,role,employee_type,activation_code,is_used,created_at,organization_id,activated_at,activated_by')
         .order('created_at', { ascending: false });
 
-      // Always filter by org for non-developers
       if (orgId) {
         query = query.eq('organization_id', orgId);
       }
@@ -221,10 +235,8 @@ export function usePendingEmployeesQuery(
       const data = await safeQuery(() => query, { label: 'pendingEmployees' });
       return (data || []).map(transformPendingEmployee);
     },
-    // Require both orgId and role permission
     enabled: !!orgId && canView,
     staleTime: STALE.normal,
-    // Polling replaced by Realtime subscriptions (useRealtimeSync)
   });
 }
 
@@ -233,8 +245,9 @@ export function usePendingEmployeesQuery(
 // ============================================
 
 export function useDistributorInventoryQuery(orgId?: string | null, role?: UserRole | null) {
-  return useQuery({
+  return useOfflineQuery({
     queryKey: queryKeys.distributorInventory(orgId),
+    offlineTtlMs: OFFLINE_TTL.normal,
     queryFn: async (): Promise<DistributorInventoryItem[]> => {
       requireOrgContext(orgId, role);
       let query = supabase
@@ -251,7 +264,6 @@ export function useDistributorInventoryQuery(orgId?: string | null, role?: UserR
     },
     enabled: canExecuteQuery(orgId, role),
     staleTime: STALE.normal,
-    // Polling replaced by Realtime subscriptions (useRealtimeSync)
   });
 }
 
@@ -264,17 +276,15 @@ export function useUsersQuery(
   role?: UserRole | null,
   employeeType?: EmployeeType
 ) {
-  // All authenticated org users can fetch the users list.
-  // RLS policies on profiles table enforce actual data visibility per role.
   const canView = role === UserRole.OWNER || 
     role === UserRole.DEVELOPER ||
     role === UserRole.EMPLOYEE;
 
-  return useQuery({
+  return useOfflineQuery({
     queryKey: queryKeys.users(orgId),
+    offlineTtlMs: OFFLINE_TTL.normal,
     queryFn: async () => {
       requireOrgContext(orgId, role);
-      // Section 5: partial select for user profiles
       const data = await safeQuery(
         () => supabase
           .from('profiles')
@@ -286,7 +296,6 @@ export function useUsersQuery(
     },
     enabled: !!orgId && canView,
     staleTime: STALE.normal,
-    // Polling replaced by Realtime subscriptions (useRealtimeSync)
   });
 }
 
@@ -306,8 +315,9 @@ export interface PurchaseReturn {
 
 export function usePurchaseReturnsQuery(orgId?: string | null, role?: UserRole | null, employeeType?: string | null) {
   const canView = role === UserRole.OWNER || role === UserRole.DEVELOPER || employeeType === 'WAREHOUSE_KEEPER' || employeeType === 'ACCOUNTANT';
-  return useQuery({
+  return useOfflineQuery({
     queryKey: queryKeys.purchaseReturns(orgId),
+    offlineTtlMs: OFFLINE_TTL.normal,
     queryFn: async (): Promise<PurchaseReturn[]> => {
       requireOrgContext(orgId, role);
       let query = supabase
@@ -334,8 +344,9 @@ export function usePurchaseReturnsQuery(orgId?: string | null, role?: UserRole |
 // ============================================
 
 export function useLicensesQuery(role?: UserRole | null) {
-  return useQuery({
+  return useOfflineQuery({
     queryKey: queryKeys.licenses(),
+    offlineTtlMs: OFFLINE_TTL.slow,
     queryFn: async (): Promise<License[]> => {
       const data = await safeQuery(
         () => supabase
@@ -356,8 +367,10 @@ export function useLicensesQuery(role?: UserRole | null) {
 // ============================================
 
 export function useOrgStatsQuery(role?: UserRole | null) {
-  return useQuery({
+  return useOfflineQuery({
     queryKey: queryKeys.orgStats(),
+    offlineTtlMs: OFFLINE_TTL.slow,
+    skipOfflineCache: true, // Stats are too dynamic to cache offline
     queryFn: async (): Promise<OrgStats[]> => {
       const data = await safeQuery(
         () => supabase.rpc('get_organization_stats_rpc'),
