@@ -39,18 +39,15 @@ export const BottomTabNav: React.FC<BottomTabNavProps> = ({ tabs, activeTab, onT
               aria-selected={isActive}
               role="tab"
             >
-              {/* Icon container */}
               <div className={`native-tab-icon ${isActive ? 'native-tab-icon-lit' : ''}`}>
                 {isActive && tab.activeIcon ? tab.activeIcon : tab.icon}
                 {tab.badge != null && tab.badge > 0 && (
                   <span className="native-tab-badge">{tab.badge > 99 ? '99+' : tab.badge}</span>
                 )}
               </div>
-              {/* Label */}
               <span className={`native-tab-label ${isActive ? 'native-tab-label-lit' : ''}`}>
                 {tab.label}
               </span>
-              {/* Active indicator dot */}
               {isActive && <div className="native-tab-dot" />}
             </button>
           );
