@@ -130,6 +130,8 @@ const en = {
     secure: 'Secure',
     accurate: 'Accurate',
     fast: 'Fast',
+    enterEmailFirst: 'Please enter your email first',
+    profileCheckError: 'Error checking account profile',
   },
 
   // ==========================================
@@ -174,6 +176,7 @@ const en = {
     likeSystem: 'Like what you see?',
     promoText: 'For full access, contact the company to book a trial license and a personal session to define your needs.',
     contactWhatsapp: 'Contact via WhatsApp',
+    previewBanner: 'Preview Mode —',
   },
 
   // ==========================================
@@ -230,6 +233,8 @@ const en = {
     totalCustomers: 'Customers',
     totalProducts: 'Products',
     totalEmployees: 'Employees',
+    cashLabel: 'Cash',
+    creditLabel: 'Credit',
   },
 
   // ==========================================
@@ -553,6 +558,30 @@ const en = {
   },
 
   // ==========================================
+  // ORG DELETION
+  // ==========================================
+  orgDeletion: {
+    title: 'Organization Deletion Request',
+    pendingTitle: 'Organization Deletion Request',
+    pendingDate: 'Organization deletion request submitted on',
+    pendingStatus: 'Status: Under review by support team',
+    reason: 'Reason:',
+    approvedNote: 'Your request has been approved. Deletion will be executed soon.',
+    requestButton: 'Request Organization Deletion',
+    confirmTitle: 'Organization Deletion Request',
+    confirmDesc: 'Your organization',
+    confirmDescEnd: 'will be permanently deleted along with all data and records.',
+    irreversible: '⚠️ This action cannot be undone after approval and execution.',
+    reasonLabel: 'Reason for deletion (optional)',
+    reasonPlaceholder: 'Why do you want to delete the organization?',
+    typeOrgName: 'Type the organization name',
+    typeOrgNameConfirm: 'to confirm *',
+    confirmButton: 'Confirm Deletion Request',
+    submittingButton: 'Submitting...',
+    errorPrefix: 'Error: ',
+  },
+
+  // ==========================================
   // BACKUP
   // ==========================================
   backup: {
@@ -570,9 +599,39 @@ const en = {
   // NOTIFICATIONS
   // ==========================================
   notifications: {
-    title: 'Notifications',
+    title: 'Notification Center',
     noNotifications: 'No notifications',
-    markRead: 'Mark as read',
+    markRead: 'Read All',
+    outOfStock: 'Out of Stock',
+    lowStock: 'Low Stock',
+    dueInvoice: 'Due Invoice',
+    outOfStockDesc: 'out of stock',
+    lowStockDesc: 'remaining',
+    now: 'Now',
+    minutesAgo: '{{count}} min ago',
+    hoursAgo: '{{count}} hr ago',
+    daysAgo: '{{count}} day ago',
+    outLabel: 'Out',
+    lowLabel: 'Low',
+    dueLabel: 'Due',
+  },
+
+  // ==========================================
+  // STOCK MOVEMENTS
+  // ==========================================
+  stockMovements: {
+    transfer: 'Transfer',
+    sale: 'Sale',
+    return: 'Sales Return',
+    purchase: 'Purchase',
+    adjustment: 'Adjustment',
+    delivery: 'Delivery',
+    all: 'All',
+    noMovements: 'No stock movements',
+    fromCentral: 'Main Warehouse',
+    fromDistributor: 'Distributor Stock',
+    toCustomer: 'Customer',
+    by: 'By:',
   },
 };
 
