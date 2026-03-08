@@ -24,9 +24,17 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   usePageTheme();
   useRealtimeNotifications();
 
+  // Global offline detection
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const on = () => setIsOnline(true);
+    const off = () => setIsOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+  }, []);
+
   const handlePullRefresh = useCallback(async () => {
-    // Data-only refresh: invalidate cached queries so they refetch from the server.
-    // Does NOT call refreshAuth (which sets isLoading=true and causes full UI skeleton).
     await refreshAllData();
   }, [refreshAllData]);
 
