@@ -4,6 +4,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Language transition animation */
+html.lang-transition * {
+  transition: all 0.3s ease !important;
+}
 
 
 /* ==========================================

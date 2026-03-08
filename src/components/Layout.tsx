@@ -57,7 +57,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       <PullToRefresh onRefresh={handlePullRefresh}>
         <div
           className="scroll-under-layout flex bg-background text-end overflow-x-hidden font-tajawal transition-colors duration-300 safe-area-x"
-          dir="rtl"
+          dir={isRtl ? 'rtl' : 'ltr'}
         >
         <main className="flex-1 relative">
           {/* Global Controls */}
@@ -69,33 +69,42 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               <button
                 onClick={() => setShowSettingsMenu(!showSettingsMenu)}
                 className="p-2 rounded-full bg-card/80 backdrop-blur-sm shadow-md text-muted-foreground hover:text-foreground transition-all"
-                title="الإعدادات"
+                title={t('settings.title')}
               >
                 <Settings size={18} />
               </button>
               {showSettingsMenu && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowSettingsMenu(false)} />
-                  <div className="absolute top-full mt-2 start-0 bg-card border border-border rounded-2xl shadow-xl z-50 w-56 animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden" dir="rtl">
+                  <div className={`absolute top-full mt-2 ${isRtl ? 'start-0' : 'end-0'} bg-card border border-border rounded-2xl shadow-xl z-50 w-56 animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden`}>
                     {/* Header */}
                     <div className="px-4 py-3 bg-muted/50 border-b border-border">
-                      <p className="text-xs font-black text-foreground">الإعدادات</p>
+                      <p className="text-xs font-black text-foreground">{t('settings.title')}</p>
                     </div>
                     
                     <div className="p-2 space-y-0.5 max-h-[60vh] overflow-y-auto">
+                      {/* Language Switcher */}
+                      <button
+                        onClick={() => { setShowLangSwitcher(true); setShowSettingsMenu(false); }}
+                        className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold text-foreground hover:bg-muted transition-colors"
+                      >
+                        <Globe size={16} className="text-primary flex-shrink-0" /> 
+                        <span>{t('settings.language')}</span>
+                        <span className="text-xs text-muted-foreground ms-auto">{i18n.language === 'ar' ? '🇸🇦' : '🇺🇸'}</span>
+                      </button>
                       <button
                         onClick={() => { navigate('/privacy-policy'); setShowSettingsMenu(false); }}
                         className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold text-foreground hover:bg-muted transition-colors"
                       >
                         <Shield size={16} className="text-primary flex-shrink-0" /> 
-                        <span>سياسة الخصوصية</span>
+                        <span>{t('settings.privacyPolicy')}</span>
                       </button>
                       <button
                         onClick={() => { navigate('/terms'); setShowSettingsMenu(false); }}
                         className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold text-foreground hover:bg-muted transition-colors"
                       >
                         <FileText size={16} className="text-primary flex-shrink-0" /> 
-                        <span>شروط الاستخدام</span>
+                        <span>{t('settings.termsOfService')}</span>
                       </button>
                       
                       <div className="h-px bg-border mx-2 my-1" />
@@ -113,6 +122,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </main>
         </div>
       </PullToRefresh>
+
+      {/* Language Switcher Modal */}
+      <LanguageSwitcher open={showLangSwitcher} onClose={() => setShowLangSwitcher(false)} />
     </>
   );
 };
