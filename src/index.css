@@ -1430,3 +1430,42 @@ html.lang-transition * {
 .dark .auth-overlay-orb {
   opacity: 0.08;
 }
+
+/* ==========================================
+   GUEST PREVIEW MODE
+   Tabs/navigation stay interactive.
+   Buttons, inputs, textareas, forms are disabled.
+========================================== */
+.guest-preview-shell button:not([data-guest-allow]),
+.guest-preview-shell input,
+.guest-preview-shell textarea,
+.guest-preview-shell select,
+.guest-preview-shell [role="combobox"],
+.guest-preview-shell [contenteditable="true"],
+.guest-preview-shell form {
+  pointer-events: none !important;
+  opacity: 0.6;
+}
+
+/* Keep tabs, tab triggers, and accordion triggers clickable */
+.guest-preview-shell [role="tablist"],
+.guest-preview-shell [role="tab"],
+.guest-preview-shell [data-radix-collection-item],
+.guest-preview-shell [role="tablist"] button,
+.guest-preview-shell [data-state][role="tab"] {
+  pointer-events: auto !important;
+  opacity: 1 !important;
+}
+
+/* Keep scroll areas interactive */
+.guest-preview-shell [data-radix-scroll-area-viewport],
+.guest-preview-shell [class*="scroll-area"] {
+  pointer-events: auto !important;
+}
+
+/* Exit button must always be clickable */
+.guest-preview-shell > button,
+.guest-preview-shell .fixed button {
+  pointer-events: auto !important;
+  opacity: 1 !important;
+}
