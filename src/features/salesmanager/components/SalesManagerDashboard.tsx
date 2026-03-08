@@ -341,7 +341,7 @@ const SalesManagerDashboard: React.FC = () => {
                       <div className="flex justify-between items-center">
                         <div>
                           <p className="font-bold text-foreground text-sm">{sale.customerName}</p>
-                          <p className="text-xs text-muted-foreground">{new Date(sale.timestamp).toLocaleString('ar-EG')}</p>
+                          <p className="text-xs text-muted-foreground">{new Date(sale.timestamp).toLocaleString(isRtl ? 'ar-EG' : 'en-US')}</p>
                         </div>
                         <div className={isRtl ? 'text-left' : 'text-right'}>
                           <p className="font-black text-emerald-600 dark:text-emerald-400">{sale.grandTotal.toLocaleString()}</p>
@@ -351,7 +351,7 @@ const SalesManagerDashboard: React.FC = () => {
                       {Number(sale.discountValue || 0) > 0 && (
                         <div className="flex items-center gap-1 mt-1.5 px-2 py-1 bg-purple-500/10 rounded-lg w-fit">
                           <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400">
-                            خصم: {Number(sale.discountValue).toLocaleString()} {CURRENCY}
+                            {t('salesManager.discount')}: {Number(sale.discountValue).toLocaleString()} {CURRENCY}
                             {sale.discountType === 'percentage' ? ` (${Number(sale.discountPercentage || 0).toFixed(1)}%)` : ''}
                           </span>
                         </div>
