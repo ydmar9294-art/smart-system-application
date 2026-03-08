@@ -128,7 +128,7 @@ const OwnerDashboard: React.FC = () => {
       case 'home': setActiveTab('daily'); break;
       case 'operations': setActiveTab('team'); break;
       case 'reports': setActiveTab('finance'); break;
-      case 'settings': setActiveTab('subscription'); break;
+      case 'settings': setActiveTab('app-settings'); break;
     }
   };
 
