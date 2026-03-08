@@ -11,7 +11,11 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   ArrowUpDown,
-  Loader2
+  Loader2,
+  DollarSign,
+  Save,
+  X,
+  Search
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY, SUPPORT_WHATSAPP_URL } from '@/constants';
@@ -20,10 +24,12 @@ import { DeliveriesTab } from '@/features/owner/components/DeliveriesTab';
 import { PurchasesTab } from '@/features/owner/components/PurchasesTab';
 import AIAssistant from '@/features/ai/components/AIAssistant';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
+import { Product } from '@/types';
+import FullScreenModal from '@/components/ui/FullScreenModal';
 
 const StockMovementsTab = lazy(() => import('./StockMovementsTab'));
 
-type WarehouseTabType = 'dashboard' | 'inventory' | 'deliveries' | 'purchases' | 'purchase-returns' | 'movements';
+type WarehouseTabType = 'dashboard' | 'inventory' | 'deliveries' | 'purchases' | 'purchase-returns' | 'movements' | 'prices';
 
 const WarehouseKeeperDashboard: React.FC = () => {
   const { 
@@ -31,11 +37,14 @@ const WarehouseKeeperDashboard: React.FC = () => {
     products = [],
     deliveries = [],
     purchases = [],
-    logout
+    logout,
+    updateProduct
   } = useApp();
   
   const [activeTab, setActiveTab] = useState<WarehouseTabType>('dashboard');
   const [loggingOut, setLoggingOut] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [priceSearch, setPriceSearch] = useState('');
 
   const stats = useMemo(() => {
     const totalProducts = products.filter(p => !p.isDeleted).length;
@@ -53,13 +62,32 @@ const WarehouseKeeperDashboard: React.FC = () => {
     try { await logout(); } finally { setLoggingOut(false); }
   };
 
+  const handlePriceSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+    const fd = new FormData(e.currentTarget);
+    await updateProduct({
+      ...editingProduct,
+      costPrice: Number(fd.get('costPrice')),
+      basePrice: Number(fd.get('basePrice')),
+      consumerPrice: Number(fd.get('consumerPrice') || 0),
+    });
+    setEditingProduct(null);
+  };
+
+  const filteredPriceProducts = products.filter(p => !p.isDeleted && p.name.includes(priceSearch));
+
   const tabs: { id: WarehouseTabType; label: string; icon: React.ReactNode; color: string; bgColor: string }[] = [
     { id: 'dashboard', label: 'الرئيسية', icon: <LayoutDashboard className="w-5 h-5" />, color: 'text-purple-600', bgColor: 'bg-purple-600' },
     { id: 'inventory', label: 'المخزون', icon: <Package className="w-5 h-5" />, color: 'text-emerald-600', bgColor: 'bg-emerald-600' },
+    { id: 'prices', label: 'الأسعار', icon: <DollarSign className="w-5 h-5" />, color: 'text-amber-500', bgColor: 'bg-amber-500' },
     { id: 'deliveries', label: 'التسليم', icon: <Truck className="w-5 h-5" />, color: 'text-blue-600', bgColor: 'bg-blue-600' },
-    { id: 'movements', label: 'الحركات', icon: <ArrowUpDown className="w-5 h-5" />, color: 'text-amber-500', bgColor: 'bg-amber-500' },
-    { id: 'purchase-returns', label: 'المرتجعات', icon: <RotateCcw className="w-5 h-5" />, color: 'text-red-500', bgColor: 'bg-red-500' },
-    { id: 'purchases', label: 'المشتريات', icon: <ShoppingCart className="w-5 h-5" />, color: 'text-orange-500', bgColor: 'bg-orange-500' },
+    { id: 'movements', label: 'الحركات', icon: <ArrowUpDown className="w-5 h-5" />, color: 'text-orange-500', bgColor: 'bg-orange-500' },
+  ];
+
+  const secondaryTabs: { id: WarehouseTabType; label: string; icon: React.ReactNode }[] = [
+    { id: 'purchases', label: 'المشتريات', icon: <ShoppingCart className="w-4 h-4" /> },
+    { id: 'purchase-returns', label: 'المرتجعات', icon: <RotateCcw className="w-4 h-4" /> },
   ];
 
   return (
@@ -98,7 +126,7 @@ const WarehouseKeeperDashboard: React.FC = () => {
         <WelcomeSplash />
 
         {/* Tab Navigation */}
-        <div className="px-4 pb-4">
+        <div className="px-4 pb-2">
           <div className="bg-card rounded-3xl p-2 shadow-sm flex gap-1">
             {tabs.map((tab) => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
@@ -107,6 +135,23 @@ const WarehouseKeeperDashboard: React.FC = () => {
                 }`}>
                 <div className={`${activeTab === tab.id ? 'scale-110' : ''} transition-transform duration-300`}>{tab.icon}</div>
                 <span className="text-[10px] font-bold">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Secondary Tabs */}
+        <div className="px-4 pb-4">
+          <div className="flex gap-2">
+            {secondaryTabs.map((tab) => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-warning text-white shadow-md'
+                    : 'bg-card text-muted-foreground hover:bg-muted shadow-sm'
+                }`}>
+                {tab.icon}
+                {tab.label}
               </button>
             ))}
           </div>
@@ -206,6 +251,50 @@ const WarehouseKeeperDashboard: React.FC = () => {
           {activeTab === 'inventory' && (
             <div className="bg-card rounded-3xl shadow-sm p-4"><InventoryTab productsOnly /></div>
           )}
+
+          {/* Price Control Tab */}
+          {activeTab === 'prices' && (
+            <div className="space-y-3 animate-fade-in">
+              <div className="relative">
+                <Search size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input 
+                  value={priceSearch} onChange={(e) => setPriceSearch(e.target.value)} 
+                  placeholder="بحث عن منتج..." 
+                  className="w-full px-4 py-3 pr-10 bg-card text-foreground rounded-2xl border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground shadow-sm" 
+                />
+              </div>
+              
+              {filteredPriceProducts.map(p => (
+                <div key={p.id} className="bg-card p-4 rounded-2xl shadow-sm">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="font-black text-foreground text-sm">{p.name}</p>
+                      <p className="text-[9px] text-muted-foreground">{p.category}</p>
+                    </div>
+                    <button onClick={() => setEditingProduct(p)}
+                      className="px-3 py-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl text-xs font-bold flex items-center gap-1">
+                      <DollarSign size={12} /> تعديل
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    <div className="bg-muted p-2 rounded-xl text-center">
+                      <p className="text-[8px] text-muted-foreground font-bold">التكلفة</p>
+                      <p className="text-sm font-black text-foreground">{p.costPrice.toLocaleString()}</p>
+                    </div>
+                    <div className="bg-muted p-2 rounded-xl text-center">
+                      <p className="text-[8px] text-muted-foreground font-bold">البيع</p>
+                      <p className="text-sm font-black text-foreground">{p.basePrice.toLocaleString()}</p>
+                    </div>
+                    <div className="bg-muted p-2 rounded-xl text-center">
+                      <p className="text-[8px] text-muted-foreground font-bold">المستهلك</p>
+                      <p className="text-sm font-black text-foreground">{(p.consumerPrice || 0).toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {activeTab === 'deliveries' && (
             <div className="bg-card rounded-3xl shadow-sm p-4"><DeliveriesTab /></div>
           )}
@@ -224,6 +313,50 @@ const WarehouseKeeperDashboard: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Price Edit Modal */}
+      <FullScreenModal
+        isOpen={!!editingProduct}
+        onClose={() => setEditingProduct(null)}
+        title={`تعديل أسعار: ${editingProduct?.name || ''}`}
+        icon={<DollarSign size={24} />}
+        headerColor="warning"
+        footer={
+          <button type="button" onClick={() => {
+            const form = document.getElementById('price-edit-form') as HTMLFormElement;
+            if (form) form.requestSubmit();
+          }} className="w-full bg-amber-500 text-white font-black py-5 rounded-2xl shadow-lg active:scale-[0.98] transition-all text-lg">
+            حفظ الأسعار
+          </button>
+        }
+      >
+        {editingProduct && (
+          <form id="price-edit-form" onSubmit={handlePriceSubmit} className="space-y-5">
+            <div className="bg-muted p-4 rounded-2xl">
+              <p className="text-xs text-muted-foreground mb-1">المنتج</p>
+              <p className="font-black text-foreground text-lg">{editingProduct.name}</p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-black text-muted-foreground uppercase">سعر التكلفة</label>
+              <input name="costPrice" type="number" step="0.01" defaultValue={editingProduct.costPrice}
+                className="w-full px-4 py-4 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-amber-500 text-center text-xl font-black" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-black text-muted-foreground uppercase">سعر البيع</label>
+              <input name="basePrice" type="number" step="0.01" defaultValue={editingProduct.basePrice}
+                className="w-full px-4 py-4 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-amber-500 text-center text-xl font-black" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-black text-muted-foreground uppercase">سعر المستهلك</label>
+              <input name="consumerPrice" type="number" step="0.01" defaultValue={editingProduct.consumerPrice ?? 0}
+                className="w-full px-4 py-4 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-amber-500 text-center text-xl font-black" />
+            </div>
+            <div className="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/20">
+              <p className="text-xs text-amber-600 dark:text-amber-400 font-bold">⚠️ جميع التغييرات في الأسعار يتم تسجيلها تلقائياً في سجل التدقيق</p>
+            </div>
+          </form>
+        )}
+      </FullScreenModal>
     </div>
   );
 };
