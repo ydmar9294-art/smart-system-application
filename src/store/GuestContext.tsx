@@ -1,8 +1,5 @@
 /**
  * GuestContext — manages guest preview mode state
- * 
- * When active, the app renders dashboards in read-only mode
- * with a periodic promo overlay.
  */
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { UserRole, EmployeeType } from '@/types';
@@ -11,6 +8,7 @@ export interface GuestRole {
   role: UserRole;
   employeeType?: EmployeeType;
   label: string;
+  key: string;
 }
 
 interface GuestContextType {
@@ -23,23 +21,17 @@ interface GuestContextType {
 const GuestContext = createContext<GuestContextType | null>(null);
 
 export const GUEST_ROLES: GuestRole[] = [
-  { role: UserRole.OWNER, label: 'المالك' },
-  { role: UserRole.EMPLOYEE, employeeType: EmployeeType.SALES_MANAGER, label: 'مدير المبيعات' },
-  { role: UserRole.EMPLOYEE, employeeType: EmployeeType.ACCOUNTANT, label: 'المحاسب' },
-  { role: UserRole.EMPLOYEE, employeeType: EmployeeType.WAREHOUSE_KEEPER, label: 'أمين المستودع' },
-  { role: UserRole.EMPLOYEE, employeeType: EmployeeType.FIELD_AGENT, label: 'الموزع الميداني' },
+  { role: UserRole.OWNER, label: 'المالك', key: 'owner' },
+  { role: UserRole.EMPLOYEE, employeeType: EmployeeType.SALES_MANAGER, label: 'مدير المبيعات', key: 'salesManager' },
+  { role: UserRole.EMPLOYEE, employeeType: EmployeeType.ACCOUNTANT, label: 'المحاسب', key: 'accountant' },
+  { role: UserRole.EMPLOYEE, employeeType: EmployeeType.WAREHOUSE_KEEPER, label: 'أمين المستودع', key: 'warehouseKeeper' },
+  { role: UserRole.EMPLOYEE, employeeType: EmployeeType.FIELD_AGENT, label: 'الموزع الميداني', key: 'fieldAgent' },
 ];
 
 export const GuestProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [guestRole, setGuestRole] = useState<GuestRole | null>(null);
-
-  const enterGuestMode = useCallback((role: GuestRole) => {
-    setGuestRole(role);
-  }, []);
-
-  const exitGuestMode = useCallback(() => {
-    setGuestRole(null);
-  }, []);
+  const enterGuestMode = useCallback((role: GuestRole) => setGuestRole(role), []);
+  const exitGuestMode = useCallback(() => setGuestRole(null), []);
 
   return (
     <GuestContext.Provider value={{ isGuest: !!guestRole, guestRole, enterGuestMode, exitGuestMode }}>
