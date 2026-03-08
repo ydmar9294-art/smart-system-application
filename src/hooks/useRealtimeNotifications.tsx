@@ -25,16 +25,14 @@ export const useRealtimeNotifications = () => {
     // Persist to DB so it appears in the bell icon permanently
     if (user?.id) {
       try {
-        const orgId = organization?.id || null;
         await supabase.from('user_notifications').insert({
           user_id: user.id,
-          organization_id: orgId,
           title: pushTitle || (type === 'error' ? 'تنبيه' : type === 'warning' ? 'تحذير' : 'إشعار'),
           description: message,
           type,
         });
-      } catch (err) {
-        console.log('Failed to persist notification:', err);
+      } catch {
+        // silent – notification persistence is best-effort
       }
     }
 
