@@ -145,7 +145,8 @@ Deno.serve(async (req) => {
     const failedCount = results.filter(r => r.status === 'failed').length;
     const duplicateCount = results.filter(r => r.status === 'duplicate').length;
 
-    console.log(`[bulk-sync] user=${userId.substring(0, 8)}... total=${operations.length} synced=${syncedCount} failed=${failedCount} duplicates=${duplicateCount}`);
+    // Structured log (no sensitive data)
+    console.info(`[bulk-sync] uid=${userId.substring(0, 8)}… ops=${operations.length} ok=${syncedCount} err=${failedCount} dup=${duplicateCount}`);
 
     return new Response(JSON.stringify({
       results,
