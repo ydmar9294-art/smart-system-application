@@ -22,8 +22,9 @@ import CustomersTab from './CustomersTab';
 import OrgDeletionRequest from './OrgDeletionRequest';
 import SubscriptionTab from './SubscriptionTab';
 import { PerformanceTab } from './PerformanceTab';
+import BackupTab from './BackupTab';
 
-type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal';
+type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup';
 
 const OwnerDashboard: React.FC = () => {
   const { 
