@@ -1,4 +1,6 @@
 /**
+import { logger } from '@/lib/logger';
+/**
  * Auth Cache - Persistent offline-first caching strategy
  * 
  * Layer 1: Memory cache (instant, per-tab)

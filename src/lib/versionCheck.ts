@@ -1,4 +1,6 @@
 /**
+import { logger } from '@/lib/logger';
+/**
  * Version Check Service
  * Compares local app version with server version.
  * Supports both X.X and X.X.X formats.

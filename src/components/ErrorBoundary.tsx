@@ -3,6 +3,7 @@
  * Prevents entire app crash from a single component failure
  */
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { logger } from '@/lib/logger';
 
 interface Props {
   children: ReactNode;
