@@ -1,22 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { generateUUID } from '@/lib/uuid';
 import { 
-  Plus, 
-  Minus, 
-  ShoppingBag, 
-  User, 
-  Search,
-  X,
-  Check,
-  Loader2,
-  Package,
-  AlertCircle,
-  WifiOff,
-  Percent,
-  Tag
+  Plus, Minus, ShoppingBag, User, Search, X, Check, Loader2,
+  Package, AlertCircle, WifiOff, Percent, Tag
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { Customer } from '@/types';
+import { CURRENCY } from '@/constants';
 import InvoicePrint from './InvoicePrint';
 import FullScreenModal from '@/components/ui/FullScreenModal';
 import type { CachedInventoryItem } from '../services/distributorOfflineService';
@@ -41,6 +32,8 @@ type PaymentType = 'CASH' | 'CREDIT';
 type DiscountType = 'percentage' | 'fixed' | null;
 
 const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventory, onQueueAction, isOnline }) => {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
   const { addNotification } = useApp();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchProduct, setSearchProduct] = useState('');
@@ -48,28 +41,12 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [paymentType, setPaymentType] = useState<PaymentType>('CREDIT');
-  
-  // Discount state
   const [discountType, setDiscountType] = useState<DiscountType>(null);
   const [discountInput, setDiscountInput] = useState('');
-  
-  // Print state
   const [showPrintModal, setShowPrintModal] = useState(false);
-  const [lastSaleData, setLastSaleData] = useState<{
-    id: string;
-    customerName: string;
-    items: CartItem[];
-    grandTotal: number;
-    subtotal: number;
-    discountType: DiscountType;
-    discountPercentage: number;
-    discountValue: number;
-    paymentType: PaymentType;
-  } | null>(null);
+  const [lastSaleData, setLastSaleData] = useState<any | null>(null);
 
-  // Use local cached inventory (offline-first)
   const activeProducts = localInventory.filter(p => p.quantity > 0);
-  
   const filteredProducts = activeProducts.filter(p =>
     p.product_name.toLowerCase().includes(searchProduct.toLowerCase())
   );
@@ -79,19 +56,13 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
     if (existing) {
       if (existing.quantity < product.quantity) {
         setCart(cart.map(item =>
-          item.product_id === product.product_id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
+          item.product_id === product.product_id ? { ...item, quantity: item.quantity + 1 } : item
         ));
       }
     } else {
       setCart([...cart, {
-        product_id: product.product_id,
-        product_name: product.product_name,
-        quantity: 1,
-        unit_price: product.base_price,
-        consumer_price: product.consumer_price,
-        unit: product.unit
+        product_id: product.product_id, product_name: product.product_name,
+        quantity: 1, unit_price: product.base_price, consumer_price: product.consumer_price, unit: product.unit
       }]);
     }
     setShowProductPicker(false);
@@ -111,13 +82,9 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
     }).filter(item => item.quantity > 0));
   };
 
-  const removeFromCart = (productId: string) => {
-    setCart(cart.filter(item => item.product_id !== productId));
-  };
+  const removeFromCart = (productId: string) => setCart(cart.filter(item => item.product_id !== productId));
 
   const subtotal = cart.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-  
-  // Calculate discount
   const discountPercentage = discountType === 'percentage' ? Math.min(100, Math.max(0, Number(discountInput) || 0)) : 
     subtotal > 0 ? ((Number(discountInput) || 0) / subtotal) * 100 : 0;
   const discountValue = discountType === 'percentage' 
@@ -127,121 +94,72 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
 
   const handleCreateSale = async () => {
     if (!selectedCustomer?.id || cart.length === 0) return;
-
     setLoading(true);
     try {
       const saleItems = cart.map(item => ({
-        productId: item.product_id,
-        productName: item.product_name,
-        quantity: item.quantity,
-        unitPrice: item.unit_price,
-        totalPrice: item.quantity * item.unit_price
+        productId: item.product_id, productName: item.product_name,
+        quantity: item.quantity, unitPrice: item.unit_price, totalPrice: item.quantity * item.unit_price
       }));
-
-      // Inventory updates: deduct quantities locally
-      const inventoryUpdates = cart.map(item => ({
-        productId: item.product_id,
-        quantityDelta: -item.quantity,
-      }));
+      const inventoryUpdates = cart.map(item => ({ productId: item.product_id, quantityDelta: -item.quantity }));
 
       await onQueueAction('CREATE_SALE', {
-        customerId: selectedCustomer.id,
-        items: saleItems,
-        paymentType,
-        discountType: discountType || undefined,
-        discountPercentage: discountPercentage || 0,
-        discountValue: discountValue || 0,
+        customerId: selectedCustomer.id, items: saleItems, paymentType,
+        discountType: discountType || undefined, discountPercentage: discountPercentage || 0, discountValue: discountValue || 0,
       }, inventoryUpdates);
 
-      // Store sale data for printing
       setLastSaleData({
-        id: generateUUID(),
-        customerName: selectedCustomer.name,
-        items: [...cart],
-        grandTotal,
-        subtotal,
-        discountType,
-        discountPercentage,
-        discountValue,
-        paymentType
+        id: generateUUID(), customerName: selectedCustomer.name, items: [...cart],
+        grandTotal, subtotal, discountType, discountPercentage, discountValue, paymentType
       });
-      
-      setCart([]);
-      setPaymentType('CREDIT');
-      setDiscountType(null);
-      setDiscountInput('');
-      setSuccess(true);
-      setShowPrintModal(true);
-      
-      addNotification(
-        isOnline ? 'تم إنشاء الفاتورة بنجاح' : 'تم حفظ الفاتورة — ستتم المزامنة عند عودة الإنترنت',
-        'success'
-      );
+      setCart([]); setPaymentType('CREDIT'); setDiscountType(null); setDiscountInput('');
+      setSuccess(true); setShowPrintModal(true);
+      addNotification(isOnline ? t('invoice.invoiceCreated') : t('invoice.invoiceCreatedOffline'), 'success');
     } catch (error) {
       console.error('Error creating sale:', error);
-      addNotification('حدث خطأ أثناء حفظ الفاتورة', 'error');
-    } finally {
-      setLoading(false);
-    }
+      addNotification(t('invoice.invoiceError'), 'error');
+    } finally { setLoading(false); }
   };
 
-  const closePrintModal = () => {
-    setShowPrintModal(false);
-    setSuccess(false);
-    setLastSaleData(null);
-  };
+  const closePrintModal = () => { setShowPrintModal(false); setSuccess(false); setLastSaleData(null); };
 
   return (
     <div className="p-5 space-y-5">
-      {/* Print Modal */}
       {showPrintModal && lastSaleData && (
         <InvoicePrint
-          invoiceType="sale"
-          invoiceId={lastSaleData.id}
-          customerName={lastSaleData.customerName}
+          invoiceType="sale" invoiceId={lastSaleData.id} customerName={lastSaleData.customerName}
           date={new Date()}
-          items={lastSaleData.items.map(item => ({
-            product_name: item.product_name,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            total_price: item.quantity * item.unit_price,
-            consumer_price: item.consumer_price,
-            unit: item.unit
+          items={lastSaleData.items.map((item: CartItem) => ({
+            product_name: item.product_name, quantity: item.quantity, unit_price: item.unit_price,
+            total_price: item.quantity * item.unit_price, consumer_price: item.consumer_price, unit: item.unit
           }))}
-          grandTotal={lastSaleData.grandTotal}
-          subtotal={lastSaleData.subtotal}
-          discountType={lastSaleData.discountType}
-          discountPercentage={lastSaleData.discountPercentage}
+          grandTotal={lastSaleData.grandTotal} subtotal={lastSaleData.subtotal}
+          discountType={lastSaleData.discountType} discountPercentage={lastSaleData.discountPercentage}
           discountValue={lastSaleData.discountValue}
           paidAmount={lastSaleData.paymentType === 'CASH' ? lastSaleData.grandTotal : 0}
           remaining={lastSaleData.paymentType === 'CASH' ? 0 : lastSaleData.grandTotal}
-          paymentType={lastSaleData.paymentType}
-          onClose={closePrintModal}
+          paymentType={lastSaleData.paymentType} onClose={closePrintModal}
         />
       )}
 
-      {/* Success Message */}
       {success && !showPrintModal && (
         <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 rounded-2xl flex items-center gap-2 border border-emerald-500/20">
           <Check className="w-5 h-5" />
-          <span className="font-bold">تم إنشاء الفاتورة بنجاح!</span>
+          <span className="font-bold">{t('distributorSale.invoiceCreatedSuccess')}</span>
           {!isOnline && (
-            <span className="text-xs text-muted-foreground mr-auto flex items-center gap-1">
-              <WifiOff className="w-3 h-3" /> محفوظة محلياً
+            <span className="text-xs text-muted-foreground ms-auto flex items-center gap-1">
+              <WifiOff className="w-3 h-3" /> {t('distributorSale.savedLocally')}
             </span>
           )}
         </div>
       )}
 
-      {/* No Customer Selected Warning */}
       {!selectedCustomer && (
         <div className="bg-amber-500/10 text-amber-600 dark:text-amber-400 p-4 rounded-2xl flex items-center gap-2 border border-amber-500/20">
           <AlertCircle className="w-5 h-5" />
-          <span className="font-bold">يرجى اختيار زبون من القائمة أعلاه</span>
+          <span className="font-bold">{t('distributorSale.selectCustomerWarning')}</span>
         </div>
       )}
 
-      {/* Selected Customer Info */}
       {selectedCustomer && (
         <div className="bg-blue-500/10 rounded-2xl p-4 flex items-center gap-3 border border-blue-500/20">
           <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
@@ -250,32 +168,27 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
           <div>
             <p className="font-bold text-foreground">{selectedCustomer.name}</p>
             <p className="text-sm text-muted-foreground">
-              الرصيد: {Number(selectedCustomer.balance).toLocaleString('ar-SA')} ل.س
+              {t('distributorSale.balance')} {Number(selectedCustomer.balance).toLocaleString(locale)} {CURRENCY}
             </p>
           </div>
         </div>
       )}
 
-      {/* Section Title */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-black text-foreground">الأصناف المطلوبة</h3>
-        <button
-          onClick={() => setShowProductPicker(true)}
+        <h3 className="text-lg font-black text-foreground">{t('distributorSale.requiredItems')}</h3>
+        <button onClick={() => setShowProductPicker(true)}
           className="flex items-center gap-1.5 text-blue-600 font-bold text-sm hover:text-blue-700"
-          disabled={!selectedCustomer}
-        >
-          <Plus className="w-4 h-4" />
-          إضافة مادة
+          disabled={!selectedCustomer}>
+          <Plus className="w-4 h-4" /> {t('distributorSale.addItem')}
         </button>
       </div>
 
-      {/* Cart Items or Empty State */}
       {cart.length === 0 ? (
         <div className="bg-muted rounded-3xl p-8 text-center">
           <div className="w-20 h-20 bg-card rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-sm">
             <ShoppingBag className="w-10 h-10 text-muted-foreground/30" />
           </div>
-          <p className="text-muted-foreground font-bold">السلة فارغة</p>
+          <p className="text-muted-foreground font-bold">{t('distributorSale.emptyCart')}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -298,7 +211,7 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
                   </button>
                 </div>
                 <span className="font-black text-blue-600 text-lg">
-                  {(item.quantity * item.unit_price).toLocaleString('ar-SA')}
+                  {(item.quantity * item.unit_price).toLocaleString(locale)}
                 </span>
               </div>
             </div>
@@ -306,101 +219,72 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
         </div>
       )}
 
-      {/* Total & Submit */}
       {cart.length > 0 && (
         <div className="space-y-4 pt-4 border-t border-border">
-          {/* Payment Type Selection */}
           <div className="space-y-2">
-            <label className="text-xs font-black text-muted-foreground uppercase">نوع الدفع</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('distributorSale.paymentType')}</label>
             <div className="grid grid-cols-2 gap-3">
               <button type="button" onClick={() => setPaymentType('CASH')}
                 className={`py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all border-2 ${
-                  paymentType === 'CASH'
-                    ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/30'
-                    : 'bg-muted text-muted-foreground border-border hover:border-emerald-300'
-                }`}>
-                💵 نقداً
-              </button>
+                  paymentType === 'CASH' ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/30' : 'bg-muted text-muted-foreground border-border hover:border-emerald-300'
+                }`}>{t('distributorSale.cashPayment')}</button>
               <button type="button" onClick={() => setPaymentType('CREDIT')}
                 className={`py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all border-2 ${
-                  paymentType === 'CREDIT'
-                    ? 'bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/30'
-                    : 'bg-muted text-muted-foreground border-border hover:border-orange-300'
-                }`}>
-                📝 آجل
-              </button>
+                  paymentType === 'CREDIT' ? 'bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/30' : 'bg-muted text-muted-foreground border-border hover:border-orange-300'
+                }`}>{t('distributorSale.creditPayment')}</button>
             </div>
           </div>
 
-          {/* Discount Section */}
           <div className="space-y-2">
-            <label className="text-xs font-black text-muted-foreground uppercase">الخصم (اختياري)</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('distributorSale.discountOptional')}</label>
             <div className="grid grid-cols-3 gap-2">
               <button type="button" onClick={() => { setDiscountType(null); setDiscountInput(''); }}
                 className={`py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1 transition-all border-2 ${
-                  discountType === null
-                    ? 'bg-muted border-primary text-primary'
-                    : 'bg-muted text-muted-foreground border-border'
-                }`}>
-                بدون
-              </button>
+                  discountType === null ? 'bg-muted border-primary text-primary' : 'bg-muted text-muted-foreground border-border'
+                }`}>{t('distributorSale.noDiscount')}</button>
               <button type="button" onClick={() => { setDiscountType('percentage'); setDiscountInput(''); }}
                 className={`py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1 transition-all border-2 ${
-                  discountType === 'percentage'
-                    ? 'bg-purple-500 text-white border-purple-500 shadow-lg'
-                    : 'bg-muted text-muted-foreground border-border'
-                }`}>
-                <Percent className="w-3.5 h-3.5" /> نسبة
-              </button>
+                  discountType === 'percentage' ? 'bg-purple-500 text-white border-purple-500 shadow-lg' : 'bg-muted text-muted-foreground border-border'
+                }`}><Percent className="w-3.5 h-3.5" /> {t('distributorSale.percentage')}</button>
               <button type="button" onClick={() => { setDiscountType('fixed'); setDiscountInput(''); }}
                 className={`py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1 transition-all border-2 ${
-                  discountType === 'fixed'
-                    ? 'bg-purple-500 text-white border-purple-500 shadow-lg'
-                    : 'bg-muted text-muted-foreground border-border'
-                }`}>
-                <Tag className="w-3.5 h-3.5" /> مبلغ
-              </button>
+                  discountType === 'fixed' ? 'bg-purple-500 text-white border-purple-500 shadow-lg' : 'bg-muted text-muted-foreground border-border'
+                }`}><Tag className="w-3.5 h-3.5" /> {t('distributorSale.fixedAmount')}</button>
             </div>
             {discountType && (
               <div className="relative">
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
+                <input type="number" inputMode="decimal" min="0"
                   max={discountType === 'percentage' ? '100' : String(subtotal)}
-                  value={discountInput}
-                  onChange={(e) => setDiscountInput(e.target.value)}
-                  placeholder={discountType === 'percentage' ? 'نسبة الخصم %' : 'قيمة الخصم'}
-                  className="w-full bg-muted border border-border rounded-xl px-4 py-3 font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-base"
-                />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-bold">
-                  {discountType === 'percentage' ? '%' : 'ل.س'}
+                  value={discountInput} onChange={(e) => setDiscountInput(e.target.value)}
+                  placeholder={discountType === 'percentage' ? t('invoice.discountPercentPlaceholder') : t('invoice.discountFixedPlaceholder')}
+                  className="w-full bg-muted border border-border rounded-xl px-4 py-3 font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-base" />
+                <span className="absolute start-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-bold">
+                  {discountType === 'percentage' ? '%' : CURRENCY}
                 </span>
               </div>
             )}
           </div>
 
-          {/* Totals */}
           <div className="space-y-2">
             {discountValue > 0 && (
               <>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">المجموع قبل الخصم</span>
-                  <span className="font-bold text-foreground">{subtotal.toLocaleString('ar-SA')} ل.س</span>
+                  <span className="text-muted-foreground">{t('distributorSale.subtotalBeforeDiscount')}</span>
+                  <span className="font-bold text-foreground">{subtotal.toLocaleString(locale)} {CURRENCY}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-purple-600 dark:text-purple-400 flex items-center gap-1">
                     <Tag className="w-3.5 h-3.5" />
-                    الخصم {discountType === 'percentage' ? `(${discountPercentage.toFixed(1)}%)` : ''}
+                    {t('distributorSale.discount')} {discountType === 'percentage' ? `(${discountPercentage.toFixed(1)}%)` : ''}
                   </span>
-                  <span className="font-bold text-purple-600 dark:text-purple-400">-{discountValue.toLocaleString('ar-SA')} ل.س</span>
+                  <span className="font-bold text-purple-600 dark:text-purple-400">-{discountValue.toLocaleString(locale)} {CURRENCY}</span>
                 </div>
               </>
             )}
             <div className="flex items-center justify-between">
-              <span className="font-bold text-muted-foreground">الإجمالي الصافي</span>
+              <span className="font-bold text-muted-foreground">{t('distributorSale.netTotal')}</span>
               <span className="font-black text-blue-600 text-2xl">
-                {grandTotal.toLocaleString('ar-SA')} ل.س
+                {grandTotal.toLocaleString(locale)} {CURRENCY}
               </span>
             </div>
           </div>
@@ -408,30 +292,29 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
           <button onClick={handleCreateSale} disabled={loading || !selectedCustomer}
             className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none hover:bg-blue-700 transition-all">
             {loading ? (
-              <><Loader2 className="w-5 h-5 animate-spin" /> جارٍ الحفظ...</>
+              <><Loader2 className="w-5 h-5 animate-spin" /> {t('distributorSale.saving')}</>
             ) : (
-              <><Check className="w-5 h-5" /> تأكيد الفاتورة {!isOnline && <WifiOff className="w-4 h-4 opacity-60" />}</>
+              <><Check className="w-5 h-5" /> {t('distributorSale.confirmInvoice')} {!isOnline && <WifiOff className="w-4 h-4 opacity-60" />}</>
             )}
           </button>
         </div>
       )}
 
-      {/* Product Picker Modal */}
       <FullScreenModal isOpen={showProductPicker} onClose={() => setShowProductPicker(false)}
-        title="اختر المادة" icon={<Package size={24} />} headerColor="primary">
+        title={t('distributorSale.chooseItem')} icon={<Package size={24} />} headerColor="primary">
         <div className="relative mb-4">
-          <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <input type="text" placeholder="بحث عن مادة..." value={searchProduct}
+          <Search className="absolute start-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <input type="text" placeholder={t('distributorSale.searchProduct')} value={searchProduct}
             onChange={(e) => setSearchProduct(e.target.value)}
-            className="w-full bg-muted border border-border rounded-xl px-12 py-4 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 text-base" />
+            className="w-full bg-muted border border-border rounded-xl ps-12 pe-4 py-4 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 text-base" />
         </div>
         
         <div className="space-y-2">
           {activeProducts.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground">
               <Package className="w-20 h-20 mx-auto mb-4 opacity-30" />
-              <p className="font-bold text-lg mb-2">لا توجد مواد متاحة</p>
-              <p className="text-sm">تواصل مع صاحب المنشأة لاستلام بضاعة</p>
+              <p className="font-bold text-lg mb-2">{t('distributorSale.noProductsAvailable')}</p>
+              <p className="text-sm">{t('distributorSale.contactOwner')}</p>
             </div>
           ) : (
             filteredProducts.map((product) => (
@@ -441,7 +324,7 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
                   <div>
                     <p className="font-bold text-foreground text-lg">{product.product_name}</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      المتوفر: {product.quantity} | السعر: {product.base_price.toLocaleString('ar-SA')} ل.س
+                      {t('distributorSale.available')} {product.quantity} | {t('distributorSale.price')} {product.base_price.toLocaleString(locale)} {CURRENCY}
                     </p>
                   </div>
                   <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
