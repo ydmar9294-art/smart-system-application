@@ -41,6 +41,13 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
   const [authError, setAuthError] = useState<string>('');
   const [isSlow, setIsSlow] = useState(false);
   const [oauthPending, setOauthPending] = useState(() => isOAuthPending());
+  const [showGuestSelector, setShowGuestSelector] = useState(false);
+  const { enterGuestMode } = useGuest();
+
+  const handleGuestSelect = (role: GuestRole) => {
+    setShowGuestSelector(false);
+    enterGuestMode(role);
+  };
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
