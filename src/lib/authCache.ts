@@ -150,7 +150,7 @@ export const setCachedAuth = (state: Omit<CachedAuthState, 'cachedAt' | 'version
     localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
   } catch (e) {
     // localStorage might be full or unavailable
-    console.warn('[AuthCache] Failed to persist:', e);
+    logger.warn('Failed to persist auth cache', 'AuthCache');
   }
 };
 
