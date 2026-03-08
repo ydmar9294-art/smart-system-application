@@ -28,7 +28,6 @@ const WarehouseKeeperDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<WarehouseTabType>('dashboard');
   const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
-  const [loggingOut, setLoggingOut] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [priceSearch, setPriceSearch] = useState('');
 
