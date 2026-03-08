@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { logger } from '@/lib/logger';
 import { Loader2, AlertCircle, XCircle, Zap, BarChart3, Lock, RefreshCw, ShieldCheck, Eye } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import AppLogo from '@/components/ui/AppLogo';
@@ -91,7 +92,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       onAuthComplete();
     } catch (err: any) {
       clearTimers(); clearOAuthPending(); setOauthPending(false);
-      console.error('[AuthFlow] Check profile error:', err);
+      logger.error('Check profile error', 'AuthFlow');
       const isTimeout = err?.message === 'VERIFY_TIMEOUT';
       setAuthState({ type: 'error', message: isTimeout ? t('auth.verifyTimeout') : err.message || t('auth.profileCheckError'), canRetry: true });
     }
@@ -102,7 +103,10 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
     const cacheIsFullyActivated = cached && cached.organizationId && cached.role;
     const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
-        if (cacheIsFullyActivated && cached.userId === session.user.id) { onAuthComplete(); return; }
+        // If cache is fully activated for this user, AuthContext (useSession) will handle it.
+        // Don't call onAuthComplete here — it triggers refreshAuth which causes a double
+        // edge function call and "silent loading" on Capacitor.
+        if (cacheIsFullyActivated && cached.userId === session.user.id) return;
         if (cached && !cacheIsFullyActivated) clearAuthCache();
         startVerification();
         await yieldToRenderer();
@@ -112,7 +116,8 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        if (cacheIsFullyActivated && cached.userId === session.user.id) { onAuthComplete(); return; }
+        // Same optimization: if cache matches, let AuthContext handle transition
+        if (cacheIsFullyActivated && cached.userId === session.user.id) return;
         if (cached && !cacheIsFullyActivated) clearAuthCache();
         startVerification(); await yieldToRenderer(); await checkUserProfile(session.user.id, session.user);
       }
