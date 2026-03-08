@@ -257,7 +257,7 @@ const App: React.FC = () => {
   }, [navigate, location.pathname]);
 
   return (
-    <SecurityGate blockRooted={false} blockSideloaded={false}>
+    <SecurityGate blockRooted={true} blockSideloaded={true}>
       <Routes>
         <Route path="/reset-password" element={
           <Suspense fallback={<DashboardFallback />}>
