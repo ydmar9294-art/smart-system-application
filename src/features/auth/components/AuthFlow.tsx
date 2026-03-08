@@ -324,24 +324,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
               oauthInProgress={oauthPending}
               loadingText={oauthPending ? 'جارٍ العودة من Google...' : undefined} />
 
-            
-            {/* Divider */}
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-border" />
-              <span className="text-xs text-muted-foreground font-bold">أو</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-            
-            <EmailPasswordAuth onError={handleAuthError} />
-
-            {/* Divider before guest */}
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-border" />
-              <span className="text-xs text-muted-foreground font-bold">أو</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-
-            {/* Guest preview button */}
+            {/* Guest preview button — directly under Google */}
             <button
               type="button"
               onClick={() => setShowGuestSelector(true)}
@@ -350,6 +333,15 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
               <Eye className="w-4 h-4" />
               دخول كزائر
             </button>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-xs text-muted-foreground font-bold">أو</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+            
+            <EmailPasswordAuth onError={handleAuthError} />
 
             <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground">
               <ShieldCheck className="w-4 h-4" />
