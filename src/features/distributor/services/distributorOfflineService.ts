@@ -471,40 +471,48 @@ export async function updateCustomerSyncStatus(
   status: 'synced' | 'failed',
   serverId?: string
 ): Promise<void> {
+  // Step 1: Read and decrypt OUTSIDE the write transaction
+  // (await is safe here — we haven't opened the write tx yet)
+  const raw = await getItem<any>(STORES.CUSTOMERS_CACHE, localId);
+  if (!raw) return;
+
+  let c: CachedCustomer;
+  try {
+    if (raw._enc && isEncrypted(raw._enc)) {
+      c = await decryptData<CachedCustomer>(raw._enc);
+    } else {
+      c = raw;
+    }
+  } catch {
+    logger.warn(`[CustomerSync] Failed to decrypt customer ${localId}`, 'DistributorOffline');
+    return;
+  }
+
+  // Step 2: Prepare the updated + encrypted record BEFORE opening the tx
+  c.syncStatus = status;
+  let deleteKey: string | null = null;
+  let writeRecord: Record<string, any>;
+
+  if (status === 'synced' && serverId) {
+    deleteKey = localId;
+    c.id = serverId;
+    c.isLocal = false;
+    const encrypted = await encryptData(c);
+    writeRecord = { id: serverId, _enc: encrypted };
+  } else {
+    const encrypted = await encryptData(c);
+    writeRecord = { id: c.id, _enc: encrypted };
+  }
+
+  // Step 3: Single synchronous IDB transaction (no awaits inside)
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORES.CUSTOMERS_CACHE, 'readwrite');
     const store = tx.objectStore(STORES.CUSTOMERS_CACHE);
-    const getReq = store.get(localId);
-    
-    getReq.onsuccess = async () => {
-      try {
-        if (getReq.result) {
-          let c: CachedCustomer;
-          // Decrypt if encrypted
-          if (getReq.result._enc && isEncrypted(getReq.result._enc)) {
-            c = await decryptData<CachedCustomer>(getReq.result._enc);
-          } else {
-            c = getReq.result;
-          }
-          
-          c.syncStatus = status;
-          if (status === 'synced' && serverId) {
-            store.delete(localId);
-            c.id = serverId;
-            c.isLocal = false;
-            const encrypted = await encryptData(c);
-            store.put({ id: serverId, _enc: encrypted });
-          } else {
-            const encrypted = await encryptData(c);
-            store.put({ id: c.id, _enc: encrypted });
-          }
-        }
-      } catch (err) {
-        logger.warn(`[CustomerSync] Failed to update status for ${localId}`, 'DistributorOffline');
-      }
-    };
-    
+    if (deleteKey) {
+      store.delete(deleteKey);
+    }
+    store.put(writeRecord);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
