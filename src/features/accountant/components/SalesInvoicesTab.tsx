@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   FileText, 
   Search, 
   Eye,
@@ -57,8 +57,25 @@ const SalesInvoicesTab: React.FC = () => {
 
   const selectedSale = sales.find(s => s.id === selectedSaleId);
 
+  // Fetch discount data from DB for the selected sale
+  const [saleDiscountData, setSaleDiscountData] = useState<{ discount_type: string | null; discount_percentage: number; discount_value: number } | null>(null);
+
+  useEffect(() => {
+    if (!selectedSaleId && !printInvoice) { setSaleDiscountData(null); return; }
+    const saleId = selectedSaleId || printInvoice?.id;
+    if (!saleId) return;
+    const fetchDiscount = async () => {
+      const { data } = await supabase
+        .from('sales')
+        .select('discount_type, discount_percentage, discount_value')
+        .eq('id', saleId)
+        .single();
+      setSaleDiscountData(data || null);
+    };
+    fetchDiscount();
+  }, [selectedSaleId, printInvoice]);
+
   const handlePrint = async (sale: typeof sales[0]) => {
-    // Fetch sale items before printing to ensure they're available
     try {
       const { data } = await supabase
         .from('sale_items')
@@ -223,6 +240,20 @@ const SalesInvoicesTab: React.FC = () => {
                 </div>
               </div>
 
+              {/* Discount info in detail view */}
+              {saleDiscountData && Number(saleDiscountData.discount_value || 0) > 0 && (
+                <div className="bg-purple-500/10 p-3 rounded-xl space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">المجموع قبل الخصم</span>
+                    <span className="font-bold">{(Number(selectedSale.grandTotal) + Number(saleDiscountData.discount_value)).toLocaleString('ar-SA')} {CURRENCY}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-purple-600 dark:text-purple-400">
+                    <span>الخصم {saleDiscountData.discount_type === 'percentage' ? `(${Number(saleDiscountData.discount_percentage).toFixed(1)}%)` : ''}</span>
+                    <span className="font-bold">-{Number(saleDiscountData.discount_value).toLocaleString('ar-SA')} {CURRENCY}</span>
+                  </div>
+                </div>
+              )}
+
               {selectedSale.isVoided && (
                 <div className="p-3 bg-destructive/10 rounded-xl flex items-center gap-2">
                   <Ban className="w-4 h-4 text-destructive" />
@@ -276,6 +307,12 @@ const SalesInvoicesTab: React.FC = () => {
             };
           })}
           grandTotal={Number(printInvoice.grandTotal)}
+          subtotal={saleDiscountData && Number(saleDiscountData.discount_value || 0) > 0 
+            ? Number(printInvoice.grandTotal) + Number(saleDiscountData.discount_value) 
+            : undefined}
+          discountType={saleDiscountData?.discount_type as any}
+          discountPercentage={Number(saleDiscountData?.discount_percentage || 0)}
+          discountValue={Number(saleDiscountData?.discount_value || 0)}
           paidAmount={Number(printInvoice.paidAmount)}
           remaining={Number(printInvoice.remaining)}
           paymentType={printInvoice.paymentType}

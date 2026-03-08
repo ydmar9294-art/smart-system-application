@@ -1563,10 +1563,26 @@ export type Database = {
         Args: { p_items: Json; p_reason?: string; p_sale_id: string }
         Returns: string
       }
-      create_distributor_sale_rpc: {
-        Args: { p_customer_id: string; p_items: Json; p_payment_type?: string }
-        Returns: string
-      }
+      create_distributor_sale_rpc:
+        | {
+            Args: {
+              p_customer_id: string
+              p_items: Json
+              p_payment_type?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_customer_id: string
+              p_discount_percentage?: number
+              p_discount_type?: string
+              p_discount_value?: number
+              p_items: Json
+              p_payment_type?: string
+            }
+            Returns: string
+          }
       create_first_subscription: {
         Args: {
           p_duration_months: number
@@ -1579,10 +1595,26 @@ export type Database = {
         Args: { p_items: Json; p_reason?: string; p_supplier_name?: string }
         Returns: string
       }
-      create_sale_rpc: {
-        Args: { p_customer_id: string; p_items: Json; p_payment_type?: string }
-        Returns: string
-      }
+      create_sale_rpc:
+        | {
+            Args: {
+              p_customer_id: string
+              p_items: Json
+              p_payment_type?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_customer_id: string
+              p_discount_percentage?: number
+              p_discount_type?: string
+              p_discount_value?: number
+              p_items: Json
+              p_payment_type?: string
+            }
+            Returns: string
+          }
       create_sales_return_rpc: {
         Args: { p_items: Json; p_reason?: string; p_sale_id: string }
         Returns: string
