@@ -368,9 +368,11 @@ export function useDistributorOffline() {
       const customer = customers.find(c => c.id === payload.customerId);
       const customerName = customer?.name || 'غير معروف';
       
-      const grandTotal = (payload.items || []).reduce(
+      const subtotal = (payload.items || []).reduce(
         (sum: number, item: any) => sum + (item.totalPrice || item.quantity * item.unitPrice), 0
       );
+      const discountValue = payload.discountValue || 0;
+      const grandTotal = Math.max(0, subtotal - discountValue);
       
       // Add to local sales cache (optimistic)
       const localSale: CachedSale = {
@@ -395,7 +397,6 @@ export function useDistributorOffline() {
       await addLocalSale(localSale);
       
       // Add to local invoices cache (so it appears in history immediately)
-      // Pull org info from cache so offline invoices include stamp + legal info
       const cachedOrg = await getCachedOrgInfo();
       const localInvoice: CachedInvoice = {
         id: localSaleId,
@@ -424,6 +425,10 @@ export function useDistributorOffline() {
         invoice_date: new Date().toISOString(),
         created_at: new Date().toISOString(),
         isLocal: true,
+        discount_type: payload.discountType || null,
+        discount_percentage: payload.discountPercentage || 0,
+        discount_value: discountValue,
+        subtotal: subtotal,
       };
       await addLocalInvoice(localInvoice);
     }

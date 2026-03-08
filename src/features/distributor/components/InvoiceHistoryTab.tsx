@@ -113,6 +113,8 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
         });
 
         sales.forEach((sale, i) => {
+          const dv = Number(sale.discount_value || 0);
+          const itemsSubtotal = (itemsBySale.get(sale.id) || []).reduce((s: number, it: any) => s + Number(it.total_price), 0);
           results.push({
             id: sale.id, invoice_type: 'sale',
             invoice_number: `INV-${String(i + 1).padStart(4, '0')}`,
@@ -124,6 +126,10 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
             items: itemsBySale.get(sale.id) || [],
             notes: null, reason: null, org_name: orgName, legal_info: legalInfo,
             invoice_date: sale.created_at, created_at: sale.created_at,
+            discount_type: sale.discount_type as any,
+            discount_percentage: Number(sale.discount_percentage || 0),
+            discount_value: dv,
+            subtotal: dv > 0 ? itemsSubtotal : undefined,
           });
         });
       }

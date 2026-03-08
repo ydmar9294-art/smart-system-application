@@ -647,6 +647,9 @@ async function executeActionInner(action: OfflineAction): Promise<ExecuteResult>
           p_customer_id: customerId,
           p_items: action.payload.items,
           p_payment_type: action.payload.paymentType || 'CASH',
+          p_discount_type: action.payload.discountType || null,
+          p_discount_percentage: action.payload.discountPercentage || 0,
+          p_discount_value: action.payload.discountValue || 0,
         });
         if (error) throw error;
 
