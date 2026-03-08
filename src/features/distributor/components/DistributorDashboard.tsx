@@ -162,9 +162,9 @@ const DistributorDashboard: React.FC = () => {
         <div className="px-4 pb-3">
           <GlassCard className="!p-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-muted-foreground text-xs font-bold">الزبون المحدد للعمليات</span>
+              <span className="text-muted-foreground text-xs font-bold">{t('distributor.selectedCustomer')}</span>
               {selectedCustomer && (
-                <button onClick={() => setSelectedCustomer(null)} className="text-xs text-destructive hover:text-destructive/80 font-bold">إلغاء</button>
+                <button onClick={() => setSelectedCustomer(null)} className="text-xs text-destructive hover:text-destructive/80 font-bold">{t('distributor.deselect')}</button>
               )}
             </div>
             <button onClick={() => setShowCustomerPicker(true)}
