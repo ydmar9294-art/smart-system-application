@@ -3,6 +3,7 @@ import { HashRouter } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import App from "./App.tsx";
 import "./index.css";
+import "./i18n"; // Initialize i18n before app renders
 import { AppProvider } from "@/store/AppContext";
 import { queryClient } from "@/lib/queryClient";
 import { initSessionGuard } from "@/lib/sessionGuard";

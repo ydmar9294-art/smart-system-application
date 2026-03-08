@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useApp } from '@/store/AppContext';
 import { UserRole, LicenseStatus } from '@/types';
-import { ShieldAlert, Phone, LogOut, RefreshCw, Settings, Shield, FileText, Trash2, X } from 'lucide-react';
+import { ShieldAlert, Phone, LogOut, RefreshCw, Settings, Shield, FileText, Trash2 } from 'lucide-react';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import ThemeToggle from '@/components/ui/ThemeToggle';
+import LanguageSelector from '@/components/ui/LanguageSelector';
 import { usePageTheme } from '@/hooks/usePageTheme';
 import { SUPPORT_WHATSAPP_URL, SUPPORT_PHONE_URL } from '@/constants';
 import { PullToRefresh } from '@/components/ui/PullToRefresh';
@@ -14,13 +16,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const { user, logout, organization, refreshAuth, refreshAllData } = useApp();
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   
   usePageTheme();
   useRealtimeNotifications();
 
   const handlePullRefresh = useCallback(async () => {
-    // Data-only refresh: invalidate cached queries so they refetch from the server.
-    // Does NOT call refreshAuth (which sets isLoading=true and causes full UI skeleton).
     await refreshAllData();
   }, [refreshAllData]);
 
@@ -30,7 +31,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   const licenseStatus = (organization as any)?.licenseStatus;
   const expiryDate = (organization as any)?.expiryDate;
-
   const isSuspended = licenseStatus === LicenseStatus.SUSPENDED;
   const isExpired = typeof expiryDate === 'number' && expiryDate < Date.now();
 
@@ -43,19 +43,19 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     />;
   }
 
+  const isRTL = i18n.language === 'ar';
+
   return (
     <>
-      {/* Liquid-glass overlay bars — OUTSIDE scroll/transform containers so they stay truly fixed */}
       <div className="glass-bar-top" aria-hidden="true" />
       <div className="glass-bar-bottom" aria-hidden="true" />
 
       <PullToRefresh onRefresh={handlePullRefresh}>
         <div
           className="scroll-under-layout flex bg-background text-end overflow-x-hidden font-tajawal transition-colors duration-300 safe-area-x"
-          dir="rtl"
+          dir={isRTL ? 'rtl' : 'ltr'}
         >
         <main className="flex-1 relative">
-          {/* Global Controls */}
           <div className="sticky top-0 z-50 flex justify-start items-center gap-2 pt-16 px-3 pb-2 pointer-events-none fixed-top-safe">
             <div className="pointer-events-auto">
               <ThemeToggle />
@@ -64,33 +64,39 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               <button
                 onClick={() => setShowSettingsMenu(!showSettingsMenu)}
                 className="p-2 rounded-full bg-card/80 backdrop-blur-sm shadow-md text-muted-foreground hover:text-foreground transition-all"
-                title="الإعدادات"
+                title={t('common.settings')}
               >
                 <Settings size={18} />
               </button>
               {showSettingsMenu && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowSettingsMenu(false)} />
-                  <div className="absolute top-full mt-2 start-0 bg-card border border-border rounded-2xl shadow-xl z-50 w-56 animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden" dir="rtl">
-                    {/* Header */}
+                  <div className={`absolute top-full mt-2 ${isRTL ? 'start-0' : 'start-0'} bg-card border border-border rounded-2xl shadow-xl z-50 w-64 animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden`} dir={isRTL ? 'rtl' : 'ltr'}>
                     <div className="px-4 py-3 bg-muted/50 border-b border-border">
-                      <p className="text-xs font-black text-foreground">الإعدادات</p>
+                      <p className="text-xs font-black text-foreground">{t('common.settings')}</p>
                     </div>
                     
-                    <div className="p-2 space-y-0.5 max-h-[60vh] overflow-y-auto">
+                    <div className="p-2 space-y-0.5 max-h-[70vh] overflow-y-auto">
+                      {/* Language Selector */}
+                      <div className="px-2 py-2">
+                        <LanguageSelector />
+                      </div>
+                      
+                      <div className="h-px bg-border mx-2 my-1" />
+
                       <button
                         onClick={() => { navigate('/privacy-policy'); setShowSettingsMenu(false); }}
                         className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold text-foreground hover:bg-muted transition-colors"
                       >
                         <Shield size={16} className="text-primary flex-shrink-0" /> 
-                        <span>سياسة الخصوصية</span>
+                        <span>{t('common.privacyPolicy')}</span>
                       </button>
                       <button
                         onClick={() => { navigate('/terms'); setShowSettingsMenu(false); }}
                         className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold text-foreground hover:bg-muted transition-colors"
                       >
                         <FileText size={16} className="text-primary flex-shrink-0" /> 
-                        <span>شروط الاستخدام</span>
+                        <span>{t('common.termsOfService')}</span>
                       </button>
                       
                       <div className="h-px bg-border mx-2 my-1" />
@@ -118,6 +124,7 @@ const LicenseFrozenScreen: React.FC<{
   onRetry: () => Promise<void>;
   onLogout: () => Promise<void>;
 }> = ({ isExpired, isSuspended, onRetry, onLogout }) => {
+  const { t } = useTranslation();
   const [checking, setChecking] = useState(false);
   const [reactivated, setReactivated] = useState(false);
 
@@ -142,38 +149,34 @@ const LicenseFrozenScreen: React.FC<{
 
   if (reactivated) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6 text-center" dir="rtl">
+      <div className="min-h-screen bg-background flex items-center justify-center p-6 text-center" dir="auto">
         <div className="max-w-md space-y-6 animate-zoom-in">
           <div className="w-24 h-24 rounded-[2.5rem] bg-success flex items-center justify-center text-success-foreground shadow-2xl mx-auto mb-8">
             <RefreshCw size={48} />
           </div>
-          <h2 className="text-3xl font-black text-foreground">مرحباً بعودتك! 🎉</h2>
-          <p className="text-muted-foreground font-bold text-lg">تم إعادة تفعيل حسابك بنجاح. شكراً لثقتك.</p>
+          <h2 className="text-3xl font-black text-foreground">{t('license.welcomeBack')}</h2>
+          <p className="text-muted-foreground font-bold text-lg">{t('license.reactivated')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6 text-center" dir="rtl">
+    <div className="min-h-screen bg-background flex items-center justify-center p-6 text-center" dir="auto">
       <div className="max-w-md space-y-6 animate-zoom-in">
         <div className={`w-24 h-24 rounded-[2.5rem] flex items-center justify-center text-destructive-foreground shadow-2xl mx-auto mb-8 ${isExpired ? 'bg-warning' : 'bg-destructive'}`}>
           <ShieldAlert size={48} />
         </div>
 
         <h2 className="text-3xl font-black text-foreground">
-          {isExpired ? 'انتهى اشتراكك' : 'الاشتراك موقوف مؤقتاً'}
+          {isExpired ? t('license.expired') : t('license.suspendedTemp')}
         </h2>
 
         <p className="text-muted-foreground font-bold text-lg">
-          {isExpired
-            ? 'لقد انتهت مدة اشتراكك في النظام. يرجى التواصل مع المطور لتجديد الاشتراك.'
-            : 'يرجى التواصل مع المطور لتسوية المستحقات وإعادة تفعيل الاشتراك.'}
+          {isExpired ? t('license.expiredDesc') : t('license.suspendedDesc')}
         </p>
 
-        <p className="text-muted-foreground/70 text-sm">
-          سيتم التحقق تلقائياً من حالة الترخيص كل 30 ثانية
-        </p>
+        <p className="text-muted-foreground/70 text-sm">{t('license.autoCheck')}</p>
 
         <div className="pt-8 flex flex-col gap-3">
           <button
@@ -182,7 +185,7 @@ const LicenseFrozenScreen: React.FC<{
             className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-black shadow-xl transition-transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <RefreshCw size={20} className={checking ? 'animate-spin' : ''} />
-            {checking ? 'جارٍ التحقق...' : 'تحقق من حالة الترخيص'}
+            {checking ? t('license.verifying') : t('license.checkStatus')}
           </button>
 
           <a
@@ -194,7 +197,7 @@ const LicenseFrozenScreen: React.FC<{
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
             </svg>
-            تواصل عبر واتساب
+            {t('common.whatsappSupport')}
           </a>
 
           <a
@@ -202,7 +205,7 @@ const LicenseFrozenScreen: React.FC<{
             className="w-full py-4 bg-secondary text-secondary-foreground rounded-2xl font-black transition-transform active:scale-95 flex items-center justify-center gap-2"
           >
             <Phone size={20} />
-            اتصل بالإدارة المالية
+            {t('common.callManagement')}
           </a>
 
           <button
@@ -210,7 +213,7 @@ const LicenseFrozenScreen: React.FC<{
             className="w-full py-4 bg-muted text-muted-foreground rounded-2xl font-black flex items-center justify-center gap-2 mt-4"
           >
             <LogOut size={20} />
-            تسجيل الخروج
+            {t('common.logout')}
           </button>
         </div>
       </div>

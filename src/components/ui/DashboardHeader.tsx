@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { LogOut, MessageCircle } from 'lucide-react';
 import AIAssistant from '@/features/ai/components/AIAssistant';
 import { NotificationCenter } from '@/features/notifications/components/NotificationCenter';
@@ -23,6 +24,8 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   loggingOut,
   rightActions,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="dashboard-header">
       {/* Notification bell — absolute top-left */}
@@ -53,7 +56,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             target="_blank"
             rel="noopener noreferrer"
             className="p-1.5 bg-gradient-to-br from-green-400 to-green-600 rounded-lg text-white hover:shadow-md transition-all active:scale-95"
-            title="فريق الدعم"
+            title={t('common.supportTeam')}
           >
             <MessageCircle className="w-4 h-4" />
           </a>
@@ -63,7 +66,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           onClick={onLogout}
           disabled={loggingOut}
           className="glass-logout-btn"
-          title="تسجيل الخروج"
+          title={t('common.logout')}
         >
           <LogOut className={`w-5 h-5 ${loggingOut ? 'animate-spin' : ''}`} />
         </button>
