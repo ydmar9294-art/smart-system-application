@@ -324,14 +324,23 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
               oauthInProgress={oauthPending}
               loadingText={oauthPending ? 'جارٍ العودة من Google...' : undefined} />
 
-            {/* Guest preview button — directly under Google */}
+            {/* Guest preview button — Liquid-Glass style */}
             <button
               type="button"
               onClick={() => setShowGuestSelector(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-muted-foreground bg-muted/60 hover:bg-muted transition-all duration-200 active:scale-[0.97]"
+              className="w-full relative overflow-hidden flex items-center justify-center gap-2.5 py-3.5 rounded-2xl font-black text-sm transition-all duration-300 active:scale-[0.97] group"
+              style={{
+                background: 'var(--card-glass-bg, hsl(var(--muted) / 0.5))',
+                backdropFilter: 'blur(20px) saturate(1.6)',
+                WebkitBackdropFilter: 'blur(20px) saturate(1.6)',
+                border: '1px solid hsl(var(--primary) / 0.15)',
+                boxShadow: '0 2px 16px hsl(var(--primary) / 0.06), inset 0 1px 0 hsl(0 0% 100% / 0.08)',
+              }}
             >
-              <Eye className="w-4 h-4" />
-              دخول كزائر
+              {/* Glass highlight */}
+              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(135deg, hsl(var(--primary) / 0.08), transparent 60%)' }} />
+              <Eye className="w-4.5 h-4.5 text-primary/70 group-hover:text-primary transition-colors duration-300" />
+              <span className="text-muted-foreground group-hover:text-foreground transition-colors duration-300">دخول كزائر</span>
             </button>
 
             {/* Divider */}
