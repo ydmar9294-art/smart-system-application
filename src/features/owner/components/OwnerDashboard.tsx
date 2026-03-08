@@ -230,11 +230,11 @@ const OwnerDashboard: React.FC = () => {
 
       {/* Add Employee Modal */}
       {showAddUserModal && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir="rtl">
+        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
           <div className="bg-card rounded-2xl w-full max-w-md p-6 space-y-4 animate-zoom-in shadow-2xl border border-border max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold text-foreground">
-                {newEmployeeCode ? 'تم إنشاء كود التفعيل' : 'إضافة موظف جديد'}
+                {newEmployeeCode ? t('activation.activationCodeGenerated') : t('owner.addNewEmployee')}
               </h2>
               <button onClick={closeEmployeeModal} className="p-2 bg-muted rounded-full hover:bg-accent">
                 <X className="w-5 h-5 text-muted-foreground" />
