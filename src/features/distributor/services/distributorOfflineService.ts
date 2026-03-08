@@ -18,7 +18,7 @@
 import { generateUUID } from '@/lib/uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
-import { encryptData, decryptData, isEncrypted } from '@/lib/indexedDbEncryption';
+import { encryptData, decryptData, isEncrypted, computeHMAC, verifyHMAC, isEncryptionAvailable } from '@/lib/indexedDbEncryption';
 
 // ============================================
 // Database Setup
