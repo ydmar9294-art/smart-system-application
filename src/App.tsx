@@ -154,6 +154,11 @@ const MainContent: React.FC = () => {
     return () => window.removeEventListener('unhandledrejection', handler);
   }, []);
 
+  // Device revoked — WhatsApp-style blocking screen (highest priority)
+  if (deviceRevoked) {
+    return <DeviceRevokedScreen deviceName={revokedDeviceName} onAcknowledge={handleRevokedAcknowledge} />;
+  }
+
   // Logout goodbye screen — blocks everything
   if (isLoggingOut) return <LogoutScreen />;
 
