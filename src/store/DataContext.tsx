@@ -1,27 +1,19 @@
 /**
- * DataContext - React Query powered data layer (Section 3 & 4)
+ * DataContext - Refactored to compose domain-specific hooks
  * 
  * Architecture:
- * - Thin adapter over domain-specific React Query hooks
+ * - Thin composition layer over domain mutation hooks
  * - Backward compatible interface for all useData() consumers
- * - Optimistic updates for key mutations (Section 4)
- * - Input validation before every mutation (Section 9)
- * - Centralized query wrappers for consistency (Section 6)
+ * - Staggered refresh to prevent network bursts
+ * - Service layer handles all Supabase calls
  */
 import React, { createContext, useContext, useCallback } from 'react';
-import { generateUUID } from '@/lib/uuid';
 import { useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { UserRole, Product, Customer, Sale, Payment, License, EmployeeType, LicenseStatus, OrgStats } from '@/types';
-import { Purchase, Delivery, PendingEmployee, DistributorInventoryItem, transformPendingEmployee } from '@/hooks/useDataOperations';
-import { extractErrorMessage } from '@/lib/errorHandler';
+import { Purchase, Delivery, PendingEmployee, DistributorInventoryItem } from '@/hooks/useDataOperations';
 import { useAuth } from './AuthContext';
 import { useNotifications } from './NotificationContext';
 import { queryKeys } from '@/lib/queryClient';
-import {
-  safeRpc, validatePositiveNumber, validateRequiredString,
-  validateUUID, validateNonEmptyArray, QueryError
-} from '@/lib/safeQuery';
 import {
   useProductsQuery, useCustomersQuery, useSalesQuery, usePaymentsQuery,
   usePurchasesQuery, useDeliveriesQuery, usePendingEmployeesQuery,
@@ -29,6 +21,12 @@ import {
   usePurchaseReturnsQuery, PurchaseReturn
 } from '@/hooks/queries';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
+import { useSalesMutations } from '@/hooks/data/useSalesMutations';
+import { useProductMutations } from '@/hooks/data/useProductMutations';
+import { useCustomerMutations } from '@/hooks/data/useCustomerMutations';
+import { useCollectionMutations } from '@/hooks/data/useCollectionMutations';
+import { useInventoryMutations } from '@/hooks/data/useInventoryMutations';
+import { staggeredRefresh } from '@/hooks/data/staggeredRefresh';
 
 // ============================================
 // Context Type (unchanged interface)
@@ -87,7 +85,7 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | null>(null);
 
 // ============================================
-// Provider (Section 3 — structured provider)
+// Provider — composes domain hooks
 // ============================================
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -98,15 +96,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const orgId = organization?.id;
   const employeeType = user?.employeeType as EmployeeType | undefined;
 
-  // ============================================
-  // Realtime subscriptions — replaces polling for 25K+ scale
-  // ============================================
+  // Realtime subscriptions
   useRealtimeSync(orgId, role);
 
   // ============================================
-  // React Query hooks — automatic caching & deduplication
+  // Query hooks — automatic caching & deduplication
   // ============================================
-
   const { data: products = [] } = useProductsQuery(orgId, role);
   const { data: customers = [] } = useCustomersQuery(orgId, role);
   const { data: sales = [] } = useSalesQuery(orgId, role);
@@ -121,19 +116,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { data: orgStats = [] } = useOrgStatsQuery(role);
 
   // ============================================
-  // Error handler
+  // Notification callbacks for mutation hooks
   // ============================================
-
-  const handleError = useCallback((err: any) => {
-    console.error('[Data Error]:', err);
-    addNotification(extractErrorMessage(err), 'error');
-    throw err; // Re-throw so callers can detect failures
-  }, [addNotification]);
+  const notifyError = useCallback((msg: string) => addNotification(msg, 'error'), [addNotification]);
+  const notifySuccess = useCallback((msg: string) => addNotification(msg, 'success'), [addNotification]);
+  const notifyWarning = useCallback((msg: string) => addNotification(msg, 'warning'), [addNotification]);
 
   // ============================================
-  // Targeted invalidation (replace manual refresh)
+  // Domain mutation hooks
   // ============================================
+  const salesMutations = useSalesMutations(orgId, notifyError);
+  const productMutations = useProductMutations(orgId, notifySuccess, notifyError);
+  const customerMutations = useCustomerMutations(orgId, notifySuccess, notifyError);
+  const collectionMutations = useCollectionMutations(orgId, notifyError);
+  const inventoryMutations = useInventoryMutations(orgId, notifySuccess, notifyWarning, notifyError);
 
+  // ============================================
+  // Targeted invalidation helpers
+  // ============================================
   const refreshProducts = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: queryKeys.products(orgId) });
   }, [queryClient, orgId]);
@@ -178,466 +178,53 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await queryClient.invalidateQueries({ queryKey: queryKeys.orgStats() });
   }, [queryClient]);
 
+  // Staggered refresh — prevents request spikes
   const refreshAllData = useCallback(async () => {
-    // Only invalidate data queries — NOT auth/session queries
-    // This prevents full UI re-initialization on pull-to-refresh
-    const dataKeys = [
-      queryKeys.products(orgId),
-      queryKeys.customers(orgId),
-      queryKeys.sales(orgId),
-      queryKeys.payments(orgId),
-      queryKeys.purchases(orgId),
-      queryKeys.deliveries(orgId),
-      queryKeys.pendingEmployees(orgId),
-      queryKeys.distributorInventory(orgId),
-      queryKeys.purchaseReturns(orgId),
-      queryKeys.users(orgId),
-      queryKeys.licenses(),
-      queryKeys.orgStats(),
-    ];
-    await Promise.all(
-      dataKeys.map(key => queryClient.invalidateQueries({ queryKey: key }))
-    );
+    await staggeredRefresh(queryClient, orgId);
   }, [queryClient, orgId]);
 
   // ============================================
-  // Mutations with optimistic updates (Section 4) + validation (Section 9)
+  // Compose context value from domain hooks
   // ============================================
-
-  const createSale = useCallback(async (cid: string, items: any[]) => {
-    try {
-      // Section 9: validate inputs before RPC
-      validateUUID(cid, 'معرف العميل');
-      validateNonEmptyArray(items, 'أصناف الفاتورة');
-
-      await safeRpc('create_sale_rpc', { p_customer_id: cid, p_items: items });
-
-      // Invalidate affected domains
-      queryClient.invalidateQueries({ queryKey: queryKeys.sales(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.customers(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.products(orgId) });
-    } catch (e) { handleError(e); }
-  }, [queryClient, orgId, handleError]);
-
-  const submitInvoice = useCallback(async (d: any) => {
-    try {
-      validateUUID(d.customerId, 'معرف العميل');
-      validateNonEmptyArray(d.items, 'أصناف الفاتورة');
-
-      await safeRpc('create_sale_rpc', { p_customer_id: d.customerId, p_items: d.items, p_payment_type: d.paymentType });
-
-      queryClient.invalidateQueries({ queryKey: queryKeys.sales(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.customers(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.products(orgId) });
-    } catch (e) { handleError(e); }
-  }, [queryClient, orgId, handleError]);
-
-  const submitPayment = useCallback(async (d: any) => {
-    try {
-      validateUUID(d.saleId, 'معرف الفاتورة');
-      validatePositiveNumber(d.amount, 'المبلغ');
-
-      await safeRpc('add_collection_rpc', { p_sale_id: d.saleId, p_amount: d.amount });
-
-      queryClient.invalidateQueries({ queryKey: queryKeys.sales(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.payments(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.customers(orgId) });
-    } catch (e) { handleError(e); }
-  }, [queryClient, orgId, handleError]);
-
-  const voidSale = useCallback(async (sid: string, r: string) => {
-    try {
-      validateUUID(sid, 'معرف الفاتورة');
-      validateRequiredString(r, 'سبب الإلغاء');
-
-      await safeRpc('void_sale_rpc', { p_sale_id: sid, p_reason: r });
-
-      queryClient.invalidateQueries({ queryKey: queryKeys.sales(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.customers(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.products(orgId) });
-    } catch (e) { handleError(e); }
-  }, [queryClient, orgId, handleError]);
-
-  const addCollection = useCallback(async (sid: string, a: number, n?: string) => {
-    try {
-      validateUUID(sid, 'معرف الفاتورة');
-      validatePositiveNumber(a, 'مبلغ التحصيل');
-
-      // Section 4: Optimistic update — update sale remaining in cache
-      const salesKey = queryKeys.sales(orgId);
-      const previousSales = queryClient.getQueryData<Sale[]>(salesKey);
-      if (previousSales) {
-        queryClient.setQueryData<Sale[]>(salesKey, old =>
-          (old || []).map(sale =>
-            sale.id === sid
-              ? { ...sale, paidAmount: sale.paidAmount + a, remaining: sale.remaining - a }
-              : sale
-          )
-        );
-      }
-
-      try {
-        await safeRpc('add_collection_rpc', { p_sale_id: sid, p_amount: a, p_notes: n });
-      } catch (err) {
-        // Rollback on failure
-        if (previousSales) queryClient.setQueryData(salesKey, previousSales);
-        throw err;
-      }
-
-      queryClient.invalidateQueries({ queryKey: salesKey });
-      queryClient.invalidateQueries({ queryKey: queryKeys.payments(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.customers(orgId) });
-    } catch (e) { handleError(e); }
-  }, [queryClient, orgId, handleError]);
-
-  const reversePayment = useCallback(async (pid: string, r: string) => {
-    try {
-      validateUUID(pid, 'معرف الدفعة');
-      validateRequiredString(r, 'سبب العكس');
-
-      await safeRpc('reverse_payment_rpc', { p_payment_id: pid, p_reason: r });
-
-      queryClient.invalidateQueries({ queryKey: queryKeys.sales(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.payments(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.customers(orgId) });
-    } catch (e) { handleError(e); }
-  }, [queryClient, orgId, handleError]);
-
-  const addCustomer = useCallback(async (name: string, phone: string, location?: string) => {
-    try {
-      if (!orgId) throw new QueryError('لا توجد منشأة', 'MISSING_ORG');
-      validateRequiredString(name, 'اسم العميل');
-
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (!currentUser) throw new QueryError('غير مسجل الدخول', 'AUTH_REQUIRED');
-
-      // Section 4: Optimistic update — add placeholder customer
-      const custKey = queryKeys.customers(orgId);
-      const tempId = generateUUID();
-      const optimisticCustomer: Customer = {
-        id: tempId, name, phone, balance: 0, location,
-        organization_id: orgId, created_by: currentUser.id
-      };
-      queryClient.setQueryData<Customer[]>(custKey, old => [optimisticCustomer, ...(old || [])]);
-
-      try {
-        const { error } = await supabase.from('customers').insert({
-          name, phone, location,
-          organization_id: orgId,
-          created_by: currentUser.id
-        });
-        if (error) throw error;
-      } catch (err) {
-        // Rollback optimistic update
-        queryClient.setQueryData<Customer[]>(custKey, old => (old || []).filter(c => c.id !== tempId));
-        throw err;
-      }
-
-      addNotification('تم إضافة الزبون بنجاح', 'success');
-      queryClient.invalidateQueries({ queryKey: custKey });
-    } catch (e) { handleError(e); }
-  }, [orgId, queryClient, addNotification, handleError]);
-
-  const addDistributor = useCallback(async (name: string, phone: string, role: UserRole, type: EmployeeType) => {
-    try {
-      validateRequiredString(name, 'اسم الموظف');
-
-      const code = await safeRpc<string>('add_employee_rpc', {
-        p_name: name, p_phone: phone, p_role: role, p_type: type
-      });
-
-      await queryClient.invalidateQueries({ queryKey: queryKeys.pendingEmployees(orgId) });
-
-      // Fetch the new employee record
-      const { data: latestPending } = await supabase
-        .from('pending_employees')
-        .select('id,name,phone,role,employee_type,activation_code,is_used,created_at,organization_id,activated_at,activated_by')
-        .eq('activation_code', code)
-        .maybeSingle();
-
-      const employee = latestPending ? transformPendingEmployee(latestPending) : null;
-      return { code, employee };
-    } catch (e) {
-      handleError(e);
-      return { code: '', employee: null };
-    }
-  }, [queryClient, orgId, handleError]);
-
-  const addProduct = useCallback(async (product: Omit<Product, 'id' | 'organization_id'>) => {
-    try {
-      if (!orgId) throw new QueryError('لا توجد منشأة', 'MISSING_ORG');
-      validateRequiredString(product.name, 'اسم المنتج');
-      validatePositiveNumber(product.basePrice, 'سعر البيع');
-
-      // Section 4: Optimistic update
-      const prodKey = queryKeys.products(orgId);
-      const tempId = generateUUID();
-      const optimisticProduct: Product = { id: tempId, organization_id: orgId, ...product };
-      queryClient.setQueryData<Product[]>(prodKey, old => [optimisticProduct, ...(old || [])]);
-
-      try {
-        const { error } = await supabase.from('products').insert({
-          name: product.name, category: product.category,
-          cost_price: product.costPrice, base_price: product.basePrice,
-          consumer_price: product.consumerPrice ?? 0,
-          stock: product.stock, min_stock: product.minStock,
-          unit: product.unit, organization_id: orgId
-        });
-        if (error) throw error;
-      } catch (err) {
-        queryClient.setQueryData<Product[]>(prodKey, old => (old || []).filter(p => p.id !== tempId));
-        throw err;
-      }
-
-      addNotification('تم إضافة المنتج بنجاح', 'success');
-      queryClient.invalidateQueries({ queryKey: prodKey });
-    } catch (e) { handleError(e); }
-  }, [orgId, queryClient, addNotification, handleError]);
-
-  const updateProduct = useCallback(async (product: Product) => {
-    try {
-      validateUUID(product.id, 'معرف المنتج');
-      validateRequiredString(product.name, 'اسم المنتج');
-
-      // Section 4: Optimistic update
-      const prodKey = queryKeys.products(orgId);
-      const previousProducts = queryClient.getQueryData<Product[]>(prodKey);
-      const oldProduct = previousProducts?.find(p => p.id === product.id);
-      queryClient.setQueryData<Product[]>(prodKey, old =>
-        (old || []).map(p => p.id === product.id ? product : p)
-      );
-
-      try {
-        const { error } = await supabase.from('products').update({
-          name: product.name, category: product.category,
-          cost_price: product.costPrice, base_price: product.basePrice,
-          consumer_price: product.consumerPrice ?? 0,
-          stock: product.stock, min_stock: product.minStock,
-          unit: product.unit
-        }).eq('id', product.id);
-        if (error) throw error;
-
-        // Log price changes
-        if (oldProduct && orgId) {
-          const { data: { user: currentUser } } = await supabase.auth.getUser();
-          const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', currentUser?.id || '').maybeSingle();
-          const changerName = profile?.full_name || 'مستخدم';
-          
-          const priceFields = [
-            { field: 'cost_price', old: oldProduct.costPrice, new: product.costPrice },
-            { field: 'base_price', old: oldProduct.basePrice, new: product.basePrice },
-            { field: 'consumer_price', old: oldProduct.consumerPrice, new: product.consumerPrice ?? 0 },
-          ];
-
-          const changes = priceFields.filter(f => f.old !== f.new);
-          if (changes.length > 0 && currentUser) {
-            await Promise.all(changes.map(c =>
-              supabase.from('price_change_history').insert({
-                product_id: product.id,
-                product_name: product.name,
-                field_changed: c.field,
-                old_value: c.old,
-                new_value: c.new,
-                changed_by: currentUser.id,
-                changed_by_name: changerName,
-                organization_id: orgId
-              })
-            ));
-          }
-        }
-      } catch (err) {
-        if (previousProducts) queryClient.setQueryData(prodKey, previousProducts);
-        throw err;
-      }
-
-      queryClient.invalidateQueries({ queryKey: prodKey });
-    } catch (e) { handleError(e); }
-  }, [queryClient, orgId, handleError]);
-
-  const deleteProduct = useCallback(async (id: string) => {
-    try {
-      validateUUID(id, 'معرف المنتج');
-
-      // Section 4: Optimistic — remove from list immediately
-      const prodKey = queryKeys.products(orgId);
-      const previousProducts = queryClient.getQueryData<Product[]>(prodKey);
-      queryClient.setQueryData<Product[]>(prodKey, old => (old || []).filter(p => p.id !== id));
-
-      try {
-        const { error } = await supabase.from('products').update({ is_deleted: true }).eq('id', id);
-        if (error) throw error;
-      } catch (err) {
-        if (previousProducts) queryClient.setQueryData(prodKey, previousProducts);
-        throw err;
-      }
-
-      queryClient.invalidateQueries({ queryKey: prodKey });
-    } catch (e) { handleError(e); }
-  }, [queryClient, orgId, handleError]);
-
-  const issueLicense = useCallback(async (orgName: string, type: 'TRIAL' | 'PERMANENT', days: number, maxEmployees: number, ownerPhone?: string) => {
-    try {
-      validateRequiredString(orgName, 'اسم المنشأة');
-      validatePositiveNumber(days, 'عدد الأيام');
-      validatePositiveNumber(maxEmployees, 'عدد الموظفين');
-
-      await safeRpc('issue_license_rpc', {
-        p_org_name: orgName, p_type: type, p_days: days,
-        p_max_employees: maxEmployees, p_owner_phone: ownerPhone || null
-      });
-
-      queryClient.invalidateQueries({ queryKey: queryKeys.licenses() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.orgStats() });
-      addNotification('تم إصدار الترخيص بنجاح', 'success');
-    } catch (e) { handleError(e); }
-  }, [queryClient, addNotification, handleError]);
-
-  const updateLicenseStatus = useCallback(async (id: string, _ownerId: string | null, status: LicenseStatus) => {
-    try {
-      validateUUID(id, 'معرف الترخيص');
-
-      await safeRpc('update_license_status_rpc', { p_license_id: id, p_status: status });
-
-      queryClient.invalidateQueries({ queryKey: queryKeys.licenses() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.orgStats() });
-    } catch (e) { handleError(e); }
-  }, [queryClient, handleError]);
-
-  /** @deprecated Permanent licenses no longer supported - function dropped from DB */
-  const makeLicensePermanent = useCallback(async (_id: string, _ownerId: string | null) => {
-    console.warn('makeLicensePermanent is deprecated - permanent licenses are no longer supported');
-  }, []);
-
-  const updateLicenseMaxEmployees = useCallback(async (licenseId: string, maxEmployees: number) => {
-    try {
-      validateUUID(licenseId, 'معرف الترخيص');
-      validatePositiveNumber(maxEmployees, 'عدد الموظفين');
-
-      const result = await safeRpc<any>('update_license_max_employees_rpc', {
-        p_license_id: licenseId, p_max_employees: maxEmployees
-      });
-
-      queryClient.invalidateQueries({ queryKey: queryKeys.licenses() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.orgStats() });
-
-      if (result?.exceeds_limit) {
-        addNotification(`تحذير: عدد الموظفين الحاليين (${result.current_employees}) يتجاوز الحد الجديد (${maxEmployees}). لن يتم حذف الموظفين الحاليين لكن لن يمكن إضافة جدد.`, 'warning');
-      } else {
-        addNotification('تم تحديث حد الموظفين بنجاح', 'success');
-      }
-      return { currentEmployees: result?.current_employees || 0, exceedsLimit: result?.exceeds_limit || false };
-    } catch (e) {
-      handleError(e);
-      return null;
-    }
-  }, [queryClient, addNotification, handleError]);
-
-  const addPurchase = useCallback(async (productId: string, quantity: number, unitPrice: number, supplierName?: string, notes?: string) => {
-    try {
-      validateUUID(productId, 'معرف المنتج');
-      validatePositiveNumber(quantity, 'الكمية');
-      validatePositiveNumber(unitPrice, 'سعر الوحدة');
-
-      await safeRpc('add_purchase_rpc', {
-        p_product_id: productId, p_quantity: quantity, p_unit_price: unitPrice,
-        p_supplier_name: supplierName, p_notes: notes
-      });
-
-      queryClient.invalidateQueries({ queryKey: queryKeys.purchases(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.products(orgId) });
-    } catch (e) { handleError(e); }
-  }, [queryClient, orgId, handleError]);
-
-  const createDelivery = useCallback(async (distributorName: string, items: any[], notes?: string, distributorId?: string) => {
-    try {
-      validateRequiredString(distributorName, 'اسم الموزع');
-      validateNonEmptyArray(items, 'أصناف التسليم');
-
-      await safeRpc('create_delivery_rpc', {
-        p_distributor_name: distributorName, p_items: items,
-        p_notes: notes, p_distributor_id: distributorId
-      });
-
-      queryClient.invalidateQueries({ queryKey: queryKeys.deliveries(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.products(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.distributorInventory(orgId) });
-    } catch (e) { handleError(e); }
-  }, [queryClient, orgId, handleError]);
-
-  const createPurchaseReturn = useCallback(async (
-    items: { product_id: string; product_name: string; quantity: number; unit_price: number }[],
-    reason?: string, supplierName?: string
-  ) => {
-    try {
-      validateNonEmptyArray(items, 'أصناف المرتجع');
-
-      await safeRpc('create_purchase_return_rpc', {
-        p_items: items, p_reason: reason, p_supplier_name: supplierName
-      });
-
-      queryClient.invalidateQueries({ queryKey: queryKeys.purchases(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.products(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.purchaseReturns(orgId) });
-    } catch (e) { handleError(e); }
-  }, [queryClient, orgId, handleError]);
-
-  // ============================================
-  // Employee Deactivation / Reactivation
-  // ============================================
-
-  const deactivateEmployee = useCallback(async (employeeId: string): Promise<boolean> => {
-    try {
-      validateUUID(employeeId, 'معرف الموظف');
-      const result = await safeRpc<any>('deactivate_employee_rpc', { p_employee_id: employeeId });
-      if (result?.success) {
-        addNotification(result.message || 'تم تعطيل الموظف بنجاح', 'success');
-        queryClient.invalidateQueries({ queryKey: queryKeys.users(orgId) });
-        return true;
-      } else {
-        addNotification(result?.message || 'فشل في تعطيل الموظف', 'error');
-        return false;
-      }
-    } catch (e) {
-      handleError(e);
-      return false;
-    }
-  }, [queryClient, orgId, addNotification, handleError]);
-
-  const reactivateEmployee = useCallback(async (employeeId: string): Promise<boolean> => {
-    try {
-      validateUUID(employeeId, 'معرف الموظف');
-      const result = await safeRpc<any>('reactivate_employee_rpc', { p_employee_id: employeeId });
-      if (result?.success) {
-        addNotification(result.message || 'تم إعادة تنشيط الموظف بنجاح', 'success');
-        queryClient.invalidateQueries({ queryKey: queryKeys.users(orgId) });
-        return true;
-      } else {
-        addNotification(result?.message || 'فشل في إعادة تنشيط الموظف', 'error');
-        return false;
-      }
-    } catch (e) {
-      handleError(e);
-      return false;
-    }
-  }, [queryClient, orgId, addNotification, handleError]);
-
-  // ============================================
-  // Section 3: Provider value — all data + mutations exposed
-  // ============================================
-
   const value: DataContextType = {
     products, customers, sales, payments, users, licenses,
     purchases, deliveries, pendingEmployees, distributorInventory,
     purchaseReturns, orgStats,
+
     refreshProducts, refreshCustomers, refreshSales, refreshPayments,
     refreshPurchases, refreshDeliveries, refreshPendingEmployees,
-    refreshDistributorInventory, refreshPurchaseReturns, refreshLicenses, refreshAllData, refreshOrgStats,
-    createSale, submitInvoice, submitPayment, voidSale, addCollection,
-    reversePayment, addCustomer, addDistributor, addProduct, updateProduct,
-    deleteProduct, issueLicense, updateLicenseStatus, makeLicensePermanent,
-    updateLicenseMaxEmployees,
-    addPurchase, createDelivery, createPurchaseReturn,
-    deactivateEmployee, reactivateEmployee
+    refreshDistributorInventory, refreshPurchaseReturns, refreshLicenses,
+    refreshAllData, refreshOrgStats,
+
+    // Sales mutations
+    createSale: salesMutations.createSale,
+    submitInvoice: salesMutations.submitInvoice,
+    submitPayment: salesMutations.submitPayment,
+    voidSale: salesMutations.voidSale,
+
+    // Collection mutations
+    addCollection: collectionMutations.addCollection,
+    reversePayment: collectionMutations.reversePayment,
+
+    // Customer mutations
+    addCustomer: customerMutations.addCustomer,
+
+    // Product mutations
+    addProduct: productMutations.addProduct,
+    updateProduct: productMutations.updateProduct,
+    deleteProduct: productMutations.deleteProduct,
+
+    // Inventory & license mutations
+    addDistributor: inventoryMutations.addDistributor,
+    addPurchase: inventoryMutations.addPurchase,
+    createDelivery: inventoryMutations.createDelivery,
+    createPurchaseReturn: inventoryMutations.createPurchaseReturn,
+    deactivateEmployee: inventoryMutations.deactivateEmployee,
+    reactivateEmployee: inventoryMutations.reactivateEmployee,
+    issueLicense: inventoryMutations.issueLicense,
+    updateLicenseStatus: inventoryMutations.updateLicenseStatus,
+    makeLicensePermanent: inventoryMutations.makeLicensePermanent,
+    updateLicenseMaxEmployees: inventoryMutations.updateLicenseMaxEmployees,
   };
 
   return (

@@ -13,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { queryKeys } from '@/lib/queryClient';
 import { logger } from '@/lib/logger';
+import { performanceMonitor } from '@/utils/monitoring/performanceMonitor';
 
 const FALLBACK_POLL_MS = 30_000; // 30s fallback polling if realtime fails
 const MAX_RECONNECT_ATTEMPTS = 5;
@@ -89,6 +90,7 @@ export function useRealtimeSync(orgId?: string | null, role?: string | null) {
           logger.info(`[Realtime] Org channel connected: ${orgId}`, 'RealtimeSync');
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           reconnectAttemptsRef.current++;
+          performanceMonitor.recordReconnect(`org-rt-${orgId}`, reconnectAttemptsRef.current);
           logger.warn(`[Realtime] Org channel error (attempt ${reconnectAttemptsRef.current}): ${err}`, 'RealtimeSync');
           if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
             startFallbackPolling();
