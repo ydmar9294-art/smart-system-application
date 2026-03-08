@@ -299,7 +299,29 @@ export async function enqueueAction(
     idempotencyKey: generateUUID(),
   };
   
-  await putItem(STORES.ACTIONS, action);
+  // Sign the action payload for integrity verification
+  if (isEncryptionAvailable()) {
+    try {
+      const signableData = JSON.stringify({ type: action.type, payload: action.payload, idempotencyKey: action.idempotencyKey });
+      action._signature = await computeHMAC(signableData);
+    } catch {
+      logger.warn('Failed to sign offline action — storing unsigned', 'DistributorOffline');
+    }
+  }
+
+  // Encrypt the entire action before storing
+  if (isEncryptionAvailable()) {
+    try {
+      const encrypted = await encryptData(action);
+      await putItem(STORES.ACTIONS, { id: action.id, _enc: encrypted });
+    } catch {
+      // Fallback: store unencrypted if encryption fails
+      await putItem(STORES.ACTIONS, action);
+    }
+  } else {
+    await putItem(STORES.ACTIONS, action);
+  }
+  
   logger.info(`[OfflineQueue] Enqueued ${type}`, 'DistributorOffline');
   return action;
 }
