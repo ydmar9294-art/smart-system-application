@@ -363,6 +363,7 @@ const SalesManagerDashboard: React.FC = () => {
               </div>
             </div>
           )}
+          </AnimatedTabContent>
         </div>
 
         {/* Add Employee Modal */}

@@ -163,6 +163,7 @@ const WarehouseKeeperDashboard: React.FC = () => {
 
         {/* Tab Content */}
         <div className="px-4 pb-8">
+          <AnimatedTabContent tabKey={activeTab}>
           {activeTab === 'dashboard' && (
             <div className="space-y-3 animate-fade-in">
               <div className="grid grid-cols-2 gap-2">
