@@ -93,7 +93,7 @@ const DeveloperHub: React.FC = () => {
       setEditingLimit(null);
       refreshOrgStats();
     } catch (err) {
-      console.error('Update limit failed:', err);
+      logger.error('Update limit failed', 'DeveloperHub');
     }
   };
 
