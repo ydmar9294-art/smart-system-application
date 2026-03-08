@@ -8,6 +8,7 @@ import { CURRENCY } from '@/constants';
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { VirtualList } from '@/components/ui/VirtualList';
 
 const CustomersTab: React.FC = () => {
   const { customers = [], payments = [], sales = [] } = useApp();
