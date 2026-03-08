@@ -1043,6 +1043,11 @@ export interface CachedInvoice {
   created_at: string;
   /** True if created offline, not yet synced */
   isLocal?: boolean;
+  /** Discount fields */
+  discount_type?: 'percentage' | 'fixed' | null;
+  discount_percentage?: number;
+  discount_value?: number;
+  subtotal?: number;
 }
 
 export async function cacheInvoices(invoices: CachedInvoice[]): Promise<void> {
