@@ -43,8 +43,8 @@ export const useRealtimeNotifications = () => {
           body: message,
           data: pushData
         });
-      } catch (err) {
-        console.log('Push notification not available:', err);
+      } catch {
+        // push not available – silent
       }
     }
   };
