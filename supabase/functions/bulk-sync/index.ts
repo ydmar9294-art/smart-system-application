@@ -124,13 +124,13 @@ Deno.serve(async (req) => {
         results.push(result);
 
         if (result.status === 'synced' && op.idempotencyKey) {
-          await supabase.from('audit_logs').insert({
+          await serviceClient.from('audit_logs').insert({
             action: 'BULK_SYNC_OP',
             entity_type: op.type,
             entity_id: op.idempotencyKey,
             user_id: userId,
             details: { serverId: result.serverId },
-          }).then(() => {});
+          });
         }
       } catch (err) {
         results.push({
