@@ -300,6 +300,13 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
           {renderContent()}
         </div>
       </div>
+
+      {/* Guest role selector modal */}
+      <GuestRoleSelector
+        open={showRoleSelector}
+        onSelect={handleGuestSelect}
+        onClose={() => setShowRoleSelector(false)}
+      />
     </div>);
 };
 

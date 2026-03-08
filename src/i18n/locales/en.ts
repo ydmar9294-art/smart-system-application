@@ -463,6 +463,32 @@ const en: TranslationKeys = {
     genericError: 'An unexpected error occurred',
     cannotDetermineUser: 'Cannot determine user type',
   },
+
+  guest: {
+    loginAsGuest: 'Login as Guest',
+    selectRole: 'Select a role to preview',
+    previewDescription: 'Browse each role\'s interface without signing in',
+    previewMode: 'Preview Mode',
+    exit: 'Exit',
+    promoTitle: 'Unlock Full Potential',
+    promoMessage: 'To unlock full access, contact the company to book a trial license and a personal session to define your needs.',
+    contactWhatsApp: 'Contact via WhatsApp',
+    continueBrowsing: 'Continue Browsing',
+    roles: {
+      owner: 'Owner',
+      salesManager: 'Sales Manager',
+      accountant: 'Accountant',
+      warehouseKeeper: 'Warehouse Keeper',
+      distributor: 'Field Distributor',
+    },
+    roleDesc: {
+      owner: 'Full dashboard for sales, inventory, and employees',
+      salesManager: 'Manage distribution team, performance, and reports',
+      accountant: 'Invoices, purchases, collections, and financial reports',
+      warehouseKeeper: 'Inventory, products, and delivery movements',
+      distributor: 'Invoicing, collection, and field customers',
+    },
+  },
 };
 
 export default en;

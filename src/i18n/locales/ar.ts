@@ -487,6 +487,33 @@ const ar = {
     genericError: 'حدث خطأ غير متوقع',
     cannotDetermineUser: 'لا يمكن تحديد نوع المستخدم',
   },
+
+  // ── Guest Mode ────────────────────────────────────────────────
+  guest: {
+    loginAsGuest: 'تصفّح كضيف',
+    selectRole: 'اختر الدور للمعاينة',
+    previewDescription: 'استعرض واجهة كل دور بدون تسجيل دخول',
+    previewMode: 'وضع المعاينة',
+    exit: 'خروج',
+    promoTitle: 'أطلق العنان للإمكانات الكاملة',
+    promoMessage: 'للحصول على الوصول الكامل، تواصل مع الشركة لحجز رخصة تجريبية وجلسة شخصية لتحديد احتياجاتك.',
+    contactWhatsApp: 'تواصل عبر واتساب',
+    continueBrowsing: 'متابعة التصفح',
+    roles: {
+      owner: 'المالك',
+      salesManager: 'مدير المبيعات',
+      accountant: 'المحاسب',
+      warehouseKeeper: 'أمين المستودع',
+      distributor: 'الموزع الميداني',
+    },
+    roleDesc: {
+      owner: 'لوحة تحكم كاملة بالمبيعات والمخزون والموظفين',
+      salesManager: 'إدارة فريق التوزيع والأداء والتقارير',
+      accountant: 'الفواتير والمشتريات والتحصيلات والتقارير المالية',
+      warehouseKeeper: 'المخزون والمنتجات وحركات التسليم',
+      distributor: 'الفوترة والتحصيل والعملاء الميدانيين',
+    },
+  },
 };
 
 export default ar;
