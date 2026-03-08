@@ -432,25 +432,15 @@ const SalesManagerDashboardContent: React.FC<{
   stats: any; customers: any[]; distributors: any[]; warehouseKeepers: any[]; sales: any[];
 }> = ({ stats, customers, distributors, warehouseKeepers, sales }) => {
   const { t } = useTranslation();
-  const [discountStats, setDiscountStats] = React.useState({ total: 0, avgPct: 0, cashDisc: 0, creditDisc: 0 });
-
-  React.useEffect(() => {
-    const loadDiscounts = async () => {
-      try {
-        const { supabase } = await import('@/integrations/supabase/client');
-        const { data } = await supabase.from('sales').select('discount_value, discount_percentage, payment_type, is_voided').eq('is_voided', false);
-        if (data) {
-          const withDiscount = data.filter(d => Number(d.discount_value || 0) > 0);
-          const total = data.reduce((s, d) => s + Number(d.discount_value || 0), 0);
-          const avgPct = withDiscount.length > 0 ? withDiscount.reduce((s, d) => s + Number(d.discount_percentage || 0), 0) / withDiscount.length : 0;
-          const cashDisc = data.filter(d => d.payment_type === 'CASH').reduce((s, d) => s + Number(d.discount_value || 0), 0);
-          const creditDisc = data.filter(d => d.payment_type === 'CREDIT').reduce((s, d) => s + Number(d.discount_value || 0), 0);
-          setDiscountStats({ total, avgPct, cashDisc, creditDisc });
-        }
-      } catch {}
-    };
-    loadDiscounts();
-  }, []);
+  const discountStats = useMemo(() => {
+    const activeSales = sales.filter((s: any) => !s.isVoided);
+    const withDiscount = activeSales.filter((s: any) => Number(s.discountValue || 0) > 0);
+    const total = activeSales.reduce((sum: number, s: any) => sum + Number(s.discountValue || 0), 0);
+    const avgPct = withDiscount.length > 0 ? withDiscount.reduce((sum: number, s: any) => sum + Number(s.discountPercentage || 0), 0) / withDiscount.length : 0;
+    const cashDisc = activeSales.filter((s: any) => s.paymentType === 'CASH').reduce((sum: number, s: any) => sum + Number(s.discountValue || 0), 0);
+    const creditDisc = activeSales.filter((s: any) => s.paymentType === 'CREDIT').reduce((sum: number, s: any) => sum + Number(s.discountValue || 0), 0);
+    return { total, avgPct, cashDisc, creditDisc };
+  }, [sales]);
 
   return (
     <div className="space-y-3 animate-fade-in">
