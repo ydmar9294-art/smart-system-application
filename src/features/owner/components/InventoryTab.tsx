@@ -773,7 +773,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
       <FullScreenModal
         isOpen={showProductModal}
         onClose={() => { setShowProductModal(false); setEditingProduct(null); }}
-        title={editingProduct ? 'تعديل صنف' : 'إضافة صنف جديد'}
+        title={editingProduct ? t('ownerInventory.editProduct') : t('ownerInventory.addNewProduct')}
         icon={<Package size={24} />}
         headerColor="primary"
         footer={
@@ -785,7 +785,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
             }}
             className="w-full bg-primary text-primary-foreground font-black py-5 rounded-2xl shadow-lg active:scale-[0.98] transition-all text-lg"
           >
-            {editingProduct ? 'حفظ التعديلات' : 'حفظ الصنف'}
+            {editingProduct ? t('ownerInventory.saveChanges') : t('ownerInventory.saveProduct')}
           </button>
         }
       >
