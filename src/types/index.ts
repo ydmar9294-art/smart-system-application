@@ -89,6 +89,9 @@ export interface Sale {
   timestamp: number;
   items: SaleItem[];
   createdBy?: string;
+  discountType?: string | null;
+  discountValue?: number;
+  discountPercentage?: number;
 }
 
 export interface SaleItem {

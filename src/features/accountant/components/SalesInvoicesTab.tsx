@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   FileText, 
   Search, 
   Eye,
   Ban,
   Printer,
-  ChevronDown
+  ChevronDown,
+  Tag
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
@@ -57,23 +58,16 @@ const SalesInvoicesTab: React.FC = () => {
 
   const selectedSale = sales.find(s => s.id === selectedSaleId);
 
-  // Fetch discount data from DB for the selected sale
-  const [saleDiscountData, setSaleDiscountData] = useState<{ discount_type: string | null; discount_percentage: number; discount_value: number } | null>(null);
-
-  useEffect(() => {
-    if (!selectedSaleId && !printInvoice) { setSaleDiscountData(null); return; }
-    const saleId = selectedSaleId || printInvoice?.id;
-    if (!saleId) return;
-    const fetchDiscount = async () => {
-      const { data } = await supabase
-        .from('sales')
-        .select('discount_type, discount_percentage, discount_value')
-        .eq('id', saleId)
-        .single();
-      setSaleDiscountData(data || null);
+  // Use discount data directly from the Sale object (now included in the query)
+  const saleDiscountData = (() => {
+    const sale = selectedSaleId ? sales.find(s => s.id === selectedSaleId) : printInvoice;
+    if (!sale) return null;
+    return {
+      discount_type: sale.discountType || null,
+      discount_percentage: sale.discountPercentage || 0,
+      discount_value: sale.discountValue || 0,
     };
-    fetchDiscount();
-  }, [selectedSaleId, printInvoice]);
+  })();
 
   const handlePrint = async (sale: typeof sales[0]) => {
     try {
@@ -180,6 +174,15 @@ const SalesInvoicesTab: React.FC = () => {
                 <p className="text-sm font-black text-warning">{Number(sale.remaining).toLocaleString('ar-SA')}</p>
               </div>
             </div>
+            {Number(sale.discountValue || 0) > 0 && (
+              <div className="flex items-center gap-1.5 mb-3 px-2 py-1.5 bg-purple-500/10 rounded-lg">
+                <Tag className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400">
+                  خصم: {Number(sale.discountValue).toLocaleString('ar-SA')} {CURRENCY}
+                  {sale.discountType === 'percentage' ? ` (${Number(sale.discountPercentage || 0).toFixed(1)}%)` : ''}
+                </span>
+              </div>
+            )}
             <div className="flex gap-2">
               <button onClick={() => setSelectedSaleId(sale.id)}
                 className="flex-1 flex items-center justify-center gap-1.5 bg-muted py-2 rounded-xl text-xs font-bold text-foreground hover:bg-accent transition-colors">
