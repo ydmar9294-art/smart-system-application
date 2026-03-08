@@ -655,7 +655,7 @@ export async function loadPersistedIdMaps(): Promise<void> {
  */
 export async function recoverStuckActions(): Promise<void> {
   try {
-    const all = await getAllItems<OfflineAction>(STORES.ACTIONS);
+    const all = await getAllActionsDecrypted();
     let recovered = 0;
     for (const action of all) {
       if (action.status === 'syncing') {
