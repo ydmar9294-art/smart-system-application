@@ -196,11 +196,15 @@ export const useSession = (deps: SessionDeps) => {
 
     validateSession();
 
-    // ── Phase 4: Listen for online events to trigger background revalidation ──
+    // ── Phase 4: Listen for online events to trigger FULL background revalidation ──
+    // This runs regardless of cache state — whenever network is restored,
+    // we verify: device status, account active, license status, subscription status.
+    // All checks are silent (no loading indicators).
     const handleOnline = async () => {
-      if (!bootedFromCache.current || !cached) return;
+      // Must have a resolved user to revalidate
+      if (!lastResolvedUid.current && !cached?.userId) return;
 
-      logger.info('Network restored — verifying device & revalidating', 'Auth');
+      logger.info('Network restored — running full background revalidation', 'Auth');
 
       // Step 1: Verify device is still active
       try {
@@ -209,7 +213,6 @@ export const useSession = (deps: SessionDeps) => {
           logger.warn('Device revoked while offline — forcing logout', 'Auth');
           clearAuthCache();
           resetToLogin();
-          // Show toast/alert via a custom event
           window.dispatchEvent(new CustomEvent('device-revoked', {
             detail: { message: deviceResult.message || 'تم تسجيل الدخول من جهاز آخر' }
           }));
@@ -219,19 +222,20 @@ export const useSession = (deps: SessionDeps) => {
         // Verification failed — don't block, continue with revalidation
       }
 
-      // Step 2: Background revalidation
-      supabase.auth
-        .getSession()
-        .then(({ data }) => {
-          if (data.session?.user) {
-            resolveProfile(data.session.user.id, true).catch(() => {
-              logger.warn('Online revalidation failed — keeping cache', 'Auth');
-            });
-          }
-        })
-        .catch(() => {
-          // Ignore — will retry next time
-        });
+      // Step 2: Full background revalidation (account status, license, subscription, profile active)
+      // resolveProfile with isBackground=true updates state silently without showing loading
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.user) {
+          await resolveProfile(data.session.user.id, true);
+        } else if (!bootedFromCache.current) {
+          // No session and no cache — force login
+          clearAuthCache();
+          resetToLogin();
+        }
+      } catch {
+        logger.warn('Online revalidation failed — keeping current state', 'Auth');
+      }
     };
 
     window.addEventListener('online', handleOnline);
