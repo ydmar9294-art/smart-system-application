@@ -25,16 +25,14 @@ export const useRealtimeNotifications = () => {
     // Persist to DB so it appears in the bell icon permanently
     if (user?.id) {
       try {
-        const orgId = organization?.id || null;
         await supabase.from('user_notifications').insert({
           user_id: user.id,
-          organization_id: orgId,
           title: pushTitle || (type === 'error' ? 'تنبيه' : type === 'warning' ? 'تحذير' : 'إشعار'),
           description: message,
           type,
         });
-      } catch (err) {
-        console.log('Failed to persist notification:', err);
+      } catch {
+        // silent – notification persistence is best-effort
       }
     }
 
@@ -45,8 +43,8 @@ export const useRealtimeNotifications = () => {
           body: message,
           data: pushData
         });
-      } catch (err) {
-        console.log('Push notification not available:', err);
+      } catch {
+        // push not available – silent
       }
     }
   };
@@ -189,6 +187,56 @@ export const useRealtimeNotifications = () => {
         })
         .subscribe();
       channels.push(deliveryChannel);
+    }
+
+    // Owner & Warehouse Keeper: delivery notifications (warehouse → distributor)
+    if (role === UserRole.OWNER || (role === UserRole.EMPLOYEE && user.employeeType === EmployeeType.WAREHOUSE_KEEPER)) {
+      const deliveryOutChannel = supabase
+        .channel(`delivery-out-notifications-${user.id}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'deliveries' }, (payload) => {
+          const delivery = payload.new as any;
+          // Don't notify the person who created it
+          if (delivery.created_by === user.id) return;
+
+          const alertKey = `${user.id}_delivery_out_${delivery.id}`;
+          if (processedAlerts.current.has(alertKey)) return;
+          processedAlerts.current.add(alertKey);
+
+          sendNotification(
+            `📦 تم تسليم بضاعة إلى الموزع: ${delivery.distributor_name}`,
+            'success',
+            'تسليم بضاعة للموزع',
+            { type: 'delivery_out', deliveryId: delivery.id }
+          );
+        })
+        .subscribe();
+      channels.push(deliveryOutChannel);
+    }
+
+    // Owner & Warehouse Keeper: transfer notifications (distributor → warehouse)
+    if (role === UserRole.OWNER || (role === UserRole.EMPLOYEE && user.employeeType === EmployeeType.WAREHOUSE_KEEPER)) {
+      const transferInChannel = supabase
+        .channel(`transfer-in-notifications-${user.id}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'stock_movements' }, (payload) => {
+          const movement = payload.new as any;
+          // Only care about distributor→warehouse transfers
+          if (movement.source_type !== 'DISTRIBUTOR' || movement.destination_type !== 'WAREHOUSE') return;
+          // Don't notify the person who created it
+          if (movement.created_by === user.id) return;
+
+          const alertKey = `${user.id}_transfer_in_${movement.id}`;
+          if (processedAlerts.current.has(alertKey)) return;
+          processedAlerts.current.add(alertKey);
+
+          sendNotification(
+            `🔄 تم تحويل بضاعة من الموزع إلى المستودع الرئيسي`,
+            'success',
+            'تحويل بضاعة للمستودع',
+            { type: 'transfer_to_warehouse', movementId: movement.id }
+          );
+        })
+        .subscribe();
+      channels.push(transferInChannel);
     }
 
     return () => {
