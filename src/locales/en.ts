@@ -897,6 +897,30 @@ const en = {
     auditCustomerLabel: 'Customer',
     auditProductLabel: 'Product',
     auditAmountLabel: 'Amount',
+    // Purchases
+    purchases: 'Purchases',
+    loadingPurchases: 'Loading purchases...',
+    loadingPurchaseReturns: 'Loading purchase returns...',
+    loadingSalesReturns: 'Loading sales returns...',
+    morePurchases: 'more purchases',
+    moreSalesReturns: 'more sales returns',
+    morePurchaseReturns: 'more purchase returns',
+    pdfPurchasesLog: 'Purchases Log',
+    pdfSupplier: 'Supplier',
+    pdfPurchasesPage: 'Purchases Page',
+    pdfTotalPurchases: 'Total Purchases',
+    // Sales Returns
+    salesReturns: 'Sales Returns',
+    pdfSalesReturnsLog: 'Sales Returns Log',
+    pdfReason: 'Reason',
+    pdfSalesReturnsPage: 'Sales Returns Page',
+    pdfTotalSalesReturns: 'Total Sales Returns',
+    pdfOriginalInvoice: 'Original Invoice',
+    // Purchase Returns
+    purchaseReturns: 'Purchase Returns',
+    pdfPurchaseReturnsLog: 'Purchase Returns Log',
+    pdfPurchaseReturnsPage: 'Purchase Returns Page',
+    pdfTotalPurchaseReturns: 'Total Purchase Returns',
   },
 
   // ==========================================

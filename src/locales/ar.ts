@@ -897,6 +897,30 @@ const ar = {
     auditCustomerLabel: 'زبون',
     auditProductLabel: 'منتج',
     auditAmountLabel: 'مبلغ',
+    // Purchases
+    purchases: 'المشتريات',
+    loadingPurchases: 'جاري تحميل المشتريات...',
+    loadingPurchaseReturns: 'جاري تحميل مرتجعات المشتريات...',
+    loadingSalesReturns: 'جاري تحميل مرتجعات المبيعات...',
+    morePurchases: 'عملية شراء أخرى',
+    moreSalesReturns: 'مرتجع مبيعات آخر',
+    morePurchaseReturns: 'مرتجع مشتريات آخر',
+    pdfPurchasesLog: 'سجل المشتريات',
+    pdfSupplier: 'المورّد',
+    pdfPurchasesPage: 'صفحة المشتريات',
+    pdfTotalPurchases: 'إجمالي المشتريات',
+    // Sales Returns
+    salesReturns: 'مرتجعات المبيعات',
+    pdfSalesReturnsLog: 'سجل مرتجعات المبيعات',
+    pdfReason: 'السبب',
+    pdfSalesReturnsPage: 'صفحة مرتجعات المبيعات',
+    pdfTotalSalesReturns: 'إجمالي مرتجعات المبيعات',
+    pdfOriginalInvoice: 'الفاتورة الأصلية',
+    // Purchase Returns
+    purchaseReturns: 'مرتجعات المشتريات',
+    pdfPurchaseReturnsLog: 'سجل مرتجعات المشتريات',
+    pdfPurchaseReturnsPage: 'صفحة مرتجعات المشتريات',
+    pdfTotalPurchaseReturns: 'إجمالي مرتجعات المشتريات',
   },
 
   // ==========================================

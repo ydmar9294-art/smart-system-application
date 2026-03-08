@@ -5,7 +5,8 @@ import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
 import {
   Database, Download, FileText, Loader2, CheckCircle2,
-  Users, Receipt, Wallet, Activity, AlertTriangle, FileSpreadsheet
+  Users, Receipt, Wallet, Activity, AlertTriangle, FileSpreadsheet,
+  ShoppingCart, RotateCcw, PackageX
 } from 'lucide-react';
 import { generateBackupPdf, PdfTranslations } from '@/lib/backupPdfService';
 
@@ -66,12 +67,51 @@ interface BackupLogEntry {
   details: string;
 }
 
+interface BackupPurchase {
+  id: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  supplier_name: string | null;
+  created_at: string;
+  created_by: string | null;
+  notes: string | null;
+  creator_name?: string;
+}
+
+interface BackupSalesReturn {
+  id: string;
+  customer_name: string;
+  sale_id: string | null;
+  reason: string | null;
+  total_amount: number;
+  created_at: string;
+  created_by: string | null;
+  creator_name?: string;
+  items: { product_name: string; quantity: number; unit_price: number; total_price: number }[];
+}
+
+interface BackupPurchaseReturn {
+  id: string;
+  supplier_name: string | null;
+  reason: string | null;
+  total_amount: number;
+  created_at: string;
+  created_by: string | null;
+  creator_name?: string;
+  items: { product_name: string; quantity: number; unit_price: number; total_price: number }[];
+}
+
 interface BackupData {
   orgName: string;
   exportDate: string;
   customers: BackupCustomer[];
   invoices: BackupInvoice[];
   collections: BackupCollection[];
+  purchases: BackupPurchase[];
+  salesReturns: BackupSalesReturn[];
+  purchaseReturns: BackupPurchaseReturn[];
   logs: BackupLogEntry[];
 }
 
@@ -84,7 +124,7 @@ const BackupTab: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState('');
   const [backupData, setBackupData] = useState<BackupData | null>(null);
-  const [previewSection, setPreviewSection] = useState<'customers' | 'invoices' | 'collections' | 'logs'>('customers');
+  const [previewSection, setPreviewSection] = useState<'customers' | 'invoices' | 'collections' | 'purchases' | 'salesReturns' | 'purchaseReturns' | 'logs'>('customers');
 
   const userNameMap = React.useMemo(() => {
     const map: Record<string, string> = {};
@@ -156,6 +196,22 @@ const BackupTab: React.FC = () => {
     invoices: t('backup.invoices'),
     collections: t('backup.collections'),
     activityLog: t('backup.activityLog'),
+    // New sections
+    purchases: t('backup.purchases'),
+    pdfPurchasesLog: t('backup.pdfPurchasesLog'),
+    pdfSupplier: t('backup.pdfSupplier'),
+    pdfPurchasesPage: t('backup.pdfPurchasesPage'),
+    pdfTotalPurchases: t('backup.pdfTotalPurchases'),
+    salesReturns: t('backup.salesReturns'),
+    pdfSalesReturnsLog: t('backup.pdfSalesReturnsLog'),
+    pdfReason: t('backup.pdfReason'),
+    pdfSalesReturnsPage: t('backup.pdfSalesReturnsPage'),
+    pdfTotalSalesReturns: t('backup.pdfTotalSalesReturns'),
+    pdfOriginalInvoice: t('backup.pdfOriginalInvoice'),
+    purchaseReturns: t('backup.purchaseReturns'),
+    pdfPurchaseReturnsLog: t('backup.pdfPurchaseReturnsLog'),
+    pdfPurchaseReturnsPage: t('backup.pdfPurchaseReturnsPage'),
+    pdfTotalPurchaseReturns: t('backup.pdfTotalPurchaseReturns'),
   }), [t]);
 
   // ── Fetch all data ──────────────────────────────────────────────
@@ -197,6 +253,52 @@ const BackupTab: React.FC = () => {
         .select('id, sale_id, amount, notes, is_reversed, reverse_reason, created_at, collected_by')
         .eq('organization_id', organization.id)
         .order('created_at', { ascending: false });
+
+      // ── Purchases ───────────────────────────────────────────────
+      setProgress(t('backup.loadingPurchases'));
+      const { data: purchasesRaw } = await supabase
+        .from('purchases')
+        .select('id, product_name, quantity, unit_price, total_price, supplier_name, created_at, created_by, notes')
+        .eq('organization_id', organization.id)
+        .order('created_at', { ascending: false });
+
+      // ── Sales Returns ───────────────────────────────────────────
+      setProgress(t('backup.loadingSalesReturns'));
+      const { data: salesReturnsRaw } = await supabase
+        .from('sales_returns')
+        .select('id, customer_name, sale_id, reason, total_amount, created_at, created_by')
+        .eq('organization_id', organization.id)
+        .order('created_at', { ascending: false });
+
+      const srIds = (salesReturnsRaw || []).map(sr => sr.id);
+      let allSrItems: any[] = [];
+      for (let i = 0; i < srIds.length; i += 100) {
+        const batch = srIds.slice(i, i + 100);
+        const { data: itemsBatch } = await supabase
+          .from('sales_return_items')
+          .select('return_id, product_name, quantity, unit_price, total_price')
+          .in('return_id', batch);
+        if (itemsBatch) allSrItems = [...allSrItems, ...itemsBatch];
+      }
+
+      // ── Purchase Returns ────────────────────────────────────────
+      setProgress(t('backup.loadingPurchaseReturns'));
+      const { data: purchaseReturnsRaw } = await supabase
+        .from('purchase_returns')
+        .select('id, supplier_name, reason, total_amount, created_at, created_by')
+        .eq('organization_id', organization.id)
+        .order('created_at', { ascending: false });
+
+      const prIds = (purchaseReturnsRaw || []).map(pr => pr.id);
+      let allPrItems: any[] = [];
+      for (let i = 0; i < prIds.length; i += 100) {
+        const batch = prIds.slice(i, i + 100);
+        const { data: itemsBatch } = await supabase
+          .from('purchase_return_items')
+          .select('return_id, product_name, quantity, unit_price, total_price')
+          .in('return_id', batch);
+        if (itemsBatch) allPrItems = [...allPrItems, ...itemsBatch];
+      }
 
       setProgress(t('backup.loadingLogs'));
       const { data: auditRaw } = await supabase
@@ -261,6 +363,52 @@ const BackupTab: React.FC = () => {
         collector_name: getUserName(c.collected_by),
       }));
 
+      const purchases: BackupPurchase[] = (purchasesRaw || []).map(p => ({
+        ...p,
+        quantity: Number(p.quantity),
+        unit_price: Number(p.unit_price),
+        total_price: Number(p.total_price),
+        creator_name: getUserName(p.created_by),
+      }));
+
+      // Group sales return items
+      const srItemsByReturn: Record<string, any[]> = {};
+      allSrItems.forEach((item: any) => {
+        if (!srItemsByReturn[item.return_id]) srItemsByReturn[item.return_id] = [];
+        srItemsByReturn[item.return_id].push({
+          product_name: item.product_name,
+          quantity: Number(item.quantity),
+          unit_price: Number(item.unit_price),
+          total_price: Number(item.total_price),
+        });
+      });
+
+      const salesReturns: BackupSalesReturn[] = (salesReturnsRaw || []).map(sr => ({
+        ...sr,
+        total_amount: Number(sr.total_amount),
+        creator_name: getUserName(sr.created_by),
+        items: srItemsByReturn[sr.id] || [],
+      }));
+
+      // Group purchase return items
+      const prItemsByReturn: Record<string, any[]> = {};
+      allPrItems.forEach((item: any) => {
+        if (!prItemsByReturn[item.return_id]) prItemsByReturn[item.return_id] = [];
+        prItemsByReturn[item.return_id].push({
+          product_name: item.product_name,
+          quantity: Number(item.quantity),
+          unit_price: Number(item.unit_price),
+          total_price: Number(item.total_price),
+        });
+      });
+
+      const purchaseReturnsList: BackupPurchaseReturn[] = (purchaseReturnsRaw || []).map(pr => ({
+        ...pr,
+        total_amount: Number(pr.total_amount),
+        creator_name: getUserName(pr.created_by),
+        items: prItemsByReturn[pr.id] || [],
+      }));
+
       const logs: BackupLogEntry[] = [
         ...(auditRaw || []).map(a => ({
           type: translateAction(a.action, a.entity_type, t),
@@ -282,6 +430,9 @@ const BackupTab: React.FC = () => {
         customers,
         invoices,
         collections,
+        purchases,
+        salesReturns,
+        purchaseReturns: purchaseReturnsList,
         logs,
       };
 
@@ -340,6 +491,30 @@ const BackupTab: React.FC = () => {
         rows: backupData.collections.map(c => [
           c.id, c.sale_id, c.customer_name || '', c.amount.toString(),
           c.created_at, c.collector_name || '', c.is_reversed ? t('backup.csvYes') : t('backup.csvNo'), c.notes || '',
+        ]),
+      },
+      {
+        name: t('backup.purchases'),
+        headers: [t('backup.pdfId'), t('backup.pdfProduct'), t('backup.pdfQuantity'), t('backup.pdfUnitPrice'), t('backup.pdfTotal'), t('backup.pdfSupplier'), t('backup.pdfDate'), t('backup.pdfNotes')],
+        rows: backupData.purchases.map(p => [
+          p.id, p.product_name, p.quantity.toString(), p.unit_price.toString(),
+          p.total_price.toString(), p.supplier_name || '', p.created_at, p.notes || '',
+        ]),
+      },
+      {
+        name: t('backup.salesReturns'),
+        headers: [t('backup.pdfId'), t('backup.pdfCustomer'), t('backup.pdfOriginalInvoice'), t('backup.pdfTotal'), t('backup.pdfReason'), t('backup.pdfDate')],
+        rows: backupData.salesReturns.map(sr => [
+          sr.id, sr.customer_name, sr.sale_id || '—', sr.total_amount.toString(),
+          sr.reason || '', sr.created_at,
+        ]),
+      },
+      {
+        name: t('backup.purchaseReturns'),
+        headers: [t('backup.pdfId'), t('backup.pdfSupplier'), t('backup.pdfTotal'), t('backup.pdfReason'), t('backup.pdfDate')],
+        rows: backupData.purchaseReturns.map(pr => [
+          pr.id, pr.supplier_name || '—', pr.total_amount.toString(),
+          pr.reason || '', pr.created_at,
         ]),
       },
       {
@@ -413,6 +588,9 @@ const BackupTab: React.FC = () => {
             <SummaryCard icon={<Users className="w-4 h-4" />} label={t('backup.customers')} value={backupData.customers.length} color="blue" />
             <SummaryCard icon={<Receipt className="w-4 h-4" />} label={t('backup.invoices')} value={backupData.invoices.length} color="emerald" />
             <SummaryCard icon={<Wallet className="w-4 h-4" />} label={t('backup.collections')} value={backupData.collections.length} color="amber" />
+            <SummaryCard icon={<ShoppingCart className="w-4 h-4" />} label={t('backup.purchases')} value={backupData.purchases.length} color="rose" />
+            <SummaryCard icon={<RotateCcw className="w-4 h-4" />} label={t('backup.salesReturns')} value={backupData.salesReturns.length} color="orange" />
+            <SummaryCard icon={<PackageX className="w-4 h-4" />} label={t('backup.purchaseReturns')} value={backupData.purchaseReturns.length} color="red" />
             <SummaryCard icon={<Activity className="w-4 h-4" />} label={t('backup.activityLog')} value={backupData.logs.length} color="purple" />
           </div>
 
@@ -429,7 +607,7 @@ const BackupTab: React.FC = () => {
             <button
               onClick={exportCSV}
               disabled={loading}
-              className="py-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-emerald-500/20 transition-all active:scale-[0.98]"
+              className="py-3 bg-success/10 text-success rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-success/20 transition-all active:scale-[0.98]"
             >
               <FileSpreadsheet className="w-4 h-4" />
               {t('backup.exportExcelCsv')}
@@ -438,17 +616,20 @@ const BackupTab: React.FC = () => {
 
           {/* Preview Navigation */}
           <div className="bg-card rounded-2xl border shadow-sm overflow-hidden">
-            <div className="flex border-b border-border">
+            <div className="flex flex-wrap border-b border-border">
               {([
                 { id: 'customers' as const, label: t('backup.customers'), icon: <Users className="w-3.5 h-3.5" /> },
                 { id: 'invoices' as const, label: t('backup.invoices'), icon: <Receipt className="w-3.5 h-3.5" /> },
                 { id: 'collections' as const, label: t('backup.collections'), icon: <Wallet className="w-3.5 h-3.5" /> },
+                { id: 'purchases' as const, label: t('backup.purchases'), icon: <ShoppingCart className="w-3.5 h-3.5" /> },
+                { id: 'salesReturns' as const, label: t('backup.salesReturns'), icon: <RotateCcw className="w-3.5 h-3.5" /> },
+                { id: 'purchaseReturns' as const, label: t('backup.purchaseReturns'), icon: <PackageX className="w-3.5 h-3.5" /> },
                 { id: 'logs' as const, label: t('backup.logs'), icon: <Activity className="w-3.5 h-3.5" /> },
               ]).map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setPreviewSection(tab.id)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[10px] font-bold transition-all ${
+                  className={`flex-1 min-w-[80px] flex items-center justify-center gap-1 py-2.5 text-[9px] font-bold transition-all ${
                     previewSection === tab.id
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:bg-muted'
@@ -465,6 +646,9 @@ const BackupTab: React.FC = () => {
               {previewSection === 'customers' && <CustomersPreview data={backupData.customers} t={t} />}
               {previewSection === 'invoices' && <InvoicesPreview data={backupData.invoices} t={t} lang={lang} />}
               {previewSection === 'collections' && <CollectionsPreview data={backupData.collections} t={t} lang={lang} />}
+              {previewSection === 'purchases' && <PurchasesPreview data={backupData.purchases} t={t} />}
+              {previewSection === 'salesReturns' && <SalesReturnsPreview data={backupData.salesReturns} t={t} />}
+              {previewSection === 'purchaseReturns' && <PurchaseReturnsPreview data={backupData.purchaseReturns} t={t} />}
               {previewSection === 'logs' && <LogsPreview data={backupData.logs} t={t} />}
             </div>
           </div>
@@ -482,6 +666,9 @@ const SummaryCard: React.FC<{ icon: React.ReactNode; label: string; value: numbe
     emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
     amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
     purple: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
+    rose: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
+    orange: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+    red: 'bg-red-500/10 text-red-600 dark:text-red-400',
   };
   return (
     <div className="bg-card p-3 rounded-xl border shadow-sm flex items-center gap-3">
@@ -559,6 +746,74 @@ const CollectionsPreview: React.FC<{ data: BackupCollection[]; t: any; lang: str
       </div>
     ))}
     {data.length > 30 && <p className="text-center text-[10px] text-muted-foreground py-2">+{data.length - 30} {t('backup.moreOperations')}</p>}
+  </div>
+);
+
+const PurchasesPreview: React.FC<{ data: BackupPurchase[]; t: any }> = ({ data, t }) => (
+  <div className="space-y-1.5">
+    {data.length === 0 && <EmptyState t={t} />}
+    {data.slice(0, 30).map(p => (
+      <div key={p.id} className="bg-muted p-2.5 rounded-xl flex justify-between items-center">
+        <div>
+          <p className="text-xs font-bold text-foreground">{p.product_name}</p>
+          <p className="text-[9px] text-muted-foreground">
+            {formatDateShort(p.created_at)} • {p.supplier_name || '—'} • {t('backup.pdfQuantity')}: {p.quantity}
+          </p>
+        </div>
+        <p className="text-xs font-black text-foreground">{p.total_price.toLocaleString()} {CURRENCY}</p>
+      </div>
+    ))}
+    {data.length > 30 && <p className="text-center text-[10px] text-muted-foreground py-2">+{data.length - 30} {t('backup.morePurchases')}</p>}
+  </div>
+);
+
+const SalesReturnsPreview: React.FC<{ data: BackupSalesReturn[]; t: any }> = ({ data, t }) => (
+  <div className="space-y-1.5">
+    {data.length === 0 && <EmptyState t={t} />}
+    {data.slice(0, 30).map(sr => (
+      <div key={sr.id} className="bg-muted p-2.5 rounded-xl">
+        <div className="flex justify-between items-start">
+          <div>
+            <p className="text-xs font-bold text-foreground">{sr.customer_name}</p>
+            <p className="text-[9px] text-muted-foreground">
+              {formatDateShort(sr.created_at)} {sr.reason && `• ${sr.reason}`}
+            </p>
+          </div>
+          <p className="text-xs font-black text-destructive">{sr.total_amount.toLocaleString()} {CURRENCY}</p>
+        </div>
+        {sr.items.length > 0 && (
+          <div className="text-[9px] text-muted-foreground mt-1">
+            {sr.items.map(it => it.product_name).join('، ')}
+          </div>
+        )}
+      </div>
+    ))}
+    {data.length > 30 && <p className="text-center text-[10px] text-muted-foreground py-2">+{data.length - 30} {t('backup.moreSalesReturns')}</p>}
+  </div>
+);
+
+const PurchaseReturnsPreview: React.FC<{ data: BackupPurchaseReturn[]; t: any }> = ({ data, t }) => (
+  <div className="space-y-1.5">
+    {data.length === 0 && <EmptyState t={t} />}
+    {data.slice(0, 30).map(pr => (
+      <div key={pr.id} className="bg-muted p-2.5 rounded-xl">
+        <div className="flex justify-between items-start">
+          <div>
+            <p className="text-xs font-bold text-foreground">{pr.supplier_name || '—'}</p>
+            <p className="text-[9px] text-muted-foreground">
+              {formatDateShort(pr.created_at)} {pr.reason && `• ${pr.reason}`}
+            </p>
+          </div>
+          <p className="text-xs font-black text-destructive">{pr.total_amount.toLocaleString()} {CURRENCY}</p>
+        </div>
+        {pr.items.length > 0 && (
+          <div className="text-[9px] text-muted-foreground mt-1">
+            {pr.items.map(it => it.product_name).join('، ')}
+          </div>
+        )}
+      </div>
+    ))}
+    {data.length > 30 && <p className="text-center text-[10px] text-muted-foreground py-2">+{data.length - 30} {t('backup.morePurchaseReturns')}</p>}
   </div>
 );
 
