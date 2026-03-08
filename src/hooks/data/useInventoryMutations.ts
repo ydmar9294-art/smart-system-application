@@ -2,6 +2,7 @@
  * Inventory Mutations Hook - Purchases, deliveries, returns, employees
  */
 import { useCallback } from 'react';
+import { logger } from '@/lib/logger';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryClient';
 import { inventoryService } from '@/services/inventoryService';
