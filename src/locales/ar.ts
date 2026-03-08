@@ -270,6 +270,18 @@ const ar = {
     recentSales: 'آخر المبيعات',
     addEmployee: 'إضافة موظف',
     addEmployeeFailed: 'فشل إنشاء الموظف. تحقق من عدم تجاوز الحد الأقصى للموظفين النشطين.',
+    discountAnalytics: 'تحليلات الخصومات',
+    totalDiscounts: 'إجمالي الخصومات',
+    avgDiscountPct: 'متوسط نسبة الخصم',
+    cashDiscounts: 'خصومات نقدي',
+    creditDiscounts: 'خصومات آجل',
+    cashDiscountsHigher: 'الخصومات أعلى في المبيعات النقدية',
+    creditDiscountsHigher: 'الخصومات أعلى في المبيعات الآجلة',
+    teamStats: 'إحصائيات الفريق',
+    distributors: 'الموزعين',
+    warehouseKeepers: 'أمناء المستودع',
+    customerStats: 'إحصائيات الزبائن',
+    debtors: 'ذمم مدينة',
   },
 
   // ==========================================
