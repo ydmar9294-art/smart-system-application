@@ -32,7 +32,7 @@ const SalesReturnsTab: React.FC = () => {
       const { data, error } = await supabase.from('sales_returns').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       setReturns(data || []);
-    } catch (error) { console.error('Error loading sales returns:', error); }
+    } catch (error) { logger.error('Error loading sales returns', 'SalesReturnsTab'); }
     finally { setLoading(false); }
   };
 

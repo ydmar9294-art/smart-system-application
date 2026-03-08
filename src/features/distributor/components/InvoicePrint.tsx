@@ -390,7 +390,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
       setSavedOk(true);
       setTimeout(() => setSavedOk(false), 3000);
     } catch (err) {
-      console.error('[InvoicePrint] Save failed:', err);
+      logger.error('Save failed', 'InvoicePrint');
     } finally {
       setActionLoading(null);
     }

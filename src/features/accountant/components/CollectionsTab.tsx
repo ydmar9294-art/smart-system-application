@@ -48,7 +48,7 @@ const CollectionsTab: React.FC = () => {
         customer_name: c.sales?.customer_name || t('common.unspecified')
       }));
       setCollections(mapped);
-    } catch (error) { console.error('Error loading collections:', error); }
+    } catch (error) { logger.error('Error loading collections', 'CollectionsTab'); }
     finally { setLoading(false); }
   };
 
