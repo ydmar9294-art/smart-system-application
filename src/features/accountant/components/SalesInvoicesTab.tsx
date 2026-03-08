@@ -240,6 +240,20 @@ const SalesInvoicesTab: React.FC = () => {
                 </div>
               </div>
 
+              {/* Discount info in detail view */}
+              {saleDiscountData && Number(saleDiscountData.discount_value || 0) > 0 && (
+                <div className="bg-purple-500/10 p-3 rounded-xl space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">المجموع قبل الخصم</span>
+                    <span className="font-bold">{(Number(selectedSale.grandTotal) + Number(saleDiscountData.discount_value)).toLocaleString('ar-SA')} {CURRENCY}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-purple-600 dark:text-purple-400">
+                    <span>الخصم {saleDiscountData.discount_type === 'percentage' ? `(${Number(saleDiscountData.discount_percentage).toFixed(1)}%)` : ''}</span>
+                    <span className="font-bold">-{Number(saleDiscountData.discount_value).toLocaleString('ar-SA')} {CURRENCY}</span>
+                  </div>
+                </div>
+              )}
+
               {selectedSale.isVoided && (
                 <div className="p-3 bg-destructive/10 rounded-xl flex items-center gap-2">
                   <Ban className="w-4 h-4 text-destructive" />
