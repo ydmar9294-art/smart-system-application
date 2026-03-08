@@ -590,14 +590,14 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
           </div>
 
           <div className="space-y-3">
-            <label className="text-xs font-black text-muted-foreground uppercase">إضافة أصناف</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.addItems')}</label>
             <div className="flex gap-3">
               <select 
                 value={selectedDeliveryProduct} 
                 onChange={(e) => setSelectedDeliveryProduct(e.target.value)} 
                 className="input-field flex-1 py-4"
               >
-                <option value="">اختر المادة...</option>
+                <option value="">{t('ownerInventory.selectProduct')}</option>
                 {products.filter(p => p.stock > 0).map(p => (
                   <option key={p.id} value={p.id}>{p.name} ({p.stock})</option>
                 ))}
