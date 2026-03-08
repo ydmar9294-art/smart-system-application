@@ -136,17 +136,17 @@ const OwnerDashboard: React.FC = () => {
     switch (bottomNav) {
       case 'home': return null;
       case 'operations': return [
-        { id: 'team', label: 'الفريق', icon: <Users className="w-4 h-4" />, bgColor: 'bg-blue-600' },
-        { id: 'customers', label: 'الزبائن', icon: <CircleDollarSign className="w-4 h-4" />, bgColor: 'bg-purple-600' },
+        { id: 'team', label: t('owner.team'), icon: <Users className="w-4 h-4" />, bgColor: 'bg-blue-600' },
+        { id: 'customers', label: t('owner.customers'), icon: <CircleDollarSign className="w-4 h-4" />, bgColor: 'bg-purple-600' },
       ];
       case 'reports': return [
-        { id: 'finance', label: 'المالية', icon: <TrendingUp className="w-4 h-4" />, bgColor: 'bg-red-500' },
-        { id: 'performance', label: 'الأداء', icon: <BarChart3 className="w-4 h-4" />, bgColor: 'bg-indigo-600' },
+        { id: 'finance', label: t('owner.finance'), icon: <TrendingUp className="w-4 h-4" />, bgColor: 'bg-red-500' },
+        { id: 'performance', label: t('owner.performance'), icon: <BarChart3 className="w-4 h-4" />, bgColor: 'bg-indigo-600' },
       ];
       case 'settings': return [
-        { id: 'subscription', label: 'الاشتراك', icon: <Shield className="w-4 h-4" />, bgColor: 'bg-primary' },
-        { id: 'legal', label: 'القانونية', icon: <ShieldCheck className="w-4 h-4" />, bgColor: 'bg-amber-600' },
-        { id: 'backup', label: 'النسخ', icon: <Database className="w-4 h-4" />, bgColor: 'bg-emerald-600' },
+        { id: 'subscription', label: t('owner.subscription'), icon: <Shield className="w-4 h-4" />, bgColor: 'bg-primary' },
+        { id: 'legal', label: t('owner.legal'), icon: <ShieldCheck className="w-4 h-4" />, bgColor: 'bg-amber-600' },
+        { id: 'backup', label: t('owner.backup'), icon: <Database className="w-4 h-4" />, bgColor: 'bg-emerald-600' },
       ];
       default: return null;
     }
