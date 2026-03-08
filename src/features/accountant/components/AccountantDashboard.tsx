@@ -22,6 +22,7 @@ type BottomNavType = 'home' | 'operations' | 'reports' | 'returns';
 
 const AccountantDashboard: React.FC = () => {
   const { logout } = useApp();
+  const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<AccountantTabType>('sales');
   const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
   const [loggingOut, setLoggingOut] = useState(false);
