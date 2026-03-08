@@ -183,6 +183,18 @@
     transition-delay: 0s !important;
   }
 
+  /* Smooth language switch transition */
+  html.lang-transition,
+  html.lang-transition *,
+  html.lang-transition *::before,
+  html.lang-transition *::after {
+    transition: opacity 250ms ease-in-out,
+                transform 250ms ease-in-out,
+                padding 250ms ease-in-out,
+                margin 250ms ease-in-out,
+                text-align 0ms !important;
+  }
+
   :root {
     --safe-area-top: env(safe-area-inset-top, 0px);
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
