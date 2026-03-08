@@ -210,7 +210,7 @@ export async function saveInvoicePdf(
       });
       return;
     } catch (err) {
-      console.error('[invoicePdfService] All Capacitor save attempts failed:', err);
+      logger.error('All Capacitor save attempts failed', 'InvoicePdf');
       throw err;
     }
   }

@@ -104,7 +104,7 @@ const SubscriptionTab: React.FC = () => {
         })));
       }
     } catch (err) {
-      console.error('Failed to fetch subscription data:', err);
+      logger.error('Failed to fetch subscription data', 'SubscriptionTab');
     } finally {
       setLoading(false);
     }

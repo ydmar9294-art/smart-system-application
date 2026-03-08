@@ -113,7 +113,7 @@ export function useInventoryMutations(
   }, [queryClient, handleError]);
 
   const makeLicensePermanent = useCallback(async (_id: string, _ownerId: string | null) => {
-    console.warn('makeLicensePermanent is deprecated');
+    logger.warn('makeLicensePermanent is deprecated', 'InventoryMutations');
   }, []);
 
   const updateLicenseMaxEmployees = useCallback(async (licenseId: string, maxEmployees: number) => {
