@@ -391,7 +391,7 @@ export async function retryFailedAction(id: string): Promise<void> {
 }
 
 export async function retryAllFailedActions(): Promise<void> {
-  const all = await getAllItems<OfflineAction>(STORES.ACTIONS);
+  const all = await getAllActionsDecrypted();
   for (const action of all) {
     if (action.status === 'failed') {
       await updateAction(action.id, { status: 'pending', retryCount: 0, nextRetryAt: undefined });
