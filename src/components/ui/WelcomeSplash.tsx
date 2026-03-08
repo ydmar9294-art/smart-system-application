@@ -69,7 +69,7 @@ const WelcomeSplash: React.FC<WelcomeSplashProps> = ({ onComplete, duration = 30
             {messages[messageIndex].icon}
             <p className="text-xl font-black text-foreground leading-relaxed animate-fade-in">{messages[messageIndex].text}</p>
           </div>
-          <p className="text-sm text-muted-foreground font-bold">{t('welcome.preparing')}</p>
+          <p className="text-sm text-muted-foreground font-bold">{t('welcomeSplash.preparing')}</p>
         </div>
         <div className="flex items-center gap-4 mt-2">
           {[Lock, Shield, CheckCircle].map((Icon, i) => (
