@@ -238,13 +238,23 @@ export const useSession = (deps: SessionDeps) => {
       }
     };
 
+    // Also revalidate when app returns from background (Capacitor/mobile)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        // Small delay to let network stabilize
+        setTimeout(handleOnline, 1500);
+      }
+    };
+
     window.addEventListener('online', handleOnline);
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       isMounted = false;
       clearTimeout(timeoutId);
       listener.subscription.unsubscribe();
       window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [resolveProfile, resetToLogin]); // eslint-disable-line react-hooks/exhaustive-deps
 };
