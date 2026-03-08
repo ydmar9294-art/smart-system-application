@@ -167,7 +167,7 @@ const DeveloperHub: React.FC = () => {
           className="px-4 pb-8"
           style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 16px), 2rem)' }}
         >
-          <div className="animate-fade-in">
+          <AnimatedTabContent tabKey={activeTab}>
             {activeTab === 'licenses' && (
               <LicensesTab
                 licenses={licenses}
@@ -186,7 +186,7 @@ const DeveloperHub: React.FC = () => {
             {activeTab === 'stats' && <StatsTab orgStats={orgStats} />}
             {activeTab === 'versions' && <VersionManagement />}
             {activeTab === 'deletion' && <OrgDeletionManager />}
-          </div>
+          </AnimatedTabContent>
         </div>
       </div>
 
