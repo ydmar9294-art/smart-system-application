@@ -499,7 +499,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-xs font-black text-muted-foreground uppercase">الكمية</label>
+              <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.quantity')}</label>
               <input 
                 type="number" 
                 min="1" 
@@ -510,7 +510,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-black text-muted-foreground uppercase">سعر الوحدة</label>
+              <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.unitPrice')}</label>
               <input 
                 type="number" 
                 min="0" 
@@ -525,18 +525,18 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
           </div>
           
           <div className="space-y-2">
-            <label className="text-xs font-black text-muted-foreground uppercase">المورد (اختياري)</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.supplierOptional')}</label>
             <input 
               type="text" 
               value={purchaseSupplier} 
               onChange={(e) => setPurchaseSupplier(e.target.value)} 
-              placeholder="اسم المورد" 
+              placeholder={t('ownerInventory.supplierName')} 
               className="input-field py-4" 
             />
           </div>
           
           <div className="bg-success/10 p-5 rounded-2xl border border-success/20 flex justify-between items-center">
-            <span className="font-bold text-muted-foreground">الإجمالي:</span>
+            <span className="font-bold text-muted-foreground">{t('ownerInventory.totalLabel')}</span>
             <span className="text-3xl font-black text-success">{(purchaseQty * Number(purchasePrice)).toLocaleString()} {CURRENCY}</span>
           </div>
         </form>
