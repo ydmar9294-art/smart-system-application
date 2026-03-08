@@ -358,7 +358,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
     try {
       await ensurePdf();
     } catch (err) {
-      console.error('[InvoicePrint] PDF generation failed:', err);
+      logger.error('PDF generation failed', 'InvoicePrint');
     } finally {
       setGenerating(false);
     }
