@@ -174,6 +174,15 @@ const SalesInvoicesTab: React.FC = () => {
                 <p className="text-sm font-black text-warning">{Number(sale.remaining).toLocaleString('ar-SA')}</p>
               </div>
             </div>
+            {Number(sale.discountValue || 0) > 0 && (
+              <div className="flex items-center gap-1.5 mb-3 px-2 py-1.5 bg-purple-500/10 rounded-lg">
+                <Tag className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400">
+                  خصم: {Number(sale.discountValue).toLocaleString('ar-SA')} {CURRENCY}
+                  {sale.discountType === 'percentage' ? ` (${Number(sale.discountPercentage || 0).toFixed(1)}%)` : ''}
+                </span>
+              </div>
+            )}
             <div className="flex gap-2">
               <button onClick={() => setSelectedSaleId(sale.id)}
                 className="flex-1 flex items-center justify-center gap-1.5 bg-muted py-2 rounded-xl text-xs font-bold text-foreground hover:bg-accent transition-colors">

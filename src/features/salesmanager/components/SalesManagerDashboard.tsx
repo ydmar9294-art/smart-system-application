@@ -337,15 +337,25 @@ const SalesManagerDashboard: React.FC = () => {
                 <h3 className="font-bold text-foreground mb-3 text-sm">{t('salesManager.recentSales')}</h3>
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {sales.slice(0, 10).map(sale => (
-                    <div key={sale.id} className="flex justify-between items-center bg-muted p-3 rounded-xl">
-                      <div>
-                        <p className="font-bold text-foreground text-sm">{sale.customerName}</p>
-                        <p className="text-xs text-muted-foreground">{new Date(sale.timestamp).toLocaleString('ar-EG')}</p>
+                    <div key={sale.id} className="bg-muted p-3 rounded-xl">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-bold text-foreground text-sm">{sale.customerName}</p>
+                          <p className="text-xs text-muted-foreground">{new Date(sale.timestamp).toLocaleString('ar-EG')}</p>
+                        </div>
+                        <div className={isRtl ? 'text-left' : 'text-right'}>
+                          <p className="font-black text-emerald-600 dark:text-emerald-400">{sale.grandTotal.toLocaleString()}</p>
+                          <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
+                        </div>
                       </div>
-                      <div className={isRtl ? 'text-left' : 'text-right'}>
-                        <p className="font-black text-emerald-600 dark:text-emerald-400">{sale.grandTotal.toLocaleString()}</p>
-                        <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
-                      </div>
+                      {Number(sale.discountValue || 0) > 0 && (
+                        <div className="flex items-center gap-1 mt-1.5 px-2 py-1 bg-purple-500/10 rounded-lg w-fit">
+                          <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400">
+                            خصم: {Number(sale.discountValue).toLocaleString()} {CURRENCY}
+                            {sale.discountType === 'percentage' ? ` (${Number(sale.discountPercentage || 0).toFixed(1)}%)` : ''}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
