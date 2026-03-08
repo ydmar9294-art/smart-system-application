@@ -440,7 +440,7 @@ const BackupTab: React.FC = () => {
       setBackupData(backup);
       setProgress('');
     } catch (err) {
-      console.error('[Backup] Error:', err);
+      logger.error('Backup generation error', 'BackupTab');
       setProgress(t('backup.errorGenerating'));
     } finally {
       setLoading(false);
