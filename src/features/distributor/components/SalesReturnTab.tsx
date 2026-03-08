@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '@/lib/logger';
 import { generateUUID } from '@/lib/uuid';
 import { 
   RotateCcw, 
