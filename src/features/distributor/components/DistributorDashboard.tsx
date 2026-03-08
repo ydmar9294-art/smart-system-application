@@ -6,6 +6,7 @@ import {
   MapPin, Check, Loader2, ChevronDown, Search, MessageCircle, Warehouse,
   History, ShoppingBag, Home, PieChart
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '@/store/AppContext';
 import { supabase } from '@/integrations/supabase/client';
 import AIAssistant from '@/features/ai/components/AIAssistant';
