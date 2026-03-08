@@ -254,6 +254,52 @@ const BackupTab: React.FC = () => {
         .eq('organization_id', organization.id)
         .order('created_at', { ascending: false });
 
+      // ── Purchases ───────────────────────────────────────────────
+      setProgress(t('backup.loadingPurchases'));
+      const { data: purchasesRaw } = await supabase
+        .from('purchases')
+        .select('id, product_name, quantity, unit_price, total_price, supplier_name, created_at, created_by, notes')
+        .eq('organization_id', organization.id)
+        .order('created_at', { ascending: false });
+
+      // ── Sales Returns ───────────────────────────────────────────
+      setProgress(t('backup.loadingSalesReturns'));
+      const { data: salesReturnsRaw } = await supabase
+        .from('sales_returns')
+        .select('id, customer_name, sale_id, reason, total_amount, created_at, created_by')
+        .eq('organization_id', organization.id)
+        .order('created_at', { ascending: false });
+
+      const srIds = (salesReturnsRaw || []).map(sr => sr.id);
+      let allSrItems: any[] = [];
+      for (let i = 0; i < srIds.length; i += 100) {
+        const batch = srIds.slice(i, i + 100);
+        const { data: itemsBatch } = await supabase
+          .from('sales_return_items')
+          .select('return_id, product_name, quantity, unit_price, total_price')
+          .in('return_id', batch);
+        if (itemsBatch) allSrItems = [...allSrItems, ...itemsBatch];
+      }
+
+      // ── Purchase Returns ────────────────────────────────────────
+      setProgress(t('backup.loadingPurchaseReturns'));
+      const { data: purchaseReturnsRaw } = await supabase
+        .from('purchase_returns')
+        .select('id, supplier_name, reason, total_amount, created_at, created_by')
+        .eq('organization_id', organization.id)
+        .order('created_at', { ascending: false });
+
+      const prIds = (purchaseReturnsRaw || []).map(pr => pr.id);
+      let allPrItems: any[] = [];
+      for (let i = 0; i < prIds.length; i += 100) {
+        const batch = prIds.slice(i, i + 100);
+        const { data: itemsBatch } = await supabase
+          .from('purchase_return_items')
+          .select('return_id, product_name, quantity, unit_price, total_price')
+          .in('return_id', batch);
+        if (itemsBatch) allPrItems = [...allPrItems, ...itemsBatch];
+      }
+
       setProgress(t('backup.loadingLogs'));
       const { data: auditRaw } = await supabase
         .from('audit_logs')
@@ -317,6 +363,52 @@ const BackupTab: React.FC = () => {
         collector_name: getUserName(c.collected_by),
       }));
 
+      const purchases: BackupPurchase[] = (purchasesRaw || []).map(p => ({
+        ...p,
+        quantity: Number(p.quantity),
+        unit_price: Number(p.unit_price),
+        total_price: Number(p.total_price),
+        creator_name: getUserName(p.created_by),
+      }));
+
+      // Group sales return items
+      const srItemsByReturn: Record<string, any[]> = {};
+      allSrItems.forEach((item: any) => {
+        if (!srItemsByReturn[item.return_id]) srItemsByReturn[item.return_id] = [];
+        srItemsByReturn[item.return_id].push({
+          product_name: item.product_name,
+          quantity: Number(item.quantity),
+          unit_price: Number(item.unit_price),
+          total_price: Number(item.total_price),
+        });
+      });
+
+      const salesReturns: BackupSalesReturn[] = (salesReturnsRaw || []).map(sr => ({
+        ...sr,
+        total_amount: Number(sr.total_amount),
+        creator_name: getUserName(sr.created_by),
+        items: srItemsByReturn[sr.id] || [],
+      }));
+
+      // Group purchase return items
+      const prItemsByReturn: Record<string, any[]> = {};
+      allPrItems.forEach((item: any) => {
+        if (!prItemsByReturn[item.return_id]) prItemsByReturn[item.return_id] = [];
+        prItemsByReturn[item.return_id].push({
+          product_name: item.product_name,
+          quantity: Number(item.quantity),
+          unit_price: Number(item.unit_price),
+          total_price: Number(item.total_price),
+        });
+      });
+
+      const purchaseReturnsList: BackupPurchaseReturn[] = (purchaseReturnsRaw || []).map(pr => ({
+        ...pr,
+        total_amount: Number(pr.total_amount),
+        creator_name: getUserName(pr.created_by),
+        items: prItemsByReturn[pr.id] || [],
+      }));
+
       const logs: BackupLogEntry[] = [
         ...(auditRaw || []).map(a => ({
           type: translateAction(a.action, a.entity_type, t),
@@ -338,6 +430,9 @@ const BackupTab: React.FC = () => {
         customers,
         invoices,
         collections,
+        purchases,
+        salesReturns,
+        purchaseReturns: purchaseReturnsList,
         logs,
       };
 
