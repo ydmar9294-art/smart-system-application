@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
 import { 
@@ -29,6 +30,7 @@ interface InventoryTabProps {
 }
 
 export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false, forceSubTab }) => {
+  const { t } = useTranslation();
   const { 
     products, users, purchases = [], deliveries = [], 
     addPurchase, createDelivery, addProduct, updateProduct, deleteProduct,
@@ -257,25 +259,25 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
             onClick={() => setSubTab('products')} 
             className={`py-2.5 rounded-xl font-black text-[10px] flex items-center justify-center gap-1 transition-all ${subTab === 'products' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
           >
-            <Package size={12} /> المواد
+            <Package size={12} /> {t('ownerInventory.products')}
           </button>
           <button 
             onClick={() => setSubTab('purchases')} 
             className={`py-2.5 rounded-xl font-black text-[10px] flex items-center justify-center gap-1 transition-all ${subTab === 'purchases' ? 'bg-card shadow-sm text-success' : 'text-muted-foreground'}`}
           >
-            <ShoppingCart size={12} /> شراء
+            <ShoppingCart size={12} /> {t('ownerInventory.purchases')}
           </button>
           <button 
             onClick={() => setSubTab('purchase-returns')} 
             className={`py-2.5 rounded-xl font-black text-[10px] flex items-center justify-center gap-1 transition-all ${subTab === 'purchase-returns' ? 'bg-card shadow-sm text-destructive' : 'text-muted-foreground'}`}
           >
-            <RotateCcw size={12} /> مرتجع
+            <RotateCcw size={12} /> {t('ownerInventory.purchaseReturns')}
           </button>
           <button 
             onClick={() => setSubTab('deliveries')} 
             className={`py-2.5 rounded-xl font-black text-[10px] flex items-center justify-center gap-1 transition-all ${subTab === 'deliveries' ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground'}`}
           >
-            <Truck size={12} /> تسليم
+            <Truck size={12} /> {t('ownerInventory.deliveries')}
           </button>
         </div>
       )}
@@ -286,7 +288,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
           {lowStockCount > 0 && (
             <div className="bg-warning/10 p-4 rounded-2xl border border-warning/20 flex items-center gap-3">
               <AlertTriangle size={20} className="text-warning shrink-0" />
-              <p className="text-xs font-bold text-warning">{lowStockCount} صنف يحتاج إعادة تعبئة</p>
+              <p className="text-xs font-bold text-warning">{lowStockCount} {t('ownerInventory.lowStockAlert')}</p>
             </div>
           )}
 
@@ -296,7 +298,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
               <input 
                 value={searchTerm} 
                 onChange={(e) => setSearchTerm(e.target.value)} 
-                placeholder="بحث عن صنف..." 
+                placeholder={t('ownerInventory.searchProduct')} 
                 className="input-field pr-10" 
               />
             </div>
@@ -309,7 +311,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
             {filteredProducts.length === 0 ? (
               <div className="bg-card p-8 rounded-[2.5rem] border text-center">
                 <Box size={48} className="mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground font-bold">لا توجد منتجات</p>
+                <p className="text-muted-foreground font-bold">{t('ownerInventory.noProducts')}</p>
               </div>
             ) : (
               filteredProducts.map(p => (
@@ -343,13 +345,13 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
             onClick={() => setShowPurchaseModal(true)} 
             className="w-full py-4 bg-success text-white rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
           >
-            <ShoppingCart size={18}/> تسجيل عملية شراء
+            <ShoppingCart size={18}/> {t('ownerInventory.registerPurchase')}
           </button>
 
           {purchases.length === 0 ? (
             <div className="bg-card p-8 rounded-[2.5rem] border text-center">
               <Package size={48} className="mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground font-bold">لا توجد مشتريات</p>
+              <p className="text-muted-foreground font-bold">{t('ownerInventory.noPurchases')}</p>
             </div>
           ) : (
             purchases.map((purchase) => (
@@ -362,12 +364,12 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
                       {new Date(purchase.created_at).toLocaleDateString('ar-EG')}
                     </p>
                   </div>
-                  <span className="badge badge-success text-[9px]">{purchase.quantity} وحدة</span>
+                  <span className="badge badge-success text-[9px]">{purchase.quantity} {t('ownerInventory.unit')}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-muted-foreground flex items-center gap-1">
                     <User size={12} />
-                    {purchase.supplier_name || 'غير محدد'}
+                    {purchase.supplier_name || t('common.unspecified')}
                   </span>
                   <span className="font-black text-success">{purchase.total_price.toLocaleString()} {CURRENCY}</span>
                 </div>
@@ -384,27 +386,27 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
             onClick={() => setShowPurchaseReturnModal(true)} 
             className="w-full py-4 bg-destructive text-white rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
           >
-            <RotateCcw size={18}/> تسجيل مرتجع شراء
+            <RotateCcw size={18}/> {t('ownerInventory.registerPurchaseReturn')}
           </button>
 
           <div className="bg-destructive/10 p-4 rounded-2xl border border-destructive/20">
-            <p className="text-xs text-destructive font-bold mb-2">⚠️ تنبيه هام</p>
+            <p className="text-xs text-destructive font-bold mb-2">{t('ownerInventory.importantWarning')}</p>
             <p className="text-xs text-muted-foreground">
-              مرتجع الشراء يؤدي إلى خصم الكمية من المخزون. تأكد من توفر الكمية قبل التسجيل.
+              {t('ownerInventory.purchaseReturnWarning')}
             </p>
           </div>
 
           {purchaseReturns.length === 0 ? (
             <div className="bg-card p-8 rounded-[2.5rem] border text-center">
               <RotateCcw size={48} className="mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground font-bold">لا توجد مرتجعات مشتريات</p>
+              <p className="text-muted-foreground font-bold">{t('ownerInventory.noPurchaseReturns')}</p>
             </div>
           ) : (
             purchaseReturns.map((ret) => (
               <div key={ret.id} className="bg-card p-4 rounded-[1.8rem] border shadow-sm">
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <h3 className="font-black text-foreground text-sm">{ret.supplier_name || 'مورد غير محدد'}</h3>
+                    <h3 className="font-black text-foreground text-sm">{ret.supplier_name || t('ownerInventory.unknownSupplier')}</h3>
                     <p className="text-[9px] text-muted-foreground flex items-center gap-1">
                       <Calendar size={10} />
                       {new Date(ret.created_at).toLocaleDateString('ar-EG')}
@@ -415,7 +417,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
                   </span>
                 </div>
                 {ret.reason && (
-                  <p className="text-xs text-muted-foreground mt-1">السبب: {ret.reason}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t('ownerInventory.reason')} {ret.reason}</p>
                 )}
               </div>
             ))
@@ -429,13 +431,13 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
             onClick={() => setShowDeliveryModal(true)} 
             className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
           >
-            <Truck size={18}/> تسليم بضاعة للموزع
+            <Truck size={18}/> {t('ownerInventory.deliverToDistributor')}
           </button>
 
           {deliveries.length === 0 ? (
             <div className="bg-card p-8 rounded-[2.5rem] border text-center">
               <Truck size={48} className="mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground font-bold">لا توجد تسليمات</p>
+              <p className="text-muted-foreground font-bold">{t('ownerInventory.noDeliveries')}</p>
             </div>
           ) : (
             deliveries.map((delivery) => (
@@ -452,7 +454,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
                     </p>
                   </div>
                   <span className={`badge text-[9px] ${delivery.status === 'completed' ? 'badge-success' : 'badge-warning'}`}>
-                    {delivery.status === 'completed' ? 'مكتمل' : 'معلق'}
+                    {delivery.status === 'completed' ? t('ownerInventory.completed') : t('common.pending')}
                   </span>
                 </div>
               </div>
@@ -465,7 +467,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
       <FullScreenModal
         isOpen={showPurchaseModal}
         onClose={() => { setShowPurchaseModal(false); resetPurchaseForm(); }}
-        title="شراء مواد"
+        title={t('ownerInventory.purchaseMaterials')}
         icon={<ShoppingCart size={24} />}
         headerColor="success"
         footer={
@@ -477,27 +479,27 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
             }}
             className="w-full bg-success text-white font-black py-5 rounded-2xl shadow-lg active:scale-[0.98] transition-all text-lg"
           >
-            تأكيد الشراء
+            {t('ownerInventory.confirmPurchase')}
           </button>
         }
       >
         <form id="purchase-form" onSubmit={handlePurchaseSubmit} className="space-y-5">
           <div className="space-y-2">
-            <label className="text-xs font-black text-muted-foreground uppercase">المادة</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.selectProduct')}</label>
             <select 
               value={purchaseProduct} 
               onChange={(e) => handlePurchaseProductChange(e.target.value)} 
               required 
               className="input-field text-base py-4"
             >
-              <option value="">اختر المادة...</option>
+              <option value="">{t('ownerInventory.selectProduct')}</option>
               {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-xs font-black text-muted-foreground uppercase">الكمية</label>
+              <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.quantity')}</label>
               <input 
                 type="number" 
                 min="1" 
@@ -508,7 +510,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-black text-muted-foreground uppercase">سعر الوحدة</label>
+              <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.unitPrice')}</label>
               <input 
                 type="number" 
                 min="0" 
@@ -523,18 +525,18 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
           </div>
           
           <div className="space-y-2">
-            <label className="text-xs font-black text-muted-foreground uppercase">المورد (اختياري)</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.supplierOptional')}</label>
             <input 
               type="text" 
               value={purchaseSupplier} 
               onChange={(e) => setPurchaseSupplier(e.target.value)} 
-              placeholder="اسم المورد" 
+              placeholder={t('ownerInventory.supplierName')} 
               className="input-field py-4" 
             />
           </div>
           
           <div className="bg-success/10 p-5 rounded-2xl border border-success/20 flex justify-between items-center">
-            <span className="font-bold text-muted-foreground">الإجمالي:</span>
+            <span className="font-bold text-muted-foreground">{t('ownerInventory.totalLabel')}</span>
             <span className="text-3xl font-black text-success">{(purchaseQty * Number(purchasePrice)).toLocaleString()} {CURRENCY}</span>
           </div>
         </form>
@@ -544,7 +546,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
       <FullScreenModal
         isOpen={showDeliveryModal}
         onClose={() => { setShowDeliveryModal(false); resetDeliveryForm(); }}
-        title="تسليم للموزع"
+        title={t('ownerInventory.deliverToAgent')}
         icon={<Truck size={24} />}
         headerColor="primary"
         footer={
@@ -558,13 +560,13 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
             className="w-full bg-primary text-primary-foreground font-black py-5 rounded-2xl shadow-lg active:scale-[0.98] transition-all disabled:opacity-50 text-lg flex items-center justify-center gap-2"
           >
             <Check size={22} />
-            تأكيد التسليم
+            {t('ownerInventory.confirmDelivery')}
           </button>
         }
       >
         <form id="delivery-form" onSubmit={handleDeliverySubmit} className="space-y-5">
           <div className="space-y-2">
-            <label className="text-xs font-black text-muted-foreground uppercase">الموزع</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.selectDistributor')}</label>
             {distributors.length > 0 ? (
               <select
                 value={selectedDistributorId}
@@ -577,25 +579,25 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
                 required
                 className="input-field text-base py-4"
               >
-                <option value="">اختر الموزع...</option>
+                <option value="">{t('ownerInventory.selectDistributor')}</option>
                 {distributors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             ) : (
               <div className="bg-muted p-4 rounded-2xl text-sm text-muted-foreground font-bold text-center">
-                لا يوجد موزعين مُفعّلين حالياً. أضف موزع جديد ثم فعّل حسابه قبل تنفيذ التسليم.
+                {t('ownerInventory.noDistributors')}
               </div>
             )}
           </div>
 
           <div className="space-y-3">
-            <label className="text-xs font-black text-muted-foreground uppercase">إضافة أصناف</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.addItems')}</label>
             <div className="flex gap-3">
               <select 
                 value={selectedDeliveryProduct} 
                 onChange={(e) => setSelectedDeliveryProduct(e.target.value)} 
                 className="input-field flex-1 py-4"
               >
-                <option value="">اختر المادة...</option>
+                <option value="">{t('ownerInventory.selectProduct')}</option>
                 {products.filter(p => p.stock > 0).map(p => (
                   <option key={p.id} value={p.id}>{p.name} ({p.stock})</option>
                 ))}
@@ -623,7 +625,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
 
           {deliveryItems.length > 0 && (
             <div className="space-y-3 bg-muted p-4 rounded-2xl">
-              <p className="text-xs font-black text-muted-foreground uppercase">الأصناف المختارة ({deliveryItems.length}):</p>
+              <p className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.selectedItems')} ({deliveryItems.length}):</p>
               {deliveryItems.map((item) => (
                 <div key={item.product_id} className="flex justify-between items-center bg-card p-4 rounded-xl">
                   <span className="font-bold">{item.product_name}</span>
@@ -648,7 +650,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
       <FullScreenModal
         isOpen={showPurchaseReturnModal}
         onClose={() => { setShowPurchaseReturnModal(false); resetPurchaseReturnForm(); }}
-        title="مرتجع شراء"
+        title={t('ownerInventory.purchaseReturn')}
         icon={<RotateCcw size={24} />}
         headerColor="destructive"
         footer={
@@ -662,38 +664,38 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
             className="w-full bg-destructive text-white font-black py-5 rounded-2xl shadow-lg active:scale-[0.98] transition-all disabled:opacity-50 text-lg flex items-center justify-center gap-2"
           >
             <Check size={22} />
-            تأكيد المرتجع
+            {t('ownerInventory.confirmReturn')}
           </button>
         }
       >
         <form id="purchase-return-form" onSubmit={handlePurchaseReturnSubmit} className="space-y-5">
           <div className="space-y-2">
-            <label className="text-xs font-black text-muted-foreground uppercase">المورد (اختياري)</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.supplierOptional')}</label>
             <input 
               type="text" 
               value={purchaseReturnSupplier} 
               onChange={(e) => setPurchaseReturnSupplier(e.target.value)} 
-              placeholder="اسم المورد" 
+              placeholder={t('ownerInventory.supplierName')} 
               className="input-field py-4" 
             />
           </div>
 
           <div className="space-y-3">
-            <label className="text-xs font-black text-muted-foreground uppercase">إضافة أصناف للمرتجع</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.addReturnItems')}</label>
             <select 
               value={selectedReturnProduct} 
               onChange={(e) => handleReturnProductChange(e.target.value)} 
               className="input-field py-4"
             >
-              <option value="">اختر المنتج...</option>
+              <option value="">{t('ownerInventory.selectProductForReturn')}</option>
               {products.filter(p => p.stock > 0).map(p => (
-                <option key={p.id} value={p.id}>{p.name} (متوفر: {p.stock})</option>
+                <option key={p.id} value={p.id}>{p.name} ({t('ownerInventory.availableQty')} {p.stock})</option>
               ))}
             </select>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-muted-foreground">الكمية</label>
+                <label className="text-[10px] font-bold text-muted-foreground">{t('ownerInventory.quantity')}</label>
                 <input 
                   type="number" 
                   min="1" 
@@ -703,7 +705,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-muted-foreground">سعر الوحدة</label>
+                <label className="text-[10px] font-bold text-muted-foreground">{t('ownerInventory.unitPrice')}</label>
                 <input 
                   type="number" 
                   min="0" 
@@ -722,13 +724,13 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
               disabled={!selectedReturnProduct || returnItemQty <= 0}
               className="w-full py-4 bg-destructive/10 text-destructive rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98] transition-transform"
             >
-              <Plus size={20} /> إضافة للمرتجع
+              <Plus size={20} /> {t('ownerInventory.addToReturn')}
             </button>
           </div>
 
           {purchaseReturnItems.length > 0 && (
             <div className="space-y-3 bg-muted p-4 rounded-2xl">
-              <p className="text-xs font-black text-muted-foreground uppercase">أصناف المرتجع ({purchaseReturnItems.length}):</p>
+              <p className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.returnItems')} ({purchaseReturnItems.length}):</p>
               {purchaseReturnItems.map((item) => (
                 <div key={item.product_id} className="flex justify-between items-center bg-card p-4 rounded-xl">
                   <span className="font-bold">{item.product_name}</span>
@@ -750,18 +752,18 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
           )}
 
           <div className="space-y-2">
-            <label className="text-xs font-black text-muted-foreground uppercase">سبب المرتجع (اختياري)</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.returnReason')}</label>
             <input 
               type="text" 
               value={purchaseReturnReason} 
               onChange={(e) => setPurchaseReturnReason(e.target.value)} 
-              placeholder="سبب المرتجع" 
+              placeholder={t('ownerInventory.returnReasonPlaceholder')} 
               className="input-field py-4" 
             />
           </div>
 
           <div className="bg-destructive/10 p-5 rounded-2xl border border-destructive/20 flex justify-between items-center">
-            <span className="font-bold text-muted-foreground">إجمالي المرتجع:</span>
+            <span className="font-bold text-muted-foreground">{t('ownerInventory.returnTotal')}</span>
             <span className="text-3xl font-black text-destructive">{purchaseReturnTotal.toLocaleString()} {CURRENCY}</span>
           </div>
         </form>
@@ -771,7 +773,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
       <FullScreenModal
         isOpen={showProductModal}
         onClose={() => { setShowProductModal(false); setEditingProduct(null); }}
-        title={editingProduct ? 'تعديل صنف' : 'إضافة صنف جديد'}
+        title={editingProduct ? t('ownerInventory.editProduct') : t('ownerInventory.addNewProduct')}
         icon={<Package size={24} />}
         headerColor="primary"
         footer={
@@ -783,35 +785,35 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
             }}
             className="w-full bg-primary text-primary-foreground font-black py-5 rounded-2xl shadow-lg active:scale-[0.98] transition-all text-lg"
           >
-            {editingProduct ? 'حفظ التعديلات' : 'حفظ الصنف'}
+            {editingProduct ? t('ownerInventory.saveChanges') : t('ownerInventory.saveProduct')}
           </button>
         }
       >
         <form id="product-form" onSubmit={handleProductSubmit} className="space-y-5">
           <div className="space-y-2">
-            <label className="text-xs font-black text-muted-foreground uppercase">اسم الصنف</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.productName')}</label>
             <input 
               name="name" 
               required 
               defaultValue={editingProduct?.name} 
-              placeholder="اسم الصنف" 
+              placeholder={t('ownerInventory.productName')} 
               className="input-field py-4 text-base" 
             />
           </div>
           
           <div className="space-y-2">
-            <label className="text-xs font-black text-muted-foreground uppercase">الفئة</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.category')}</label>
             <input 
               name="category" 
               defaultValue={editingProduct?.category} 
-              placeholder="الفئة" 
+              placeholder={t('ownerInventory.category')} 
               className="input-field py-4" 
             />
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-xs font-black text-muted-foreground uppercase">سعر التكلفة</label>
+              <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.costPrice')}</label>
               <input 
                 name="costPrice" 
                 type="number" 
@@ -822,7 +824,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-black text-muted-foreground uppercase">سعر البيع</label>
+              <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.salePrice')}</label>
               <input 
                 name="basePrice" 
                 type="number" 
@@ -835,7 +837,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
           </div>
           
           <div className="space-y-2">
-            <label className="text-xs font-black text-muted-foreground uppercase">سعر المستهلك</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.consumerPrice')}</label>
             <input 
               name="consumerPrice" 
               type="number" 
@@ -848,7 +850,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-xs font-black text-muted-foreground uppercase">المخزون الحالي</label>
+              <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.currentStock')}</label>
               <input 
                 name="stock" 
                 type="number" 
@@ -857,7 +859,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-black text-muted-foreground uppercase">الحد الأدنى</label>
+              <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.minStock')}</label>
               <input 
                 name="minStock" 
                 type="number" 
@@ -868,11 +870,11 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
           </div>
           
           <div className="space-y-2">
-            <label className="text-xs font-black text-muted-foreground uppercase">الوحدة</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.unitLabel')}</label>
             <input 
               name="unit" 
-              defaultValue={editingProduct?.unit ?? 'قطعة'} 
-              placeholder="قطعة" 
+              defaultValue={editingProduct?.unit ?? t('ownerInventory.piece')} 
+              placeholder={t('ownerInventory.piece')} 
               className="input-field py-4" 
             />
           </div>
