@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import AnimatedTabContent from '@/components/ui/AnimatedTabContent';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { 
