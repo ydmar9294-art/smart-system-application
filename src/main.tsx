@@ -5,6 +5,7 @@ import App from "./App.tsx";
 import "./index.css";
 import "./i18n"; // Initialize i18n before app renders
 import { AppProvider } from "@/store/AppContext";
+import { GuestProvider } from "@/store/GuestContext";
 import { queryClient } from "@/lib/queryClient";
 import { initSessionGuard } from "@/lib/sessionGuard";
 import { initCapacitorOAuth } from "@/lib/capacitorOAuth";
@@ -33,9 +34,11 @@ if (Capacitor.isNativePlatform()) {
 createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
     <HashRouter>
-      <AppProvider>
-        <App />
-      </AppProvider>
+      <GuestProvider>
+        <AppProvider>
+          <App />
+        </AppProvider>
+      </GuestProvider>
     </HashRouter>
   </QueryClientProvider>
 );

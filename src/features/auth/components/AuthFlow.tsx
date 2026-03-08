@@ -10,6 +10,8 @@ import EmailPasswordAuth from './EmailPasswordAuth';
 import GoogleSignInButton from './GoogleSignInButton';
 import LicenseActivation from './LicenseActivation';
 import AuthOverlay from './AuthOverlay';
+import { GuestRoleSelector } from '@/features/guest';
+import { useGuest, GuestRole } from '@/store/GuestContext';
 
 interface AuthFlowProps {
   onAuthComplete: () => void;
@@ -30,6 +32,8 @@ const SLOW_THRESHOLD_MS = 5_000;
 const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
   const { t } = useTranslation();
   const [authState, setAuthState] = useState<AuthState>({ type: 'initial' });
+  const [showRoleSelector, setShowRoleSelector] = useState(false);
+  const { enterGuest } = useGuest();
   const [authError, setAuthError] = useState<string>('');
   const [isSlow, setIsSlow] = useState(false);
   const [oauthPending, setOauthPending] = useState(() => isOAuthPending());
@@ -171,6 +175,10 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
 
   const handleActivationSuccess = () => { onAuthComplete(); };
   const handleAuthError = (error: string) => { setAuthError(error); };
+  const handleGuestSelect = (role: GuestRole) => {
+    setShowRoleSelector(false);
+    enterGuest(role);
+  };
 
   const renderContent = () => {
     switch (authState.type) {
@@ -243,6 +251,13 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
               <div className="flex-1 h-px bg-border" />
             </div>
             <EmailPasswordAuth onError={handleAuthError} />
+            {/* Guest preview button */}
+            <button
+              onClick={() => setShowRoleSelector(true)}
+              className="w-full py-3 rounded-2xl border-2 border-dashed border-border text-muted-foreground font-bold text-sm hover:border-primary/40 hover:text-foreground active:scale-[0.97] transition-all duration-200"
+            >
+              {t('guest.loginAsGuest')}
+            </button>
             <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground">
               <ShieldCheck className="w-4 h-4" />
               <span>{t('auth.secureLogin')}</span>
@@ -285,6 +300,13 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
           {renderContent()}
         </div>
       </div>
+
+      {/* Guest role selector modal */}
+      <GuestRoleSelector
+        open={showRoleSelector}
+        onSelect={handleGuestSelect}
+        onClose={() => setShowRoleSelector(false)}
+      />
     </div>);
 };
 
