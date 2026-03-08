@@ -400,7 +400,7 @@ export async function retryAllFailedActions(): Promise<void> {
 }
 
 export async function clearSyncedActions(): Promise<void> {
-  const all = await getAllItems<OfflineAction>(STORES.ACTIONS);
+  const all = await getAllActionsDecrypted();
   const syncedIds = all.filter(a => a.status === 'synced').map(a => a.id);
   if (syncedIds.length === 0) return;
 
