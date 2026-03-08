@@ -752,18 +752,18 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
           )}
 
           <div className="space-y-2">
-            <label className="text-xs font-black text-muted-foreground uppercase">سبب المرتجع (اختياري)</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.returnReason')}</label>
             <input 
               type="text" 
               value={purchaseReturnReason} 
               onChange={(e) => setPurchaseReturnReason(e.target.value)} 
-              placeholder="سبب المرتجع" 
+              placeholder={t('ownerInventory.returnReasonPlaceholder')} 
               className="input-field py-4" 
             />
           </div>
 
           <div className="bg-destructive/10 p-5 rounded-2xl border border-destructive/20 flex justify-between items-center">
-            <span className="font-bold text-muted-foreground">إجمالي المرتجع:</span>
+            <span className="font-bold text-muted-foreground">{t('ownerInventory.returnTotal')}</span>
             <span className="text-3xl font-black text-destructive">{purchaseReturnTotal.toLocaleString()} {CURRENCY}</span>
           </div>
         </form>
