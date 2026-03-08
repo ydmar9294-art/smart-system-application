@@ -780,6 +780,37 @@ const en = {
     toCustomer: 'Customer',
     by: 'By:',
   },
+
+  // ==========================================
+  // ERROR MESSAGES
+  // ==========================================
+  errors: {
+    unexpected: 'An unexpected error occurred',
+    operationTimeout: 'Operation timed out',
+    invalidCredentials: 'Invalid email or password',
+    serverConnection: 'Server connection error',
+    networkError: 'Network connection error',
+    timeout: 'Connection timed out',
+    emailAlreadyRegistered: 'This email is already registered',
+    emailNotConfirmed: 'Email not confirmed',
+    invalidToken: 'Invalid session, please log in again',
+    jwtExpired: 'Session expired, please log in again',
+    insufficientStock: 'Insufficient stock',
+    stockNegative: 'Stock cannot be negative',
+    noOrganization: 'Organization not found',
+    productNotFound: 'Product not found',
+    customerNotFound: 'Customer not found',
+    saleNotFound: 'Invoice not found',
+    licenseNotFound: 'License not found',
+    licenseExpired: 'License has expired',
+    activationCodeNotFound: 'Activation code not found or already used',
+    unauthorized: 'Unauthorized operation',
+    saleAlreadyVoided: 'Invoice is already voided',
+    paymentAlreadyReversed: 'Payment is already reversed',
+    amountExceedsBalance: 'Amount exceeds remaining balance',
+    collectionOnVoidedSale: 'Cannot add collection to voided invoice',
+    returnOnVoidedSale: 'Cannot return items from voided invoice',
+  },
 };
 
 export default en;

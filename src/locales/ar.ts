@@ -780,6 +780,37 @@ const ar = {
     toCustomer: 'العميل',
     by: 'بواسطة:',
   },
+
+  // ==========================================
+  // ERROR MESSAGES
+  // ==========================================
+  errors: {
+    unexpected: 'حدث خطأ غير متوقع',
+    operationTimeout: 'انتهت مهلة العملية',
+    invalidCredentials: 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
+    serverConnection: 'خطأ في الاتصال بالسيرفر',
+    networkError: 'خطأ في الاتصال بالشبكة',
+    timeout: 'انتهت مهلة الاتصال',
+    emailAlreadyRegistered: 'هذا البريد الإلكتروني مسجل مسبقاً',
+    emailNotConfirmed: 'لم يتم تأكيد البريد الإلكتروني',
+    invalidToken: 'جلسة غير صالحة، يرجى تسجيل الدخول مجدداً',
+    jwtExpired: 'انتهت صلاحية الجلسة، يرجى تسجيل الدخول مجدداً',
+    insufficientStock: 'المخزون غير كافٍ',
+    stockNegative: 'لا يمكن أن يكون المخزون سالباً',
+    noOrganization: 'لم يتم العثور على المنشأة',
+    productNotFound: 'المنتج غير موجود',
+    customerNotFound: 'العميل غير موجود',
+    saleNotFound: 'الفاتورة غير موجودة',
+    licenseNotFound: 'الترخيص غير موجود',
+    licenseExpired: 'انتهت صلاحية الترخيص',
+    activationCodeNotFound: 'كود التفعيل غير موجود أو مستخدم',
+    unauthorized: 'غير مصرح بهذه العملية',
+    saleAlreadyVoided: 'الفاتورة ملغية بالفعل',
+    paymentAlreadyReversed: 'الدفعة معكوسة بالفعل',
+    amountExceedsBalance: 'المبلغ أكبر من الرصيد المتبقي',
+    collectionOnVoidedSale: 'لا يمكن إضافة تحصيل لفاتورة ملغية',
+    returnOnVoidedSale: 'لا يمكن إرجاع أصناف من فاتورة ملغية',
+  },
 };
 
 export default ar;
