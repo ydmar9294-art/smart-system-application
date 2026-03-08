@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   FileText, 
   ShoppingCart, 
@@ -24,6 +25,8 @@ import ReportsTab from './ReportsTab';
 type AccountantTabType = 'sales' | 'purchases' | 'sales-returns' | 'purchase-returns' | 'collections' | 'debts' | 'reports';
 
 const AccountantDashboard: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language === 'ar';
   const { logout } = useApp();
   const [activeTab, setActiveTab] = useState<AccountantTabType>('sales');
   const [loggingOut, setLoggingOut] = useState(false);
@@ -34,16 +37,16 @@ const AccountantDashboard: React.FC = () => {
   };
 
   const tabs: { id: AccountantTabType; label: string; icon: React.ReactNode; color: string; bgColor: string }[] = [
-    { id: 'sales', label: 'المبيعات', icon: <FileText className="w-5 h-5" />, color: 'text-emerald-600', bgColor: 'bg-emerald-600' },
-    { id: 'purchases', label: 'المشتريات', icon: <ShoppingCart className="w-5 h-5" />, color: 'text-blue-600', bgColor: 'bg-blue-600' },
-    { id: 'collections', label: 'التحصيلات', icon: <Wallet className="w-5 h-5" />, color: 'text-purple-600', bgColor: 'bg-purple-600' },
-    { id: 'debts', label: 'الديون', icon: <Users className="w-5 h-5" />, color: 'text-red-500', bgColor: 'bg-red-500' },
-    { id: 'reports', label: 'التقارير', icon: <BarChart3 className="w-5 h-5" />, color: 'text-indigo-600', bgColor: 'bg-indigo-600' },
+    { id: 'sales', label: t('accountant.tabs.sales'), icon: <FileText className="w-5 h-5" />, color: 'text-emerald-600', bgColor: 'bg-emerald-600' },
+    { id: 'purchases', label: t('accountant.tabs.purchases'), icon: <ShoppingCart className="w-5 h-5" />, color: 'text-blue-600', bgColor: 'bg-blue-600' },
+    { id: 'collections', label: t('accountant.tabs.collections'), icon: <Wallet className="w-5 h-5" />, color: 'text-purple-600', bgColor: 'bg-purple-600' },
+    { id: 'debts', label: t('accountant.tabs.debts'), icon: <Users className="w-5 h-5" />, color: 'text-red-500', bgColor: 'bg-red-500' },
+    { id: 'reports', label: t('accountant.tabs.reports'), icon: <BarChart3 className="w-5 h-5" />, color: 'text-indigo-600', bgColor: 'bg-indigo-600' },
   ];
 
   const secondaryTabs: { id: AccountantTabType; label: string; icon: React.ReactNode }[] = [
-    { id: 'sales-returns', label: 'مرتجع بيع', icon: <RotateCcw className="w-4 h-4" /> },
-    { id: 'purchase-returns', label: 'مرتجع شراء', icon: <RotateCcw className="w-4 h-4" /> },
+    { id: 'sales-returns', label: t('accountant.tabs.salesReturns'), icon: <RotateCcw className="w-4 h-4" /> },
+    { id: 'purchase-returns', label: t('accountant.tabs.purchaseReturns'), icon: <RotateCcw className="w-4 h-4" /> },
   ];
 
   const renderTabContent = () => {
@@ -59,23 +62,21 @@ const AccountantDashboard: React.FC = () => {
     }
   };
 
-  const isSecondaryActive = activeTab === 'sales-returns' || activeTab === 'purchase-returns';
-
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir={isRtl ? 'rtl' : 'ltr'}>
       <div className="max-w-lg mx-auto">
         {/* Header */}
         <div className="bg-background pt-4 px-4 relative">
-          <div className="absolute -top-1 left-1 z-10"><NotificationCenter /></div>
+          <div className={`absolute -top-1 ${isRtl ? 'left-1' : 'right-1'} z-10`}><NotificationCenter /></div>
 
           <div className="flex justify-center pt-4 mb-3">
             <div className="flex items-center gap-3 bg-card px-4 py-2 rounded-full shadow-sm">
               <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                 <BarChart3 className="w-4 h-4 text-white" />
               </div>
-              <div className="text-end">
-                <p className="font-bold text-foreground text-sm">لوحة المحاسب</p>
-                <p className="text-[10px] text-muted-foreground">إدارة العمليات المالية</p>
+              <div className={isRtl ? 'text-end' : 'text-start'}>
+                <p className="font-bold text-foreground text-sm">{t('accountant.dashboard')}</p>
+                <p className="text-[10px] text-muted-foreground">{t('accountant.subtitle')}</p>
               </div>
             </div>
           </div>
@@ -85,12 +86,12 @@ const AccountantDashboard: React.FC = () => {
               <AIAssistant className="!p-1.5 !rounded-lg" />
               <div className="w-px h-5 bg-border" />
               <a href="https://wa.me/963947744162" target="_blank" rel="noopener noreferrer"
-                className="p-1.5 bg-gradient-to-br from-green-400 to-green-600 rounded-lg text-white hover:shadow-md transition-all active:scale-95" title="فريق الدعم">
+                className="p-1.5 bg-gradient-to-br from-green-400 to-green-600 rounded-lg text-white hover:shadow-md transition-all active:scale-95" title={t('common.supportTeam')}>
                 <MessageCircle className="w-4 h-4" />
               </a>
             </div>
             <button onClick={handleLogout} disabled={loggingOut}
-              className="p-2.5 bg-card/80 backdrop-blur-sm rounded-full shadow-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all" title="تسجيل الخروج">
+              className="p-2.5 bg-card/80 backdrop-blur-sm rounded-full shadow-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all" title={t('common.logout')}>
               <LogOut className={`w-5 h-5 ${loggingOut ? 'animate-spin' : ''}`} />
             </button>
           </div>

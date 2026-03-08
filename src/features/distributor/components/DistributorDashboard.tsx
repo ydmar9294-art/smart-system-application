@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { 
   FileText, 
   RotateCcw, 
@@ -39,6 +40,8 @@ import { CURRENCY } from '@/constants';
 type DistributorTabType = 'inventory' | 'new-sale' | 'returns' | 'collections' | 'debts' | 'history';
 
 const DistributorDashboard: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language === 'ar';
   const { logout, addNotification, refreshAllData, organization, user: appUser } = useApp();
   const offline = useDistributorOffline();
   const [activeTab, setActiveTab] = useState<DistributorTabType>('inventory');
@@ -55,20 +58,16 @@ const DistributorDashboard: React.FC = () => {
 
   useEffect(() => {
     const getCurrentUser = async () => {
-      // Use getSession (local-first, no network needed) instead of getUser
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           setCurrentUserId(session.user.id);
         }
-      } catch {
-        // offline and no cached session — customers will show all
-      }
+      } catch {}
     };
     getCurrentUser();
   }, []);
 
-  // Use offline-first cached customers — show ALL when userId unknown (offline fallback)
   const myCustomers = currentUserId
     ? offline.localCustomers.filter(c => c.created_by === currentUserId)
     : offline.localCustomers;
@@ -82,13 +81,12 @@ const DistributorDashboard: React.FC = () => {
   };
 
   const handleAddCustomer = async () => {
-    if (!newCustomerName.trim()) { addNotification('يرجى إدخال اسم الزبون', 'warning'); return; }
-    if (!newCustomerPhone.trim()) { addNotification('يرجى إدخال رقم الهاتف', 'warning'); return; }
-    if (!/^[0-9+\-\s]+$/.test(newCustomerPhone.trim())) { addNotification('رقم الهاتف غير صالح', 'warning'); return; }
-    if (!newCustomerLocation.trim()) { addNotification('يرجى إدخال موقع الزبون', 'warning'); return; }
+    if (!newCustomerName.trim()) { addNotification(t('distributor.enterCustomerName'), 'warning'); return; }
+    if (!newCustomerPhone.trim()) { addNotification(t('distributor.enterCustomerPhone'), 'warning'); return; }
+    if (!/^[0-9+\-\s]+$/.test(newCustomerPhone.trim())) { addNotification(t('distributor.invalidPhone'), 'warning'); return; }
+    if (!newCustomerLocation.trim()) { addNotification(t('distributor.enterCustomerLocation'), 'warning'); return; }
     setAddingCustomer(true);
     try {
-      // addCustomerOffline resolves org context from IndexedDB — no network needed
       const newCustomer = await offline.addCustomerOffline(
         newCustomerName.trim(),
         newCustomerPhone.trim(),
@@ -98,7 +96,6 @@ const DistributorDashboard: React.FC = () => {
       setNewCustomerName(''); setNewCustomerPhone(''); setNewCustomerLocation('');
       setShowAddCustomerModal(false);
       
-      // Auto-select the new customer
       setSelectedCustomer({
         id: newCustomer.id,
         name: newCustomer.name,
@@ -110,26 +107,26 @@ const DistributorDashboard: React.FC = () => {
       });
 
       addNotification(
-        offline.isOnline ? 'تم إضافة الزبون بنجاح' : 'تم حفظ الزبون محلياً — ستتم المزامنة عند عودة الإنترنت',
+        offline.isOnline ? t('distributor.customerAdded') : t('distributor.customerAddedOffline'),
         'success'
       );
     } catch (error: any) {
       console.error('Error adding customer:', error);
-      addNotification(error?.message || 'فشل إضافة الزبون', 'error');
+      addNotification(error?.message || t('distributor.customerAddFailed'), 'error');
     }
     finally { setAddingCustomer(false); }
   };
 
   const primaryTabs: { id: DistributorTabType; label: string; icon: React.ReactNode; bgColor: string }[] = [
-    { id: 'inventory', label: 'مخزني', icon: <Warehouse className="w-5 h-5" />, bgColor: 'bg-purple-600' },
-    { id: 'new-sale', label: 'فاتورة', icon: <FileText className="w-5 h-5" />, bgColor: 'bg-blue-600' },
-    { id: 'collections', label: 'تحصيل', icon: <Wallet className="w-5 h-5" />, bgColor: 'bg-emerald-600' },
-    { id: 'debts', label: 'الزبائن', icon: <Users className="w-5 h-5" />, bgColor: 'bg-red-500' },
-    { id: 'history', label: 'السجل', icon: <History className="w-5 h-5" />, bgColor: 'bg-indigo-600' },
+    { id: 'inventory', label: t('distributor.tabs.inventory'), icon: <Warehouse className="w-5 h-5" />, bgColor: 'bg-purple-600' },
+    { id: 'new-sale', label: t('distributor.tabs.newSale'), icon: <FileText className="w-5 h-5" />, bgColor: 'bg-blue-600' },
+    { id: 'collections', label: t('distributor.tabs.collections'), icon: <Wallet className="w-5 h-5" />, bgColor: 'bg-emerald-600' },
+    { id: 'debts', label: t('distributor.tabs.customers'), icon: <Users className="w-5 h-5" />, bgColor: 'bg-red-500' },
+    { id: 'history', label: t('distributor.tabs.history'), icon: <History className="w-5 h-5" />, bgColor: 'bg-indigo-600' },
   ];
 
   const secondaryTabs: { id: DistributorTabType; label: string; icon: React.ReactNode }[] = [
-    { id: 'returns', label: 'مرتجع بيع', icon: <RotateCcw className="w-4 h-4" /> },
+    { id: 'returns', label: t('distributor.tabs.returns'), icon: <RotateCcw className="w-4 h-4" /> },
   ];
 
   const renderTabContent = () => {
@@ -145,11 +142,11 @@ const DistributorDashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir={isRtl ? 'rtl' : 'ltr'}>
       <div className="max-w-lg mx-auto">
-        {/* Header - mirrors AccountantDashboard */}
+        {/* Header */}
         <div className="bg-background pt-4 px-4 relative">
-          <div className="absolute -top-1 left-1 z-10">
+          <div className={`absolute -top-1 ${isRtl ? 'left-1' : 'right-1'} z-10`}>
             <NotificationCenter />
           </div>
 
@@ -158,9 +155,9 @@ const DistributorDashboard: React.FC = () => {
               <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                 <ShoppingBag className="w-4 h-4 text-white" />
               </div>
-              <div className="text-end">
-                <p className="font-bold text-foreground text-sm">لوحة الموزع</p>
-                <p className="text-[10px] text-muted-foreground">إدارة المبيعات الميدانية</p>
+              <div className={isRtl ? 'text-end' : 'text-start'}>
+                <p className="font-bold text-foreground text-sm">{t('distributor.dashboard')}</p>
+                <p className="text-[10px] text-muted-foreground">{t('distributor.subtitle')}</p>
               </div>
             </div>
           </div>
@@ -170,18 +167,18 @@ const DistributorDashboard: React.FC = () => {
               <AIAssistant className="!p-1.5 !rounded-lg" />
               <div className="w-px h-5 bg-border" />
               <a href="https://wa.me/963947744162" target="_blank" rel="noopener noreferrer"
-                className="p-1.5 bg-gradient-to-br from-green-400 to-green-600 rounded-lg text-white hover:shadow-md transition-all active:scale-95" title="فريق الدعم">
+                className="p-1.5 bg-gradient-to-br from-green-400 to-green-600 rounded-lg text-white hover:shadow-md transition-all active:scale-95" title={t('common.supportTeam')}>
                 <MessageCircle className="w-4 h-4" />
               </a>
             </div>
 
             <div className="flex items-center gap-2">
               <button onClick={() => setShowAddCustomerModal(true)}
-                className="p-2 bg-blue-600/10 text-blue-600 rounded-xl hover:bg-blue-600/20 transition-all" title="إضافة زبون جديد">
+                className="p-2 bg-blue-600/10 text-blue-600 rounded-xl hover:bg-blue-600/20 transition-all" title={t('distributor.addNewCustomer')}>
                 <UserPlus className="w-5 h-5" />
               </button>
               <button onClick={handleLogout} disabled={loggingOut}
-                className="p-2.5 bg-card/80 backdrop-blur-sm rounded-full shadow-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all" title="تسجيل الخروج">
+                className="p-2.5 bg-card/80 backdrop-blur-sm rounded-full shadow-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all" title={t('common.logout')}>
                 <LogOut className={`w-5 h-5 ${loggingOut ? 'animate-spin' : ''}`} />
               </button>
             </div>
@@ -192,9 +189,9 @@ const DistributorDashboard: React.FC = () => {
         <div className="px-4 pb-3">
           <div className="bg-card rounded-2xl p-3 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-muted-foreground text-xs font-bold">الزبون المحدد للعمليات</span>
+              <span className="text-muted-foreground text-xs font-bold">{t('distributor.selectedCustomer')}</span>
               {selectedCustomer && (
-                <button onClick={() => setSelectedCustomer(null)} className="text-xs text-red-500 hover:text-red-600 font-bold">إلغاء</button>
+                <button onClick={() => setSelectedCustomer(null)} className="text-xs text-red-500 hover:text-red-600 font-bold">{t('distributor.cancelSelection')}</button>
               )}
             </div>
             <button onClick={() => setShowCustomerPicker(true)}
@@ -207,10 +204,10 @@ const DistributorDashboard: React.FC = () => {
                   {selectedCustomer ? (
                     <>
                       <p className="font-bold text-foreground text-sm">{selectedCustomer.name}</p>
-                      <p className="text-xs text-muted-foreground">الرصيد: {Number(selectedCustomer.balance).toLocaleString('ar-SA')} {CURRENCY}</p>
+                      <p className="text-xs text-muted-foreground">{t('common.balance')}: {Number(selectedCustomer.balance).toLocaleString('ar-SA')} {CURRENCY}</p>
                     </>
                   ) : (
-                    <p className="text-muted-foreground font-medium text-sm">اختر زبون من القائمة</p>
+                    <p className="text-muted-foreground font-medium text-sm">{t('distributor.selectCustomer')}</p>
                   )}
                 </div>
               </div>
@@ -236,7 +233,7 @@ const DistributorDashboard: React.FC = () => {
           />
         </div>
 
-        {/* Primary Tab Navigation - mirrors AccountantDashboard */}
+        {/* Primary Tab Navigation */}
         <div className="px-4 pb-2">
           <div className="bg-card rounded-3xl p-2 shadow-sm flex gap-1">
             {primaryTabs.map((tab) => (
@@ -251,7 +248,7 @@ const DistributorDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Secondary Tab (Returns) - mirrors AccountantDashboard secondary tabs */}
+        {/* Secondary Tab (Returns) */}
         <div className="px-4 pb-4">
           <div className="flex gap-2">
             {secondaryTabs.map((tab) => (
@@ -278,11 +275,11 @@ const DistributorDashboard: React.FC = () => {
 
       {/* Customer Picker Modal */}
       {showCustomerPicker && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir="rtl" onClick={() => setShowCustomerPicker(false)}>
+        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir={isRtl ? 'rtl' : 'ltr'} onClick={() => setShowCustomerPicker(false)}>
           <div className="bg-card w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border border-border" onClick={e => e.stopPropagation()}>
             <div className="p-5 border-b border-border bg-muted/50">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-black text-lg text-foreground">اختر الزبون</h3>
+                <h3 className="font-black text-lg text-foreground">{t('distributor.chooseCustomer')}</h3>
                 <button onClick={() => setShowCustomerPicker(false)} className="p-2 hover:bg-accent rounded-xl transition-colors">
                   <X className="w-5 h-5 text-muted-foreground" />
                 </button>
@@ -290,13 +287,13 @@ const DistributorDashboard: React.FC = () => {
               
               <button onClick={() => { setShowCustomerPicker(false); setShowAddCustomerModal(true); }}
                 className="w-full bg-blue-600 text-white py-3 rounded-xl flex items-center justify-center gap-2 font-bold mb-4 hover:bg-blue-700 transition-colors">
-                <UserPlus className="w-5 h-5" /> إضافة زبون جديد
+                <UserPlus className="w-5 h-5" /> {t('distributor.addNewCustomer')}
               </button>
               
               <div className="relative">
-                <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input type="text" placeholder="بحث..." value={searchCustomer} onChange={(e) => setSearchCustomer(e.target.value)}
-                  className="w-full bg-card border border-border rounded-xl px-12 py-3 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20 placeholder:text-muted-foreground" />
+                <Search className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground`} />
+                <input type="text" placeholder={t('distributor.searchCustomer')} value={searchCustomer} onChange={(e) => setSearchCustomer(e.target.value)}
+                  className={`w-full bg-card border border-border rounded-xl ${isRtl ? 'px-12' : 'px-12'} py-3 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20 placeholder:text-muted-foreground`} />
               </div>
             </div>
             
@@ -304,8 +301,8 @@ const DistributorDashboard: React.FC = () => {
               {filteredCustomers.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <User className="w-16 h-16 mx-auto mb-3 opacity-30" />
-                  <p className="font-bold">لا يوجد زبائن</p>
-                  <p className="text-sm mt-1">قم بإضافة زبون جديد للبدء</p>
+                  <p className="font-bold">{t('distributor.noCustomers')}</p>
+                  <p className="text-sm mt-1">{t('distributor.addCustomerToStart')}</p>
                 </div>
               ) : (
                 filteredCustomers.map((customer) => (
@@ -322,10 +319,10 @@ const DistributorDashboard: React.FC = () => {
                       </div>
                       <div>
                         <p className="font-bold text-foreground">{customer.name}</p>
-                        <p className="text-sm text-muted-foreground">الرصيد: {Number(customer.balance).toLocaleString('ar-SA')} {CURRENCY}</p>
+                        <p className="text-sm text-muted-foreground">{t('common.balance')}: {Number(customer.balance).toLocaleString('ar-SA')} {CURRENCY}</p>
                       </div>
                       {selectedCustomer?.id === customer.id && (
-                        <Check className="w-5 h-5 text-blue-600 mr-auto" />
+                        <Check className={`w-5 h-5 text-blue-600 ${isRtl ? 'mr-auto' : 'ml-auto'}`} />
                       )}
                     </div>
                   </button>
@@ -339,11 +336,11 @@ const DistributorDashboard: React.FC = () => {
 
       {/* Add Customer Modal */}
       {showAddCustomerModal && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir="rtl" onClick={() => setShowAddCustomerModal(false)}>
+        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir={isRtl ? 'rtl' : 'ltr'} onClick={() => setShowAddCustomerModal(false)}>
           <div className="bg-card w-full max-w-md rounded-2xl p-6 space-y-5 shadow-2xl border border-border" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h3 className="font-black text-lg text-foreground flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-blue-600 dark:text-blue-400" /> إضافة زبون جديد
+                <UserPlus className="w-5 h-5 text-blue-600 dark:text-blue-400" /> {t('distributor.addNewCustomer')}
               </h3>
               <button onClick={() => setShowAddCustomerModal(false)} className="p-2 hover:bg-accent rounded-xl transition-colors">
                 <X className="w-5 h-5 text-muted-foreground" />
@@ -352,18 +349,18 @@ const DistributorDashboard: React.FC = () => {
             
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-bold text-muted-foreground mb-2 block">اسم الزبون <span className="text-destructive">*</span></label>
+                <label className="text-sm font-bold text-muted-foreground mb-2 block">{t('distributor.customerName')} <span className="text-destructive">*</span></label>
                 <div className="relative">
-                  <User className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input type="text" placeholder="أدخل اسم الزبون" value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)}
+                  <User className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground`} />
+                  <input type="text" placeholder={t('distributor.customerName')} value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)}
                     className="w-full bg-muted border-none rounded-xl px-12 py-4 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20 placeholder:text-muted-foreground" disabled={addingCustomer} />
                 </div>
               </div>
               
               <div>
-                <label className="text-sm font-bold text-muted-foreground mb-2 block">رقم الهاتف <span className="text-destructive">*</span></label>
+                <label className="text-sm font-bold text-muted-foreground mb-2 block">{t('distributor.customerPhone')} <span className="text-destructive">*</span></label>
                 <div className="relative">
-                  <Phone className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Phone className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground`} />
                   <input type="tel" inputMode="numeric" placeholder="09xxxxxxxx" value={newCustomerPhone}
                     onChange={(e) => setNewCustomerPhone(e.target.value.replace(/[^0-9+\-\s]/g, ''))}
                     className="w-full bg-muted border-none rounded-xl px-12 py-4 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20 placeholder:text-muted-foreground" disabled={addingCustomer} />
@@ -371,10 +368,10 @@ const DistributorDashboard: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-sm font-bold text-muted-foreground mb-2 block">موقع الزبون <span className="text-destructive">*</span></label>
+                <label className="text-sm font-bold text-muted-foreground mb-2 block">{t('distributor.customerLocation')} <span className="text-destructive">*</span></label>
                 <div className="relative">
-                  <MapPin className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input type="text" placeholder="أدخل موقع أو عنوان الزبون" value={newCustomerLocation} onChange={(e) => setNewCustomerLocation(e.target.value)}
+                  <MapPin className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground`} />
+                  <input type="text" placeholder={t('distributor.customerLocation')} value={newCustomerLocation} onChange={(e) => setNewCustomerLocation(e.target.value)}
                     className="w-full bg-muted border-none rounded-xl px-12 py-4 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20 placeholder:text-muted-foreground" disabled={addingCustomer} />
                 </div>
               </div>
@@ -384,10 +381,10 @@ const DistributorDashboard: React.FC = () => {
               <button onClick={handleAddCustomer}
                 disabled={addingCustomer || !newCustomerName.trim() || !newCustomerPhone.trim() || !newCustomerLocation.trim()}
                 className="flex-1 bg-emerald-500 text-white py-4 rounded-xl flex items-center justify-center gap-2 font-bold disabled:opacity-50 hover:bg-emerald-600 transition-colors">
-                {addingCustomer ? (<><Loader2 className="w-5 h-5 animate-spin" /> جارٍ الحفظ...</>) : (<><Check className="w-5 h-5" /> حفظ</>)}
+                {addingCustomer ? (<><Loader2 className="w-5 h-5 animate-spin" /> {t('distributor.adding')}</>) : (<><Check className="w-5 h-5" /> {t('common.save')}</>)}
               </button>
               <button onClick={() => setShowAddCustomerModal(false)} disabled={addingCustomer}
-                className="px-6 py-4 bg-muted rounded-xl font-bold text-muted-foreground hover:bg-accent disabled:opacity-50 transition-colors">إلغاء</button>
+                className="px-6 py-4 bg-muted rounded-xl font-bold text-muted-foreground hover:bg-accent disabled:opacity-50 transition-colors">{t('common.cancel')}</button>
             </div>
           </div>
         </div>,

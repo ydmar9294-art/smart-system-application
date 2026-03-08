@@ -270,6 +270,18 @@ const en = {
     recentSales: 'Recent Sales',
     addEmployee: 'Add Employee',
     addEmployeeFailed: 'Failed to create employee. Check active employee limit.',
+    discountAnalytics: 'Discount Analytics',
+    totalDiscounts: 'Total Discounts',
+    avgDiscountPct: 'Avg Discount %',
+    cashDiscounts: 'Cash Discounts',
+    creditDiscounts: 'Credit Discounts',
+    cashDiscountsHigher: 'Discounts are higher in cash sales',
+    creditDiscountsHigher: 'Discounts are higher in credit sales',
+    teamStats: 'Team Stats',
+    distributors: 'Distributors',
+    warehouseKeepers: 'Warehouse Keepers',
+    customerStats: 'Customer Stats',
+    debtors: 'Debtors',
   },
 
   // ==========================================

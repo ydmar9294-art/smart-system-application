@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import DeletionRequestsManager from '@/features/shared/components/DeletionRequestsManager';
 import { createPortal } from 'react-dom';
-// Employee limit is enforced by the backend RPC (add_employee_rpc).
-// Frontend shows clear error when backend rejects.
+import { useTranslation } from 'react-i18next';
 import { copyToClipboard } from '@/lib/clipboard';
 import { 
   Users,
@@ -36,6 +35,8 @@ import DistributorWarehouseKPIs from '@/features/analytics/components/Distributo
 type SalesManagerTabType = 'dashboard' | 'team' | 'sales' | 'kpi';
 
 const SalesManagerDashboard: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language === 'ar';
   const { 
     user, 
     sales = [], 
@@ -83,16 +84,8 @@ const SalesManagerDashboard: React.FC = () => {
     try { await logout(); } finally { setLoggingOut(false); }
   };
 
-  // Employee limit check — same validation as backend add_employee_rpc
   const isEmployeeLimitReached = useMemo(() => {
-    // Count active employees (WAREHOUSE_KEEPER + FIELD_AGENT) that this sales manager manages
-    const activeFieldEmployees = users.filter(u => 
-      u.role === UserRole.EMPLOYEE && u.isActive !== false &&
-      (u.employeeType === EmployeeType.FIELD_AGENT || u.employeeType === EmployeeType.WAREHOUSE_KEEPER)
-    );
-    // We don't have max_employees on the frontend directly, but the backend enforces it.
-    // We still add a pre-check: if the addDistributor RPC fails with limit error, we show it.
-    return false; // The real check happens server-side; we handle the error gracefully below.
+    return false;
   }, [users]);
 
   const [employeeLimitError, setEmployeeLimitError] = useState<string | null>(null);
@@ -109,10 +102,7 @@ const SalesManagerDashboard: React.FC = () => {
       setNewEmployeeCode(result.code);
       setNewEmployeeData(result.employee);
     } else {
-      // If no code returned, the RPC likely threw an error (including employee limit)
-      // The error is already shown via notification from DataContext.handleError
-      // But let's set a specific message for the modal UI
-      setEmployeeLimitError('فشل إنشاء الموظف. تحقق من عدم تجاوز الحد الأقصى للموظفين النشطين.');
+      setEmployeeLimitError(t('salesManager.addEmployeeFailed'));
     }
   };
 
@@ -137,21 +127,21 @@ const SalesManagerDashboard: React.FC = () => {
 
   const getEmployeeTypeLabel = (type: EmployeeType) => {
     switch (type) {
-      case EmployeeType.FIELD_AGENT: return 'موزع ميداني';
-      case EmployeeType.WAREHOUSE_KEEPER: return 'أمين مستودع';
+      case EmployeeType.FIELD_AGENT: return t('owner.fieldAgentType');
+      case EmployeeType.WAREHOUSE_KEEPER: return t('owner.warehouseKeeperType');
       default: return type;
     }
   };
 
   const tabs: { id: SalesManagerTabType; label: string; icon: React.ReactNode; color: string; bgColor: string }[] = [
-    { id: 'dashboard', label: 'الرئيسية', icon: <LayoutDashboard className="w-5 h-5" />, color: 'text-blue-600', bgColor: 'bg-blue-600' },
-    { id: 'team', label: 'الفريق', icon: <Users className="w-5 h-5" />, color: 'text-orange-500', bgColor: 'bg-orange-500' },
-    { id: 'kpi', label: 'الأداء', icon: <BarChart3 className="w-5 h-5" />, color: 'text-emerald-600', bgColor: 'bg-emerald-600' },
-    { id: 'sales', label: 'المبيعات', icon: <TrendingUp className="w-5 h-5" />, color: 'text-purple-600', bgColor: 'bg-purple-600' },
+    { id: 'dashboard', label: t('salesManager.tabs.home'), icon: <LayoutDashboard className="w-5 h-5" />, color: 'text-blue-600', bgColor: 'bg-blue-600' },
+    { id: 'team', label: t('salesManager.tabs.team'), icon: <Users className="w-5 h-5" />, color: 'text-orange-500', bgColor: 'bg-orange-500' },
+    { id: 'kpi', label: t('salesManager.tabs.kpi'), icon: <BarChart3 className="w-5 h-5" />, color: 'text-emerald-600', bgColor: 'bg-emerald-600' },
+    { id: 'sales', label: t('salesManager.tabs.sales'), icon: <TrendingUp className="w-5 h-5" />, color: 'text-purple-600', bgColor: 'bg-purple-600' },
   ];
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir={isRtl ? 'rtl' : 'ltr'}>
       <div className="max-w-lg mx-auto">
         {/* Top Header */}
         <div className="bg-background pt-4 px-4 relative">
@@ -160,9 +150,9 @@ const SalesManagerDashboard: React.FC = () => {
               <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
                 <TrendingUp className="w-4 h-4 text-white" />
               </div>
-              <div className="text-end">
-                <p className="font-bold text-foreground text-sm">{user?.name || 'مدير المبيعات'}</p>
-                <p className="text-[10px] text-muted-foreground">إدارة المبيعات</p>
+              <div className={isRtl ? 'text-end' : 'text-start'}>
+                <p className="font-bold text-foreground text-sm">{user?.name || t('roles.salesManager')}</p>
+                <p className="text-[10px] text-muted-foreground">{t('salesManager.dashboard')}</p>
               </div>
             </div>
           </div>
@@ -172,12 +162,12 @@ const SalesManagerDashboard: React.FC = () => {
               <AIAssistant className="!p-1.5 !rounded-lg" />
               <div className="w-px h-5 bg-border" />
               <a href="https://wa.me/963947744162" target="_blank" rel="noopener noreferrer"
-                className="p-1.5 bg-gradient-to-br from-green-400 to-green-600 rounded-lg text-white hover:shadow-md transition-all active:scale-95" title="فريق الدعم">
+                className="p-1.5 bg-gradient-to-br from-green-400 to-green-600 rounded-lg text-white hover:shadow-md transition-all active:scale-95" title={t('common.supportTeam')}>
                 <MessageCircle className="w-4 h-4" />
               </a>
             </div>
             <button onClick={handleLogout} disabled={loggingOut}
-              className="p-2.5 bg-card/80 backdrop-blur-sm rounded-full shadow-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all" title="تسجيل الخروج">
+              className="p-2.5 bg-card/80 backdrop-blur-sm rounded-full shadow-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all" title={t('common.logout')}>
               <LogOut className={`w-5 h-5 ${loggingOut ? 'animate-spin' : ''}`} />
             </button>
           </div>
@@ -210,13 +200,13 @@ const SalesManagerDashboard: React.FC = () => {
             <div className="space-y-4 animate-fade-in">
               <button onClick={() => setShowAddUserModal(true)} 
                 className="w-full py-4 bg-orange-500 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
-                <UserPlus className="w-5 h-5" /> إضافة موظف
+                <UserPlus className="w-5 h-5" /> {t('salesManager.addEmployee')}
               </button>
               
               {myPendingEmployees.length > 0 && (
                 <div className="space-y-2">
                   <h3 className="font-bold text-foreground text-sm flex items-center gap-2 px-2">
-                    <Clock className="w-4 h-4 text-orange-500" /> أكواد تفعيل معلقة
+                    <Clock className="w-4 h-4 text-orange-500" /> {t('owner.pendingCodes')}
                   </h3>
                   {myPendingEmployees.map(pe => (
                     <div key={pe.id} className="bg-orange-500/10 p-4 rounded-2xl border border-orange-500/20">
@@ -242,7 +232,7 @@ const SalesManagerDashboard: React.FC = () => {
               {myActivatedEmployees.length > 0 && (
                 <div className="space-y-2">
                   <h3 className="font-bold text-foreground text-sm flex items-center gap-2 px-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" /> أكواد مفعّلة
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" /> {t('owner.activatedCodes')}
                   </h3>
                   {myActivatedEmployees.map(pe => (
                     <div key={pe.id} className="bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20">
@@ -252,14 +242,14 @@ const SalesManagerDashboard: React.FC = () => {
                           <p className="text-xs text-muted-foreground">{pe.phone}</p>
                         </div>
                         <span className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-2 py-1 rounded-lg text-xs font-bold">
-                          مفعّل ✓
+                          {t('owner.activated')}
                         </span>
                       </div>
                       <div className="bg-card p-3 rounded-xl">
                         <span className="font-mono text-muted-foreground text-xs line-through">{pe.activation_code}</span>
                         {pe.activated_at && (
                           <p className="text-[10px] text-muted-foreground mt-1">
-                            تم التفعيل: {new Date(pe.activated_at).toLocaleDateString('ar-SY')}
+                            {t('owner.activatedAt')} {new Date(pe.activated_at).toLocaleDateString('ar-SY')}
                           </p>
                         )}
                       </div>
@@ -272,7 +262,7 @@ const SalesManagerDashboard: React.FC = () => {
                 {teamMembers.length === 0 && myPendingEmployees.length === 0 ? (
                   <div className="bg-card p-8 rounded-3xl text-center">
                     <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground font-medium">لا يوجد موظفين</p>
+                    <p className="text-muted-foreground font-medium">{t('owner.noEmployees')}</p>
                   </div>
                 ) : (
                   teamMembers.map(u => {
@@ -290,7 +280,7 @@ const SalesManagerDashboard: React.FC = () => {
                             </div>
                           </div>
                           <span className={`px-3 py-1 rounded-lg text-xs font-bold ${isActive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-destructive/10 text-destructive'}`}>
-                            {isActive ? 'نشط' : 'معطّل'}
+                            {isActive ? t('common.active') : t('common.inactive')}
                           </span>
                         </div>
                         <button
@@ -303,9 +293,9 @@ const SalesManagerDashboard: React.FC = () => {
                           {togglingEmployee === u.id ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           ) : isActive ? (
-                            <><UserX className="w-4 h-4" /> إيقاف الموظف</>
+                            <><UserX className="w-4 h-4" /> {t('owner.deactivateEmployee')}</>
                           ) : (
-                            <><UserCheck className="w-4 h-4" /> إعادة التنشيط</>
+                            <><UserCheck className="w-4 h-4" /> {t('owner.reactivateEmployee')}</>
                           )}
                         </button>
                       </div>
@@ -317,7 +307,7 @@ const SalesManagerDashboard: React.FC = () => {
               {/* Deletion Requests Section */}
               <div className="bg-card p-4 rounded-2xl shadow-sm">
                 <h3 className="font-bold text-foreground mb-3 text-sm flex items-center gap-2">
-                  <Trash2 className="w-4 h-4 text-destructive" /> طلبات حذف الحسابات
+                  <Trash2 className="w-4 h-4 text-destructive" /> {t('owner.deletionRequests')}
                 </h3>
                 <DeletionRequestsManager />
               </div>
@@ -333,18 +323,18 @@ const SalesManagerDashboard: React.FC = () => {
               <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-3xl text-white shadow-lg">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-xs opacity-80 mb-1">إجمالي المبيعات اليوم</p>
+                    <p className="text-xs opacity-80 mb-1">{t('salesManager.todaySalesTotal')}</p>
                     <p className="text-3xl font-black">{stats.todayRevenue.toLocaleString()} {CURRENCY}</p>
                   </div>
-                  <div className="text-left">
-                    <p className="text-xs opacity-80 mb-1">عدد الفواتير</p>
+                  <div className={isRtl ? 'text-left' : 'text-right'}>
+                    <p className="text-xs opacity-80 mb-1">{t('salesManager.invoiceCount')}</p>
                     <p className="text-2xl font-black">{stats.todaySalesCount}</p>
                   </div>
                 </div>
               </div>
 
               <div className="bg-card p-4 rounded-2xl shadow-sm">
-                <h3 className="font-bold text-foreground mb-3 text-sm">آخر المبيعات</h3>
+                <h3 className="font-bold text-foreground mb-3 text-sm">{t('salesManager.recentSales')}</h3>
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {sales.slice(0, 10).map(sale => (
                     <div key={sale.id} className="flex justify-between items-center bg-muted p-3 rounded-xl">
@@ -352,7 +342,7 @@ const SalesManagerDashboard: React.FC = () => {
                         <p className="font-bold text-foreground text-sm">{sale.customerName}</p>
                         <p className="text-xs text-muted-foreground">{new Date(sale.timestamp).toLocaleString('ar-EG')}</p>
                       </div>
-                      <div className="text-left">
+                      <div className={isRtl ? 'text-left' : 'text-right'}>
                         <p className="font-black text-emerald-600 dark:text-emerald-400">{sale.grandTotal.toLocaleString()}</p>
                         <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
                       </div>
@@ -366,11 +356,11 @@ const SalesManagerDashboard: React.FC = () => {
 
         {/* Add Employee Modal */}
         {showAddUserModal && createPortal(
-          <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir="rtl">
+          <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir={isRtl ? 'rtl' : 'ltr'}>
             <div className="bg-card rounded-2xl w-full max-w-md p-6 space-y-4 animate-zoom-in shadow-2xl border border-border max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold text-foreground">
-                  {newEmployeeCode ? 'تم إنشاء كود التفعيل' : 'إضافة موظف جديد'}
+                  {newEmployeeCode ? t('owner.activationCodeCreated') : t('owner.addEmployee')}
                 </h2>
                 <button onClick={closeEmployeeModal} className="p-2 bg-muted rounded-full hover:bg-accent">
                   <X className="w-5 h-5 text-muted-foreground" />
@@ -387,35 +377,35 @@ const SalesManagerDashboard: React.FC = () => {
                 <div className="space-y-4">
                   <div className="bg-emerald-500/10 p-6 rounded-2xl border border-emerald-500/20 text-center">
                     <CheckCircle2 className="w-12 h-12 mx-auto text-emerald-500 mb-3" />
-                    <p className="text-sm text-muted-foreground mb-2">كود تفعيل الموظف:</p>
+                    <p className="text-sm text-muted-foreground mb-2">{t('owner.employeeActivationCode')}</p>
                     <p className="text-2xl font-mono font-bold text-blue-600 dark:text-blue-400 tracking-widest">{newEmployeeCode}</p>
                   </div>
                   
                   {newEmployeeData && (
                     <div className="bg-muted p-4 rounded-xl space-y-2 text-sm">
-                      <p><span className="text-muted-foreground">الاسم:</span> <span className="font-bold text-foreground">{newEmployeeData.name}</span></p>
-                      <p><span className="text-muted-foreground">الهاتف:</span> <span className="font-bold text-foreground">{newEmployeeData.phone}</span></p>
-                      <p><span className="text-muted-foreground">النوع:</span> <span className="font-bold text-foreground">{getEmployeeTypeLabel(newEmployeeData.employee_type)}</span></p>
+                      <p><span className="text-muted-foreground">{t('common.name')}:</span> <span className="font-bold text-foreground">{newEmployeeData.name}</span></p>
+                      <p><span className="text-muted-foreground">{t('common.phone')}:</span> <span className="font-bold text-foreground">{newEmployeeData.phone}</span></p>
+                      <p><span className="text-muted-foreground">{t('owner.employeeType')}:</span> <span className="font-bold text-foreground">{getEmployeeTypeLabel(newEmployeeData.employee_type)}</span></p>
                     </div>
                   )}
                   
                   <button onClick={async () => { await copyToClipboard(newEmployeeCode); }}
                     className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold flex items-center justify-center gap-2">
-                    <Copy className="w-5 h-5" /> نسخ الكود
+                    <Copy className="w-5 h-5" /> {t('owner.copyCode')}
                   </button>
-                  <button onClick={closeEmployeeModal} className="w-full py-3 bg-muted text-muted-foreground rounded-xl font-bold">إغلاق</button>
+                  <button onClick={closeEmployeeModal} className="w-full py-3 bg-muted text-muted-foreground rounded-xl font-bold">{t('common.close')}</button>
                 </div>
               ) : (
                 <form onSubmit={handleAddEmployee} className="space-y-4">
-                  <input name="name" required placeholder="اسم الموظف" 
+                  <input name="name" required placeholder={t('owner.employeeName')} 
                     className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-muted-foreground" />
-                  <input name="phone" type="tel" inputMode="numeric" pattern="[0-9]*" required placeholder="رقم الهاتف" 
+                  <input name="phone" type="tel" inputMode="numeric" pattern="[0-9]*" required placeholder={t('owner.employeePhone')} 
                     className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-muted-foreground" />
                   <select name="type" className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-orange-500">
-                    <option value={EmployeeType.FIELD_AGENT}>موزع ميداني</option>
-                    <option value={EmployeeType.WAREHOUSE_KEEPER}>أمين مستودع</option>
+                    <option value={EmployeeType.FIELD_AGENT}>{t('owner.fieldAgentType')}</option>
+                    <option value={EmployeeType.WAREHOUSE_KEEPER}>{t('owner.warehouseKeeperType')}</option>
                   </select>
-                  <button type="submit" className="w-full py-3 bg-orange-500 text-white rounded-xl font-bold">توليد كود التفعيل</button>
+                  <button type="submit" className="w-full py-3 bg-orange-500 text-white rounded-xl font-bold">{t('owner.generateCode')}</button>
                 </form>
               )}
             </div>
@@ -431,6 +421,7 @@ const SalesManagerDashboard: React.FC = () => {
 const SalesManagerDashboardContent: React.FC<{
   stats: any; customers: any[]; distributors: any[]; warehouseKeepers: any[]; sales: any[];
 }> = ({ stats, customers, distributors, warehouseKeepers, sales }) => {
+  const { t } = useTranslation();
   const [discountStats, setDiscountStats] = React.useState({ total: 0, avgPct: 0, cashDisc: 0, creditDisc: 0 });
 
   React.useEffect(() => {
@@ -460,7 +451,7 @@ const SalesManagerDashboardContent: React.FC<{
               <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
-          <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">مبيعات اليوم</p>
+          <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">{t('owner.todaySales')}</p>
           <p className="text-xl font-black text-foreground">{stats.todayRevenue.toLocaleString()}</p>
           <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
         </div>
@@ -471,79 +462,79 @@ const SalesManagerDashboardContent: React.FC<{
               <Wallet className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             </div>
           </div>
-          <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">التحصيلات</p>
+          <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">{t('accountant.tabs.collections')}</p>
           <p className="text-xl font-black text-foreground">{stats.totalCollections.toLocaleString()}</p>
           <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
         </div>
       </div>
 
-      {/* Discount Analytics for Sales Manager */}
+      {/* Discount Analytics */}
       <div className="bg-card p-4 rounded-2xl shadow-sm">
         <h3 className="font-bold text-foreground mb-3 text-sm flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-amber-600 dark:text-amber-400" /> تحليلات الخصومات
+          <TrendingUp className="w-4 h-4 text-amber-600 dark:text-amber-400" /> {t('salesManager.discountAnalytics')}
         </h3>
         <div className="grid grid-cols-2 gap-2 mb-2">
           <div className="bg-amber-500/10 p-3 rounded-xl text-center">
             <p className="text-lg font-black text-amber-600 dark:text-amber-400">{discountStats.total.toLocaleString()}</p>
-            <p className="text-[8px] text-muted-foreground font-bold">إجمالي الخصومات</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('salesManager.totalDiscounts')}</p>
           </div>
           <div className="bg-purple-500/10 p-3 rounded-xl text-center">
             <p className="text-lg font-black text-purple-600 dark:text-purple-400">{discountStats.avgPct.toFixed(1)}%</p>
-            <p className="text-[8px] text-muted-foreground font-bold">متوسط نسبة الخصم</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('salesManager.avgDiscountPct')}</p>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div className="bg-emerald-500/10 p-2.5 rounded-xl text-center">
             <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">{discountStats.cashDisc.toLocaleString()}</p>
-            <p className="text-[8px] text-muted-foreground font-bold">خصومات نقدي</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('salesManager.cashDiscounts')}</p>
           </div>
           <div className="bg-blue-500/10 p-2.5 rounded-xl text-center">
             <p className="text-sm font-black text-blue-600 dark:text-blue-400">{discountStats.creditDisc.toLocaleString()}</p>
-            <p className="text-[8px] text-muted-foreground font-bold">خصومات آجل</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('salesManager.creditDiscounts')}</p>
           </div>
         </div>
         {discountStats.cashDisc !== discountStats.creditDisc && (
           <div className="mt-2 bg-primary/5 p-2.5 rounded-xl">
             <p className="text-[10px] text-muted-foreground">
               💡 {discountStats.cashDisc > discountStats.creditDisc 
-                ? 'الخصومات أعلى في المبيعات النقدية' 
-                : 'الخصومات أعلى في المبيعات الآجلة'}
+                ? t('salesManager.cashDiscountsHigher') 
+                : t('salesManager.creditDiscountsHigher')}
             </p>
           </div>
         )}
       </div>
 
       <div className="bg-card p-4 rounded-2xl shadow-sm">
-        <h3 className="font-bold text-foreground mb-3 text-sm">إحصائيات الفريق</h3>
+        <h3 className="font-bold text-foreground mb-3 text-sm">{t('salesManager.teamStats')}</h3>
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-blue-500/10 p-3 rounded-xl text-center">
             <Users className="w-5 h-5 mx-auto text-blue-600 dark:text-blue-400 mb-1" />
             <p className="text-lg font-black text-foreground">{distributors.length}</p>
-            <p className="text-[8px] text-muted-foreground font-bold">الموزعين</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('salesManager.distributors')}</p>
           </div>
           <div className="bg-purple-500/10 p-3 rounded-xl text-center">
             <WarehouseIcon className="w-5 h-5 mx-auto text-purple-600 dark:text-purple-400 mb-1" />
             <p className="text-lg font-black text-foreground">{warehouseKeepers.length}</p>
-            <p className="text-[8px] text-muted-foreground font-bold">أمناء المستودع</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('salesManager.warehouseKeepers')}</p>
           </div>
           <div className="bg-orange-500/10 p-3 rounded-xl text-center">
             <FileText className="w-5 h-5 mx-auto text-orange-600 dark:text-orange-400 mb-1" />
             <p className="text-lg font-black text-foreground">{stats.todaySalesCount}</p>
-            <p className="text-[8px] text-muted-foreground font-bold">فواتير اليوم</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('salesManager.invoiceCount')}</p>
           </div>
         </div>
       </div>
 
       <div className="bg-card p-4 rounded-2xl shadow-sm">
-        <h3 className="font-bold text-foreground mb-3 text-sm">إحصائيات الزبائن</h3>
+        <h3 className="font-bold text-foreground mb-3 text-sm">{t('salesManager.customerStats')}</h3>
         <div className="grid grid-cols-2 gap-2">
           <div className="bg-emerald-500/10 p-3 rounded-xl text-center">
             <p className="text-lg font-black text-foreground">{customers.length}</p>
-            <p className="text-[8px] text-muted-foreground font-bold">إجمالي الزبائن</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('owner.totalCustomers')}</p>
           </div>
           <div className="bg-red-500/10 p-3 rounded-xl text-center">
             <p className="text-lg font-black text-foreground">{customers.filter(c => c.balance > 0).length}</p>
-            <p className="text-[8px] text-muted-foreground font-bold">ذمم مدينة</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('salesManager.debtors')}</p>
           </div>
         </div>
       </div>

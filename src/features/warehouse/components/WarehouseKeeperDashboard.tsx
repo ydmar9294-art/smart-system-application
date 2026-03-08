@@ -1,4 +1,5 @@
 import React, { useState, useMemo, lazy, Suspense } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   Package, 
   LogOut,
@@ -32,6 +33,8 @@ const StockMovementsTab = lazy(() => import('./StockMovementsTab'));
 type WarehouseTabType = 'dashboard' | 'inventory' | 'deliveries' | 'purchases' | 'purchase-returns' | 'movements' | 'prices';
 
 const WarehouseKeeperDashboard: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language === 'ar';
   const { 
     user, 
     products = [],
@@ -78,20 +81,20 @@ const WarehouseKeeperDashboard: React.FC = () => {
   const filteredPriceProducts = products.filter(p => !p.isDeleted && p.name.includes(priceSearch));
 
   const tabs: { id: WarehouseTabType; label: string; icon: React.ReactNode; color: string; bgColor: string }[] = [
-    { id: 'dashboard', label: 'الرئيسية', icon: <LayoutDashboard className="w-5 h-5" />, color: 'text-purple-600', bgColor: 'bg-purple-600' },
-    { id: 'inventory', label: 'المخزون', icon: <Package className="w-5 h-5" />, color: 'text-emerald-600', bgColor: 'bg-emerald-600' },
-    { id: 'prices', label: 'الأسعار', icon: <DollarSign className="w-5 h-5" />, color: 'text-amber-500', bgColor: 'bg-amber-500' },
-    { id: 'deliveries', label: 'التسليم', icon: <Truck className="w-5 h-5" />, color: 'text-blue-600', bgColor: 'bg-blue-600' },
-    { id: 'movements', label: 'الحركات', icon: <ArrowUpDown className="w-5 h-5" />, color: 'text-orange-500', bgColor: 'bg-orange-500' },
+    { id: 'dashboard', label: t('warehouse.tabs.home'), icon: <LayoutDashboard className="w-5 h-5" />, color: 'text-purple-600', bgColor: 'bg-purple-600' },
+    { id: 'inventory', label: t('warehouse.tabs.inventory'), icon: <Package className="w-5 h-5" />, color: 'text-emerald-600', bgColor: 'bg-emerald-600' },
+    { id: 'prices', label: t('warehouse.tabs.prices'), icon: <DollarSign className="w-5 h-5" />, color: 'text-amber-500', bgColor: 'bg-amber-500' },
+    { id: 'deliveries', label: t('warehouse.tabs.deliveries'), icon: <Truck className="w-5 h-5" />, color: 'text-blue-600', bgColor: 'bg-blue-600' },
+    { id: 'movements', label: t('warehouse.tabs.movements'), icon: <ArrowUpDown className="w-5 h-5" />, color: 'text-orange-500', bgColor: 'bg-orange-500' },
   ];
 
   const secondaryTabs: { id: WarehouseTabType; label: string; icon: React.ReactNode }[] = [
-    { id: 'purchases', label: 'المشتريات', icon: <ShoppingCart className="w-4 h-4" /> },
-    { id: 'purchase-returns', label: 'المرتجعات', icon: <RotateCcw className="w-4 h-4" /> },
+    { id: 'purchases', label: t('warehouse.tabs.purchases'), icon: <ShoppingCart className="w-4 h-4" /> },
+    { id: 'purchase-returns', label: t('warehouse.tabs.returns'), icon: <RotateCcw className="w-4 h-4" /> },
   ];
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir={isRtl ? 'rtl' : 'ltr'}>
       <div className="max-w-lg mx-auto">
         {/* Top Header */}
         <div className="bg-background pt-4 px-4 relative">
@@ -100,9 +103,9 @@ const WarehouseKeeperDashboard: React.FC = () => {
               <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
                 <Package className="w-4 h-4 text-white" />
               </div>
-              <div className="text-end">
-                <p className="font-bold text-foreground text-sm">{user?.name || 'أمين المستودع'}</p>
-                <p className="text-[10px] text-muted-foreground">إدارة المخزون</p>
+              <div className={isRtl ? 'text-end' : 'text-start'}>
+                <p className="font-bold text-foreground text-sm">{user?.name || t('roles.warehouseKeeper')}</p>
+                <p className="text-[10px] text-muted-foreground">{t('warehouse.dashboard')}</p>
               </div>
             </div>
           </div>
@@ -112,12 +115,12 @@ const WarehouseKeeperDashboard: React.FC = () => {
               <AIAssistant className="!p-1.5 !rounded-lg" />
               <div className="w-px h-5 bg-border" />
               <a href={SUPPORT_WHATSAPP_URL} target="_blank" rel="noopener noreferrer"
-                className="p-1.5 bg-gradient-to-br from-green-400 to-green-600 rounded-lg text-white hover:shadow-md transition-all active:scale-95" title="فريق الدعم">
+                className="p-1.5 bg-gradient-to-br from-green-400 to-green-600 rounded-lg text-white hover:shadow-md transition-all active:scale-95" title={t('common.supportTeam')}>
                 <MessageCircle className="w-4 h-4" />
               </a>
             </div>
             <button onClick={handleLogout} disabled={loggingOut}
-              className="p-2.5 bg-card/80 backdrop-blur-sm rounded-full shadow-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all" title="تسجيل الخروج">
+              className="p-2.5 bg-card/80 backdrop-blur-sm rounded-full shadow-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all" title={t('common.logout')}>
               <LogOut className={`w-5 h-5 ${loggingOut ? 'animate-spin' : ''}`} />
             </button>
           </div>
@@ -168,9 +171,9 @@ const WarehouseKeeperDashboard: React.FC = () => {
                       <Package className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                     </div>
                   </div>
-                  <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">إجمالي المنتجات</p>
+                  <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">{t('warehouse.totalProducts')}</p>
                   <p className="text-xl font-black text-foreground">{stats.totalProducts}</p>
-                  <p className="text-[10px] text-muted-foreground">منتج</p>
+                  <p className="text-[10px] text-muted-foreground">{t('common.product')}</p>
                 </div>
                 
                 <div className="bg-card p-4 rounded-2xl shadow-sm">
@@ -179,24 +182,24 @@ const WarehouseKeeperDashboard: React.FC = () => {
                       <ArrowDownCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                     </div>
                   </div>
-                  <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">إجمالي المخزون</p>
+                  <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">{t('warehouse.totalStock')}</p>
                   <p className="text-xl font-black text-foreground">{stats.totalStock.toLocaleString()}</p>
-                  <p className="text-[10px] text-muted-foreground">وحدة</p>
+                  <p className="text-[10px] text-muted-foreground">{t('warehouse.unit')}</p>
                 </div>
               </div>
 
               <div className="bg-card p-4 rounded-2xl shadow-sm">
-                <h3 className="font-bold text-foreground mb-3 text-sm">نشاط اليوم</h3>
+                <h3 className="font-bold text-foreground mb-3 text-sm">{t('warehouse.todayActivity')}</h3>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="bg-blue-500/10 p-3 rounded-xl text-center">
                     <Truck className="w-5 h-5 mx-auto text-blue-600 dark:text-blue-400 mb-1" />
                     <p className="text-lg font-black text-foreground">{stats.todayDeliveries}</p>
-                    <p className="text-[8px] text-muted-foreground font-bold">تسليمات اليوم</p>
+                    <p className="text-[8px] text-muted-foreground font-bold">{t('warehouse.todayDeliveries')}</p>
                   </div>
                   <div className="bg-orange-500/10 p-3 rounded-xl text-center">
                     <ShoppingCart className="w-5 h-5 mx-auto text-orange-600 dark:text-orange-400 mb-1" />
                     <p className="text-lg font-black text-foreground">{stats.todayPurchases}</p>
-                    <p className="text-[8px] text-muted-foreground font-bold">مشتريات اليوم</p>
+                    <p className="text-[8px] text-muted-foreground font-bold">{t('warehouse.todayPurchases')}</p>
                   </div>
                 </div>
               </div>
@@ -205,7 +208,7 @@ const WarehouseKeeperDashboard: React.FC = () => {
                 <div className="bg-card p-4 rounded-2xl shadow-sm border-r-4 border-red-500">
                   <h3 className="font-bold text-foreground mb-3 text-sm flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 text-red-500" />
-                    منتجات قاربت على النفاد
+                    {t('warehouse.lowStockProducts')}
                   </h3>
                   <div className="space-y-2 max-h-32 overflow-y-auto">
                     {products.filter(p => p.stock <= p.minStock && !p.isDeleted).slice(0, 5).map(p => (
@@ -224,7 +227,7 @@ const WarehouseKeeperDashboard: React.FC = () => {
               <div className="bg-card p-4 rounded-2xl shadow-sm">
                 <h3 className="font-bold text-foreground mb-3 text-sm flex items-center gap-2">
                   <ArrowUpCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  آخر التسليمات
+                  {t('warehouse.recentDeliveries')}
                 </h3>
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {deliveries.slice(0, 5).map(d => (
@@ -236,12 +239,12 @@ const WarehouseKeeperDashboard: React.FC = () => {
                       <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
                         d.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
                       }`}>
-                        {d.status === 'completed' ? 'مكتمل' : 'معلق'}
+                        {d.status === 'completed' ? t('common.completed') : t('common.pending')}
                       </span>
                     </div>
                   ))}
                   {deliveries.length === 0 && (
-                    <p className="text-center text-muted-foreground py-4">لا توجد تسليمات</p>
+                    <p className="text-center text-muted-foreground py-4">{t('warehouse.noDeliveries')}</p>
                   )}
                 </div>
               </div>
@@ -256,11 +259,11 @@ const WarehouseKeeperDashboard: React.FC = () => {
           {activeTab === 'prices' && (
             <div className="space-y-3 animate-fade-in">
               <div className="relative">
-                <Search size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Search size={16} className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 text-muted-foreground`} />
                 <input 
                   value={priceSearch} onChange={(e) => setPriceSearch(e.target.value)} 
-                  placeholder="بحث عن منتج..." 
-                  className="w-full px-4 py-3 pr-10 bg-card text-foreground rounded-2xl border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground shadow-sm" 
+                  placeholder={t('warehouse.searchProduct')} 
+                  className={`w-full px-4 py-3 ${isRtl ? 'pr-10' : 'pl-10'} bg-card text-foreground rounded-2xl border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground shadow-sm`} 
                 />
               </div>
               
@@ -273,20 +276,20 @@ const WarehouseKeeperDashboard: React.FC = () => {
                     </div>
                     <button onClick={() => setEditingProduct(p)}
                       className="px-3 py-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl text-xs font-bold flex items-center gap-1">
-                      <DollarSign size={12} /> تعديل
+                      <DollarSign size={12} /> {t('common.edit')}
                     </button>
                   </div>
                   <div className="grid grid-cols-3 gap-2 mt-2">
                     <div className="bg-muted p-2 rounded-xl text-center">
-                      <p className="text-[8px] text-muted-foreground font-bold">التكلفة</p>
+                      <p className="text-[8px] text-muted-foreground font-bold">{t('warehouse.cost')}</p>
                       <p className="text-sm font-black text-foreground">{p.costPrice.toLocaleString()}</p>
                     </div>
                     <div className="bg-muted p-2 rounded-xl text-center">
-                      <p className="text-[8px] text-muted-foreground font-bold">البيع</p>
+                      <p className="text-[8px] text-muted-foreground font-bold">{t('warehouse.sale')}</p>
                       <p className="text-sm font-black text-foreground">{p.basePrice.toLocaleString()}</p>
                     </div>
                     <div className="bg-muted p-2 rounded-xl text-center">
-                      <p className="text-[8px] text-muted-foreground font-bold">المستهلك</p>
+                      <p className="text-[8px] text-muted-foreground font-bold">{t('warehouse.consumer')}</p>
                       <p className="text-sm font-black text-foreground">{(p.consumerPrice || 0).toLocaleString()}</p>
                     </div>
                   </div>
@@ -318,7 +321,7 @@ const WarehouseKeeperDashboard: React.FC = () => {
       <FullScreenModal
         isOpen={!!editingProduct}
         onClose={() => setEditingProduct(null)}
-        title={`تعديل أسعار: ${editingProduct?.name || ''}`}
+        title={`${t('warehouse.editPrices')} ${editingProduct?.name || ''}`}
         icon={<DollarSign size={24} />}
         headerColor="warning"
         footer={
@@ -326,33 +329,30 @@ const WarehouseKeeperDashboard: React.FC = () => {
             const form = document.getElementById('price-edit-form') as HTMLFormElement;
             if (form) form.requestSubmit();
           }} className="w-full bg-amber-500 text-white font-black py-5 rounded-2xl shadow-lg active:scale-[0.98] transition-all text-lg">
-            حفظ الأسعار
+            {t('warehouse.savePrices')}
           </button>
         }
       >
         {editingProduct && (
           <form id="price-edit-form" onSubmit={handlePriceSubmit} className="space-y-5">
             <div className="bg-muted p-4 rounded-2xl">
-              <p className="text-xs text-muted-foreground mb-1">المنتج</p>
+              <p className="text-xs text-muted-foreground mb-1">{t('common.product')}</p>
               <p className="font-black text-foreground text-lg">{editingProduct.name}</p>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-black text-muted-foreground uppercase">سعر التكلفة</label>
+              <label className="text-xs font-black text-muted-foreground uppercase">{t('warehouse.costPrice')}</label>
               <input name="costPrice" type="number" step="0.01" defaultValue={editingProduct.costPrice}
                 className="w-full px-4 py-4 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-amber-500 text-center text-xl font-black" />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-black text-muted-foreground uppercase">سعر البيع</label>
+              <label className="text-xs font-black text-muted-foreground uppercase">{t('warehouse.salePrice')}</label>
               <input name="basePrice" type="number" step="0.01" defaultValue={editingProduct.basePrice}
                 className="w-full px-4 py-4 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-amber-500 text-center text-xl font-black" />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-black text-muted-foreground uppercase">سعر المستهلك</label>
+              <label className="text-xs font-black text-muted-foreground uppercase">{t('warehouse.consumerPrice')}</label>
               <input name="consumerPrice" type="number" step="0.01" defaultValue={editingProduct.consumerPrice ?? 0}
                 className="w-full px-4 py-4 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-amber-500 text-center text-xl font-black" />
-            </div>
-            <div className="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/20">
-              <p className="text-xs text-amber-600 dark:text-amber-400 font-bold">⚠️ جميع التغييرات في الأسعار يتم تسجيلها تلقائياً في سجل التدقيق</p>
             </div>
           </form>
         )}
