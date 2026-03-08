@@ -39,12 +39,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       <div className="glass-bar-bottom" aria-hidden="true" />
 
       <PullToRefresh onRefresh={handlePullRefresh}>
-        <div
-          className="native-app-shell"
-          dir={isRTL ? 'rtl' : 'ltr'}
-        >
+        <div className="native-app-shell" dir={isRTL ? 'rtl' : 'ltr'}>
           <main className="flex-1 relative">
-            <div className="native-content-area">{children}</div>
+            {children}
           </main>
         </div>
       </PullToRefresh>

@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Sun, Moon, Languages, LogOut, Shield, FileText, Trash2, 
-  ChevronLeft, ChevronRight, Palette, Globe, User, Scale,
-  ArrowRight, Loader2
+  Sun, Moon, LogOut, Shield, FileText, Trash2, 
+  ChevronLeft, ChevronRight, Loader2, Globe, Palette
 } from 'lucide-react';
 import { usePageTheme } from '@/hooks/usePageTheme';
 import { useApp } from '@/store/AppContext';
@@ -29,26 +28,23 @@ const SettingsPage: React.FC = () => {
 
   return (
     <motion.div 
-      className="pb-8 space-y-5"
-      initial={{ opacity: 0, y: 12 }}
+      className="pb-8 space-y-6"
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
     >
       {/* ── Appearance ── */}
-      <SettingsSection title={t('settings.appearance')}>
-        <button
-          onClick={toggleTheme}
-          className="settings-row"
-        >
+      <SettingsSection title={t('settings.appearance')} icon={<Palette className="w-3.5 h-3.5" />} delay={0}>
+        <button onClick={toggleTheme} className="settings-row group">
           <div className="flex items-center gap-3">
             <div className="settings-icon-box bg-primary/10">
-              {isDark ? <Moon className="w-4 h-4 text-primary" /> : <Sun className="w-4 h-4 text-primary" />}
+              {isDark ? <Moon className="w-4 h-4 text-primary" strokeWidth={1.5} /> : <Sun className="w-4 h-4 text-primary" strokeWidth={1.5} />}
             </div>
             <div className="text-start">
-              <p className="text-sm font-bold text-foreground">
+              <p className="text-[13px] font-bold text-foreground">
                 {isDark ? t('theme.dark') : t('theme.light')}
               </p>
-              <p className="text-[11px] text-muted-foreground">{t('settings.themeDesc')}</p>
+              <p className="text-[10px] text-muted-foreground leading-tight">{t('settings.themeDesc')}</p>
             </div>
           </div>
           <div className={`settings-toggle ${isDark ? 'settings-toggle-on' : 'settings-toggle-off'}`}>
@@ -58,25 +54,27 @@ const SettingsPage: React.FC = () => {
       </SettingsSection>
 
       {/* ── Language ── */}
-      <SettingsSection title={t('settings.language')}>
-        <LanguageSelector />
+      <SettingsSection title={t('settings.language')} icon={<Globe className="w-3.5 h-3.5" />} delay={1}>
+        <div className="px-4 py-3">
+          <LanguageSelector />
+        </div>
       </SettingsSection>
 
       {/* ── Account ── */}
-      <SettingsSection title={t('settings.account')}>
+      <SettingsSection title={t('settings.account')} delay={2}>
         <button
           onClick={handleLogout}
           disabled={loggingOut}
-          className="settings-row text-destructive"
+          className="settings-row"
         >
           <div className="flex items-center gap-3">
             <div className="settings-icon-box bg-destructive/10">
               {loggingOut 
-                ? <Loader2 className="w-4 h-4 text-destructive animate-spin" />
-                : <LogOut className="w-4 h-4 text-destructive" />
+                ? <Loader2 className="w-4 h-4 text-destructive animate-spin" strokeWidth={1.5} />
+                : <LogOut className="w-4 h-4 text-destructive" strokeWidth={1.5} />
               }
             </div>
-            <p className="text-sm font-bold">
+            <p className="text-[13px] font-bold text-destructive">
               {loggingOut ? t('settings.loggingOut') : t('common.logout')}
             </p>
           </div>
@@ -84,51 +82,64 @@ const SettingsPage: React.FC = () => {
       </SettingsSection>
 
       {/* ── Legal ── */}
-      <SettingsSection title={t('settings.legal')}>
-        <button
-          onClick={() => navigate('/privacy-policy')}
-          className="settings-row"
-        >
+      <SettingsSection title={t('settings.legal')} delay={3}>
+        <button onClick={() => navigate('/privacy-policy')} className="settings-row">
           <div className="flex items-center gap-3">
             <div className="settings-icon-box bg-primary/10">
-              <Shield className="w-4 h-4 text-primary" />
+              <Shield className="w-4 h-4 text-primary" strokeWidth={1.5} />
             </div>
-            <p className="text-sm font-bold text-foreground">{t('common.privacyPolicy')}</p>
+            <p className="text-[13px] font-bold text-foreground">{t('common.privacyPolicy')}</p>
           </div>
-          <Chevron className="w-4 h-4 text-muted-foreground" />
+          <Chevron className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
         </button>
-        <div className="h-px bg-border mx-3" />
-        <button
-          onClick={() => navigate('/terms')}
-          className="settings-row"
-        >
+        <div className="settings-divider" />
+        <button onClick={() => navigate('/terms')} className="settings-row">
           <div className="flex items-center gap-3">
             <div className="settings-icon-box bg-primary/10">
-              <FileText className="w-4 h-4 text-primary" />
+              <FileText className="w-4 h-4 text-primary" strokeWidth={1.5} />
             </div>
-            <p className="text-sm font-bold text-foreground">{t('common.termsOfService')}</p>
+            <p className="text-[13px] font-bold text-foreground">{t('common.termsOfService')}</p>
           </div>
-          <Chevron className="w-4 h-4 text-muted-foreground" />
+          <Chevron className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
         </button>
       </SettingsSection>
 
       {/* ── Data & Privacy ── */}
-      <SettingsSection title={t('settings.dataPrivacy')}>
-        <div className="px-3 py-2">
-          <AccountDeletionButton />
+      <SettingsSection title={t('settings.dataPrivacy')} delay={4}>
+        <div className="settings-row">
+          <div className="flex items-center gap-3">
+            <div className="settings-icon-box bg-destructive/10">
+              <Trash2 className="w-4 h-4 text-destructive" strokeWidth={1.5} />
+            </div>
+            <div className="flex-1">
+              <AccountDeletionButton />
+            </div>
+          </div>
         </div>
       </SettingsSection>
     </motion.div>
   );
 };
 
-const SettingsSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-  <div>
-    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider px-1 mb-2">{title}</p>
-    <div className="native-glass-card rounded-2xl overflow-hidden divide-y-0">
+const SettingsSection: React.FC<{ 
+  title: string; 
+  children: React.ReactNode; 
+  icon?: React.ReactNode;
+  delay?: number;
+}> = ({ title, children, icon, delay = 0 }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.3, delay: delay * 0.06, ease: [0.4, 0, 0.2, 1] }}
+  >
+    <div className="flex items-center gap-1.5 px-1 mb-2">
+      {icon && <span className="text-muted-foreground">{icon}</span>}
+      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">{title}</p>
+    </div>
+    <div className="native-glass-card !rounded-2xl overflow-hidden !p-0">
       {children}
     </div>
-  </div>
+  </motion.div>
 );
 
 export default SettingsPage;
