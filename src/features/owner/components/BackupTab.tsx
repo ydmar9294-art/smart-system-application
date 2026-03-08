@@ -666,6 +666,9 @@ const SummaryCard: React.FC<{ icon: React.ReactNode; label: string; value: numbe
     emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
     amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
     purple: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
+    rose: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
+    orange: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+    red: 'bg-red-500/10 text-red-600 dark:text-red-400',
   };
   return (
     <div className="bg-card p-3 rounded-xl border shadow-sm flex items-center gap-3">
