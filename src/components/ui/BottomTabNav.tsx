@@ -21,7 +21,7 @@ export const BottomTabNav: React.FC<BottomTabNavProps> = ({ tabs, activeTab, onT
 
   const handleTab = useCallback((tabId: string) => {
     if (tabId !== activeTab) {
-      impact('light');
+      impact(ImpactStyle.Light);
       onTabChange(tabId);
     }
   }, [activeTab, onTabChange, impact]);
