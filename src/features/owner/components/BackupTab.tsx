@@ -116,15 +116,14 @@ const BackupTab: React.FC = () => {
 
       setProgress('جاري تحميل أصناف الفواتير...');
       const saleIds = (salesRaw || []).map(s => s.id);
-      let allItems: BackupInvoiceItem & { sale_id: string }[] = [];
-      // Fetch in batches of 100 to avoid query limits
+      let allItems: any[] = [];
       for (let i = 0; i < saleIds.length; i += 100) {
         const batch = saleIds.slice(i, i + 100);
         const { data: itemsBatch } = await supabase
           .from('sale_items')
           .select('sale_id, product_name, quantity, unit_price, total_price')
           .in('sale_id', batch);
-        if (itemsBatch) allItems = [...allItems, ...itemsBatch as any];
+        if (itemsBatch) allItems = [...allItems, ...itemsBatch];
       }
 
       setProgress('جاري تحميل التحصيلات...');
