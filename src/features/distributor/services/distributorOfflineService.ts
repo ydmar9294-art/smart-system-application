@@ -770,6 +770,16 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 
 async function executeAction(action: OfflineAction): Promise<ExecuteResult> {
   try {
+    // Verify HMAC integrity before processing
+    if (action._signature && isEncryptionAvailable()) {
+      const signableData = JSON.stringify({ type: action.type, payload: action.payload, idempotencyKey: action.idempotencyKey });
+      const isValid = await verifyHMAC(signableData, action._signature);
+      if (!isValid) {
+        logger.error(`[Sync] HMAC verification failed for action ${action.id} — possible tampering`, 'DistributorOffline');
+        return 'failed';
+      }
+    }
+
     return await withTimeout(executeActionInner(action), SYNC_TIMEOUT_MS, action.type);
   } catch (err: any) {
     logger.error(`[Sync] Action ${action.id} (${action.type}) failed: ${err.message}`, 'DistributorOffline');
