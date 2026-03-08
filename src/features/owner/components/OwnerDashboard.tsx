@@ -174,6 +174,11 @@ const OwnerDashboard: React.FC = () => {
       case 'subscription': return <SubscriptionTab />;
       case 'legal': return <><LegalInfoTab /><OrgDeletionRequest /></>;
       case 'backup': return <BackupTab />;
+      case 'app-settings': return (
+        <Suspense fallback={<div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}>
+          <SettingsPage />
+        </Suspense>
+      );
       default: return null;
     }
   };
