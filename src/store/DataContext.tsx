@@ -402,6 +402,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Section 4: Optimistic update
       const prodKey = queryKeys.products(orgId);
       const previousProducts = queryClient.getQueryData<Product[]>(prodKey);
+      const oldProduct = previousProducts?.find(p => p.id === product.id);
       queryClient.setQueryData<Product[]>(prodKey, old =>
         (old || []).map(p => p.id === product.id ? product : p)
       );
@@ -415,6 +416,35 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           unit: product.unit
         }).eq('id', product.id);
         if (error) throw error;
+
+        // Log price changes
+        if (oldProduct && orgId) {
+          const { data: { user: currentUser } } = await supabase.auth.getUser();
+          const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', currentUser?.id || '').maybeSingle();
+          const changerName = profile?.full_name || 'مستخدم';
+          
+          const priceFields = [
+            { field: 'cost_price', old: oldProduct.costPrice, new: product.costPrice },
+            { field: 'base_price', old: oldProduct.basePrice, new: product.basePrice },
+            { field: 'consumer_price', old: oldProduct.consumerPrice, new: product.consumerPrice ?? 0 },
+          ];
+
+          const changes = priceFields.filter(f => f.old !== f.new);
+          if (changes.length > 0 && currentUser) {
+            await Promise.all(changes.map(c =>
+              supabase.from('price_change_history').insert({
+                product_id: product.id,
+                product_name: product.name,
+                field_changed: c.field,
+                old_value: c.old,
+                new_value: c.new,
+                changed_by: currentUser.id,
+                changed_by_name: changerName,
+                organization_id: orgId
+              })
+            ));
+          }
+        }
       } catch (err) {
         if (previousProducts) queryClient.setQueryData(prodKey, previousProducts);
         throw err;

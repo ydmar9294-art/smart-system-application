@@ -203,66 +203,7 @@ const SalesManagerDashboard: React.FC = () => {
         {/* Tab Content */}
         <div className="px-4 pb-8">
           {activeTab === 'dashboard' && (
-            <div className="space-y-3 animate-fade-in">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-card p-4 rounded-2xl shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                  </div>
-                  <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">مبيعات اليوم</p>
-                  <p className="text-xl font-black text-foreground">{stats.todayRevenue.toLocaleString()}</p>
-                  <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
-                </div>
-                
-                <div className="bg-card p-4 rounded-2xl shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
-                      <Wallet className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                  </div>
-                  <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">التحصيلات</p>
-                  <p className="text-xl font-black text-foreground">{stats.totalCollections.toLocaleString()}</p>
-                  <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
-                </div>
-              </div>
-
-              <div className="bg-card p-4 rounded-2xl shadow-sm">
-                <h3 className="font-bold text-foreground mb-3 text-sm">إحصائيات الفريق</h3>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-blue-500/10 p-3 rounded-xl text-center">
-                    <Users className="w-5 h-5 mx-auto text-blue-600 dark:text-blue-400 mb-1" />
-                    <p className="text-lg font-black text-foreground">{distributors.length}</p>
-                    <p className="text-[8px] text-muted-foreground font-bold">الموزعين</p>
-                  </div>
-                  <div className="bg-purple-500/10 p-3 rounded-xl text-center">
-                    <WarehouseIcon className="w-5 h-5 mx-auto text-purple-600 dark:text-purple-400 mb-1" />
-                    <p className="text-lg font-black text-foreground">{warehouseKeepers.length}</p>
-                    <p className="text-[8px] text-muted-foreground font-bold">أمناء المستودع</p>
-                  </div>
-                  <div className="bg-orange-500/10 p-3 rounded-xl text-center">
-                    <FileText className="w-5 h-5 mx-auto text-orange-600 dark:text-orange-400 mb-1" />
-                    <p className="text-lg font-black text-foreground">{stats.todaySalesCount}</p>
-                    <p className="text-[8px] text-muted-foreground font-bold">فواتير اليوم</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-card p-4 rounded-2xl shadow-sm">
-                <h3 className="font-bold text-foreground mb-3 text-sm">إحصائيات الزبائن</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-emerald-500/10 p-3 rounded-xl text-center">
-                    <p className="text-lg font-black text-foreground">{customers.length}</p>
-                    <p className="text-[8px] text-muted-foreground font-bold">إجمالي الزبائن</p>
-                  </div>
-                  <div className="bg-red-500/10 p-3 rounded-xl text-center">
-                    <p className="text-lg font-black text-foreground">{customers.filter(c => c.balance > 0).length}</p>
-                    <p className="text-[8px] text-muted-foreground font-bold">ذمم مدينة</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <SalesManagerDashboardContent stats={stats} customers={customers} distributors={distributors} warehouseKeepers={warehouseKeepers} sales={sales} />
           )}
 
           {activeTab === 'team' && (
@@ -481,6 +422,130 @@ const SalesManagerDashboard: React.FC = () => {
           </div>,
           document.body
         )}
+      </div>
+    </div>
+  );
+};
+
+/* ========== Sales Manager Dashboard Content ========== */
+const SalesManagerDashboardContent: React.FC<{
+  stats: any; customers: any[]; distributors: any[]; warehouseKeepers: any[]; sales: any[];
+}> = ({ stats, customers, distributors, warehouseKeepers, sales }) => {
+  const [discountStats, setDiscountStats] = React.useState({ total: 0, avgPct: 0, cashDisc: 0, creditDisc: 0 });
+
+  React.useEffect(() => {
+    const loadDiscounts = async () => {
+      try {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data } = await supabase.from('sales').select('discount_value, discount_percentage, payment_type, is_voided').eq('is_voided', false);
+        if (data) {
+          const withDiscount = data.filter(d => Number(d.discount_value || 0) > 0);
+          const total = data.reduce((s, d) => s + Number(d.discount_value || 0), 0);
+          const avgPct = withDiscount.length > 0 ? withDiscount.reduce((s, d) => s + Number(d.discount_percentage || 0), 0) / withDiscount.length : 0;
+          const cashDisc = data.filter(d => d.payment_type === 'CASH').reduce((s, d) => s + Number(d.discount_value || 0), 0);
+          const creditDisc = data.filter(d => d.payment_type === 'CREDIT').reduce((s, d) => s + Number(d.discount_value || 0), 0);
+          setDiscountStats({ total, avgPct, cashDisc, creditDisc });
+        }
+      } catch {}
+    };
+    loadDiscounts();
+  }, []);
+
+  return (
+    <div className="space-y-3 animate-fade-in">
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-card p-4 rounded-2xl shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center">
+              <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+          </div>
+          <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">مبيعات اليوم</p>
+          <p className="text-xl font-black text-foreground">{stats.todayRevenue.toLocaleString()}</p>
+          <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
+        </div>
+        
+        <div className="bg-card p-4 rounded-2xl shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
+              <Wallet className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+          </div>
+          <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">التحصيلات</p>
+          <p className="text-xl font-black text-foreground">{stats.totalCollections.toLocaleString()}</p>
+          <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
+        </div>
+      </div>
+
+      {/* Discount Analytics for Sales Manager */}
+      <div className="bg-card p-4 rounded-2xl shadow-sm">
+        <h3 className="font-bold text-foreground mb-3 text-sm flex items-center gap-2">
+          <TrendingUp className="w-4 h-4 text-amber-600 dark:text-amber-400" /> تحليلات الخصومات
+        </h3>
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          <div className="bg-amber-500/10 p-3 rounded-xl text-center">
+            <p className="text-lg font-black text-amber-600 dark:text-amber-400">{discountStats.total.toLocaleString()}</p>
+            <p className="text-[8px] text-muted-foreground font-bold">إجمالي الخصومات</p>
+          </div>
+          <div className="bg-purple-500/10 p-3 rounded-xl text-center">
+            <p className="text-lg font-black text-purple-600 dark:text-purple-400">{discountStats.avgPct.toFixed(1)}%</p>
+            <p className="text-[8px] text-muted-foreground font-bold">متوسط نسبة الخصم</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-emerald-500/10 p-2.5 rounded-xl text-center">
+            <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">{discountStats.cashDisc.toLocaleString()}</p>
+            <p className="text-[8px] text-muted-foreground font-bold">خصومات نقدي</p>
+          </div>
+          <div className="bg-blue-500/10 p-2.5 rounded-xl text-center">
+            <p className="text-sm font-black text-blue-600 dark:text-blue-400">{discountStats.creditDisc.toLocaleString()}</p>
+            <p className="text-[8px] text-muted-foreground font-bold">خصومات آجل</p>
+          </div>
+        </div>
+        {discountStats.cashDisc !== discountStats.creditDisc && (
+          <div className="mt-2 bg-primary/5 p-2.5 rounded-xl">
+            <p className="text-[10px] text-muted-foreground">
+              💡 {discountStats.cashDisc > discountStats.creditDisc 
+                ? 'الخصومات أعلى في المبيعات النقدية' 
+                : 'الخصومات أعلى في المبيعات الآجلة'}
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-card p-4 rounded-2xl shadow-sm">
+        <h3 className="font-bold text-foreground mb-3 text-sm">إحصائيات الفريق</h3>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-blue-500/10 p-3 rounded-xl text-center">
+            <Users className="w-5 h-5 mx-auto text-blue-600 dark:text-blue-400 mb-1" />
+            <p className="text-lg font-black text-foreground">{distributors.length}</p>
+            <p className="text-[8px] text-muted-foreground font-bold">الموزعين</p>
+          </div>
+          <div className="bg-purple-500/10 p-3 rounded-xl text-center">
+            <WarehouseIcon className="w-5 h-5 mx-auto text-purple-600 dark:text-purple-400 mb-1" />
+            <p className="text-lg font-black text-foreground">{warehouseKeepers.length}</p>
+            <p className="text-[8px] text-muted-foreground font-bold">أمناء المستودع</p>
+          </div>
+          <div className="bg-orange-500/10 p-3 rounded-xl text-center">
+            <FileText className="w-5 h-5 mx-auto text-orange-600 dark:text-orange-400 mb-1" />
+            <p className="text-lg font-black text-foreground">{stats.todaySalesCount}</p>
+            <p className="text-[8px] text-muted-foreground font-bold">فواتير اليوم</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-card p-4 rounded-2xl shadow-sm">
+        <h3 className="font-bold text-foreground mb-3 text-sm">إحصائيات الزبائن</h3>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-emerald-500/10 p-3 rounded-xl text-center">
+            <p className="text-lg font-black text-foreground">{customers.length}</p>
+            <p className="text-[8px] text-muted-foreground font-bold">إجمالي الزبائن</p>
+          </div>
+          <div className="bg-red-500/10 p-3 rounded-xl text-center">
+            <p className="text-lg font-black text-foreground">{customers.filter(c => c.balance > 0).length}</p>
+            <p className="text-[8px] text-muted-foreground font-bold">ذمم مدينة</p>
+          </div>
+        </div>
       </div>
     </div>
   );

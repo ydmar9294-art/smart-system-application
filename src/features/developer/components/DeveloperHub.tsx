@@ -244,6 +244,31 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
   setEditingLimit, setNewLimit, handleUpdateLimit, copyKey,
   updateLicenseStatus
 }) => {
+  const [editingOrgName, setEditingOrgName] = useState<string | null>(null);
+  const [newOrgName, setNewOrgName] = useState('');
+  const [savingOrgName, setSavingOrgName] = useState(false);
+
+  const handleUpdateOrgName = async (license: any) => {
+    if (!newOrgName.trim() || newOrgName.trim().length < 2) return;
+    setSavingOrgName(true);
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      // Update organization name
+      if (license.organizationId) {
+        await supabase.from('organizations').update({ name: newOrgName.trim() }).eq('id', license.organizationId);
+      }
+      // Update license orgName
+      await supabase.from('developer_licenses').update({ orgName: newOrgName.trim() }).eq('id', license.id);
+      setEditingOrgName(null);
+      // Force refresh
+      window.location.reload();
+    } catch (err) {
+      console.error('Failed to update org name:', err);
+    } finally {
+      setSavingOrgName(false);
+    }
+  };
+
   if (licenses.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
@@ -274,7 +299,25 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
               </span>
             </div>
             
-            <h3 className="font-black text-foreground text-base mb-2">{license.orgName}</h3>
+            {/* Editable Org Name */}
+            {editingOrgName === license.id ? (
+              <div className="flex items-center gap-2 mb-2">
+                <input 
+                  type="text" value={newOrgName} onChange={(e) => setNewOrgName(e.target.value)}
+                  className="flex-1 px-3 py-2 rounded-xl border border-border text-sm bg-background text-foreground font-bold"
+                  placeholder="اسم المنشأة الجديد" autoFocus
+                />
+                <button onClick={() => handleUpdateOrgName(license)} disabled={savingOrgName}
+                  className="text-primary"><Save size={16}/></button>
+                <button onClick={() => setEditingOrgName(null)} className="text-muted-foreground"><X size={16}/></button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="font-black text-foreground text-base">{license.orgName}</h3>
+                <button onClick={() => { setEditingOrgName(license.id); setNewOrgName(license.orgName); }} 
+                  className="text-muted-foreground hover:text-primary"><Edit2 size={14}/></button>
+              </div>
+            )}
             
             {/* Employee limit */}
             <div className="flex items-center gap-2 mb-2 text-xs">
