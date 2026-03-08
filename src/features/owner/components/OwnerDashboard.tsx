@@ -7,7 +7,7 @@ import {
   Receipt, Wallet, UserPlus, X, Copy, CheckCircle2, Clock,
   ShieldCheck, MessageCircle, AlertTriangle, Phone, MapPin,
   CircleDollarSign, Shield, UserX, UserCheck, Loader2,
-  BarChart3, CreditCard, Banknote
+  BarChart3, CreditCard, Banknote, Database
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
