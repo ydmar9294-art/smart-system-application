@@ -46,7 +46,6 @@ const OwnerDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<OwnerTabType>('daily');
   const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
-  const [loggingOut, setLoggingOut] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [newEmployeeCode, setNewEmployeeCode] = useState<string | null>(null);
