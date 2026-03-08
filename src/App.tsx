@@ -127,16 +127,21 @@ const MainContent: React.FC = () => {
     };
   }, []);
 
-  // Listen for device-revoked events (from useSession online handler)
+  // Listen for device-revoked events — show WhatsApp-style full-screen modal
   useEffect(() => {
-    const handleDeviceRevoked = async (e: Event) => {
+    const handleDeviceRevoked = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      const { toast } = await import('sonner');
-      toast.error(detail?.message || 'تم تسجيل الدخول من جهاز آخر', { duration: 6000 });
-      logout();
+      setRevokedDeviceName(detail?.deviceName);
+      setDeviceRevoked(true);
     };
     window.addEventListener('device-revoked', handleDeviceRevoked);
     return () => window.removeEventListener('device-revoked', handleDeviceRevoked);
+  }, []);
+
+  // Handle user acknowledging the device revocation
+  const handleRevokedAcknowledge = useCallback(async () => {
+    setDeviceRevoked(false);
+    await logout();
   }, [logout]);
 
   // Global unhandled rejection safety net
