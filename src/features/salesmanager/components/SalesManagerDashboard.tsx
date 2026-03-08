@@ -32,7 +32,6 @@ const SalesManagerDashboard: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<SalesManagerTabType>('dashboard');
   const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
-  const [loggingOut, setLoggingOut] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [newEmployeeCode, setNewEmployeeCode] = useState<string | null>(null);
@@ -67,10 +66,8 @@ const SalesManagerDashboard: React.FC = () => {
     pe.is_used && (pe.employee_type === EmployeeType.FIELD_AGENT || pe.employee_type === EmployeeType.WAREHOUSE_KEEPER)
   );
 
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    try { await logout(); } finally { setLoggingOut(false); }
-  };
+
+
 
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,8 +125,6 @@ const SalesManagerDashboard: React.FC = () => {
           subtitle={t('salesManager.title')}
           icon={<TrendingUp className="w-4 h-4 text-primary-foreground" />}
           iconBgClass="bg-warning"
-          onLogout={handleLogout}
-          loggingOut={loggingOut}
         />
 
         <WelcomeSplash />

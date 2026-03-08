@@ -33,7 +33,6 @@ const DistributorDashboard: React.FC = () => {
   const offline = useDistributorOffline();
   const [activeTab, setActiveTab] = useState<DistributorTabType>('inventory');
   const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
-  const [loggingOut, setLoggingOut] = useState(false);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState('');
@@ -68,10 +67,8 @@ const DistributorDashboard: React.FC = () => {
   const totalDebt = myCustomers.reduce((sum, c) => sum + Number(c.balance), 0);
   const totalCustomers = myCustomers.length;
 
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    try { await logout(); } finally { setLoggingOut(false); }
-  };
+
+
 
   const handleAddCustomer = async () => {
     if (!newCustomerName.trim()) { addNotification('يرجى إدخال اسم الزبون', 'warning'); return; }
@@ -144,12 +141,10 @@ const DistributorDashboard: React.FC = () => {
     <div className="min-h-screen bg-background has-bottom-nav" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       <div className="max-w-lg mx-auto">
         <DashboardHeader
-          userName={t('distributor.title')}
+          userName={appUser?.name || t('distributor.title')}
           subtitle={t('distributor.subtitle')}
           icon={<ShoppingBag className="w-4 h-4 text-primary-foreground" />}
           iconBgClass="bg-primary"
-          onLogout={handleLogout}
-          loggingOut={loggingOut}
           rightActions={
             <button onClick={() => setShowAddCustomerModal(true)}
               className="p-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-all" title={t('distributor.addNewCustomer')}>

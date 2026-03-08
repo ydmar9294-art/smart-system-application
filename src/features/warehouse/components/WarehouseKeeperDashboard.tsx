@@ -28,7 +28,6 @@ const WarehouseKeeperDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<WarehouseTabType>('dashboard');
   const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
-  const [loggingOut, setLoggingOut] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [priceSearch, setPriceSearch] = useState('');
 
@@ -49,10 +48,8 @@ const WarehouseKeeperDashboard: React.FC = () => {
     return { totalProducts, lowStockProducts, totalStock, todayDeliveries, todayPurchases };
   }, [products, deliveries, purchases]);
 
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    try { await logout(); } finally { setLoggingOut(false); }
-  };
+
+
 
   const handlePriceSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -108,8 +105,6 @@ const WarehouseKeeperDashboard: React.FC = () => {
           subtitle={t('warehouse.title')}
           icon={<Package className="w-4 h-4 text-primary-foreground" />}
           iconBgClass="bg-purple-600"
-          onLogout={handleLogout}
-          loggingOut={loggingOut}
         />
 
         <WelcomeSplash />

@@ -25,8 +25,6 @@ const AccountantDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<AccountantTabType>('sales');
   const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
-  const [loggingOut, setLoggingOut] = useState(false);
-
   React.useEffect(() => {
     if (['sales', 'purchases'].includes(activeTab)) setBottomNav('home');
     else if (['collections', 'debts'].includes(activeTab)) setBottomNav('operations');
@@ -34,10 +32,8 @@ const AccountantDashboard: React.FC = () => {
     else if (['sales-returns', 'purchase-returns'].includes(activeTab)) setBottomNav('returns');
   }, [activeTab]);
 
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    try { await logout(); } finally { setLoggingOut(false); }
-  };
+
+
 
   const handleBottomNavChange = (navId: string) => {
     setBottomNav(navId as BottomNavType);
@@ -97,8 +93,6 @@ const AccountantDashboard: React.FC = () => {
           subtitle={t('accountant.subtitle')}
           icon={<BarChart3 className="w-4 h-4 text-primary-foreground" strokeWidth={1.5} />}
           iconBgClass="bg-primary"
-          onLogout={handleLogout}
-          loggingOut={loggingOut}
         />
 
         <WelcomeSplash />

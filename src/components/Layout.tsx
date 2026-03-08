@@ -2,20 +2,14 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '@/store/AppContext';
 import { UserRole, LicenseStatus } from '@/types';
-import { ShieldAlert, Phone, LogOut, RefreshCw, Shield, FileText } from 'lucide-react';
+import { ShieldAlert, Phone, LogOut, RefreshCw } from 'lucide-react';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
-import ThemeToggle from '@/components/ui/ThemeToggle';
-import LanguageSelector from '@/components/ui/LanguageSelector';
 import { usePageTheme } from '@/hooks/usePageTheme';
 import { SUPPORT_WHATSAPP_URL, SUPPORT_PHONE_URL } from '@/constants';
 import { PullToRefresh } from '@/components/ui/PullToRefresh';
-import AccountDeletionButton from '@/components/AccountDeletionButton';
-import { useNavigate } from 'react-router-dom';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout, organization, refreshAuth, refreshAllData } = useApp();
-  const [showSettingsSheet, setShowSettingsSheet] = useState(false);
-  const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   
   usePageTheme();
@@ -50,44 +44,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           dir={isRTL ? 'rtl' : 'ltr'}
         >
           <main className="flex-1 relative">
-            {/* Floating Theme Toggle */}
-            <div className="sticky top-0 z-50 flex justify-start items-center gap-1.5 pt-14 px-3 pb-0.5 pointer-events-none fixed-top-safe">
-              <div className="pointer-events-auto">
-                <ThemeToggle />
-              </div>
-            </div>
-            {/* Main content area */}
             <div className="native-content-area">{children}</div>
           </main>
         </div>
       </PullToRefresh>
-
-      {/* Settings Sheet */}
-      {showSettingsSheet && (
-        <>
-          <div className="settings-sheet-backdrop" onClick={() => setShowSettingsSheet(false)} />
-          <div className="settings-sheet" dir={isRTL ? 'rtl' : 'ltr'}>
-            <div className="settings-sheet-handle" />
-            <div className="px-5 pt-3.5 pb-1.5">
-              <p className="text-sm font-black text-foreground">{t('common.settings')}</p>
-            </div>
-            <div className="px-3 pb-4 space-y-0.5">
-              <div className="px-3 py-2"><LanguageSelector /></div>
-              <div className="h-px bg-border mx-3 my-1" />
-              <button onClick={() => { navigate('/privacy-policy'); setShowSettingsSheet(false); }} className="settings-sheet-item">
-                <Shield size={17} className="text-primary flex-shrink-0" />
-                <span>{t('common.privacyPolicy')}</span>
-              </button>
-              <button onClick={() => { navigate('/terms'); setShowSettingsSheet(false); }} className="settings-sheet-item">
-                <FileText size={17} className="text-primary flex-shrink-0" />
-                <span>{t('common.termsOfService')}</span>
-              </button>
-              <div className="h-px bg-border mx-3 my-1" />
-              <div className="px-2 py-1"><AccountDeletionButton /></div>
-            </div>
-          </div>
-        </>
-      )}
     </>
   );
 };

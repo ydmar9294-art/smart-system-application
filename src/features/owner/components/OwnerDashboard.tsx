@@ -27,8 +27,11 @@ import BackupTab from './BackupTab';
 import { DashboardHeader } from '@/components/ui/DashboardHeader';
 import { BottomTabNav } from '@/components/ui/BottomTabNav';
 import { GlassCard, GlassKPI } from '@/components/ui/GlassCard';
+import { lazy, Suspense } from 'react';
 
-type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup';
+const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
+
+type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup' | 'app-settings';
 
 // Bottom nav maps to tab groups
 type BottomNavType = 'home' | 'operations' | 'reports' | 'settings';
@@ -43,7 +46,6 @@ const OwnerDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<OwnerTabType>('daily');
   const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
-  const [loggingOut, setLoggingOut] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [newEmployeeCode, setNewEmployeeCode] = useState<string | null>(null);
@@ -93,10 +95,8 @@ const OwnerDashboard: React.FC = () => {
   const remainingSlots = Math.max(0, maxEmployees - activeEmployeeCount);
   const usagePercent = maxEmployees > 0 ? (activeEmployeeCount / maxEmployees) * 100 : 0;
 
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    try { await logout(); } finally { setLoggingOut(false); }
-  };
+
+
 
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,7 +128,7 @@ const OwnerDashboard: React.FC = () => {
       case 'home': setActiveTab('daily'); break;
       case 'operations': setActiveTab('team'); break;
       case 'reports': setActiveTab('finance'); break;
-      case 'settings': setActiveTab('subscription'); break;
+      case 'settings': setActiveTab('app-settings'); break;
     }
   };
 
@@ -145,6 +145,7 @@ const OwnerDashboard: React.FC = () => {
         { id: 'performance', label: t('owner.performance'), icon: <BarChart3 className="w-4 h-4" />, bgColor: 'bg-indigo-600' },
       ];
       case 'settings': return [
+        { id: 'app-settings', label: t('common.settings'), icon: <Settings className="w-4 h-4" />, bgColor: 'bg-primary' },
         { id: 'subscription', label: t('owner.subscription'), icon: <Shield className="w-4 h-4" />, bgColor: 'bg-primary' },
         { id: 'legal', label: t('owner.legal'), icon: <ShieldCheck className="w-4 h-4" />, bgColor: 'bg-amber-600' },
         { id: 'backup', label: t('owner.backup'), icon: <Database className="w-4 h-4" />, bgColor: 'bg-emerald-600' },
@@ -191,8 +192,6 @@ const OwnerDashboard: React.FC = () => {
           subtitle={t('owner.title')}
           icon={<ShieldCheck className="w-4 h-4 text-primary-foreground" />}
           iconBgClass="bg-primary"
-          onLogout={handleLogout}
-          loggingOut={loggingOut}
         />
 
         <WelcomeSplash />
