@@ -95,10 +95,8 @@ const OwnerDashboard: React.FC = () => {
   const remainingSlots = Math.max(0, maxEmployees - activeEmployeeCount);
   const usagePercent = maxEmployees > 0 ? (activeEmployeeCount / maxEmployees) * 100 : 0;
 
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    try { await logout(); } finally { setLoggingOut(false); }
-  };
+
+
 
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
