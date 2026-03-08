@@ -28,7 +28,7 @@ export const salesService = {
     try {
       let query = supabase
         .from('sales')
-        .select('id,customer_id,customer_name,grand_total,paid_amount,remaining,payment_type,is_voided,void_reason,created_at,organization_id,created_by')
+        .select('id,customer_id,customer_name,grand_total,paid_amount,remaining,payment_type,is_voided,void_reason,created_at,organization_id,created_by,discount_type,discount_value,discount_percentage')
         .order('created_at', { ascending: false })
         .limit(limit + 1); // fetch one extra to determine if there's a next page
 

@@ -106,7 +106,7 @@ export function useSalesQuery(orgId?: string | null, role?: UserRole | null) {
       requireOrgContext(orgId, role);
       let query = supabase
         .from('sales')
-        .select('id,customer_id,customer_name,grand_total,paid_amount,remaining,payment_type,is_voided,void_reason,created_at,organization_id,created_by')
+        .select('id,customer_id,customer_name,grand_total,paid_amount,remaining,payment_type,is_voided,void_reason,created_at,organization_id,created_by,discount_type,discount_value,discount_percentage')
         .order('created_at', { ascending: false })
         .range(0, PAGE_LIMIT - 1);
 

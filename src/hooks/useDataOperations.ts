@@ -109,6 +109,9 @@ export const transformSale = (s: any): Sale => ({
   timestamp: new Date(s.created_at).getTime(),
   items: [],
   createdBy: s.created_by || undefined,
+  discountType: s.discount_type || null,
+  discountValue: Number(s.discount_value || 0),
+  discountPercentage: Number(s.discount_percentage || 0),
 });
 
 export const transformPayment = (p: any): Payment => ({
