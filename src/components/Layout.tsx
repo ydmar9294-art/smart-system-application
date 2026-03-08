@@ -49,11 +49,29 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     />;
   }
 
+  // Global offline detection
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const on = () => setIsOnline(true);
+    const off = () => setIsOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+  }, []);
+
   return (
     <>
       {/* Liquid-glass overlay bars — OUTSIDE scroll/transform containers so they stay truly fixed */}
       <div className="glass-bar-top" aria-hidden="true" />
       <div className="glass-bar-bottom" aria-hidden="true" />
+
+      {/* Global Offline Banner */}
+      {!isOnline && (
+        <div className="fixed top-0 left-0 right-0 z-[9999] flex items-center justify-center gap-2 bg-destructive text-destructive-foreground py-2 px-4 text-sm font-bold shadow-lg" dir="rtl">
+          <WifiOff size={16} />
+          <span>غير متصل — البيانات المحلية متاحة</span>
+        </div>
+      )}
 
       <PullToRefresh onRefresh={handlePullRefresh}>
         <div
