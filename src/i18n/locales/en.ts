@@ -45,6 +45,10 @@ const en: TranslationKeys = {
     reversed: 'Reversed',
     cash: 'Cash',
     credit: 'Credit',
+    name: 'Name',
+    phone: 'Phone',
+    type: 'Type',
+    searchDots: 'Search...',
   },
 
   nav: {
@@ -116,6 +120,7 @@ const en: TranslationKeys = {
     emailNotFound: 'Email not found',
     googleSignInFailed: 'Google sign-in failed. Please try again',
     enterEmailFirst: 'Please enter your email first',
+    verifyError: 'Error verifying account',
   },
 
   activation: {
@@ -131,6 +136,8 @@ const en: TranslationKeys = {
     activating: 'Activating...',
     enterCode: 'Please enter activation code',
     activationFailed: 'Activation failed',
+    activationFailedAccount: 'Failed to activate account',
+    activationFailedLicense: 'Failed to activate license',
     payViaShamCash: 'Pay via ShamCash',
     importantNote: 'Important Note',
     paymentNote: 'Subscription will not be activated automatically. After payment, contact support to confirm payment manually.',
@@ -140,6 +147,8 @@ const en: TranslationKeys = {
     orgCodeFormat: 'Organization code:',
     empCodeFormat: 'Employee code:',
     activationCodeGenerated: 'Activation Code Generated',
+    employeeActivationCode: 'Employee activation code:',
+    enterCodeToContinue: 'Enter code to continue',
   },
 
   consent: {
@@ -246,6 +255,19 @@ const en: TranslationKeys = {
     newRequest: 'Submit new request',
     deletionRequests: 'Account Deletion Requests',
     requestDeletion: 'Request Account Deletion',
+    submitFailed: 'Failed to submit request',
+  },
+
+  emailConfirmed: {
+    title: '✅ Email Verified',
+    description: 'You can now use the system. Sign in from the main screen.',
+    verified: 'Successfully verified',
+  },
+
+  notFound: {
+    title: '404',
+    message: 'Page not found',
+    goHome: 'Go to Home',
   },
 
   owner: {
@@ -285,6 +307,7 @@ const en: TranslationKeys = {
     reactivateEmployee: 'Reactivate',
     employeeName: 'Employee Name',
     phoneNumber: 'Phone Number',
+    fromMax: 'of {{max}}',
   },
 
   employeeType: {
@@ -359,6 +382,8 @@ const en: TranslationKeys = {
     cost: 'Cost',
     selling: 'Selling',
     consumer: 'Consumer',
+    productLabel: 'Product',
+    editButton: 'Edit',
   },
 
   distributor: {

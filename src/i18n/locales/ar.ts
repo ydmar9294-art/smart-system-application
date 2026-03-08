@@ -44,6 +44,10 @@ const ar = {
     reversed: 'معكوس',
     cash: 'نقدي',
     credit: 'آجل',
+    name: 'الاسم',
+    phone: 'الهاتف',
+    type: 'النوع',
+    searchDots: 'بحث...',
   },
 
   // ── Navigation ──────────────────────────────────────────────────
@@ -94,7 +98,6 @@ const ar = {
     accountCreated: 'تم إنشاء الحساب بنجاح',
     accountCreatedDesc: 'يمكنك الآن تسجيل الدخول باستخدام بريدك الإلكتروني وكلمة المرور.',
     loginNow: 'تسجيل الدخول الآن',
-    // Phases
     phaseReturning: 'جارٍ تسجيل الدخول...',
     phaseValidating: 'جارٍ التحقق من الترخيص...',
     phaseChecking: 'جارٍ التحقق من حالة الحساب...',
@@ -103,7 +106,6 @@ const ar = {
     verifyTimeout: 'استغرق التحقق وقتاً طويلاً. يرجى المحاولة مرة أخرى.',
     accessDenied: 'تم رفض الوصول',
     errorOccurred: 'حدث خطأ',
-    // Errors
     enterEmail: 'يرجى إدخال البريد الإلكتروني',
     enterPassword: 'يرجى إدخال كلمة المرور',
     passwordMin6: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل',
@@ -119,6 +121,7 @@ const ar = {
     emailNotFound: 'الإيميل غير موجود',
     googleSignInFailed: 'فشل تسجيل الدخول بجوجل. يرجى المحاولة مرة أخرى',
     enterEmailFirst: 'يرجى إدخال البريد الإلكتروني أولاً',
+    verifyError: 'حدث خطأ في التحقق من الحساب',
   },
 
   // ── License Activation ──────────────────────────────────────────
@@ -135,6 +138,8 @@ const ar = {
     activating: 'جارٍ التفعيل...',
     enterCode: 'يرجى إدخال كود التفعيل',
     activationFailed: 'فشل في التفعيل',
+    activationFailedAccount: 'فشل في تفعيل الحساب',
+    activationFailedLicense: 'فشل في تفعيل الترخيص',
     payViaShamCash: 'الدفع عبر شام كاش',
     importantNote: 'ملاحظة هامة',
     paymentNote: 'الاشتراك لن يتم تفعيله تلقائياً. بعد الدفع، تواصل مع فريق الدعم لتأكيد الدفع يدوياً.',
@@ -144,6 +149,8 @@ const ar = {
     orgCodeFormat: 'كود المنشأة:',
     empCodeFormat: 'كود الموظف:',
     activationCodeGenerated: 'تم إنشاء كود التفعيل',
+    employeeActivationCode: 'كود تفعيل الموظف:',
+    enterCodeToContinue: 'أدخل الكود للمتابعة',
   },
 
   // ── Consent Gate ────────────────────────────────────────────────
@@ -261,6 +268,21 @@ const ar = {
     newRequest: 'تقديم طلب جديد',
     deletionRequests: 'طلبات حذف الحسابات',
     requestDeletion: 'طلب حذف الحساب',
+    submitFailed: 'فشل تقديم الطلب',
+  },
+
+  // ── Email Confirmed ─────────────────────────────────────────────
+  emailConfirmed: {
+    title: '✅ تم التحقق من الإيميل',
+    description: 'يمكنك استخدام النظام الآن. قم بتسجيل الدخول من الشاشة الرئيسية.',
+    verified: 'تم التحقق بنجاح',
+  },
+
+  // ── Not Found ───────────────────────────────────────────────────
+  notFound: {
+    title: '404',
+    message: 'الصفحة غير موجودة',
+    goHome: 'العودة للرئيسية',
   },
 
   // ── Owner Dashboard ─────────────────────────────────────────────
@@ -277,7 +299,6 @@ const ar = {
     totalCustomers: 'إجمالي الزبائن',
     products: 'المنتجات',
     lowStockWarning: 'منتجات قاربت على النفاد',
-    // Tabs
     team: 'الفريق',
     customers: 'الزبائن',
     finance: 'المالية',
@@ -285,7 +306,6 @@ const ar = {
     subscription: 'الاشتراك',
     legal: 'القانونية',
     backup: 'النسخ',
-    // Team
     orgStatus: 'حالة المنشأة',
     orgName: 'اسم المنشأة',
     employeesLimit: 'الموظفون / الحد',
@@ -303,6 +323,7 @@ const ar = {
     reactivateEmployee: 'إعادة التنشيط',
     employeeName: 'اسم الموظف',
     phoneNumber: 'رقم الهاتف',
+    fromMax: 'من {{max}}',
   },
 
   // ── Employee Types ──────────────────────────────────────────────
@@ -382,6 +403,8 @@ const ar = {
     cost: 'التكلفة',
     selling: 'البيع',
     consumer: 'المستهلك',
+    productLabel: 'المنتج',
+    editButton: 'تعديل',
   },
 
   // ── Distributor Dashboard ───────────────────────────────────────
