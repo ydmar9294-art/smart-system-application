@@ -859,7 +859,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-black text-muted-foreground uppercase">الحد الأدنى</label>
+              <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.minStock')}</label>
               <input 
                 name="minStock" 
                 type="number" 
