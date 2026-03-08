@@ -234,6 +234,16 @@ const en: TranslationKeys = {
     dark: 'Dark Mode',
   },
 
+  settings: {
+    appearance: 'Appearance',
+    language: 'Language',
+    account: 'Account',
+    legal: 'Legal',
+    dataPrivacy: 'Data & Privacy',
+    themeDesc: 'Switch between light and dark mode',
+    loggingOut: 'Logging out...',
+  },
+
   language: {
     title: 'Language',
     arabic: 'العربية',

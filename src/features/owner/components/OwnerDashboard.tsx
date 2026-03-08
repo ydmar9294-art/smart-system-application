@@ -31,7 +31,7 @@ import { lazy, Suspense } from 'react';
 
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 
-type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup';
+type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup' | 'app-settings';
 
 // Bottom nav maps to tab groups
 type BottomNavType = 'home' | 'operations' | 'reports' | 'settings';
