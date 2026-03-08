@@ -14,6 +14,7 @@ import { useDeviceRealtime } from '@/hooks/useDeviceRealtime';
 import OfflineIndicator from '@/components/ui/OfflineIndicator';
 import UpdateModal from '@/components/ui/UpdateModal';
 import LogoutScreen from '@/components/ui/LogoutScreen';
+import DeviceRevokedScreen from '@/components/ui/DeviceRevokedScreen';
 import { usePageTheme } from '@/hooks/usePageTheme';
 import { useStatusBar } from '@/platform/hooks/useStatusBar';
 import SecurityGate from '@/components/SecurityGate';
@@ -100,6 +101,8 @@ const ViewManager: React.FC = () => {
 const MainContent: React.FC = () => {
   const { user, role, isLoading, refreshAuth, needsActivation, logout } = useApp();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [deviceRevoked, setDeviceRevoked] = useState(false);
+  const [revokedDeviceName, setRevokedDeviceName] = useState<string | undefined>();
   
   // Initialize theme early so loading/auth screens also get dark mode
   usePageTheme();
@@ -124,16 +127,21 @@ const MainContent: React.FC = () => {
     };
   }, []);
 
-  // Listen for device-revoked events (from useSession online handler)
+  // Listen for device-revoked events — show WhatsApp-style full-screen modal
   useEffect(() => {
-    const handleDeviceRevoked = async (e: Event) => {
+    const handleDeviceRevoked = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      const { toast } = await import('sonner');
-      toast.error(detail?.message || 'تم تسجيل الدخول من جهاز آخر', { duration: 6000 });
-      logout();
+      setRevokedDeviceName(detail?.deviceName);
+      setDeviceRevoked(true);
     };
     window.addEventListener('device-revoked', handleDeviceRevoked);
     return () => window.removeEventListener('device-revoked', handleDeviceRevoked);
+  }, []);
+
+  // Handle user acknowledging the device revocation
+  const handleRevokedAcknowledge = useCallback(async () => {
+    setDeviceRevoked(false);
+    await logout();
   }, [logout]);
 
   // Global unhandled rejection safety net
@@ -145,6 +153,11 @@ const MainContent: React.FC = () => {
     window.addEventListener('unhandledrejection', handler);
     return () => window.removeEventListener('unhandledrejection', handler);
   }, []);
+
+  // Device revoked — WhatsApp-style blocking screen (highest priority)
+  if (deviceRevoked) {
+    return <DeviceRevokedScreen deviceName={revokedDeviceName} onAcknowledge={handleRevokedAcknowledge} />;
+  }
 
   // Logout goodbye screen — blocks everything
   if (isLoggingOut) return <LogoutScreen />;
