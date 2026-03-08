@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { logger } from '@/lib/logger';
 import { useTranslation } from 'react-i18next';
 import { Wallet, ChevronDown, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
