@@ -8,6 +8,7 @@
  * - Circuit breaker for cascading failure prevention
  */
 import { useRef, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole, User, EmployeeType, LicenseStatus, Organization } from '@/types';
 import { getCachedAuth, setCachedAuth, clearAuthCache, CachedAuthState } from '@/lib/authCache';
