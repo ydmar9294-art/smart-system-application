@@ -375,7 +375,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
       const { shareInvoicePdf, buildInvoiceFileName } = await import('@/lib/invoicePdfService');
       await shareInvoicePdf(b64, buildInvoiceFileName(invoiceId), getInvoiceTitle());
     } catch (err) {
-      console.error('[InvoicePrint] Share failed:', err);
+      logger.error('Share failed', 'InvoicePrint');
     } finally {
       setActionLoading(null);
     }
