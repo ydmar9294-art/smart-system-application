@@ -33,7 +33,6 @@ const DistributorDashboard: React.FC = () => {
   const offline = useDistributorOffline();
   const [activeTab, setActiveTab] = useState<DistributorTabType>('inventory');
   const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
-  const [loggingOut, setLoggingOut] = useState(false);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState('');
