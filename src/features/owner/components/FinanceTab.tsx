@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
 import { 
@@ -8,6 +9,8 @@ import {
 } from 'lucide-react';
 
 export const FinanceTab: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
   const { sales, payments, products, customers } = useApp();
 
   const discountAnalytics = useMemo(() => {
@@ -82,39 +85,36 @@ export const FinanceTab: React.FC = () => {
 
   return (
     <div className="space-y-3 animate-fade-in">
-      {/* KPIs الرئيسية */}
       <div className="grid grid-cols-2 gap-2">
-        <FinanceKpiCard label="مبيعات الأسبوع" value={stats.thisWeekRevenue} change={stats.revenueChange} icon={<DollarSign size={16} />} color="primary" />
-        <FinanceKpiCard label="التحصيلات" value={stats.totalCollections} change={stats.collectionsChange} icon={<CreditCard size={16} />} color="success" />
-        <FinanceKpiCard label="إجمالي الذمم" value={stats.totalDebts} icon={<AlertTriangle size={16} />} color="destructive" negative />
-        <FinanceKpiCard label="المرتجعات" value={stats.totalReturns} icon={<Package size={16} />} color="warning" />
+        <FinanceKpiCard label={t('finance.weeklySales')} value={stats.thisWeekRevenue} change={stats.revenueChange} icon={<DollarSign size={16} />} color="primary" />
+        <FinanceKpiCard label={t('finance.collections')} value={stats.totalCollections} change={stats.collectionsChange} icon={<CreditCard size={16} />} color="success" />
+        <FinanceKpiCard label={t('finance.totalDebts')} value={stats.totalDebts} icon={<AlertTriangle size={16} />} color="destructive" negative />
+        <FinanceKpiCard label={t('finance.returns')} value={stats.totalReturns} icon={<Package size={16} />} color="warning" />
       </div>
 
-      {/* Discount Analytics - Owner Advanced */}
       <div className="bg-card p-4 rounded-[2rem] border shadow-sm">
         <h3 className="font-black text-foreground mb-3 flex items-center gap-2 text-sm">
           <Percent size={16} className="text-amber-600 dark:text-amber-400" />
-          تحليلات الخصومات
+          {t('finance.discountAnalytics')}
         </h3>
         <div className="grid grid-cols-3 gap-2 mb-3">
           <div className="bg-amber-500/10 p-3 rounded-xl text-center">
             <p className="text-lg font-black text-amber-600 dark:text-amber-400">{discountAnalytics.totalDiscounts.toLocaleString()}</p>
-            <p className="text-[8px] text-muted-foreground font-bold">إجمالي الخصومات</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('finance.totalDiscounts')}</p>
           </div>
           <div className="bg-emerald-500/10 p-3 rounded-xl text-center">
             <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">{discountAnalytics.cashDiscounts.toLocaleString()}</p>
-            <p className="text-[8px] text-muted-foreground font-bold">خصومات نقدي</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('finance.cashDiscounts')}</p>
           </div>
           <div className="bg-blue-500/10 p-3 rounded-xl text-center">
             <p className="text-lg font-black text-blue-600 dark:text-blue-400">{discountAnalytics.creditDiscounts.toLocaleString()}</p>
-            <p className="text-[8px] text-muted-foreground font-bold">خصومات آجل</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('finance.creditDiscounts')}</p>
           </div>
         </div>
 
-        {/* Top Customers with Discounts */}
         {discountAnalytics.topCustomers.length > 0 && (
           <div className="space-y-1.5">
-            <p className="text-[10px] font-bold text-muted-foreground mb-2">🏆 أكثر الزبائن حصولاً على خصم</p>
+            <p className="text-[10px] font-bold text-muted-foreground mb-2">{t('finance.topDiscountCustomers')}</p>
             {discountAnalytics.topCustomers.map((c, i) => (
               <div key={c.name} className="flex items-center justify-between bg-muted p-2.5 rounded-xl">
                 <div className="flex items-center gap-2">
@@ -127,70 +127,66 @@ export const FinanceTab: React.FC = () => {
           </div>
         )}
 
-        {/* AI Insight */}
         {discountAnalytics.totalDiscounts > 0 && (
           <div className="mt-3 bg-primary/5 p-3 rounded-xl border border-primary/10">
-            <p className="text-[10px] font-bold text-primary mb-1">💡 توصية ذكية</p>
+            <p className="text-[10px] font-bold text-primary mb-1">{t('finance.smartRecommendation')}</p>
             <p className="text-[10px] text-muted-foreground">
               {discountAnalytics.cashDiscounts > discountAnalytics.creditDiscounts
-                ? 'الخصومات تتركز على المبيعات النقدية. فكر في تقليلها لتحسين هامش الربح.'
-                : 'الخصومات على المبيعات الآجلة أعلى. راجع سياسة الخصم للبيع بالآجل.'}
+                ? t('finance.cashDiscountsHighInsight')
+                : t('finance.creditDiscountsHighInsight')}
               {discountAnalytics.topCustomers.length > 0 && discountAnalytics.topCustomers[0].total > discountAnalytics.totalDiscounts * 0.3
-                ? ` ⚠️ الزبون "${discountAnalytics.topCustomers[0].name}" يحصل على أكثر من 30% من إجمالي الخصومات.`
+                ? t('finance.customerHighDiscountWarning', { name: discountAnalytics.topCustomers[0].name })
                 : ''}
             </p>
           </div>
         )}
       </div>
 
-      {/* مقارنة أسبوعية */}
       <div className="bg-card p-4 rounded-[2rem] border shadow-sm">
         <h3 className="font-black text-foreground mb-3 flex items-center gap-2 text-sm">
           <BarChart3 size={16} className="text-primary" />
-          مقارنة أسبوعية
+          {t('finance.weeklyComparison')}
         </h3>
         <div className="grid grid-cols-2 gap-3">
-          <ComparisonCard label="المبيعات" thisWeek={stats.thisWeekRevenue} lastWeek={stats.lastWeekRevenue} />
-          <ComparisonCard label="عدد الفواتير" thisWeek={stats.thisWeekSalesCount} lastWeek={stats.lastWeekSalesCount} isCurrency={false} />
+          <ComparisonCard label={t('finance.sales')} thisWeek={stats.thisWeekRevenue} lastWeek={stats.lastWeekRevenue} />
+          <ComparisonCard label={t('finance.invoiceCount')} thisWeek={stats.thisWeekSalesCount} lastWeek={stats.lastWeekSalesCount} isCurrency={false} />
         </div>
       </div>
 
-      {/* ملخص النظام */}
       <div className="bg-card p-4 rounded-[2rem] border shadow-sm">
         <h3 className="font-black text-foreground mb-3 flex items-center gap-2 text-sm">
           <Clock size={16} className="text-primary" />
-          ملخص النظام
+          {t('finance.systemSummary')}
         </h3>
         <div className="grid grid-cols-2 gap-2">
           <div className="bg-blue-500/10 p-3 rounded-xl text-center">
             <FileText className="w-5 h-5 mx-auto text-blue-600 dark:text-blue-400 mb-1" />
             <p className="text-lg font-black text-foreground">{stats.thisWeekSalesCount}</p>
-            <p className="text-[8px] text-muted-foreground font-bold">فواتير الأسبوع</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('finance.weekInvoices')}</p>
           </div>
           <div className="bg-emerald-500/10 p-3 rounded-xl text-center">
             <Wallet className="w-5 h-5 mx-auto text-emerald-600 dark:text-emerald-400 mb-1" />
             <p className="text-lg font-black text-foreground">{payments.filter(p => !p.isReversed).length}</p>
-            <p className="text-[8px] text-muted-foreground font-bold">عمليات تحصيل</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('finance.collectionOps')}</p>
           </div>
           <div className="bg-orange-500/10 p-3 rounded-xl text-center">
             <Users className="w-5 h-5 mx-auto text-orange-600 dark:text-orange-400 mb-1" />
             <p className="text-lg font-black text-foreground">{customers.filter(c => c.balance > 0).length}</p>
-            <p className="text-[8px] text-muted-foreground font-bold">زبائن بذمم</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('finance.debtCustomers')}</p>
           </div>
           <div className="bg-red-500/10 p-3 rounded-xl text-center">
             <Package className="w-5 h-5 mx-auto text-red-600 dark:text-red-400 mb-1" />
             <p className="text-lg font-black text-foreground">{products.filter(p => p.stock <= p.minStock).length}</p>
-            <p className="text-[8px] text-muted-foreground font-bold">منتجات منخفضة</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('finance.lowStockProducts')}</p>
           </div>
         </div>
       </div>
 
-      {/* أعلى الزبائن حجماً */}
       {stats.topProducts.length > 0 && (
         <div className="bg-card p-4 rounded-[2rem] border shadow-sm">
           <h3 className="font-black text-foreground mb-3 flex items-center gap-2 text-sm">
             <PieChart size={16} className="text-primary" />
-            أعلى الزبائن حجماً
+            {t('finance.topCustomersByVolume')}
           </h3>
           <div className="space-y-1.5">
             {stats.topProducts.map((item, index) => (
@@ -240,6 +236,7 @@ const FinanceKpiCard: React.FC<{
 const ComparisonCard: React.FC<{
   label: string; thisWeek: number; lastWeek: number; isCurrency?: boolean;
 }> = ({ label, thisWeek, lastWeek, isCurrency = true }) => {
+  const { t } = useTranslation();
   const change = lastWeek > 0 ? ((thisWeek - lastWeek) / lastWeek) * 100 : 0;
   const isPositive = change >= 0;
 
@@ -248,13 +245,13 @@ const ComparisonCard: React.FC<{
       <p className="text-[9px] font-black text-muted-foreground uppercase mb-1.5">{label}</p>
       <div className="space-y-0.5">
         <div className="flex justify-between items-center">
-          <span className="text-[10px] text-muted-foreground">هذا الأسبوع</span>
+          <span className="text-[10px] text-muted-foreground">{t('finance.thisWeek')}</span>
           <span className="font-black text-foreground text-xs">
             {thisWeek.toLocaleString()} {isCurrency && <span className="text-[9px] opacity-30">{CURRENCY}</span>}
           </span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-[10px] text-muted-foreground">السابق</span>
+          <span className="text-[10px] text-muted-foreground">{t('finance.lastWeek')}</span>
           <span className="font-bold text-muted-foreground text-xs">
             {lastWeek.toLocaleString()} {isCurrency && <span className="text-[9px] opacity-30">{CURRENCY}</span>}
           </span>

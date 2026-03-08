@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ShoppingCart, Search, Package, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { CURRENCY } from '@/constants';
 
 interface Purchase {
   id: string;
@@ -14,6 +16,8 @@ interface Purchase {
 }
 
 const PurchasesTab: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,19 +49,17 @@ const PurchasesTab: React.FC = () => {
 
   return (
     <div className="space-y-3">
-      {/* Search */}
       <div className="relative">
         <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-        <input type="text" placeholder="بحث بالمنتج أو المورد..." value={searchTerm}
+        <input type="text" placeholder={t('accountant.searchByProductOrSupplier')} value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full bg-muted border-none rounded-xl px-12 py-3 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground" />
       </div>
 
-      {/* Date Filters */}
       <button onClick={() => setShowFilters(!showFilters)}
         className="flex items-center gap-2 text-xs text-muted-foreground font-bold">
         <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-        فلترة بالتاريخ
+        {t('common.filterByDate')}
       </button>
       {showFilters && (
         <div className="grid grid-cols-2 gap-2">
@@ -68,20 +70,18 @@ const PurchasesTab: React.FC = () => {
         </div>
       )}
 
-      {/* Summary */}
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-blue-500/10 rounded-2xl p-4 text-center">
-          <p className="text-[9px] text-muted-foreground font-bold">إجمالي المشتريات</p>
-          <p className="text-xl font-black text-blue-600 dark:text-blue-400">{totalAmount.toLocaleString('ar-SA')}</p>
-          <p className="text-[10px] text-muted-foreground">ل.س</p>
+          <p className="text-[9px] text-muted-foreground font-bold">{t('accountant.totalPurchases')}</p>
+          <p className="text-xl font-black text-blue-600 dark:text-blue-400">{totalAmount.toLocaleString(locale)}</p>
+          <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
         </div>
         <div className="bg-muted rounded-2xl p-4 text-center">
-          <p className="text-[9px] text-muted-foreground font-bold">عدد العمليات</p>
+          <p className="text-[9px] text-muted-foreground font-bold">{t('common.operationCount')}</p>
           <p className="text-xl font-black text-foreground">{filteredPurchases.length}</p>
         </div>
       </div>
 
-      {/* Purchases List */}
       {loading ? (
         <div className="text-center py-12">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
@@ -89,7 +89,7 @@ const PurchasesTab: React.FC = () => {
       ) : filteredPurchases.length === 0 ? (
         <div className="text-center py-12">
           <ShoppingCart className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
-          <p className="text-muted-foreground font-bold">لا توجد مشتريات</p>
+          <p className="text-muted-foreground font-bold">{t('accountant.noPurchases')}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -102,14 +102,14 @@ const PurchasesTab: React.FC = () => {
                   </div>
                   <div>
                     <p className="font-bold text-foreground">{purchase.product_name}</p>
-                    <p className="text-xs text-muted-foreground">{purchase.supplier_name || 'بدون مورد'}</p>
+                    <p className="text-xs text-muted-foreground">{purchase.supplier_name || t('common.noSupplier')}</p>
                   </div>
                 </div>
-                <p className="font-black text-blue-600 dark:text-blue-400">{Number(purchase.total_price).toLocaleString('ar-SA')}</p>
+                <p className="font-black text-blue-600 dark:text-blue-400">{Number(purchase.total_price).toLocaleString(locale)}</p>
               </div>
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{purchase.quantity} × {Number(purchase.unit_price).toLocaleString('ar-SA')}</span>
-                <span>{new Date(purchase.created_at).toLocaleDateString('ar-SA')}</span>
+                <span>{purchase.quantity} × {Number(purchase.unit_price).toLocaleString(locale)}</span>
+                <span>{new Date(purchase.created_at).toLocaleDateString(locale)}</span>
               </div>
             </div>
           ))}
