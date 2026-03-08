@@ -34,8 +34,9 @@ const OFFLINE_TTL = {
   slow: 48 * 60 * 60 * 1000,   // 48 hours - licenses, org stats
 };
 
-// Max rows per query to prevent hitting Supabase 1000-row default
-const PAGE_LIMIT = 500;
+// Increased from 500 to 1000 (Supabase max default) for better coverage
+// For datasets > 1000, use useCursorPagination hook
+const PAGE_LIMIT = 1000;
 
 // ============================================
 // Product Queries
