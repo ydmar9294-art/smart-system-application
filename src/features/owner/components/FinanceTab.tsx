@@ -10,43 +10,26 @@ import {
 
 export const FinanceTab: React.FC = () => {
   const { sales, payments, products, customers } = useApp();
-  const [discountAnalytics, setDiscountAnalytics] = useState<{
-    totalDiscounts: number;
-    cashDiscounts: number;
-    creditDiscounts: number;
-    topCustomers: { name: string; total: number }[];
-  }>({ totalDiscounts: 0, cashDiscounts: 0, creditDiscounts: 0, topCustomers: [] });
 
-  useEffect(() => {
-    const loadDiscountAnalytics = async () => {
-      try {
-        const { data } = await supabase
-          .from('sales')
-          .select('discount_value, discount_percentage, payment_type, customer_name, is_voided')
-          .eq('is_voided', false);
-        
-        if (data) {
-          const totalDiscounts = data.reduce((s, d) => s + Number(d.discount_value || 0), 0);
-          const cashDiscounts = data.filter(d => d.payment_type === 'CASH').reduce((s, d) => s + Number(d.discount_value || 0), 0);
-          const creditDiscounts = data.filter(d => d.payment_type === 'CREDIT').reduce((s, d) => s + Number(d.discount_value || 0), 0);
-          
-          const customerMap: Record<string, number> = {};
-          data.forEach(d => {
-            if (Number(d.discount_value || 0) > 0) {
-              customerMap[d.customer_name] = (customerMap[d.customer_name] || 0) + Number(d.discount_value);
-            }
-          });
-          const topCustomers = Object.entries(customerMap)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 5)
-            .map(([name, total]) => ({ name, total }));
+  const discountAnalytics = useMemo(() => {
+    const activeSales = sales.filter(s => !s.isVoided);
+    const totalDiscounts = activeSales.reduce((s, d) => s + Number(d.discountValue || 0), 0);
+    const cashDiscounts = activeSales.filter(d => d.paymentType === 'CASH').reduce((s, d) => s + Number(d.discountValue || 0), 0);
+    const creditDiscounts = activeSales.filter(d => d.paymentType === 'CREDIT').reduce((s, d) => s + Number(d.discountValue || 0), 0);
+    
+    const customerMap: Record<string, number> = {};
+    activeSales.forEach(d => {
+      if (Number(d.discountValue || 0) > 0) {
+        customerMap[d.customerName] = (customerMap[d.customerName] || 0) + Number(d.discountValue || 0);
+      }
+    });
+    const topCustomers = Object.entries(customerMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, total]) => ({ name, total }));
 
-          setDiscountAnalytics({ totalDiscounts, cashDiscounts, creditDiscounts, topCustomers });
-        }
-      } catch (err) { console.error(err); }
-    };
-    loadDiscountAnalytics();
-  }, []);
+    return { totalDiscounts, cashDiscounts, creditDiscounts, topCustomers };
+  }, [sales]);
 
   const stats = useMemo(() => {
     const now = new Date();
