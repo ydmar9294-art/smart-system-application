@@ -465,80 +465,151 @@
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
   /* ==========================================
-     BOTTOM TAB NAVIGATION — Premium Native Glass
+     NATIVE HEADER — Premium Glass
   ========================================== */
-  .bottom-tab-nav {
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 9980;
+  .native-header {
+    position: relative;
     background: var(--card-glass-bg);
     backdrop-filter: blur(32px) saturate(2);
     -webkit-backdrop-filter: blur(32px) saturate(2);
-    border-top: 0.5px solid var(--card-glass-border);
-    box-shadow: 0 -6px 40px hsla(220, 30%, 10%, 0.1), var(--glass-highlight);
+    border-bottom: 0.5px solid var(--card-glass-border);
+    box-shadow: 0 4px 24px hsla(220, 30%, 10%, 0.06), var(--glass-highlight);
     overflow: hidden;
   }
-  /* Glass reflection on nav */
-  .bottom-tab-nav::before {
+  .native-header::before {
     content: ''; position: absolute; inset: 0;
     background: var(--glass-reflection); pointer-events: none; z-index: 1;
   }
-  .dark .bottom-tab-nav {
-    box-shadow: 0 -6px 40px hsla(222, 30%, 3%, 0.5), var(--glass-highlight);
+  .dark .native-header {
+    box-shadow: 0 4px 24px hsla(222, 30%, 3%, 0.35), var(--glass-highlight);
   }
 
-  .bottom-tab-nav-inner {
-    display: flex; align-items: center; justify-content: space-around;
-    padding: 0.5rem 0.75rem 0.35rem;
-    max-width: 32rem; margin: 0 auto;
+  .native-header-avatar {
+    position: relative; flex-shrink: 0;
+  }
+
+  .native-header-icon-btn {
+    width: 2.25rem; height: 2.25rem;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 0.875rem;
+    background: var(--card-glass-bg);
+    backdrop-filter: blur(16px) saturate(1.5);
+    -webkit-backdrop-filter: blur(16px) saturate(1.5);
+    border: 0.5px solid var(--card-glass-border);
+    box-shadow: var(--glass-shadow);
+    color: hsl(var(--foreground));
+    transition: all 200ms;
+    -webkit-tap-highlight-color: transparent;
+    position: relative; z-index: 2;
+  }
+  .native-header-icon-btn:active { transform: scale(0.9); }
+
+  .native-header-icon-whatsapp {
+    background: linear-gradient(135deg, hsla(142, 70%, 49%, 0.12), hsla(142, 70%, 49%, 0.06));
+    border-color: hsla(142, 70%, 49%, 0.25);
+    color: hsl(142, 70%, 45%);
+  }
+  .native-header-icon-whatsapp:active {
+    background: hsla(142, 70%, 49%, 0.2);
+  }
+
+  .native-header-action-pill {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    padding: 0.25rem 0.5rem; border-radius: 0.875rem;
+    background: var(--card-glass-bg);
+    backdrop-filter: blur(14px) saturate(1.4);
+    -webkit-backdrop-filter: blur(14px) saturate(1.4);
+    border: 0.5px solid var(--card-glass-border);
+    box-shadow: var(--glass-shadow);
     position: relative; z-index: 2;
   }
 
-  .bottom-tab-item {
+  .native-header-edge {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, hsl(var(--primary) / 0.15) 30%, hsl(var(--primary) / 0.25) 50%, hsl(var(--primary) / 0.15) 70%, transparent 100%);
+  }
+
+  /* ==========================================
+     NATIVE BOTTOM NAVIGATION — Premium Floating Glass
+  ========================================== */
+  .native-bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 9980;
+    padding: 0 0.75rem 0.5rem;
+  }
+
+  .native-bottom-nav-inner {
+    display: flex; align-items: center; justify-content: space-around;
+    padding: 0.5rem 0.5rem 0.4rem;
+    border-radius: 1.5rem;
+    background: var(--card-glass-bg);
+    backdrop-filter: blur(40px) saturate(2.2);
+    -webkit-backdrop-filter: blur(40px) saturate(2.2);
+    border: 0.5px solid var(--card-glass-border);
+    box-shadow: 0 -4px 32px hsla(220, 30%, 10%, 0.1),
+                0 2px 12px hsla(220, 30%, 10%, 0.05),
+                var(--glass-highlight);
+    position: relative; overflow: hidden;
+  }
+  .native-bottom-nav-inner::before {
+    content: ''; position: absolute; inset: 0; border-radius: inherit;
+    background: var(--glass-reflection); pointer-events: none; z-index: 0;
+  }
+  .dark .native-bottom-nav-inner {
+    box-shadow: 0 -4px 32px hsla(222, 30%, 3%, 0.5),
+                0 2px 12px hsla(222, 30%, 3%, 0.25),
+                var(--glass-highlight);
+  }
+
+  .native-tab-item {
     flex: 1; display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    gap: 0.2rem; padding: 0.4rem 0.25rem;
-    border-radius: 1.25rem;
+    gap: 0.15rem; padding: 0.35rem 0.25rem;
+    border-radius: 1rem;
     transition: all 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
-    position: relative;
+    position: relative; z-index: 1;
     -webkit-tap-highlight-color: transparent;
   }
-  .bottom-tab-item:active { transform: scale(0.9); }
+  .native-tab-item:active { transform: scale(0.88); }
 
-  .bottom-tab-icon-wrap {
+  .native-tab-icon {
     position: relative; display: flex; align-items: center; justify-content: center;
-    width: 2.5rem; height: 2.5rem; border-radius: 1rem;
+    width: 2.25rem; height: 2.25rem; border-radius: 0.875rem;
     transition: all 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
   }
-  .bottom-tab-icon-active {
-    background: hsl(var(--primary) / 0.14);
-    box-shadow: 0 0 16px hsl(var(--primary) / 0.18),
-                inset 0 1px 0 0 hsla(0, 0%, 100%, 0.15);
-    transform: scale(1.1) translateY(-2px);
+  .native-tab-icon-lit {
+    background: hsl(var(--primary) / 0.12);
+    box-shadow: 0 0 14px hsl(var(--primary) / 0.15),
+                inset 0 1px 0 0 hsla(0, 0%, 100%, 0.12);
+    transform: scale(1.08) translateY(-1px);
   }
-  .dark .bottom-tab-icon-active {
-    background: hsl(var(--primary) / 0.22);
+  .dark .native-tab-icon-lit {
+    background: hsl(var(--primary) / 0.2);
+    box-shadow: 0 0 18px hsl(var(--primary) / 0.2),
+                inset 0 1px 0 0 hsla(0, 0%, 100%, 0.06);
   }
 
-  .bottom-tab-active { color: hsl(var(--primary)); }
-  .bottom-tab-inactive { color: hsl(var(--muted-foreground)); }
+  .native-tab-active { color: hsl(var(--primary)); }
+  .native-tab-inactive { color: hsl(var(--muted-foreground)); }
 
-  .bottom-tab-label {
-    font-size: 0.6rem; font-weight: 800; line-height: 1;
+  .native-tab-label {
+    font-size: 0.56rem; font-weight: 800; line-height: 1;
     transition: all 250ms;
   }
-  .bottom-tab-label-active {
+  .native-tab-label-lit {
     color: hsl(var(--primary));
-    transform: scale(1.05);
+    font-weight: 900;
   }
 
-  .bottom-tab-indicator {
-    position: absolute; bottom: -0.2rem;
-    width: 1.25rem; height: 2.5px;
-    border-radius: 999px;
+  .native-tab-dot {
+    position: absolute; bottom: -0.1rem;
+    width: 4px; height: 4px;
+    border-radius: 50%;
     background: hsl(var(--primary));
-    box-shadow: 0 0 10px hsl(var(--primary) / 0.5);
+    box-shadow: 0 0 8px hsl(var(--primary) / 0.5);
   }
 
-  .bottom-tab-badge {
+  .native-tab-badge {
     position: absolute; top: -3px; right: -5px;
     min-width: 16px; height: 16px; padding: 0 4px;
     font-size: 8px; font-weight: 900; line-height: 16px; text-align: center;
@@ -550,12 +621,80 @@
   }
 
   /* ==========================================
-     DASHBOARD HEADER — Premium Glass
+     NATIVE APP SHELL
   ========================================== */
-  .dashboard-header {
-    position: relative; padding: 0.75rem 1rem 0.75rem;
+  .native-app-shell {
+    min-height: 100vh; min-height: 100dvh;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    display: flex; flex-direction: column;
+    background: hsl(var(--background));
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
   }
 
+  .native-content-area {
+    padding: 0.75rem 1rem 1rem;
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* ==========================================
+     NATIVE GLASS CARD — Premium Elevated
+  ========================================== */
+  .native-glass-card {
+    background: var(--card-glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+    border: 0.5px solid var(--card-glass-border);
+    box-shadow: var(--glass-shadow), var(--glass-highlight);
+    @apply rounded-[1.25rem] p-4;
+    position: relative; overflow: hidden;
+  }
+  .native-glass-card::before {
+    content: ''; position: absolute; inset: 0; border-radius: inherit;
+    background: var(--glass-reflection); pointer-events: none; z-index: 1;
+  }
+  .native-glass-card-glow {
+    box-shadow: var(--glass-shadow), var(--glass-highlight),
+                0 0 20px hsl(var(--primary) / 0.08);
+  }
+
+  .native-glass-kpi {
+    background: var(--card-glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+    border: 0.5px solid var(--card-glass-border);
+    box-shadow: var(--glass-shadow), var(--glass-highlight);
+    @apply p-4 rounded-[1.25rem];
+    position: relative; overflow: hidden;
+  }
+  .native-glass-kpi::before {
+    content: ''; position: absolute; inset: 0; border-radius: inherit;
+    background: var(--glass-reflection); pointer-events: none; z-index: 1;
+  }
+
+  /* ==========================================
+     NATIVE FAB — Floating Action Button
+  ========================================== */
+  .native-fab {
+    position: fixed;
+    bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+    left: 1rem; z-index: 9970;
+    width: 3.25rem; height: 3.25rem;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 1.125rem;
+    box-shadow: 0 6px 24px hsl(var(--primary) / 0.3), var(--glass-highlight);
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .native-fab:active { transform: scale(0.88); }
+
+  /* Legacy compatibility aliases */
+  .bottom-tab-nav { @apply native-bottom-nav; }
+  .dashboard-header { @apply native-header safe-area-top; }
+  .glass-card-elevated { @apply native-glass-card; }
+  .glass-kpi-card { @apply native-glass-kpi; }
+  .fab-button { @apply native-fab; }
   .glass-profile-capsule {
     display: flex; align-items: center; gap: 0.75rem;
     padding: 0.5rem 1.25rem 0.5rem 0.75rem;
@@ -571,7 +710,6 @@
     content: ''; position: absolute; inset: 0; border-radius: inherit;
     background: var(--glass-reflection); pointer-events: none;
   }
-
   .glass-action-bar {
     display: flex; align-items: center; gap: 0.375rem;
     padding: 0.375rem 0.5rem; border-radius: 1rem;
@@ -586,7 +724,6 @@
     content: ''; position: absolute; inset: 0; border-radius: inherit;
     background: var(--glass-reflection); pointer-events: none;
   }
-
   .glass-logout-btn {
     @apply p-2.5 rounded-full text-muted-foreground transition-all;
     background: var(--card-glass-bg);
@@ -599,42 +736,6 @@
     @apply text-destructive;
     background: hsl(var(--destructive) / 0.08);
     border-color: hsl(var(--destructive) / 0.2);
-  }
-
-  /* ==========================================
-     GLASS CARD — Premium Enhanced
-  ========================================== */
-  .glass-card-elevated {
-    background: var(--card-glass-bg);
-    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
-    border: 0.5px solid var(--card-glass-border);
-    box-shadow: var(--glass-shadow), var(--glass-highlight);
-    @apply rounded-[1.25rem] p-4;
-    position: relative; overflow: hidden;
-  }
-  .glass-card-elevated::before {
-    content: ''; position: absolute; inset: 0; border-radius: inherit;
-    background: var(--glass-reflection); pointer-events: none; z-index: 1;
-  }
-
-  .glass-card-glow {
-    box-shadow: var(--glass-shadow), var(--glass-highlight),
-                0 0 24px hsl(var(--primary) / 0.08);
-  }
-
-  .glass-kpi-card {
-    background: var(--card-glass-bg);
-    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
-    border: 0.5px solid var(--card-glass-border);
-    box-shadow: var(--glass-shadow), var(--glass-highlight);
-    @apply p-4 rounded-[1.25rem];
-    position: relative; overflow: hidden;
-  }
-  .glass-kpi-card::before {
-    content: ''; position: absolute; inset: 0; border-radius: inherit;
-    background: var(--glass-reflection); pointer-events: none; z-index: 1;
   }
 
   /* ==========================================
@@ -667,7 +768,6 @@
     position: relative; z-index: 1;
   }
   .glass-section-tab:active { transform: scale(0.93); }
-
   .glass-section-tab-active {
     @apply text-white shadow-lg;
     transform: scale(1.02);
@@ -675,25 +775,9 @@
   .glass-section-tab-inactive { @apply text-muted-foreground; }
   .glass-section-tab-inactive:hover { background: hsl(var(--muted) / 0.5); }
 
-  /* ==========================================
-     FLOATING ACTION BUTTON
-  ========================================== */
-  .fab-button {
-    position: fixed;
-    bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
-    left: 1rem; z-index: 9970;
-    width: 3.5rem; height: 3.5rem;
-    display: flex; align-items: center; justify-content: center;
-    border-radius: 1.25rem;
-    box-shadow: 0 8px 28px hsl(var(--primary) / 0.35), var(--glass-highlight);
-    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
-    -webkit-tap-highlight-color: transparent;
-  }
-  .fab-button:active { transform: scale(0.88); }
-
   /* Content bottom padding when bottom nav is visible */
   .has-bottom-nav {
-    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
   }
 
   /* ==========================================
