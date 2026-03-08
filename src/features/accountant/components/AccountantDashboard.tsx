@@ -25,8 +25,6 @@ const AccountantDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<AccountantTabType>('sales');
   const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
-  const [loggingOut, setLoggingOut] = useState(false);
-
   React.useEffect(() => {
     if (['sales', 'purchases'].includes(activeTab)) setBottomNav('home');
     else if (['collections', 'debts'].includes(activeTab)) setBottomNav('operations');
