@@ -249,7 +249,7 @@ const SalesManagerDashboard: React.FC = () => {
                         <span className="font-mono text-muted-foreground text-xs line-through">{pe.activation_code}</span>
                         {pe.activated_at && (
                           <p className="text-[10px] text-muted-foreground mt-1">
-                            {t('owner.activatedAt')} {new Date(pe.activated_at).toLocaleDateString('ar-SY')}
+                            {t('owner.activatedAt')} {new Date(pe.activated_at).toLocaleDateString(isRtl ? 'ar-SY' : 'en-US')}
                           </p>
                         )}
                       </div>

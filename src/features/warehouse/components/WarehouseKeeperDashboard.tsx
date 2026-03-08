@@ -234,7 +234,7 @@ const WarehouseKeeperDashboard: React.FC = () => {
                     <div key={d.id} className="flex justify-between items-center bg-muted p-3 rounded-lg">
                       <div>
                         <p className="font-bold text-foreground text-sm">{d.distributor_name}</p>
-                        <p className="text-xs text-muted-foreground">{new Date(d.created_at).toLocaleDateString('ar-EG')}</p>
+                        <p className="text-xs text-muted-foreground">{new Date(d.created_at).toLocaleDateString(isRtl ? 'ar-EG' : 'en-US')}</p>
                       </div>
                       <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
                         d.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
