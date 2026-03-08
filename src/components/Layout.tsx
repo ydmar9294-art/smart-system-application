@@ -15,7 +15,10 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout, organization, refreshAuth, refreshAllData } = useApp();
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [showLangSwitcher, setShowLangSwitcher] = useState(false);
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language === 'ar';
   
   usePageTheme();
   useRealtimeNotifications();
