@@ -68,9 +68,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
       {/* Global Offline Banner */}
       {!isOnline && (
-        <div className="fixed top-0 left-0 right-0 z-[9999] flex items-center justify-center gap-2 bg-destructive text-destructive-foreground py-2 px-4 text-sm font-bold shadow-lg" dir="rtl">
+        <div className="fixed top-0 left-0 right-0 z-[9999] flex items-center justify-center gap-2 bg-destructive text-destructive-foreground py-2 px-4 text-sm font-bold shadow-lg" dir={isRtl ? 'rtl' : 'ltr'}>
           <WifiOff size={16} />
-          <span>غير متصل — البيانات المحلية متاحة</span>
+          <span>{t('layout.offlineBanner')}</span>
         </div>
       )}
 
