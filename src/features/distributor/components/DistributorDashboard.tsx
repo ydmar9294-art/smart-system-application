@@ -134,10 +134,10 @@ const DistributorDashboard: React.FC = () => {
   };
 
   const bottomTabs = [
-    { id: 'home', label: 'المخزون', icon: <Warehouse className="w-5 h-5" /> },
-    { id: 'sales', label: 'المبيعات', icon: <FileText className="w-5 h-5" /> },
-    { id: 'finance', label: 'المالية', icon: <Wallet className="w-5 h-5" /> },
-    { id: 'history', label: 'السجل', icon: <History className="w-5 h-5" /> },
+    { id: 'home', label: t('nav.warehouse'), icon: <Warehouse className="w-5 h-5" /> },
+    { id: 'sales', label: t('nav.sales'), icon: <FileText className="w-5 h-5" /> },
+    { id: 'finance', label: t('nav.finance'), icon: <Wallet className="w-5 h-5" /> },
+    { id: 'history', label: t('nav.history'), icon: <History className="w-5 h-5" /> },
   ];
 
   return (
