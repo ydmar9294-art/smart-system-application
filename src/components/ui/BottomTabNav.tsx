@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useCallback } from 'react';
+import { ImpactStyle } from '@capacitor/haptics';
+import { useHaptics } from '@/platform/hooks/useHaptics';
 
 export interface BottomTab {
   id: string;
@@ -15,33 +17,45 @@ interface BottomTabNavProps {
 }
 
 export const BottomTabNav: React.FC<BottomTabNavProps> = ({ tabs, activeTab, onTabChange }) => {
+  const { impact } = useHaptics();
+
+  const handleTab = useCallback((tabId: string) => {
+    if (tabId !== activeTab) {
+      impact(ImpactStyle.Light);
+      onTabChange(tabId);
+    }
+  }, [activeTab, onTabChange, impact]);
+
   return (
-    <div className="bottom-tab-nav safe-area-bottom">
-      <div className="bottom-tab-nav-inner">
+    <nav className="native-bottom-nav safe-area-bottom" role="tablist" aria-label="Main navigation">
+      <div className="native-bottom-nav-inner">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
-              onClick={() => onTabChange(tab.id)}
-              className={`bottom-tab-item ${isActive ? 'bottom-tab-active' : 'bottom-tab-inactive'}`}
+              onClick={() => handleTab(tab.id)}
+              className={`native-tab-item ${isActive ? 'native-tab-active' : 'native-tab-inactive'}`}
               aria-selected={isActive}
               role="tab"
             >
-              <div className={`bottom-tab-icon-wrap ${isActive ? 'bottom-tab-icon-active' : ''}`}>
+              {/* Icon container */}
+              <div className={`native-tab-icon ${isActive ? 'native-tab-icon-lit' : ''}`}>
                 {isActive && tab.activeIcon ? tab.activeIcon : tab.icon}
                 {tab.badge != null && tab.badge > 0 && (
-                  <span className="bottom-tab-badge">{tab.badge > 99 ? '99+' : tab.badge}</span>
+                  <span className="native-tab-badge">{tab.badge > 99 ? '99+' : tab.badge}</span>
                 )}
               </div>
-              <span className={`bottom-tab-label ${isActive ? 'bottom-tab-label-active' : ''}`}>
+              {/* Label */}
+              <span className={`native-tab-label ${isActive ? 'native-tab-label-lit' : ''}`}>
                 {tab.label}
               </span>
-              {isActive && <div className="bottom-tab-indicator" />}
+              {/* Active indicator dot */}
+              {isActive && <div className="native-tab-dot" />}
             </button>
           );
         })}
       </div>
-    </div>
+    </nav>
   );
 };
