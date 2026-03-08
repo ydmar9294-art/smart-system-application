@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FileText,
   RotateCcw,
@@ -26,6 +27,10 @@ interface InvoiceHistoryTabProps {
 }
 
 const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language === 'ar';
+  const locale = isRtl ? 'ar-SA' : 'en-US';
+
   const [invoices, setInvoices] = useState<CachedInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -35,14 +40,11 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
   const [showPrintModal, setShowPrintModal] = useState(false);
   const loadedFromCache = useRef(false);
 
-  // Load from IndexedDB first, then background-refresh from server
   const loadInvoices = useCallback(async (isRefresh = false) => {
-    // On first load, show cached data immediately (includes locally-created invoices)
     if (!loadedFromCache.current) {
       try {
         const cached = await getCachedInvoices();
         if (cached.length > 0) {
-          // Sort: newest first
           cached.sort((a, b) => new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime());
           setInvoices(cached);
           setLoading(false);
@@ -54,7 +56,6 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
     if (isRefresh) setRefreshing(true);
 
     if (!navigator.onLine) {
-      // Even if offline, ensure we load from cache if not loaded yet
       if (!loadedFromCache.current) {
         try {
           const cached = await getCachedInvoices();
@@ -74,7 +75,6 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
 
       const results: CachedInvoice[] = [];
 
-      // Fetch org info + legal info for all invoices
       let orgName: string | null = null;
       let legalInfo: any = null;
       const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single();
@@ -195,7 +195,7 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
             id: col.id, invoice_type: 'collection',
             invoice_number: `COL-${String(i + 1).padStart(4, '0')}`,
             reference_id: col.sale_id, customer_id: null,
-            customer_name: saleNameMap.get(col.sale_id) || 'غير معروف',
+            customer_name: saleNameMap.get(col.sale_id) || t('invoice.unknownCustomer'),
             created_by: col.collected_by, created_by_name: null,
             grand_total: col.amount, paid_amount: col.amount,
             remaining: 0, payment_type: 'CASH',
@@ -209,7 +209,6 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
       results.sort((a, b) => new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime());
       setInvoices(results);
       
-      // Cache for offline use
       try { await cacheInvoices(results); } catch { /* ignore */ }
     } catch (err) {
       console.error('Error fetching invoices:', err);
@@ -217,7 +216,7 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadInvoices();
@@ -243,10 +242,10 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
 
   const getTypeName = (type: string) => {
     switch (type) {
-      case 'sale': return 'بيع';
-      case 'return': return 'مرتجع';
-      case 'collection': return 'قبض';
-      default: return 'مستند';
+      case 'sale': return t('invoice.sale');
+      case 'return': return t('invoice.return');
+      case 'collection': return t('invoice.collection');
+      default: return t('invoice.document');
     }
   };
 
@@ -260,7 +259,6 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
     setSelectedInvoice(null);
   };
 
-  // Apply filters locally
   const filteredInvoices = invoices
     .filter(inv => filter === 'all' || inv.invoice_type === filter)
     .filter(inv => {
@@ -270,10 +268,10 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
     });
 
   const filterButtons: { id: InvoiceFilter; label: string; color: string }[] = [
-    { id: 'all', label: 'الكل', color: 'bg-gray-600' },
-    { id: 'sale', label: 'مبيعات', color: 'bg-blue-600' },
-    { id: 'return', label: 'مرتجعات', color: 'bg-orange-500' },
-    { id: 'collection', label: 'تحصيلات', color: 'bg-emerald-600' },
+    { id: 'all', label: t('invoice.all'), color: 'bg-gray-600' },
+    { id: 'sale', label: t('invoice.sales'), color: 'bg-blue-600' },
+    { id: 'return', label: t('invoice.returns'), color: 'bg-orange-500' },
+    { id: 'collection', label: t('invoice.collections'), color: 'bg-emerald-600' },
   ];
 
   return (
@@ -286,7 +284,7 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
       <div className="flex items-center justify-between">
         <h2 className="font-black text-lg flex items-center gap-2">
           <History className="w-5 h-5 text-primary" />
-          سجل الفواتير
+          {t('invoice.invoiceHistory')}
           {!isOnline && <WifiOff className="w-4 h-4 text-amber-500" />}
         </h2>
         <button
@@ -295,19 +293,19 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
           className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 disabled:opacity-50"
         >
           <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          تحديث
+          {t('invoice.refresh')}
         </button>
       </div>
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+        <Search className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground`} />
         <input
           type="text"
-          placeholder="بحث بالعميل أو رقم الفاتورة..."
+          placeholder={t('invoice.searchInvoice')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full bg-muted border-none rounded-2xl px-12 py-4 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className={`w-full bg-muted border-none rounded-2xl ${isRtl ? 'pr-12 pl-4' : 'pl-12 pr-4'} py-4 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground`}
         />
       </div>
 
@@ -332,14 +330,14 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
       {loading ? (
         <div className="text-center py-16">
           <Loader2 className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4 animate-spin" />
-          <p className="text-muted-foreground font-bold">جارٍ تحميل السجل...</p>
+          <p className="text-muted-foreground font-bold">{t('invoice.loadingHistory')}</p>
         </div>
       ) : filteredInvoices.length === 0 ? (
         <div className="text-center py-16">
           <History className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
-          <p className="text-muted-foreground font-bold">لا توجد فواتير</p>
+          <p className="text-muted-foreground font-bold">{t('invoice.noInvoices')}</p>
           <p className="text-muted-foreground/70 text-sm mt-2">
-            سيظهر هنا سجل فواتيرك عند إنشائها
+            {t('invoice.invoicesAppearHere')}
           </p>
         </div>
       ) : (
@@ -355,13 +353,13 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
                   <span className="text-xs text-muted-foreground font-mono">{invoice.invoice_number}</span>
                   {(invoice as any).isLocal && (
                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                      <WifiOff className="w-3 h-3" /> محلي
+                      <WifiOff className="w-3 h-3" /> {t('invoice.local')}
                     </span>
                   )}
                 </div>
-                <div className="text-left">
+                <div className={isRtl ? 'text-left' : 'text-right'}>
                   <p className={`text-lg font-black ${invoice.invoice_type === 'return' ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                    {invoice.invoice_type === 'return' ? '-' : ''}{Number(invoice.grand_total).toLocaleString('ar-SA')}
+                    {invoice.invoice_type === 'return' ? '-' : ''}{Number(invoice.grand_total).toLocaleString(locale)}
                   </p>
                   <p className="text-xs text-muted-foreground">{CURRENCY}</p>
                 </div>
@@ -371,7 +369,7 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
                 <div>
                   <p className="font-bold text-foreground">{invoice.customer_name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(invoice.invoice_date).toLocaleDateString('ar-SA')}
+                    {new Date(invoice.invoice_date).toLocaleDateString(locale)}
                   </p>
                 </div>
                 
@@ -382,7 +380,7 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
                         : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
                     }`}>
-                      {invoice.payment_type === 'CASH' ? 'نقداً' : 'آجل'}
+                      {invoice.payment_type === 'CASH' ? t('invoice.cashPayment') : t('invoice.creditPayment')}
                     </span>
                   )}
                   

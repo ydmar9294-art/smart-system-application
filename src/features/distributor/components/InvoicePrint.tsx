@@ -1,8 +1,10 @@
 /**
  * InvoicePrint — builds a CLEAN HTML string from data (never from DOM.innerHTML).
  * Supports discount display in preview and PDF export.
+ * Fully localized with i18n.
  */
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Share2, Download, Loader2, Receipt, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cacheOrgInfo, getCachedOrgInfo } from '../services/distributorOfflineService';
@@ -46,9 +48,42 @@ interface InvoicePrintProps {
   onClose: () => void;
 }
 
+// Translation labels interface for HTML builder
+interface InvoiceLabels {
+  title: string;
+  invoiceNumber: string;
+  date: string;
+  time: string;
+  customer: string;
+  cashPaid: string;
+  creditDeferred: string;
+  item: string;
+  qty: string;
+  price: string;
+  unit: string;
+  consumerPrice: string;
+  total: string;
+  subtotalBeforeDiscount: string;
+  discount: string;
+  netTotal: string;
+  collectedAmount: string;
+  paid: string;
+  remaining: string;
+  notes: string;
+  thankYou: string;
+  orgDefault: string;
+  trademark: string;
+  commercialReg: string;
+  industrialReg: string;
+  taxId: string;
+  paymentStatus: string;
+}
+
 // ─── Pure function: builds a clean, self-contained HTML string ─────────────────
 function buildInvoiceHtml(params: {
-  title: string;
+  labels: InvoiceLabels;
+  locale: string;
+  isRtl: boolean;
   orgName: string;
   legalInfo: LegalInfo | null;
   invoiceId: string;
@@ -67,14 +102,19 @@ function buildInvoiceHtml(params: {
   notes?: string;
 }): string {
   const {
-    title, orgName, legalInfo, invoiceId, date,
+    labels, locale, isRtl, orgName, legalInfo, invoiceId, date,
     customerName, invoiceType, paymentType,
     items, grandTotal, subtotal, discountType, discountPercentage, discountValue,
     paidAmount, remaining, notes
   } = params;
 
-  const dateStr = date.toLocaleDateString('ar-SA');
-  const timeStr = date.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+  const dir = isRtl ? 'rtl' : 'ltr';
+  const lang = isRtl ? 'ar' : 'en';
+  const textAlign = isRtl ? 'right' : 'left';
+  const textAlignEnd = isRtl ? 'left' : 'right';
+
+  const dateStr = date.toLocaleDateString(locale);
+  const timeStr = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 
   const legalHtml = buildLegalInfoHtml(legalInfo);
 
@@ -82,7 +122,7 @@ function buildInvoiceHtml(params: {
     <div style="text-align:center;padding:4px;margin:6px 0;font-weight:bold;font-size:11px;
       background:${paymentType === 'CASH' ? '#d1fae5' : '#ffedd5'};
       color:${paymentType === 'CASH' ? '#047857' : '#c2410c'};">
-      ${paymentType === 'CASH' ? '✓ نقداً (مدفوعة)' : '⏳ آجل'}
+      ${paymentType === 'CASH' ? escapeHtml(labels.cashPaid) : escapeHtml(labels.creditDeferred)}
     </div>` : '';
 
   const itemsHtml = items.length > 0 ? `
@@ -90,23 +130,23 @@ function buildInvoiceHtml(params: {
       <table style="width:100%;border-collapse:collapse;font-size:10px;">
         <thead>
           <tr style="font-weight:bold;font-size:9px;color:#555;border-bottom:1px dashed #ccc;">
-            <th style="text-align:right;padding:3px 2px;">الصنف</th>
-            <th style="text-align:center;padding:3px 2px;">الكمية</th>
-            <th style="text-align:center;padding:3px 2px;">السعر</th>
-            ${items.some((i) => i.unit) ? `<th style="text-align:center;padding:3px 2px;">الوحدة</th>` : ''}
-            ${items.some((i) => i.consumer_price) ? `<th style="text-align:center;padding:3px 2px;">سعر المستهلك</th>` : ''}
-            <th style="text-align:left;padding:3px 2px;">الإجمالي</th>
+            <th style="text-align:${textAlign};padding:3px 2px;">${escapeHtml(labels.item)}</th>
+            <th style="text-align:center;padding:3px 2px;">${escapeHtml(labels.qty)}</th>
+            <th style="text-align:center;padding:3px 2px;">${escapeHtml(labels.price)}</th>
+            ${items.some((i) => i.unit) ? `<th style="text-align:center;padding:3px 2px;">${escapeHtml(labels.unit)}</th>` : ''}
+            ${items.some((i) => i.consumer_price) ? `<th style="text-align:center;padding:3px 2px;">${escapeHtml(labels.consumerPrice)}</th>` : ''}
+            <th style="text-align:${textAlignEnd};padding:3px 2px;">${escapeHtml(labels.total)}</th>
           </tr>
         </thead>
         <tbody>
           ${items.map((item) => `
             <tr style="font-size:11px;border-bottom:1px dashed #eee;">
-              <td style="text-align:right;padding:3px 2px;">${escapeHtml(item.product_name)}</td>
+              <td style="text-align:${textAlign};padding:3px 2px;">${escapeHtml(item.product_name)}</td>
               <td style="text-align:center;padding:3px 2px;font-weight:bold;">${escapeNumber(item.quantity)}</td>
               <td style="text-align:center;padding:3px 2px;">${escapeNumber(item.unit_price)}</td>
               ${items.some((i) => i.unit) ? `<td style="text-align:center;padding:3px 2px;">${escapeHtml(item.unit || '-')}</td>` : ''}
               ${items.some((i) => i.consumer_price) ? `<td style="text-align:center;padding:3px 2px;">${item.consumer_price ? escapeNumber(item.consumer_price) : '-'}</td>` : ''}
-              <td style="text-align:left;padding:3px 2px;font-weight:bold;">${escapeNumber(item.total_price)}</td>
+              <td style="text-align:${textAlignEnd};padding:3px 2px;font-weight:bold;">${escapeNumber(item.total_price)}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -118,58 +158,60 @@ function buildInvoiceHtml(params: {
   const discountHtml = hasDiscount ? `
     <div style="font-size:11px;margin:5px 0;">
       <div style="display:flex;justify-content:space-between;margin:3px 0;">
-        <span>المجموع قبل الخصم:</span><span>${escapeNumber(subtotal || grandTotal + discountValue)} ${escapeHtml(CURRENCY)}</span>
+        <span>${escapeHtml(labels.subtotalBeforeDiscount)}:</span><span>${escapeNumber(subtotal || grandTotal + discountValue)} ${escapeHtml(CURRENCY)}</span>
       </div>
       <div style="display:flex;justify-content:space-between;margin:3px 0;color:#7c3aed;font-weight:bold;">
-        <span>الخصم ${discountType === 'percentage' ? `(${(discountPercentage || 0).toFixed(1)}%)` : ''}:</span>
+        <span>${escapeHtml(labels.discount)} ${discountType === 'percentage' ? `(${(discountPercentage || 0).toFixed(1)}%)` : ''}:</span>
         <span>-${escapeNumber(discountValue)} ${escapeHtml(CURRENCY)}</span>
       </div>
     </div>` : '';
 
+  const totalLabelText = invoiceType === 'collection' ? labels.collectedAmount : labels.netTotal;
+
   const totalsHtml = `
     ${discountHtml}
     <div style="font-size:14px;font-weight:bold;text-align:center;margin:10px 0;${hasDiscount ? 'border-top:1px dashed #7c3aed;padding-top:8px;' : ''}">
-      ${invoiceType === 'collection' ? 'المبلغ المحصّل' : 'الإجمالي الصافي'}: ${escapeNumber(grandTotal)} ${escapeHtml(CURRENCY)}
+      ${escapeHtml(totalLabelText)}: ${escapeNumber(grandTotal)} ${escapeHtml(CURRENCY)}
     </div>
     ${invoiceType === 'sale' && paymentType === 'CREDIT' && paidAmount !== undefined ? `
       <div style="display:flex;justify-content:space-between;font-size:11px;margin:3px 0;">
-        <span>المدفوع:</span><span>${escapeNumber(paidAmount)} ${escapeHtml(CURRENCY)}</span>
+        <span>${escapeHtml(labels.paid)}:</span><span>${escapeNumber(paidAmount)} ${escapeHtml(CURRENCY)}</span>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:bold;color:#c2410c;margin:3px 0;">
-        <span>المتبقي:</span><span>${escapeNumber(remaining ?? 0)} ${escapeHtml(CURRENCY)}</span>
+        <span>${escapeHtml(labels.remaining)}:</span><span>${escapeNumber(remaining ?? 0)} ${escapeHtml(CURRENCY)}</span>
       </div>
     ` : ''}`;
 
   const notesHtml = notes ? `
     <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #000;font-size:10px;color:#555;">
-      ملاحظات: ${escapeHtml(notes)}
+      ${escapeHtml(labels.notes)}: ${escapeHtml(notes)}
     </div>` : '';
 
   return `<!DOCTYPE html>
-<html dir="rtl" lang="ar">
+<html dir="${dir}" lang="${lang}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>${escapeHtml(title)}</title>
+  <title>${escapeHtml(labels.title)}</title>
   <style>${INVOICE_PAGE_STYLE}</style>
 </head>
 <body>
   <div style="text-align:center;margin-bottom:10px;border-bottom:1px dashed #000;padding-bottom:10px;">
-    <div style="font-size:16px;font-weight:bold;">${escapeHtml(orgName || 'اسم المنشأة')}</div>
+    <div style="font-size:16px;font-weight:bold;">${escapeHtml(orgName || labels.orgDefault)}</div>
     ${legalHtml}
   </div>
-  <div style="font-size:14px;font-weight:bold;margin:10px 0;text-align:center;">${escapeHtml(title)}</div>
+  <div style="font-size:14px;font-weight:bold;margin:10px 0;text-align:center;">${escapeHtml(labels.title)}</div>
   <div style="display:flex;justify-content:space-between;font-size:11px;margin:3px 0;">
-    <span>رقم الفاتورة:</span><span dir="ltr">${escapeHtml(invoiceId.slice(0, 8))}</span>
+    <span>${escapeHtml(labels.invoiceNumber)}:</span><span dir="ltr">${escapeHtml(invoiceId.slice(0, 8))}</span>
   </div>
   <div style="display:flex;justify-content:space-between;font-size:11px;margin:3px 0;">
-    <span>التاريخ:</span><span>${escapeHtml(dateStr)}</span>
+    <span>${escapeHtml(labels.date)}:</span><span>${escapeHtml(dateStr)}</span>
   </div>
   <div style="display:flex;justify-content:space-between;font-size:11px;margin:3px 0;">
-    <span>الوقت:</span><span>${escapeHtml(timeStr)}</span>
+    <span>${escapeHtml(labels.time)}:</span><span>${escapeHtml(timeStr)}</span>
   </div>
   <div style="display:flex;justify-content:space-between;font-size:11px;margin:3px 0;">
-    <span>العميل:</span><span>${escapeHtml(customerName)}</span>
+    <span>${escapeHtml(labels.customer)}:</span><span>${escapeHtml(customerName)}</span>
   </div>
   ${paymentBadge}
   ${itemsHtml}
@@ -200,6 +242,10 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
   paymentType,
   onClose
 }) => {
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language === 'ar';
+  const locale = isRtl ? 'ar-SA' : 'en-US';
+
   const [legalInfo, setLegalInfo] = useState<LegalInfo | null>(null);
   const [orgName, setOrgName] = useState('');
   const [loading, setLoading] = useState(true);
@@ -252,18 +298,48 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
 
   const getInvoiceTitle = () => {
     switch (invoiceType) {
-      case 'sale': return 'فاتورة مبيعات';
-      case 'return': return 'إشعار مرتجع';
-      case 'collection': return 'سند قبض';
-      default: return 'فاتورة';
+      case 'sale': return t('invoice.saleInvoice');
+      case 'return': return t('invoice.returnNotice');
+      case 'collection': return t('invoice.receiptVoucher');
+      default: return t('invoice.document');
     }
   };
+
+  const getLabels = (): InvoiceLabels => ({
+    title: getInvoiceTitle(),
+    invoiceNumber: t('invoice.invoiceNumber'),
+    date: t('invoice.dateLabel'),
+    time: t('invoice.timeLabel'),
+    customer: t('invoice.customerLabel'),
+    cashPaid: t('invoice.cashPaid'),
+    creditDeferred: t('invoice.creditDeferred'),
+    item: t('invoice.itemLabel'),
+    qty: t('invoice.quantity'),
+    price: t('invoice.price'),
+    unit: t('invoice.unitLabel'),
+    consumerPrice: t('invoice.consumerPrice'),
+    total: t('invoice.totalLabel'),
+    subtotalBeforeDiscount: t('invoice.subtotalBeforeDiscount'),
+    discount: t('invoice.discountLabel'),
+    netTotal: t('invoice.netTotalLabel'),
+    collectedAmount: t('invoice.collectedAmount'),
+    paid: t('invoice.paidLabel'),
+    remaining: t('invoice.remainingLabel'),
+    notes: t('invoice.notesLabel'),
+    thankYou: t('invoice.thankYou'),
+    orgDefault: t('invoice.orgNameDefault'),
+    trademark: '',
+    commercialReg: '',
+    industrialReg: '',
+    taxId: '',
+    paymentStatus: t('invoice.paymentStatus'),
+  });
 
   const ensurePdf = async (): Promise<string> => {
     if (pdfBase64) return pdfBase64;
 
     const html = buildInvoiceHtml({
-      title: getInvoiceTitle(), orgName, legalInfo, invoiceId,
+      labels: getLabels(), locale, isRtl, orgName, legalInfo, invoiceId,
       date, customerName, invoiceType, paymentType,
       items, grandTotal, subtotal, discountType, discountPercentage, discountValue,
       paidAmount, remaining, notes
@@ -323,24 +399,24 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
 
   if (loading) {
     return (
-      <FullScreenModal isOpen={true} onClose={onClose} title="تحميل الفاتورة"
+      <FullScreenModal isOpen={true} onClose={onClose} title={t('invoice.loadingInvoice')}
       icon={<Receipt size={24} />} headerColor="primary">
         <div className="flex flex-col items-center justify-center py-16">
           <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
-          <p className="font-bold text-muted-foreground">جارٍ تحميل بيانات الفاتورة...</p>
+          <p className="font-bold text-muted-foreground">{t('invoice.loadingInvoiceData')}</p>
         </div>
       </FullScreenModal>);
   }
 
   return (
     <FullScreenModal isOpen={true} onClose={onClose}
-    title="تصدير الفاتورة" icon={<Receipt size={24} />} headerColor="primary"
+    title={t('invoice.exportInvoice')} icon={<Receipt size={24} />} headerColor="primary"
     footer={
     <div className="space-y-3">
           {generating &&
       <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-2">
               <Loader2 className="w-4 h-4 animate-spin" />
-              جارٍ إنشاء ملف PDF...
+              {t('invoice.generatingPdf')}
             </div>
       }
           <button
@@ -348,8 +424,8 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         disabled={generating || actionLoading !== null}
         className="w-full bg-primary text-primary-foreground font-black py-5 rounded-2xl flex items-center justify-center gap-3 hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-50">
             {actionLoading === 'share' ?
-        <><Loader2 className="w-6 h-6 animate-spin" /> جارٍ المشاركة...</> :
-        <><Share2 className="w-6 h-6" /> مشاركة الفاتورة</>
+        <><Loader2 className="w-6 h-6 animate-spin" /> {t('invoice.sharing')}</> :
+        <><Share2 className="w-6 h-6" /> {t('invoice.shareInvoice')}</>
         }
           </button>
           <button
@@ -357,10 +433,10 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
         disabled={generating || actionLoading !== null}
         className="w-full bg-muted text-foreground font-black py-5 rounded-2xl flex items-center justify-center gap-3 hover:bg-muted/80 transition-all active:scale-[0.98] disabled:opacity-50">
             {actionLoading === 'save' ?
-        <><Loader2 className="w-6 h-6 animate-spin" /> جارٍ الحفظ...</> :
+        <><Loader2 className="w-6 h-6 animate-spin" /> {t('invoice.savingFile')}</> :
         savedOk ?
-        <><CheckCircle2 className="w-6 h-6 text-green-500" /> تم الحفظ بنجاح!</> :
-        <><Download className="w-6 h-6" /> حفظ في جهازك</>
+        <><CheckCircle2 className="w-6 h-6 text-green-500" /> {t('invoice.savedSuccess')}</> :
+        <><Download className="w-6 h-6" /> {t('invoice.saveToDevice')}</>
         }
           </button>
         </div>
@@ -369,21 +445,21 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
       {pdfBase64 && !generating &&
       <div className="flex items-center justify-center gap-2 text-sm text-green-600 mb-3">
           <CheckCircle2 className="w-4 h-4" />
-          <span className="font-bold">جاهز للمشاركة والحفظ</span>
+          <span className="font-bold">{t('invoice.readyToShare')}</span>
         </div>
       }
 
-      <p className="text-sm text-muted-foreground text-center mb-4">معاينة الفاتورة</p>
-      <div className="bg-card border rounded-2xl p-5 text-sm" style={{ fontFamily: 'Segoe UI, Tahoma, sans-serif' }}>
+      <p className="text-sm text-muted-foreground text-center mb-4">{t('invoice.previewInvoice')}</p>
+      <div className="bg-card border rounded-2xl p-5 text-sm" dir={isRtl ? 'rtl' : 'ltr'} style={{ fontFamily: 'Segoe UI, Tahoma, sans-serif' }}>
         {/* Header */}
         <div className="text-center border-b border-dashed pb-4 mb-4">
-          <div className="text-lg font-bold mb-2">{orgName || 'اسم المنشأة'}</div>
+          <div className="text-lg font-bold mb-2">{orgName || t('invoice.orgNameDefault')}</div>
           {legalInfo &&
           <div className="text-xs text-muted-foreground space-y-1">
-              {legalInfo.trademark_name && <div>العلامة التجارية: {legalInfo.trademark_name}</div>}
-              {legalInfo.commercial_registration && <div>سجل تجاري: {legalInfo.commercial_registration}</div>}
-              {legalInfo.industrial_registration && <div>سجل صناعي: {legalInfo.industrial_registration}</div>}
-              {legalInfo.tax_identification && <div>رقم ضريبي: {legalInfo.tax_identification}</div>}
+              {legalInfo.trademark_name && <div>{legalInfo.trademark_name}</div>}
+              {legalInfo.commercial_registration && <div>{legalInfo.commercial_registration}</div>}
+              {legalInfo.industrial_registration && <div>{legalInfo.industrial_registration}</div>}
+              {legalInfo.tax_identification && <div>{legalInfo.tax_identification}</div>}
             </div>
           }
         </div>
@@ -392,22 +468,22 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
 
         <div className="text-sm space-y-2 mb-4">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">رقم الفاتورة:</span>
+            <span className="text-muted-foreground">{t('invoice.invoiceNumber')}:</span>
             <span dir="ltr" className="font-bold">{invoiceId.slice(0, 8)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">التاريخ:</span>
-            <span className="font-bold">{date.toLocaleDateString('ar-SA')}</span>
+            <span className="text-muted-foreground">{t('invoice.dateLabel')}:</span>
+            <span className="font-bold">{date.toLocaleDateString(locale)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">العميل:</span>
+            <span className="text-muted-foreground">{t('invoice.customerLabel')}:</span>
             <span className="font-bold">{customerName}</span>
           </div>
           {paymentType && invoiceType === 'sale' &&
           <div className="flex justify-between font-bold">
-              <span className="text-muted-foreground">حالة الدفع:</span>
+              <span className="text-muted-foreground">{t('invoice.paymentStatus')}:</span>
               <span className={paymentType === 'CASH' ? 'text-green-600' : 'text-orange-500'}>
-                {paymentType === 'CASH' ? '✓ نقداً (مدفوعة)' : '⏳ آجل'}
+                {paymentType === 'CASH' ? t('invoice.cashPaid') : t('invoice.creditDeferred')}
               </span>
             </div>
           }
@@ -418,12 +494,12 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-muted-foreground font-bold border-b border-dashed">
-                  <th className="text-start pb-2">الصنف</th>
-                  <th className="text-center pb-2">الكمية</th>
-                  <th className="text-center pb-2">السعر</th>
-                  {items.some((i) => i.unit) && <th className="text-center pb-2">الوحدة</th>}
-                  {items.some((i) => i.consumer_price) && <th className="text-center pb-2">سعر المستهلك</th>}
-                  <th className="text-start pb-2">الإجمالي</th>
+                  <th className={`text-${isRtl ? 'start' : 'start'} pb-2`}>{t('invoice.itemLabel')}</th>
+                  <th className="text-center pb-2">{t('invoice.quantity')}</th>
+                  <th className="text-center pb-2">{t('invoice.price')}</th>
+                  {items.some((i) => i.unit) && <th className="text-center pb-2">{t('invoice.unitLabel')}</th>}
+                  {items.some((i) => i.consumer_price) && <th className="text-center pb-2">{t('invoice.consumerPrice')}</th>}
+                  <th className="text-start pb-2">{t('invoice.totalLabel')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -431,10 +507,10 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
               <tr key={idx} className="border-b border-dashed/30">
                     <td className="py-1.5">{item.product_name}</td>
                     <td className="text-center font-bold py-1.5">{item.quantity}</td>
-                    <td className="text-center py-1.5">{item.unit_price.toLocaleString()}</td>
+                    <td className="text-center py-1.5">{item.unit_price.toLocaleString(locale)}</td>
                     {items.some((i) => i.unit) && <td className="text-center py-1.5">{item.unit || '-'}</td>}
-                    {items.some((i) => i.consumer_price) && <td className="text-center py-1.5">{item.consumer_price ? item.consumer_price.toLocaleString() : '-'}</td>}
-                    <td className="font-bold py-1.5">{item.total_price.toLocaleString()}</td>
+                    {items.some((i) => i.consumer_price) && <td className="text-center py-1.5">{item.consumer_price ? item.consumer_price.toLocaleString(locale) : '-'}</td>}
+                    <td className="font-bold py-1.5">{item.total_price.toLocaleString(locale)}</td>
                   </tr>
               )}
               </tbody>
@@ -447,27 +523,27 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           {hasDiscount && (
             <>
               <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">المجموع قبل الخصم</span>
-                <span className="font-bold">{(subtotal || grandTotal + (discountValue || 0)).toLocaleString()} {CURRENCY}</span>
+                <span className="text-muted-foreground">{t('invoice.subtotalBeforeDiscount')}</span>
+                <span className="font-bold">{(subtotal || grandTotal + (discountValue || 0)).toLocaleString(locale)} {CURRENCY}</span>
               </div>
               <div className="flex justify-between text-xs text-purple-600 dark:text-purple-400">
-                <span>الخصم {discountType === 'percentage' ? `(${(discountPercentage || 0).toFixed(1)}%)` : ''}</span>
-                <span className="font-bold">-{(discountValue || 0).toLocaleString()} {CURRENCY}</span>
+                <span>{t('invoice.discountLabel')} {discountType === 'percentage' ? `(${(discountPercentage || 0).toFixed(1)}%)` : ''}</span>
+                <span className="font-bold">-{(discountValue || 0).toLocaleString(locale)} {CURRENCY}</span>
               </div>
             </>
           )}
           <div className={`text-center font-black text-lg py-3 rounded-xl ${hasDiscount ? 'bg-purple-500/10 text-purple-700 dark:text-purple-300' : 'bg-muted'}`}>
-            {invoiceType === 'collection' ? 'المبلغ المحصّل' : 'الإجمالي الصافي'}: {grandTotal.toLocaleString()} {CURRENCY}
+            {invoiceType === 'collection' ? t('invoice.collectedAmount') : t('invoice.netTotalLabel')}: {grandTotal.toLocaleString(locale)} {CURRENCY}
           </div>
           {paidAmount !== undefined && invoiceType === 'sale' && paymentType === 'CREDIT' &&
           <div className="grid grid-cols-2 gap-3 mt-3">
               <div className="bg-green-500/10 text-green-600 p-3 rounded-xl text-center">
-                <p className="text-xs opacity-70">المدفوع</p>
-                <p className="font-black">{paidAmount.toLocaleString()} {CURRENCY}</p>
+                <p className="text-xs opacity-70">{t('invoice.paidLabel')}</p>
+                <p className="font-black">{paidAmount.toLocaleString(locale)} {CURRENCY}</p>
               </div>
               <div className="bg-orange-500/10 text-orange-500 p-3 rounded-xl text-center">
-                <p className="text-xs opacity-70">المتبقي</p>
-                <p className="font-black">{(remaining || 0).toLocaleString()} {CURRENCY}</p>
+                <p className="text-xs opacity-70">{t('invoice.remainingLabel')}</p>
+                <p className="font-black">{(remaining || 0).toLocaleString(locale)} {CURRENCY}</p>
               </div>
             </div>
           }
@@ -475,12 +551,12 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
 
         {notes &&
         <div className="mt-4 pt-4 border-t border-dashed text-sm text-muted-foreground">
-            ملاحظات: {notes}
+            {t('invoice.notesLabel')}: {notes}
           </div>
         }
 
         <div className="text-center text-xs text-muted-foreground mt-6 pt-4 border-t border-dashed">
-          <p>شكراً لتعاملكم معنا</p>
+          <p>{t('invoice.thankYou')}</p>
           <p className="mt-1">Smart System</p>
         </div>
       </div>
