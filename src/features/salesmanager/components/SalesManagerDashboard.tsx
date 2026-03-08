@@ -127,8 +127,6 @@ const SalesManagerDashboard: React.FC = () => {
           subtitle={t('salesManager.title')}
           icon={<TrendingUp className="w-4 h-4 text-primary-foreground" />}
           iconBgClass="bg-warning"
-          onLogout={handleLogout}
-          loggingOut={loggingOut}
         />
 
         <WelcomeSplash />

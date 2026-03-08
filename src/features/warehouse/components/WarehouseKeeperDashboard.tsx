@@ -107,8 +107,6 @@ const WarehouseKeeperDashboard: React.FC = () => {
           subtitle={t('warehouse.title')}
           icon={<Package className="w-4 h-4 text-primary-foreground" />}
           iconBgClass="bg-purple-600"
-          onLogout={handleLogout}
-          loggingOut={loggingOut}
         />
 
         <WelcomeSplash />

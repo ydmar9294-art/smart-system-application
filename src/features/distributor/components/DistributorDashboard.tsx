@@ -143,12 +143,10 @@ const DistributorDashboard: React.FC = () => {
     <div className="min-h-screen bg-background has-bottom-nav" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       <div className="max-w-lg mx-auto">
         <DashboardHeader
-          userName={t('distributor.title')}
+          userName={appUser?.name || t('distributor.title')}
           subtitle={t('distributor.subtitle')}
           icon={<ShoppingBag className="w-4 h-4 text-primary-foreground" />}
           iconBgClass="bg-primary"
-          onLogout={handleLogout}
-          loggingOut={loggingOut}
           rightActions={
             <button onClick={() => setShowAddCustomerModal(true)}
               className="p-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-all" title={t('distributor.addNewCustomer')}>

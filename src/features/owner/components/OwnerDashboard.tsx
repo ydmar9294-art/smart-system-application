@@ -193,8 +193,6 @@ const OwnerDashboard: React.FC = () => {
           subtitle={t('owner.title')}
           icon={<ShieldCheck className="w-4 h-4 text-primary-foreground" />}
           iconBgClass="bg-primary"
-          onLogout={handleLogout}
-          loggingOut={loggingOut}
         />
 
         <WelcomeSplash />

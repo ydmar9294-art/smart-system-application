@@ -95,8 +95,6 @@ const AccountantDashboard: React.FC = () => {
           subtitle={t('accountant.subtitle')}
           icon={<BarChart3 className="w-4 h-4 text-primary-foreground" strokeWidth={1.5} />}
           iconBgClass="bg-primary"
-          onLogout={handleLogout}
-          loggingOut={loggingOut}
         />
 
         <WelcomeSplash />
