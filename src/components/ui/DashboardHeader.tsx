@@ -35,29 +35,35 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     <motion.div
       className="native-header safe-area-top"
       dir={isRTL ? 'rtl' : 'ltr'}
-      initial={{ y: -24, opacity: 0 }}
+      initial={{ y: -28, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 24 }}
     >
-      {/* Status badge row */}
-      <div className="flex items-center justify-center pt-2.5 pb-0.5 gap-2">
+      {/* Status badge row — AI Active indicator */}
+      <div className="flex items-center justify-center pt-2.5 pb-1 gap-2">
         <motion.div
           className="native-header-status-badge"
-          initial={{ scale: 0.8, opacity: 0 }}
+          initial={{ scale: 0.7, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.2, type: 'spring', stiffness: 400 }}
+          transition={{ delay: 0.25, type: 'spring', stiffness: 400, damping: 18 }}
         >
+          <div className="native-header-ai-dot" />
           <Sparkles className="w-2.5 h-2.5" />
-          <span>{isRTL ? 'منصة الإنتاج الذكي' : 'Smart Production'}</span>
+          <span>{isRTL ? 'منصة الإنتاج الذكي' : 'AI Active'}</span>
         </motion.div>
       </div>
 
       {/* Main row: Profile + Actions */}
-      <div className="flex items-center justify-between px-4 pt-1.5 pb-2.5">
+      <div className="flex items-center justify-between px-4 pt-1 pb-2.5">
         {/* Profile capsule */}
-        <div className="flex items-center gap-3 min-w-0 flex-1">
+        <motion.div
+          className="flex items-center gap-3 min-w-0 flex-1"
+          initial={{ x: isRTL ? 20 : -20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.1, type: 'spring', stiffness: 300, damping: 25 }}
+        >
           <div className="native-header-avatar">
-            <div className={`w-10 h-10 ${iconBgClass} rounded-[1rem] flex items-center justify-center shadow-lg`}>
+            <div className={`w-10 h-10 ${iconBgClass} rounded-[1.25rem] flex items-center justify-center shadow-lg`}>
               {icon}
             </div>
             {/* Online indicator */}
@@ -67,10 +73,15 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             <p className="font-black text-foreground text-[14px] leading-tight truncate">{greeting}</p>
             <p className="text-[10px] text-muted-foreground font-bold mt-0.5 truncate">{subtitle}</p>
           </div>
-        </div>
+        </motion.div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-1.5 flex-shrink-0">
+        <motion.div
+          className="flex items-center gap-1.5 flex-shrink-0"
+          initial={{ x: isRTL ? -20 : 20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.15, type: 'spring', stiffness: 300, damping: 25 }}
+        >
           <div className="native-header-action-pill">
             <AIAssistant className="!p-1 !rounded-lg" />
           </div>
@@ -96,7 +107,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             </button>
           )}
           {rightActions}
-        </div>
+        </motion.div>
       </div>
 
       {/* Bottom accent line */}
