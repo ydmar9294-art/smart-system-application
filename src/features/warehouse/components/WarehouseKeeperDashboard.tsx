@@ -1,4 +1,5 @@
 import React, { useState, useMemo, lazy, Suspense } from 'react';
+import AnimatedTabContent from '@/components/ui/AnimatedTabContent';
 import { useTranslation } from 'react-i18next';
 import { 
   Package, 
