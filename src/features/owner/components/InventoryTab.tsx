@@ -90,7 +90,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
       setShowPurchaseModal(false);
       resetPurchaseForm();
     } catch (err) {
-      console.error('Purchase failed:', err);
+      logger.error('Purchase failed', 'InventoryTab');
     }
   };
 
