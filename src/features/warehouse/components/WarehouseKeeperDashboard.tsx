@@ -1,4 +1,5 @@
 import React, { useState, useMemo, lazy, Suspense } from 'react';
+import AnimatedTabContent from '@/components/ui/AnimatedTabContent';
 import { useTranslation } from 'react-i18next';
 import { 
   Package, 
@@ -162,6 +163,7 @@ const WarehouseKeeperDashboard: React.FC = () => {
 
         {/* Tab Content */}
         <div className="px-4 pb-8">
+          <AnimatedTabContent tabKey={activeTab}>
           {activeTab === 'dashboard' && (
             <div className="space-y-3 animate-fade-in">
               <div className="grid grid-cols-2 gap-2">
@@ -314,6 +316,7 @@ const WarehouseKeeperDashboard: React.FC = () => {
           {activeTab === 'purchase-returns' && (
             <div className="bg-card rounded-3xl shadow-sm p-4"><InventoryTab forceSubTab="purchase-returns" /></div>
           )}
+          </AnimatedTabContent>
         </div>
       </div>
 

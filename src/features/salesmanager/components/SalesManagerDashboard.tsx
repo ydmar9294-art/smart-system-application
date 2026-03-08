@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import AnimatedTabContent from '@/components/ui/AnimatedTabContent';
 import DeletionRequestsManager from '@/features/shared/components/DeletionRequestsManager';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -192,6 +193,7 @@ const SalesManagerDashboard: React.FC = () => {
 
         {/* Tab Content */}
         <div className="px-4 pb-8">
+          <AnimatedTabContent tabKey={activeTab}>
           {activeTab === 'dashboard' && (
             <SalesManagerDashboardContent stats={stats} customers={customers} distributors={distributors} warehouseKeepers={warehouseKeepers} sales={sales} />
           )}
@@ -362,6 +364,7 @@ const SalesManagerDashboard: React.FC = () => {
               </div>
             </div>
           )}
+          </AnimatedTabContent>
         </div>
 
         {/* Add Employee Modal */}

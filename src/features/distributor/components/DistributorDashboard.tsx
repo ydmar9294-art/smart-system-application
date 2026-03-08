@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import AnimatedTabContent from '@/components/ui/AnimatedTabContent';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -267,9 +268,9 @@ const DistributorDashboard: React.FC = () => {
 
         {/* Tab Content */}
         <div className="px-4 pb-8">
-          <div className="animate-fade-in">
+          <AnimatedTabContent tabKey={activeTab}>
             {renderTabContent()}
-          </div>
+          </AnimatedTabContent>
         </div>
       </div>
 
