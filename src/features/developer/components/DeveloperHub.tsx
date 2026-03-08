@@ -265,7 +265,7 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
       // Force refresh
       window.location.reload();
     } catch (err) {
-      console.error('Failed to update org name:', err);
+      logger.error('Failed to update org name', 'DeveloperHub');
     } finally {
       setSavingOrgName(false);
     }

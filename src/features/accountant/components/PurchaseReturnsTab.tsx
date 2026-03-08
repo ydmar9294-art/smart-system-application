@@ -31,7 +31,7 @@ const PurchaseReturnsTab: React.FC = () => {
       const { data, error } = await supabase.from('purchase_returns').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       setReturns(data || []);
-    } catch (error) { console.error('Error loading purchase returns:', error); }
+    } catch (error) { logger.error('Error loading purchase returns', 'PurchaseReturnsTab'); }
     finally { setLoading(false); }
   };
 

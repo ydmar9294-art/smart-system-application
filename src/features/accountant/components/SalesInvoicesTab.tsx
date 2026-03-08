@@ -80,7 +80,7 @@ const SalesInvoicesTab: React.FC = () => {
         .eq('sale_id', sale.id);
       setSaleItems(data || []);
     } catch (err) {
-      console.error('Error fetching sale items for print:', err);
+      logger.error('Error fetching sale items for print', 'SalesInvoicesTab');
     }
     setPrintInvoice(sale);
   };
