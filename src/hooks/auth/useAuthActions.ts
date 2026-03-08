@@ -68,6 +68,17 @@ export const useAuthActions = (deps: AuthActionsDeps) => {
       return;
     }
 
+    // If profile was JUST resolved (within last 15s), reuse cached data
+    // This prevents double edge function calls when AuthFlow and useSession
+    // both handle SIGNED_IN simultaneously on Capacitor
+    const cached = getCachedAuth();
+    if (cached && isCacheFullyActivated(cached) && (Date.now() - cached.cachedAt) < 15_000) {
+      logger.info('Auth cache is very fresh — skipping re-resolution', 'Auth');
+      const built = buildUserFromCache(cached);
+      setAuthenticatedState(built);
+      return;
+    }
+
     // Clear cache and re-query to get fresh license/profile status
     clearAuthCache();
 
@@ -81,9 +92,9 @@ export const useAuthActions = (deps: AuthActionsDeps) => {
       }
     } catch {
       // If refresh fails (e.g. network dropped), don't logout
-      const cached = getCachedAuth();
-      if (cached && isCacheFullyActivated(cached)) {
-        const built = buildUserFromCache(cached);
+      const fallback = getCachedAuth();
+      if (fallback && isCacheFullyActivated(fallback)) {
+        const built = buildUserFromCache(fallback);
         setAuthenticatedState(built);
       } else {
         resetToLogin();

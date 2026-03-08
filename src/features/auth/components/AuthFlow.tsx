@@ -102,7 +102,10 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
     const cacheIsFullyActivated = cached && cached.organizationId && cached.role;
     const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
-        if (cacheIsFullyActivated && cached.userId === session.user.id) { onAuthComplete(); return; }
+        // If cache is fully activated for this user, AuthContext (useSession) will handle it.
+        // Don't call onAuthComplete here — it triggers refreshAuth which causes a double
+        // edge function call and "silent loading" on Capacitor.
+        if (cacheIsFullyActivated && cached.userId === session.user.id) return;
         if (cached && !cacheIsFullyActivated) clearAuthCache();
         startVerification();
         await yieldToRenderer();
@@ -112,7 +115,8 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        if (cacheIsFullyActivated && cached.userId === session.user.id) { onAuthComplete(); return; }
+        // Same optimization: if cache matches, let AuthContext handle transition
+        if (cacheIsFullyActivated && cached.userId === session.user.id) return;
         if (cached && !cacheIsFullyActivated) clearAuthCache();
         startVerification(); await yieldToRenderer(); await checkUserProfile(session.user.id, session.user);
       }
