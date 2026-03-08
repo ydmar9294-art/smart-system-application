@@ -155,6 +155,7 @@ const LicenseFrozenScreen: React.FC<{
   onRetry: () => Promise<void>;
   onLogout: () => Promise<void>;
 }> = ({ isExpired, isSuspended, onRetry, onLogout }) => {
+  const { t } = useTranslation();
   const [checking, setChecking] = useState(false);
   const [reactivated, setReactivated] = useState(false);
 
