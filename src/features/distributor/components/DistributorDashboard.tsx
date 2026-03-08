@@ -108,12 +108,12 @@ const DistributorDashboard: React.FC = () => {
   const getSectionTabs = () => {
     switch (bottomNav) {
       case 'sales': return [
-        { id: 'new-sale', label: 'فاتورة جديدة', icon: <FileText className="w-4 h-4" />, bgColor: 'bg-primary' },
-        { id: 'returns', label: 'مرتجع بيع', icon: <RotateCcw className="w-4 h-4" />, bgColor: 'bg-warning' },
+        { id: 'new-sale', label: t('distributor.newInvoice'), icon: <FileText className="w-4 h-4" />, bgColor: 'bg-primary' },
+        { id: 'returns', label: t('distributor.salesReturn'), icon: <RotateCcw className="w-4 h-4" />, bgColor: 'bg-warning' },
       ];
       case 'finance': return [
-        { id: 'collections', label: 'تحصيل', icon: <Wallet className="w-4 h-4" />, bgColor: 'bg-emerald-600' },
-        { id: 'debts', label: 'الزبائن', icon: <Users className="w-4 h-4" />, bgColor: 'bg-destructive' },
+        { id: 'collections', label: t('distributor.collection'), icon: <Wallet className="w-4 h-4" />, bgColor: 'bg-emerald-600' },
+        { id: 'debts', label: t('distributor.debts'), icon: <Users className="w-4 h-4" />, bgColor: 'bg-destructive' },
       ];
       default: return null;
     }
