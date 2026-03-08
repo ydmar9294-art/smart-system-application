@@ -134,9 +134,9 @@ const AccountantDashboard: React.FC = () => {
 
         {/* Tab Content */}
         <div className="px-4 pb-8">
-          <div className="animate-fade-in">
+          <AnimatedTabContent tabKey={activeTab}>
             {renderTabContent()}
-          </div>
+          </AnimatedTabContent>
         </div>
       </div>
     </div>
