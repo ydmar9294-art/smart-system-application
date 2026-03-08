@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useApp } from '@/store/AppContext';
 import { UserRole, LicenseStatus } from '@/types';
-import { ShieldAlert, Phone, LogOut, RefreshCw, Settings, Shield, FileText, Trash2, X } from 'lucide-react';
+import { ShieldAlert, Phone, LogOut, RefreshCw, Settings, Shield, FileText, Globe } from 'lucide-react';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import { usePageTheme } from '@/hooks/usePageTheme';
@@ -9,6 +10,7 @@ import { SUPPORT_WHATSAPP_URL, SUPPORT_PHONE_URL } from '@/constants';
 import { PullToRefresh } from '@/components/ui/PullToRefresh';
 import AccountDeletionButton from '@/components/AccountDeletionButton';
 import { useNavigate } from 'react-router-dom';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout, organization, refreshAuth, refreshAllData } = useApp();
