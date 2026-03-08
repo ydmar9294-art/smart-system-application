@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { LogOut, MessageCircle } from 'lucide-react';
+import { Bell, MessageCircle, User } from 'lucide-react';
 import AIAssistant from '@/features/ai/components/AIAssistant';
 import { NotificationCenter } from '@/features/notifications/components/NotificationCenter';
 import { SUPPORT_WHATSAPP_URL } from '@/constants';
@@ -24,53 +24,56 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   loggingOut,
   rightActions,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
+  const greeting = isRTL ? `مرحباً، ${userName} 👋` : `Hello, ${userName} 👋`;
 
   return (
-    <div className="dashboard-header">
-      {/* Notification bell — absolute top-left */}
-      <div className="absolute top-3 left-3 z-10">
-        <NotificationCenter />
-      </div>
-
-      {/* Profile capsule */}
-      <div className="flex justify-center pt-1 mb-2.5">
-        <div className="glass-profile-capsule">
-          <div className={`w-9 h-9 ${iconBgClass} rounded-full flex items-center justify-center shadow-sm`}>
-            {icon}
+    <div className="native-header safe-area-top" dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* Row 1: Profile + Greeting + Actions */}
+      <div className="flex items-center justify-between px-4 pt-3 pb-2">
+        {/* Profile side */}
+        <div className="flex items-center gap-3">
+          <div className="native-header-avatar">
+            <div className={`w-10 h-10 ${iconBgClass} rounded-full flex items-center justify-center shadow-sm`}>
+              {icon}
+            </div>
+            {/* Online dot */}
+            <div className="absolute -bottom-0.5 -end-0.5 w-3 h-3 rounded-full bg-success border-2 border-background" />
           </div>
-          <div className="text-end">
-            <p className="font-black text-foreground text-sm leading-tight">{userName}</p>
-            <p className="text-[10px] text-muted-foreground font-bold">{subtitle}</p>
+          <div>
+            <p className="font-black text-foreground text-[15px] leading-tight">{greeting}</p>
+            <p className="text-[11px] text-muted-foreground font-bold mt-0.5">{subtitle}</p>
           </div>
         </div>
-      </div>
 
-      {/* Action bar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 glass-action-bar">
-          <AIAssistant className="!p-1.5 !rounded-lg" />
-          <div className="w-px h-5 bg-border/50" />
+        {/* Action icons */}
+        <div className="flex items-center gap-2">
+          <div className="native-header-icon-btn">
+            <NotificationCenter />
+          </div>
           <a
             href={SUPPORT_WHATSAPP_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="p-1.5 bg-gradient-to-br from-green-400 to-green-600 rounded-lg text-white hover:shadow-md transition-all active:scale-95"
+            className="native-header-icon-btn native-header-icon-whatsapp"
             title={t('common.supportTeam')}
           >
-            <MessageCircle className="w-4 h-4" />
+            <MessageCircle className="w-[18px] h-[18px]" />
           </a>
           {rightActions}
         </div>
-        <button
-          onClick={onLogout}
-          disabled={loggingOut}
-          className="glass-logout-btn"
-          title={t('common.logout')}
-        >
-          <LogOut className={`w-5 h-5 ${loggingOut ? 'animate-spin' : ''}`} />
-        </button>
       </div>
+
+      {/* Row 2: Quick actions bar */}
+      <div className="flex items-center gap-2 px-4 pb-3">
+        <div className="native-header-action-pill">
+          <AIAssistant className="!p-1.5 !rounded-lg" />
+        </div>
+      </div>
+
+      {/* Bottom edge line */}
+      <div className="native-header-edge" />
     </div>
   );
 };
