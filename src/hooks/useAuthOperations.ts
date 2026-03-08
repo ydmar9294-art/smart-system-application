@@ -107,7 +107,7 @@ export const checkAuthStatus = async (): Promise<AuthStatusResponse> => {
         }
       );
     } catch (err) {
-      console.error('[AuthOps] checkAuthStatus failed:', err);
+      logger.error('checkAuthStatus failed', 'AuthOps');
       return { authenticated: false, reason: 'ERROR' };
     } finally {
       inflightAuthStatus = null;
