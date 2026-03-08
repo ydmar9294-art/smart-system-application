@@ -30,6 +30,21 @@ interface PdfBackupData {
     is_reversed: boolean; reverse_reason: string | null;
     created_at: string; customer_name?: string; collector_name?: string;
   }>;
+  purchases: Array<{
+    id: string; product_name: string; quantity: number; unit_price: number;
+    total_price: number; supplier_name: string | null; created_at: string;
+    notes: string | null; creator_name?: string;
+  }>;
+  salesReturns: Array<{
+    id: string; customer_name: string; sale_id: string | null; reason: string | null;
+    total_amount: number; created_at: string; creator_name?: string;
+    items: Array<{ product_name: string; quantity: number; unit_price: number; total_price: number }>;
+  }>;
+  purchaseReturns: Array<{
+    id: string; supplier_name: string | null; reason: string | null;
+    total_amount: number; created_at: string; creator_name?: string;
+    items: Array<{ product_name: string; quantity: number; unit_price: number; total_price: number }>;
+  }>;
   logs: Array<{
     type: string; user_name: string; date: string; details: string;
   }>;
@@ -93,6 +108,22 @@ export interface PdfTranslations {
   invoices: string;
   collections: string;
   activityLog: string;
+  // New sections
+  purchases: string;
+  pdfPurchasesLog: string;
+  pdfSupplier: string;
+  pdfPurchasesPage: string;
+  pdfTotalPurchases: string;
+  salesReturns: string;
+  pdfSalesReturnsLog: string;
+  pdfReason: string;
+  pdfSalesReturnsPage: string;
+  pdfTotalSalesReturns: string;
+  pdfOriginalInvoice: string;
+  purchaseReturns: string;
+  pdfPurchaseReturnsLog: string;
+  pdfPurchaseReturnsPage: string;
+  pdfTotalPurchaseReturns: string;
 }
 
 // ── Shared styles ────────────────────────────────────────────────
@@ -117,6 +148,16 @@ function getBaseStyles(isRtl: boolean): string {
   }
   .section-title {
     background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff; padding: 8px 16px; border-radius: 8px;
+    font-size: 13px; font-weight: 800; margin-bottom: 10px;
+  }
+  .section-title-orange {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: #fff; padding: 8px 16px; border-radius: 8px;
+    font-size: 13px; font-weight: 800; margin-bottom: 10px;
+  }
+  .section-title-red {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
     color: #fff; padding: 8px 16px; border-radius: 8px;
     font-size: 13px; font-weight: 800; margin-bottom: 10px;
   }
@@ -148,7 +189,7 @@ function getBaseStyles(isRtl: boolean): string {
   }
   .stat-grid {
     display: grid; grid-template-columns: repeat(4, 1fr);
-    gap: 12px; margin-top: 24px; max-width: 600px;
+    gap: 12px; margin-top: 24px; max-width: 800px;
   }
   .stat-card {
     background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;
@@ -187,6 +228,9 @@ function buildBackupHtml(data: PdfBackupData, t: PdfTranslations, lang: string):
   const totalRevenue = data.invoices.reduce((s, i) => s + i.grand_total, 0);
   const totalCollected = data.collections.filter(c => !c.is_reversed).reduce((s, c) => s + c.amount, 0);
   const totalRemaining = data.invoices.reduce((s, i) => s + i.remaining, 0);
+  const totalPurchases = data.purchases.reduce((s, p) => s + p.total_price, 0);
+  const totalSalesReturns = data.salesReturns.reduce((s, sr) => s + sr.total_amount, 0);
+  const totalPurchaseReturns = data.purchaseReturns.reduce((s, pr) => s + pr.total_amount, 0);
   const voidedCount = data.invoices.filter(i => i.is_voided).length;
   const cashCount = data.invoices.filter(i => i.payment_type === 'CASH' && !i.is_voided).length;
   const creditCount = data.invoices.filter(i => i.payment_type === 'CREDIT' && !i.is_voided).length;
@@ -204,6 +248,9 @@ function buildBackupHtml(data: PdfBackupData, t: PdfTranslations, lang: string):
           <div class="stat-card"><div class="stat-value">${data.customers.length}</div><div class="stat-label">${t.customers}</div></div>
           <div class="stat-card"><div class="stat-value">${data.invoices.length}</div><div class="stat-label">${t.invoices}</div></div>
           <div class="stat-card"><div class="stat-value">${data.collections.length}</div><div class="stat-label">${t.collections}</div></div>
+          <div class="stat-card"><div class="stat-value">${data.purchases.length}</div><div class="stat-label">${t.purchases}</div></div>
+          <div class="stat-card"><div class="stat-value">${data.salesReturns.length}</div><div class="stat-label">${t.salesReturns}</div></div>
+          <div class="stat-card"><div class="stat-value">${data.purchaseReturns.length}</div><div class="stat-label">${t.purchaseReturns}</div></div>
           <div class="stat-card"><div class="stat-value">${data.logs.length}</div><div class="stat-label">${t.activityLog}</div></div>
         </div>
         <div style="margin-top: 24px; max-width: 500px;">
@@ -212,6 +259,9 @@ function buildBackupHtml(data: PdfBackupData, t: PdfTranslations, lang: string):
             <tr><td style="text-align: ${alignEnd}; font-weight: 700;">${t.pdfTotalCollections}</td><td style="text-align: ${alignStart}; font-weight: 800; color: #16a34a;">${fmtNum(totalCollected, locale)} ${CURRENCY}</td></tr>
             <tr><td style="text-align: ${alignEnd}; font-weight: 700;">${t.pdfTotalRemaining}</td><td style="text-align: ${alignStart}; font-weight: 800; color: #dc2626;">${fmtNum(totalRemaining, locale)} ${CURRENCY}</td></tr>
             <tr><td style="text-align: ${alignEnd}; font-weight: 700;">${t.pdfTotalDebts}</td><td style="text-align: ${alignStart}; font-weight: 800; color: #d97706;">${fmtNum(totalDebt, locale)} ${CURRENCY}</td></tr>
+            <tr><td style="text-align: ${alignEnd}; font-weight: 700;">${t.pdfTotalPurchases}</td><td style="text-align: ${alignStart}; font-weight: 800;">${fmtNum(totalPurchases, locale)} ${CURRENCY}</td></tr>
+            <tr><td style="text-align: ${alignEnd}; font-weight: 700;">${t.pdfTotalSalesReturns}</td><td style="text-align: ${alignStart}; font-weight: 800; color: #ea580c;">${fmtNum(totalSalesReturns, locale)} ${CURRENCY}</td></tr>
+            <tr><td style="text-align: ${alignEnd}; font-weight: 700;">${t.pdfTotalPurchaseReturns}</td><td style="text-align: ${alignStart}; font-weight: 800; color: #ea580c;">${fmtNum(totalPurchaseReturns, locale)} ${CURRENCY}</td></tr>
             <tr><td style="text-align: ${alignEnd}; font-weight: 700;">${t.pdfCashCreditVoided}</td><td style="text-align: ${alignStart};">${cashCount} / ${creditCount} / ${voidedCount}</td></tr>
           </table>
         </div>
@@ -337,6 +387,131 @@ function buildBackupHtml(data: PdfBackupData, t: PdfTranslations, lang: string):
       <div class="footer">${t.pdfCollectionsPage} — ${data.orgName}</div>
     </div>`;
 
+  // ── Purchases page ──────────────────────────────────────────
+  let purchasesPage = '';
+  if (data.purchases.length > 0) {
+    const purchRows = data.purchases.map(p => `
+      <tr>
+        <td>${p.id.slice(0, 8)}</td>
+        <td style="font-weight: 700;">${p.product_name}</td>
+        <td>${p.quantity}</td>
+        <td>${fmtNum(p.unit_price, locale)} ${CURRENCY}</td>
+        <td style="font-weight: 800;">${fmtNum(p.total_price, locale)} ${CURRENCY}</td>
+        <td>${p.supplier_name || '—'}</td>
+        <td>${fmtDate(p.created_at, locale)}</td>
+        <td class="text-muted">${p.notes || '—'}</td>
+      </tr>`).join('');
+
+    purchasesPage = `
+      <div class="page">
+        <div class="header-bar"><span>${data.exportDate}</span><span>${data.orgName}</span></div>
+        <div class="section-title">🛒 ${t.pdfPurchasesLog} (${data.purchases.length})</div>
+        <table>
+          <thead><tr>
+            <th>${t.pdfNumber}</th><th>${t.pdfProduct}</th><th>${t.pdfQuantity}</th>
+            <th>${t.pdfUnitPrice}</th><th>${t.pdfTotal}</th><th>${t.pdfSupplier}</th>
+            <th>${t.pdfDate}</th><th>${t.pdfNotes}</th>
+          </tr></thead>
+          <tbody>${purchRows}</tbody>
+        </table>
+        <div class="footer">${t.pdfPurchasesPage} — ${data.orgName}</div>
+      </div>`;
+  }
+
+  // ── Sales Returns page ──────────────────────────────────────
+  let salesReturnsPage = '';
+  if (data.salesReturns.length > 0) {
+    const srRows = data.salesReturns.map(sr => `
+      <tr>
+        <td>${sr.id.slice(0, 8)}</td>
+        <td style="font-weight: 700;">${sr.customer_name}</td>
+        <td>${sr.sale_id ? sr.sale_id.slice(0, 8) : '—'}</td>
+        <td style="font-weight: 800; color: #ea580c;">${fmtNum(sr.total_amount, locale)} ${CURRENCY}</td>
+        <td class="text-muted">${sr.reason || '—'}</td>
+        <td>${fmtDate(sr.created_at, locale)}</td>
+        <td>${sr.creator_name || '—'}</td>
+      </tr>`).join('');
+
+    // Items detail
+    const srWithItems = data.salesReturns.filter(sr => sr.items.length > 0).slice(0, 50);
+    const srItemsHtml = srWithItems.map(sr => {
+      const rows = sr.items.map(it => `
+        <tr>
+          <td style="text-align: ${alignEnd}; font-weight: 600;">${it.product_name}</td>
+          <td>${it.quantity}</td>
+          <td>${fmtNum(it.unit_price, locale)} ${CURRENCY}</td>
+          <td style="font-weight: 700;">${fmtNum(it.total_price, locale)} ${CURRENCY}</td>
+        </tr>`).join('');
+      return `
+        <div class="inv-group-title" style="color: #ea580c;">${sr.customer_name} | ${sr.id.slice(0, 8)} | ${fmtDate(sr.created_at, locale)}</div>
+        <table>
+          <thead><tr><th style="text-align: ${alignEnd};">${t.pdfProduct}</th><th>${t.pdfQuantity}</th><th>${t.pdfUnitPrice}</th><th>${t.pdfItemTotal}</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }).join('');
+
+    salesReturnsPage = `
+      <div class="page">
+        <div class="header-bar"><span>${data.exportDate}</span><span>${data.orgName}</span></div>
+        <div class="section-title-orange">↩️ ${t.pdfSalesReturnsLog} (${data.salesReturns.length})</div>
+        <table>
+          <thead><tr>
+            <th>${t.pdfNumber}</th><th>${t.pdfCustomer}</th><th>${t.pdfOriginalInvoice}</th>
+            <th>${t.pdfTotal}</th><th>${t.pdfReason}</th><th>${t.pdfDate}</th><th>${t.pdfUser}</th>
+          </tr></thead>
+          <tbody>${srRows}</tbody>
+        </table>
+        ${srItemsHtml}
+        <div class="footer">${t.pdfSalesReturnsPage} — ${data.orgName}</div>
+      </div>`;
+  }
+
+  // ── Purchase Returns page ───────────────────────────────────
+  let purchaseReturnsPage = '';
+  if (data.purchaseReturns.length > 0) {
+    const prRows = data.purchaseReturns.map(pr => `
+      <tr>
+        <td>${pr.id.slice(0, 8)}</td>
+        <td style="font-weight: 700;">${pr.supplier_name || '—'}</td>
+        <td style="font-weight: 800; color: #dc2626;">${fmtNum(pr.total_amount, locale)} ${CURRENCY}</td>
+        <td class="text-muted">${pr.reason || '—'}</td>
+        <td>${fmtDate(pr.created_at, locale)}</td>
+        <td>${pr.creator_name || '—'}</td>
+      </tr>`).join('');
+
+    const prWithItems = data.purchaseReturns.filter(pr => pr.items.length > 0).slice(0, 50);
+    const prItemsHtml = prWithItems.map(pr => {
+      const rows = pr.items.map(it => `
+        <tr>
+          <td style="text-align: ${alignEnd}; font-weight: 600;">${it.product_name}</td>
+          <td>${it.quantity}</td>
+          <td>${fmtNum(it.unit_price, locale)} ${CURRENCY}</td>
+          <td style="font-weight: 700;">${fmtNum(it.total_price, locale)} ${CURRENCY}</td>
+        </tr>`).join('');
+      return `
+        <div class="inv-group-title" style="color: #dc2626;">${pr.supplier_name || '—'} | ${pr.id.slice(0, 8)} | ${fmtDate(pr.created_at, locale)}</div>
+        <table>
+          <thead><tr><th style="text-align: ${alignEnd};">${t.pdfProduct}</th><th>${t.pdfQuantity}</th><th>${t.pdfUnitPrice}</th><th>${t.pdfItemTotal}</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }).join('');
+
+    purchaseReturnsPage = `
+      <div class="page">
+        <div class="header-bar"><span>${data.exportDate}</span><span>${data.orgName}</span></div>
+        <div class="section-title-red">📦↩️ ${t.pdfPurchaseReturnsLog} (${data.purchaseReturns.length})</div>
+        <table>
+          <thead><tr>
+            <th>${t.pdfNumber}</th><th>${t.pdfSupplier}</th><th>${t.pdfTotal}</th>
+            <th>${t.pdfReason}</th><th>${t.pdfDate}</th><th>${t.pdfUser}</th>
+          </tr></thead>
+          <tbody>${prRows}</tbody>
+        </table>
+        ${prItemsHtml}
+        <div class="footer">${t.pdfPurchaseReturnsPage} — ${data.orgName}</div>
+      </div>`;
+  }
+
   // ── Logs page ───────────────────────────────────────────────
   const logRows = data.logs.slice(0, 300).map(l => `
     <tr>
@@ -370,7 +545,7 @@ function buildBackupHtml(data: PdfBackupData, t: PdfTranslations, lang: string):
       ${fontLink}
       <style>${getBaseStyles(isRtl)}</style>
     </head>
-    <body>${coverPage}${customersPage}${invoicesPage}${itemsHtml}${collectionsPage}${logsPage}</body>
+    <body>${coverPage}${customersPage}${invoicesPage}${itemsHtml}${collectionsPage}${purchasesPage}${salesReturnsPage}${purchaseReturnsPage}${logsPage}</body>
     </html>`;
 }
 

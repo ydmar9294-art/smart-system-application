@@ -749,6 +749,74 @@ const CollectionsPreview: React.FC<{ data: BackupCollection[]; t: any; lang: str
   </div>
 );
 
+const PurchasesPreview: React.FC<{ data: BackupPurchase[]; t: any }> = ({ data, t }) => (
+  <div className="space-y-1.5">
+    {data.length === 0 && <EmptyState t={t} />}
+    {data.slice(0, 30).map(p => (
+      <div key={p.id} className="bg-muted p-2.5 rounded-xl flex justify-between items-center">
+        <div>
+          <p className="text-xs font-bold text-foreground">{p.product_name}</p>
+          <p className="text-[9px] text-muted-foreground">
+            {formatDateShort(p.created_at)} • {p.supplier_name || '—'} • {t('backup.pdfQuantity')}: {p.quantity}
+          </p>
+        </div>
+        <p className="text-xs font-black text-foreground">{p.total_price.toLocaleString()} {CURRENCY}</p>
+      </div>
+    ))}
+    {data.length > 30 && <p className="text-center text-[10px] text-muted-foreground py-2">+{data.length - 30} {t('backup.morePurchases')}</p>}
+  </div>
+);
+
+const SalesReturnsPreview: React.FC<{ data: BackupSalesReturn[]; t: any }> = ({ data, t }) => (
+  <div className="space-y-1.5">
+    {data.length === 0 && <EmptyState t={t} />}
+    {data.slice(0, 30).map(sr => (
+      <div key={sr.id} className="bg-muted p-2.5 rounded-xl">
+        <div className="flex justify-between items-start">
+          <div>
+            <p className="text-xs font-bold text-foreground">{sr.customer_name}</p>
+            <p className="text-[9px] text-muted-foreground">
+              {formatDateShort(sr.created_at)} {sr.reason && `• ${sr.reason}`}
+            </p>
+          </div>
+          <p className="text-xs font-black text-destructive">{sr.total_amount.toLocaleString()} {CURRENCY}</p>
+        </div>
+        {sr.items.length > 0 && (
+          <div className="text-[9px] text-muted-foreground mt-1">
+            {sr.items.map(it => it.product_name).join('، ')}
+          </div>
+        )}
+      </div>
+    ))}
+    {data.length > 30 && <p className="text-center text-[10px] text-muted-foreground py-2">+{data.length - 30} {t('backup.moreSalesReturns')}</p>}
+  </div>
+);
+
+const PurchaseReturnsPreview: React.FC<{ data: BackupPurchaseReturn[]; t: any }> = ({ data, t }) => (
+  <div className="space-y-1.5">
+    {data.length === 0 && <EmptyState t={t} />}
+    {data.slice(0, 30).map(pr => (
+      <div key={pr.id} className="bg-muted p-2.5 rounded-xl">
+        <div className="flex justify-between items-start">
+          <div>
+            <p className="text-xs font-bold text-foreground">{pr.supplier_name || '—'}</p>
+            <p className="text-[9px] text-muted-foreground">
+              {formatDateShort(pr.created_at)} {pr.reason && `• ${pr.reason}`}
+            </p>
+          </div>
+          <p className="text-xs font-black text-destructive">{pr.total_amount.toLocaleString()} {CURRENCY}</p>
+        </div>
+        {pr.items.length > 0 && (
+          <div className="text-[9px] text-muted-foreground mt-1">
+            {pr.items.map(it => it.product_name).join('، ')}
+          </div>
+        )}
+      </div>
+    ))}
+    {data.length > 30 && <p className="text-center text-[10px] text-muted-foreground py-2">+{data.length - 30} {t('backup.morePurchaseReturns')}</p>}
+  </div>
+);
+
 const LogsPreview: React.FC<{ data: BackupLogEntry[]; t: any }> = ({ data, t }) => (
   <div className="space-y-1.5">
     {data.length === 0 && <EmptyState t={t} />}
