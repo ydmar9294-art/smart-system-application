@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Wallet, ChevronDown, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { CURRENCY } from '@/constants';
@@ -15,6 +16,8 @@ interface Collection {
 }
 
 const CollectionsTab: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState('');
@@ -27,7 +30,6 @@ const CollectionsTab: React.FC = () => {
   const loadCollections = async () => {
     setLoading(true);
     try {
-      // Join with sales to get customer_name
       const { data, error } = await supabase
         .from('collections')
         .select('id, sale_id, amount, notes, is_reversed, reverse_reason, created_at, sales!collections_sale_id_fkey(customer_name)')
@@ -42,7 +44,7 @@ const CollectionsTab: React.FC = () => {
         is_reversed: c.is_reversed,
         reverse_reason: c.reverse_reason,
         created_at: c.created_at,
-        customer_name: c.sales?.customer_name || 'غير محدد'
+        customer_name: c.sales?.customer_name || t('common.unspecified')
       }));
       setCollections(mapped);
     } catch (error) { console.error('Error loading collections:', error); }
@@ -66,12 +68,12 @@ const CollectionsTab: React.FC = () => {
       {/* Summary */}
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-emerald-500/10 rounded-2xl p-4 text-center">
-          <p className="text-[9px] text-muted-foreground font-bold">إجمالي التحصيلات</p>
-          <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">{totalAmount.toLocaleString('ar-SA')}</p>
+          <p className="text-[9px] text-muted-foreground font-bold">{t('accountant.totalCollections')}</p>
+          <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">{totalAmount.toLocaleString(locale)}</p>
           <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
         </div>
         <div className="bg-muted rounded-2xl p-4 text-center">
-          <p className="text-[9px] text-muted-foreground font-bold">عدد العمليات</p>
+          <p className="text-[9px] text-muted-foreground font-bold">{t('common.operationCount')}</p>
           <p className="text-xl font-black text-foreground">{filteredCollections.filter(c => !c.is_reversed).length}</p>
         </div>
       </div>
@@ -80,7 +82,7 @@ const CollectionsTab: React.FC = () => {
       <button onClick={() => setShowFilters(!showFilters)}
         className="flex items-center gap-2 text-xs text-muted-foreground font-bold">
         <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-        خيارات الفلترة
+        {t('common.filterOptions')}
       </button>
       {showFilters && (
         <div className="space-y-2">
@@ -92,7 +94,7 @@ const CollectionsTab: React.FC = () => {
           </div>
           <label className="flex items-center gap-2 bg-muted rounded-xl px-3 py-2 cursor-pointer">
             <input type="checkbox" checked={showReversed} onChange={(e) => setShowReversed(e.target.checked)} className="w-4 h-4" />
-            <span className="text-xs font-bold text-foreground">إظهار الملغاة</span>
+            <span className="text-xs font-bold text-foreground">{t('common.showCancelled')}</span>
           </label>
         </div>
       )}
@@ -105,7 +107,7 @@ const CollectionsTab: React.FC = () => {
       ) : filteredCollections.length === 0 ? (
         <div className="text-center py-12">
           <Wallet className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
-          <p className="text-muted-foreground font-bold">لا توجد تحصيلات</p>
+          <p className="text-muted-foreground font-bold">{t('accountant.noCollections')}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -119,18 +121,18 @@ const CollectionsTab: React.FC = () => {
                   <p className="font-bold text-foreground text-sm">{coll.customer_name}</p>
                 </div>
                 {coll.is_reversed ? (
-                  <span className="bg-destructive/10 text-destructive px-2 py-0.5 rounded-lg text-[10px] font-bold">ملغى</span>
+                  <span className="bg-destructive/10 text-destructive px-2 py-0.5 rounded-lg text-[10px] font-bold">{t('accountant.cancelled')}</span>
                 ) : (
-                  <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-lg text-[10px] font-bold">تم</span>
+                  <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-lg text-[10px] font-bold">{t('accountant.done')}</span>
                 )}
               </div>
               <div className="flex items-center justify-between">
-                <p className="font-black text-lg text-emerald-600 dark:text-emerald-400">{Number(coll.amount).toLocaleString('ar-SA')} {CURRENCY}</p>
-                <p className="text-xs text-muted-foreground">{new Date(coll.created_at).toLocaleDateString('ar-SA')}</p>
+                <p className="font-black text-lg text-emerald-600 dark:text-emerald-400">{Number(coll.amount).toLocaleString(locale)} {CURRENCY}</p>
+                <p className="text-xs text-muted-foreground">{new Date(coll.created_at).toLocaleDateString(locale)}</p>
               </div>
               {coll.notes && <p className="text-xs text-muted-foreground mt-1">{coll.notes}</p>}
               {coll.is_reversed && coll.reverse_reason && (
-                <p className="text-xs text-destructive mt-1">سبب الإلغاء: {coll.reverse_reason}</p>
+                <p className="text-xs text-destructive mt-1">{t('common.cancelledReason')}: {coll.reverse_reason}</p>
               )}
             </div>
           ))}

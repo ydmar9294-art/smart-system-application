@@ -59,6 +59,17 @@ const en = {
     supportTeam: 'Support Team',
     secureLogin: 'Secure & encrypted login',
     secureEncrypted: 'Secure & encrypted connection',
+    details: 'Details',
+    print: 'Print',
+    filterByDate: 'Filter by date',
+    filterOptions: 'Filter options',
+    showCancelled: 'Show cancelled',
+    operationCount: 'Operation count',
+    returnOperation: 'return operation',
+    noSupplier: 'No supplier',
+    unspecified: 'Unspecified',
+    cancelledReason: 'Cancellation reason',
+    items: 'Items',
   },
 
   // ==========================================
@@ -238,6 +249,36 @@ const en = {
   },
 
   // ==========================================
+  // FINANCE TAB (Owner)
+  // ==========================================
+  finance: {
+    weeklySales: 'Weekly Sales',
+    collections: 'Collections',
+    totalDebts: 'Total Receivables',
+    returns: 'Returns',
+    discountAnalytics: 'Discount Analytics',
+    totalDiscounts: 'Total Discounts',
+    cashDiscounts: 'Cash Discounts',
+    creditDiscounts: 'Credit Discounts',
+    topDiscountCustomers: '🏆 Top Customers by Discount',
+    smartRecommendation: '💡 Smart Recommendation',
+    cashDiscountsHighInsight: 'Discounts are concentrated on cash sales. Consider reducing them to improve profit margins.',
+    creditDiscountsHighInsight: 'Credit sale discounts are higher. Review your credit discount policy.',
+    customerHighDiscountWarning: ' ⚠️ Customer "{{name}}" receives over 30% of total discounts.',
+    weeklyComparison: 'Weekly Comparison',
+    sales: 'Sales',
+    invoiceCount: 'Invoice Count',
+    systemSummary: 'System Summary',
+    weekInvoices: 'Week Invoices',
+    collectionOps: 'Collection Ops',
+    debtCustomers: 'Debtors',
+    lowStockProducts: 'Low Stock',
+    topCustomersByVolume: 'Top Customers by Volume',
+    thisWeek: 'This Week',
+    lastWeek: 'Last Week',
+  },
+
+  // ==========================================
   // ACCOUNTANT DASHBOARD
   // ==========================================
   accountant: {
@@ -252,6 +293,74 @@ const en = {
       salesReturns: 'Sales Returns',
       purchaseReturns: 'Purchase Returns',
     },
+    // Sales Invoices Tab
+    searchByCustomer: 'Search by customer...',
+    statusAll: 'All',
+    statusPaid: 'Paid',
+    statusPartial: 'Partial',
+    statusCredit: 'Credit',
+    statusVoided: 'Voided',
+    totalLabel: 'Total',
+    collectedLabel: 'Collected',
+    remainingLabel: 'Remaining',
+    paidLabel: 'Paid',
+    invoiceDetails: 'Invoice Details',
+    printInvoice: 'Print Invoice',
+    customerLabel: 'Customer',
+    dateLabel: 'Date',
+    subtotalBeforeDiscount: 'Subtotal before discount',
+    discountLabel: 'Discount',
+    voidedInvoice: 'Voided Invoice',
+    noInvoices: 'No invoices',
+    // Purchases Tab
+    searchByProductOrSupplier: 'Search by product or supplier...',
+    totalPurchases: 'Total Purchases',
+    noPurchases: 'No purchases',
+    // Collections Tab
+    totalCollections: 'Total Collections',
+    noCollections: 'No collections',
+    cancelled: 'Cancelled',
+    done: 'Done',
+    // Sales Returns Tab
+    searchByCustomerReturns: 'Search by customer...',
+    totalSalesReturns: 'Total Sales Returns',
+    noSalesReturns: 'No sales returns',
+    // Purchase Returns Tab
+    searchBySupplier: 'Search by supplier...',
+    totalPurchaseReturns: 'Total Purchase Returns',
+    noPurchaseReturns: 'No purchase returns',
+    // Debts Tab
+    totalCustomerDebts: 'Total Customer Debts',
+    customersWithDebts: 'customers with outstanding debts',
+    searchCustomer: 'Search customer...',
+    sortByDebt: 'Highest Debt',
+    sortByName: 'Name',
+    noDebts: 'No customers with outstanding debts',
+  },
+
+  // ==========================================
+  // REPORTS TAB
+  // ==========================================
+  reports: {
+    netSales: 'Net Sales',
+    netPurchases: 'Net Purchases',
+    totalDiscounts: 'Total Discounts',
+    revenueImpact: 'Revenue Impact',
+    profitLoss: 'Profit / Loss',
+    salesCost: 'Cost of Sales',
+    inventoryValue: 'Inventory Value',
+    purchases: 'Purchases',
+    collections: 'Collections',
+    debts: 'Debts',
+    currentInventoryValue: 'Current Inventory Value',
+    mainWarehouse: 'Main Warehouse',
+    distributorWarehouses: 'Distributor Warehouses',
+    financialSummary: 'Financial Summary',
+    totalSales: 'Total Sales',
+    salesCostLabel: 'Cost of Sales',
+    salesReturns: 'Sales Returns',
+    totalPurchases: 'Total Purchases',
+    purchaseReturns: 'Purchase Returns',
   },
 
   // ==========================================
@@ -282,6 +391,7 @@ const en = {
     warehouseKeepers: 'Warehouse Keepers',
     customerStats: 'Customer Stats',
     debtors: 'Debtors',
+    discount: 'Discount',
   },
 
   // ==========================================
@@ -352,6 +462,31 @@ const en = {
     customerAdded: 'Customer added successfully',
     customerAddedOffline: 'Customer saved locally — will sync when online',
     customerAddFailed: 'Failed to add customer',
+  },
+
+  // ==========================================
+  // OFFLINE SYNC
+  // ==========================================
+  offlineSync: {
+    offlineMode: 'Offline mode — operations saved locally',
+    syncing: 'Syncing...',
+    failedOps: '{{count}} operations failed to sync',
+    pendingOps: '{{count}} operations pending sync',
+    autoSync: 'Will sync automatically',
+    syncOnReconnect: 'Will sync when back online',
+    retryAll: 'Retry All',
+    syncNow: 'Sync Now',
+    operationsLog: 'Operations Log',
+    saleInvoice: 'Sale Invoice',
+    collection: 'Collection',
+    returnOp: 'Return',
+    warehouseTransfer: 'Warehouse Transfer',
+    addCustomerOp: 'Add Customer',
+    statusDone: 'Done',
+    statusFailed: 'Failed',
+    statusSyncing: 'Syncing',
+    statusPending: 'Pending',
+    retry: 'Retry',
   },
 
   // ==========================================

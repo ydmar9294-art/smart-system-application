@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RotateCcw, Search, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { CURRENCY } from '@/constants';
 
 interface SalesReturn {
   id: string;
@@ -12,6 +14,8 @@ interface SalesReturn {
 }
 
 const SalesReturnsTab: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
   const [returns, setReturns] = useState<SalesReturn[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,19 +46,17 @@ const SalesReturnsTab: React.FC = () => {
 
   return (
     <div className="space-y-3">
-      {/* Search */}
       <div className="relative">
         <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-        <input type="text" placeholder="بحث بالعميل..." value={searchTerm}
+        <input type="text" placeholder={t('accountant.searchByCustomerReturns')} value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full bg-muted border-none rounded-xl px-12 py-3 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground" />
       </div>
 
-      {/* Date Filters */}
       <button onClick={() => setShowFilters(!showFilters)}
         className="flex items-center gap-2 text-xs text-muted-foreground font-bold">
         <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-        فلترة بالتاريخ
+        {t('common.filterByDate')}
       </button>
       {showFilters && (
         <div className="grid grid-cols-2 gap-2">
@@ -65,14 +67,12 @@ const SalesReturnsTab: React.FC = () => {
         </div>
       )}
 
-      {/* Summary */}
       <div className="bg-warning/10 rounded-2xl p-4 text-center">
-        <p className="text-[9px] text-muted-foreground font-bold">إجمالي مرتجعات المبيعات</p>
-        <p className="text-xl font-black text-warning">{totalAmount.toLocaleString('ar-SA')} ل.س</p>
-        <p className="text-xs text-muted-foreground mt-1">{filteredReturns.length} عملية إرجاع</p>
+        <p className="text-[9px] text-muted-foreground font-bold">{t('accountant.totalSalesReturns')}</p>
+        <p className="text-xl font-black text-warning">{totalAmount.toLocaleString(locale)} {CURRENCY}</p>
+        <p className="text-xs text-muted-foreground mt-1">{filteredReturns.length} {t('common.returnOperation')}</p>
       </div>
 
-      {/* Returns List */}
       {loading ? (
         <div className="text-center py-12">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
@@ -80,7 +80,7 @@ const SalesReturnsTab: React.FC = () => {
       ) : filteredReturns.length === 0 ? (
         <div className="text-center py-12">
           <RotateCcw className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
-          <p className="text-muted-foreground font-bold">لا توجد مرتجعات مبيعات</p>
+          <p className="text-muted-foreground font-bold">{t('accountant.noSalesReturns')}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -89,9 +89,9 @@ const SalesReturnsTab: React.FC = () => {
               <div className="flex items-start justify-between mb-1">
                 <div>
                   <p className="font-bold text-foreground">{ret.customer_name}</p>
-                  <p className="text-xs text-muted-foreground">{new Date(ret.created_at).toLocaleDateString('ar-SA')}</p>
+                  <p className="text-xs text-muted-foreground">{new Date(ret.created_at).toLocaleDateString(locale)}</p>
                 </div>
-                <p className="font-black text-warning">{Number(ret.total_amount).toLocaleString('ar-SA')} ل.س</p>
+                <p className="font-black text-warning">{Number(ret.total_amount).toLocaleString(locale)} {CURRENCY}</p>
               </div>
               {ret.reason && <p className="text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-lg mt-2">{ret.reason}</p>}
             </div>
