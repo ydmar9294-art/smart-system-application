@@ -29,6 +29,7 @@ type BottomNavType = 'home' | 'sales' | 'finance' | 'history';
 
 const DistributorDashboard: React.FC = () => {
   const { logout, addNotification, refreshAllData, organization, user: appUser } = useApp();
+  const { t, i18n } = useTranslation();
   const offline = useDistributorOffline();
   const [activeTab, setActiveTab] = useState<DistributorTabType>('inventory');
   const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
