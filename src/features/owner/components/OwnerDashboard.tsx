@@ -27,6 +27,9 @@ import BackupTab from './BackupTab';
 import { DashboardHeader } from '@/components/ui/DashboardHeader';
 import { BottomTabNav } from '@/components/ui/BottomTabNav';
 import { GlassCard, GlassKPI } from '@/components/ui/GlassCard';
+import { lazy, Suspense } from 'react';
+
+const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 
 type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup';
 
