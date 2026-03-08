@@ -100,11 +100,11 @@ const WarehouseKeeperDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background has-bottom-nav" dir="rtl">
+    <div className="min-h-screen bg-background has-bottom-nav" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       <div className="max-w-lg mx-auto">
         <DashboardHeader
-          userName={user?.name || 'أمين المستودع'}
-          subtitle="إدارة المخزون"
+          userName={user?.name || t('warehouse.keeper')}
+          subtitle={t('warehouse.title')}
           icon={<Package className="w-4 h-4 text-primary-foreground" />}
           iconBgClass="bg-purple-600"
           onLogout={handleLogout}

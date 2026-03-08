@@ -177,10 +177,10 @@ const DistributorDashboard: React.FC = () => {
                   {selectedCustomer ? (
                     <>
                       <p className="font-bold text-foreground text-sm">{selectedCustomer.name}</p>
-                      <p className="text-xs text-muted-foreground">الرصيد: {Number(selectedCustomer.balance).toLocaleString('ar-SA')} {CURRENCY}</p>
+                      <p className="text-xs text-muted-foreground">{t('distributor.balance')}: {Number(selectedCustomer.balance).toLocaleString('ar-SA')} {CURRENCY}</p>
                     </>
                   ) : (
-                    <p className="text-muted-foreground font-medium text-sm">اختر زبون من القائمة</p>
+                    <p className="text-muted-foreground font-medium text-sm">{t('distributor.selectCustomer')}</p>
                   )}
                 </div>
               </div>

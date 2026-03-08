@@ -121,11 +121,11 @@ const SalesManagerDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background has-bottom-nav" dir="rtl">
+    <div className="min-h-screen bg-background has-bottom-nav" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       <div className="max-w-lg mx-auto">
         <DashboardHeader
-          userName={user?.name || 'مدير المبيعات'}
-          subtitle="إدارة المبيعات"
+          userName={user?.name || t('salesManager.manager')}
+          subtitle={t('salesManager.title')}
           icon={<TrendingUp className="w-4 h-4 text-primary-foreground" />}
           iconBgClass="bg-warning"
           onLogout={handleLogout}
