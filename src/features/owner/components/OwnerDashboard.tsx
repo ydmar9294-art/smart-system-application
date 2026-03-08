@@ -115,13 +115,7 @@ const OwnerDashboard: React.FC = () => {
   };
 
   const getEmployeeTypeLabel = (type: EmployeeType) => {
-    switch (type) {
-      case EmployeeType.SALES_MANAGER: return 'مدير مبيعات';
-      case EmployeeType.ACCOUNTANT: return 'محاسب';
-      case EmployeeType.FIELD_AGENT: return 'موزع ميداني';
-      case EmployeeType.WAREHOUSE_KEEPER: return 'أمين مستودع';
-      default: return type;
-    }
+    return t(`employeeType.${type}`, type);
   };
 
   const myPendingEmployees = pendingEmployees.filter(pe => !pe.is_used);
