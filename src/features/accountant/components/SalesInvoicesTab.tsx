@@ -307,6 +307,12 @@ const SalesInvoicesTab: React.FC = () => {
             };
           })}
           grandTotal={Number(printInvoice.grandTotal)}
+          subtotal={saleDiscountData && Number(saleDiscountData.discount_value || 0) > 0 
+            ? Number(printInvoice.grandTotal) + Number(saleDiscountData.discount_value) 
+            : undefined}
+          discountType={saleDiscountData?.discount_type as any}
+          discountPercentage={Number(saleDiscountData?.discount_percentage || 0)}
+          discountValue={Number(saleDiscountData?.discount_value || 0)}
           paidAmount={Number(printInvoice.paidAmount)}
           remaining={Number(printInvoice.remaining)}
           paymentType={printInvoice.paymentType}
