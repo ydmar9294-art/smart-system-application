@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   FileText, ShoppingCart, RotateCcw, Wallet, Users,
   BarChart3, LogOut, MessageCircle, Home, PieChart, Settings
@@ -21,6 +22,7 @@ type BottomNavType = 'home' | 'operations' | 'reports' | 'returns';
 
 const AccountantDashboard: React.FC = () => {
   const { logout } = useApp();
+  const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<AccountantTabType>('sales');
   const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
   const [loggingOut, setLoggingOut] = useState(false);
@@ -50,16 +52,16 @@ const AccountantDashboard: React.FC = () => {
   const getSectionTabs = () => {
     switch (bottomNav) {
       case 'home': return [
-        { id: 'sales', label: 'المبيعات', icon: <FileText className="w-4 h-4" />, bgColor: 'bg-emerald-600' },
-        { id: 'purchases', label: 'المشتريات', icon: <ShoppingCart className="w-4 h-4" />, bgColor: 'bg-primary' },
+        { id: 'sales', label: t('accountant.salesInvoices'), icon: <FileText className="w-4 h-4" />, bgColor: 'bg-emerald-600' },
+        { id: 'purchases', label: t('accountant.purchases'), icon: <ShoppingCart className="w-4 h-4" />, bgColor: 'bg-primary' },
       ];
       case 'operations': return [
-        { id: 'collections', label: 'التحصيلات', icon: <Wallet className="w-4 h-4" />, bgColor: 'bg-purple-600' },
-        { id: 'debts', label: 'الديون', icon: <Users className="w-4 h-4" />, bgColor: 'bg-destructive' },
+        { id: 'collections', label: t('accountant.collections'), icon: <Wallet className="w-4 h-4" />, bgColor: 'bg-purple-600' },
+        { id: 'debts', label: t('accountant.debts'), icon: <Users className="w-4 h-4" />, bgColor: 'bg-destructive' },
       ];
       case 'returns': return [
-        { id: 'sales-returns', label: 'مرتجع بيع', icon: <RotateCcw className="w-4 h-4" />, bgColor: 'bg-warning' },
-        { id: 'purchase-returns', label: 'مرتجع شراء', icon: <RotateCcw className="w-4 h-4" />, bgColor: 'bg-warning' },
+        { id: 'sales-returns', label: t('accountant.salesReturns'), icon: <RotateCcw className="w-4 h-4" />, bgColor: 'bg-warning' },
+        { id: 'purchase-returns', label: t('accountant.purchaseReturns'), icon: <RotateCcw className="w-4 h-4" />, bgColor: 'bg-warning' },
       ];
       default: return null;
     }
@@ -81,18 +83,18 @@ const AccountantDashboard: React.FC = () => {
   };
 
   const bottomTabs = [
-    { id: 'home', label: 'الرئيسية', icon: <Home className="w-5 h-5" /> },
-    { id: 'operations', label: 'العمليات', icon: <Wallet className="w-5 h-5" /> },
-    { id: 'reports', label: 'التقارير', icon: <BarChart3 className="w-5 h-5" /> },
-    { id: 'returns', label: 'المرتجعات', icon: <RotateCcw className="w-5 h-5" /> },
+    { id: 'home', label: t('nav.home'), icon: <Home className="w-5 h-5" /> },
+    { id: 'operations', label: t('nav.operations'), icon: <Wallet className="w-5 h-5" /> },
+    { id: 'reports', label: t('nav.reports'), icon: <BarChart3 className="w-5 h-5" /> },
+    { id: 'returns', label: t('nav.returns'), icon: <RotateCcw className="w-5 h-5" /> },
   ];
 
   return (
-    <div className="min-h-screen bg-background has-bottom-nav" dir="rtl">
+    <div className="min-h-screen bg-background has-bottom-nav" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       <div className="max-w-lg mx-auto">
         <DashboardHeader
-          userName="لوحة المحاسب"
-          subtitle="إدارة العمليات المالية"
+          userName={t('accountant.title')}
+          subtitle={t('accountant.subtitle')}
           icon={<BarChart3 className="w-4 h-4 text-primary-foreground" />}
           iconBgClass="bg-primary"
           onLogout={handleLogout}

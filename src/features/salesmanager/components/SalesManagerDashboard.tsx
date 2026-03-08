@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import DeletionRequestsManager from '@/features/shared/components/DeletionRequestsManager';
 import { createPortal } from 'react-dom';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -27,6 +28,7 @@ const SalesManagerDashboard: React.FC = () => {
     logout, addDistributor, pendingEmployees = [],
     deactivateEmployee, reactivateEmployee
   } = useApp();
+  const { t, i18n } = useTranslation();
   
   const [activeTab, setActiveTab] = useState<SalesManagerTabType>('dashboard');
   const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
@@ -88,11 +90,7 @@ const SalesManagerDashboard: React.FC = () => {
   };
 
   const getEmployeeTypeLabel = (type: EmployeeType) => {
-    switch (type) {
-      case EmployeeType.FIELD_AGENT: return 'موزع ميداني';
-      case EmployeeType.WAREHOUSE_KEEPER: return 'أمين مستودع';
-      default: return type;
-    }
+    return t(`employeeType.${type}`, type);
   };
 
   const handleBottomNavChange = (navId: string) => {
@@ -107,8 +105,8 @@ const SalesManagerDashboard: React.FC = () => {
   const getSectionTabs = () => {
     switch (bottomNav) {
       case 'reports': return [
-        { id: 'sales', label: 'المبيعات', icon: <TrendingUp className="w-4 h-4" />, bgColor: 'bg-purple-600' },
-        { id: 'kpi', label: 'الأداء', icon: <BarChart3 className="w-4 h-4" />, bgColor: 'bg-emerald-600' },
+        { id: 'sales', label: t('nav.sales'), icon: <TrendingUp className="w-4 h-4" />, bgColor: 'bg-purple-600' },
+        { id: 'kpi', label: t('salesManager.kpi'), icon: <BarChart3 className="w-4 h-4" />, bgColor: 'bg-emerald-600' },
       ];
       default: return null;
     }
@@ -117,17 +115,17 @@ const SalesManagerDashboard: React.FC = () => {
   const sectionTabs = getSectionTabs();
 
   const bottomTabs = [
-    { id: 'home', label: 'الرئيسية', icon: <Home className="w-5 h-5" /> },
-    { id: 'team', label: 'الفريق', icon: <Users className="w-5 h-5" /> },
-    { id: 'reports', label: 'التقارير', icon: <PieChart className="w-5 h-5" /> },
+    { id: 'home', label: t('nav.home'), icon: <Home className="w-5 h-5" /> },
+    { id: 'team', label: t('nav.team'), icon: <Users className="w-5 h-5" /> },
+    { id: 'reports', label: t('nav.reports'), icon: <PieChart className="w-5 h-5" /> },
   ];
 
   return (
-    <div className="min-h-screen bg-background has-bottom-nav" dir="rtl">
+    <div className="min-h-screen bg-background has-bottom-nav" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       <div className="max-w-lg mx-auto">
         <DashboardHeader
-          userName={user?.name || 'مدير المبيعات'}
-          subtitle="إدارة المبيعات"
+          userName={user?.name || t('salesManager.manager')}
+          subtitle={t('salesManager.title')}
           icon={<TrendingUp className="w-4 h-4 text-primary-foreground" />}
           iconBgClass="bg-warning"
           onLogout={handleLogout}

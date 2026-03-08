@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import DeletionRequestsManager from '@/features/shared/components/DeletionRequestsManager';
 import { createPortal } from 'react-dom';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -39,6 +40,7 @@ const OwnerDashboard: React.FC = () => {
     deactivateEmployee, reactivateEmployee, organization
   } = useApp();
   
+  const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<OwnerTabType>('daily');
   const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
   const [loggingOut, setLoggingOut] = useState(false);
@@ -114,13 +116,7 @@ const OwnerDashboard: React.FC = () => {
   };
 
   const getEmployeeTypeLabel = (type: EmployeeType) => {
-    switch (type) {
-      case EmployeeType.SALES_MANAGER: return 'مدير مبيعات';
-      case EmployeeType.ACCOUNTANT: return 'محاسب';
-      case EmployeeType.FIELD_AGENT: return 'موزع ميداني';
-      case EmployeeType.WAREHOUSE_KEEPER: return 'أمين مستودع';
-      default: return type;
-    }
+    return t(`employeeType.${type}`, type);
   };
 
   const myPendingEmployees = pendingEmployees.filter(pe => !pe.is_used);
@@ -141,17 +137,17 @@ const OwnerDashboard: React.FC = () => {
     switch (bottomNav) {
       case 'home': return null;
       case 'operations': return [
-        { id: 'team', label: 'الفريق', icon: <Users className="w-4 h-4" />, bgColor: 'bg-blue-600' },
-        { id: 'customers', label: 'الزبائن', icon: <CircleDollarSign className="w-4 h-4" />, bgColor: 'bg-purple-600' },
+        { id: 'team', label: t('owner.team'), icon: <Users className="w-4 h-4" />, bgColor: 'bg-blue-600' },
+        { id: 'customers', label: t('owner.customers'), icon: <CircleDollarSign className="w-4 h-4" />, bgColor: 'bg-purple-600' },
       ];
       case 'reports': return [
-        { id: 'finance', label: 'المالية', icon: <TrendingUp className="w-4 h-4" />, bgColor: 'bg-red-500' },
-        { id: 'performance', label: 'الأداء', icon: <BarChart3 className="w-4 h-4" />, bgColor: 'bg-indigo-600' },
+        { id: 'finance', label: t('owner.finance'), icon: <TrendingUp className="w-4 h-4" />, bgColor: 'bg-red-500' },
+        { id: 'performance', label: t('owner.performance'), icon: <BarChart3 className="w-4 h-4" />, bgColor: 'bg-indigo-600' },
       ];
       case 'settings': return [
-        { id: 'subscription', label: 'الاشتراك', icon: <Shield className="w-4 h-4" />, bgColor: 'bg-primary' },
-        { id: 'legal', label: 'القانونية', icon: <ShieldCheck className="w-4 h-4" />, bgColor: 'bg-amber-600' },
-        { id: 'backup', label: 'النسخ', icon: <Database className="w-4 h-4" />, bgColor: 'bg-emerald-600' },
+        { id: 'subscription', label: t('owner.subscription'), icon: <Shield className="w-4 h-4" />, bgColor: 'bg-primary' },
+        { id: 'legal', label: t('owner.legal'), icon: <ShieldCheck className="w-4 h-4" />, bgColor: 'bg-amber-600' },
+        { id: 'backup', label: t('owner.backup'), icon: <Database className="w-4 h-4" />, bgColor: 'bg-emerald-600' },
       ];
       default: return null;
     }
@@ -181,18 +177,18 @@ const OwnerDashboard: React.FC = () => {
   };
 
   const bottomTabs = [
-    { id: 'home', label: 'الرئيسية', icon: <Home className="w-5 h-5" /> },
-    { id: 'operations', label: 'العمليات', icon: <Users className="w-5 h-5" /> },
-    { id: 'reports', label: 'التقارير', icon: <PieChart className="w-5 h-5" /> },
-    { id: 'settings', label: 'الإعدادات', icon: <Settings className="w-5 h-5" /> },
+    { id: 'home', label: t('nav.home'), icon: <Home className="w-5 h-5" /> },
+    { id: 'operations', label: t('nav.operations'), icon: <Users className="w-5 h-5" /> },
+    { id: 'reports', label: t('nav.reports'), icon: <PieChart className="w-5 h-5" /> },
+    { id: 'settings', label: t('nav.settings'), icon: <Settings className="w-5 h-5" /> },
   ];
 
   return (
-    <div className="min-h-screen bg-background has-bottom-nav" dir="rtl">
+    <div className="min-h-screen bg-background has-bottom-nav" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       <div className="max-w-lg mx-auto">
         <DashboardHeader
-          userName={user?.name || 'المالك'}
-          subtitle="لوحة الإدارة"
+          userName={user?.name || t('owner.owner')}
+          subtitle={t('owner.title')}
           icon={<ShieldCheck className="w-4 h-4 text-primary-foreground" />}
           iconBgClass="bg-primary"
           onLogout={handleLogout}
@@ -235,11 +231,11 @@ const OwnerDashboard: React.FC = () => {
 
       {/* Add Employee Modal */}
       {showAddUserModal && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir="rtl">
+        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
           <div className="bg-card rounded-2xl w-full max-w-md p-6 space-y-4 animate-zoom-in shadow-2xl border border-border max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold text-foreground">
-                {newEmployeeCode ? 'تم إنشاء كود التفعيل' : 'إضافة موظف جديد'}
+                {newEmployeeCode ? t('activation.activationCodeGenerated') : t('owner.addNewEmployee')}
               </h2>
               <button onClick={closeEmployeeModal} className="p-2 bg-muted rounded-full hover:bg-accent">
                 <X className="w-5 h-5 text-muted-foreground" />

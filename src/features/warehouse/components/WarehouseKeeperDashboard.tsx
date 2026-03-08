@@ -1,4 +1,5 @@
 import React, { useState, useMemo, lazy, Suspense } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   Package, LogOut, LayoutDashboard, Truck, RotateCcw, ShoppingCart,
   MessageCircle, AlertTriangle, ArrowDownCircle, ArrowUpCircle, ArrowUpDown,
@@ -24,6 +25,7 @@ type BottomNavType = 'home' | 'inventory' | 'operations' | 'prices';
 
 const WarehouseKeeperDashboard: React.FC = () => {
   const { user, products = [], deliveries = [], purchases = [], logout, updateProduct } = useApp();
+  const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<WarehouseTabType>('dashboard');
   const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
   const [loggingOut, setLoggingOut] = useState(false);
@@ -80,10 +82,10 @@ const WarehouseKeeperDashboard: React.FC = () => {
   const getSectionTabs = () => {
     switch (bottomNav) {
       case 'operations': return [
-        { id: 'deliveries', label: 'التسليم', icon: <Truck className="w-4 h-4" />, bgColor: 'bg-primary' },
-        { id: 'movements', label: 'الحركات', icon: <ArrowUpDown className="w-4 h-4" />, bgColor: 'bg-warning' },
-        { id: 'purchases', label: 'المشتريات', icon: <ShoppingCart className="w-4 h-4" />, bgColor: 'bg-emerald-600' },
-        { id: 'purchase-returns', label: 'المرتجعات', icon: <RotateCcw className="w-4 h-4" />, bgColor: 'bg-destructive' },
+        { id: 'deliveries', label: t('warehouse.delivery'), icon: <Truck className="w-4 h-4" />, bgColor: 'bg-primary' },
+        { id: 'movements', label: t('warehouse.movements'), icon: <ArrowUpDown className="w-4 h-4" />, bgColor: 'bg-warning' },
+        { id: 'purchases', label: t('accountant.purchases'), icon: <ShoppingCart className="w-4 h-4" />, bgColor: 'bg-emerald-600' },
+        { id: 'purchase-returns', label: t('warehouse.purchaseReturns'), icon: <RotateCcw className="w-4 h-4" />, bgColor: 'bg-destructive' },
       ];
       default: return null;
     }
@@ -92,18 +94,18 @@ const WarehouseKeeperDashboard: React.FC = () => {
   const sectionTabs = getSectionTabs();
 
   const bottomTabs = [
-    { id: 'home', label: 'الرئيسية', icon: <Home className="w-5 h-5" /> },
-    { id: 'inventory', label: 'المخزون', icon: <Package className="w-5 h-5" /> },
-    { id: 'operations', label: 'العمليات', icon: <Truck className="w-5 h-5" /> },
-    { id: 'prices', label: 'الأسعار', icon: <DollarSign className="w-5 h-5" /> },
+    { id: 'home', label: t('nav.home'), icon: <Home className="w-5 h-5" /> },
+    { id: 'inventory', label: t('nav.inventory'), icon: <Package className="w-5 h-5" /> },
+    { id: 'operations', label: t('nav.operations'), icon: <Truck className="w-5 h-5" /> },
+    { id: 'prices', label: t('nav.prices'), icon: <DollarSign className="w-5 h-5" /> },
   ];
 
   return (
-    <div className="min-h-screen bg-background has-bottom-nav" dir="rtl">
+    <div className="min-h-screen bg-background has-bottom-nav" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       <div className="max-w-lg mx-auto">
         <DashboardHeader
-          userName={user?.name || 'أمين المستودع'}
-          subtitle="إدارة المخزون"
+          userName={user?.name || t('warehouse.keeper')}
+          subtitle={t('warehouse.title')}
           icon={<Package className="w-4 h-4 text-primary-foreground" />}
           iconBgClass="bg-purple-600"
           onLogout={handleLogout}

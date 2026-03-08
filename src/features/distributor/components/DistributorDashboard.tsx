@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { 
   FileText, RotateCcw, Wallet, Users, LogOut, UserPlus, X, User, Phone,
@@ -28,6 +29,7 @@ type BottomNavType = 'home' | 'sales' | 'finance' | 'history';
 
 const DistributorDashboard: React.FC = () => {
   const { logout, addNotification, refreshAllData, organization, user: appUser } = useApp();
+  const { t, i18n } = useTranslation();
   const offline = useDistributorOffline();
   const [activeTab, setActiveTab] = useState<DistributorTabType>('inventory');
   const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
@@ -106,12 +108,12 @@ const DistributorDashboard: React.FC = () => {
   const getSectionTabs = () => {
     switch (bottomNav) {
       case 'sales': return [
-        { id: 'new-sale', label: 'فاتورة جديدة', icon: <FileText className="w-4 h-4" />, bgColor: 'bg-primary' },
-        { id: 'returns', label: 'مرتجع بيع', icon: <RotateCcw className="w-4 h-4" />, bgColor: 'bg-warning' },
+        { id: 'new-sale', label: t('distributor.newInvoice'), icon: <FileText className="w-4 h-4" />, bgColor: 'bg-primary' },
+        { id: 'returns', label: t('distributor.salesReturn'), icon: <RotateCcw className="w-4 h-4" />, bgColor: 'bg-warning' },
       ];
       case 'finance': return [
-        { id: 'collections', label: 'تحصيل', icon: <Wallet className="w-4 h-4" />, bgColor: 'bg-emerald-600' },
-        { id: 'debts', label: 'الزبائن', icon: <Users className="w-4 h-4" />, bgColor: 'bg-destructive' },
+        { id: 'collections', label: t('distributor.collection'), icon: <Wallet className="w-4 h-4" />, bgColor: 'bg-emerald-600' },
+        { id: 'debts', label: t('distributor.debts'), icon: <Users className="w-4 h-4" />, bgColor: 'bg-destructive' },
       ];
       default: return null;
     }
@@ -132,25 +134,25 @@ const DistributorDashboard: React.FC = () => {
   };
 
   const bottomTabs = [
-    { id: 'home', label: 'المخزون', icon: <Warehouse className="w-5 h-5" /> },
-    { id: 'sales', label: 'المبيعات', icon: <FileText className="w-5 h-5" /> },
-    { id: 'finance', label: 'المالية', icon: <Wallet className="w-5 h-5" /> },
-    { id: 'history', label: 'السجل', icon: <History className="w-5 h-5" /> },
+    { id: 'home', label: t('nav.warehouse'), icon: <Warehouse className="w-5 h-5" /> },
+    { id: 'sales', label: t('nav.sales'), icon: <FileText className="w-5 h-5" /> },
+    { id: 'finance', label: t('nav.finance'), icon: <Wallet className="w-5 h-5" /> },
+    { id: 'history', label: t('nav.history'), icon: <History className="w-5 h-5" /> },
   ];
 
   return (
-    <div className="min-h-screen bg-background has-bottom-nav" dir="rtl">
+    <div className="min-h-screen bg-background has-bottom-nav" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       <div className="max-w-lg mx-auto">
         <DashboardHeader
-          userName="لوحة الموزع"
-          subtitle="إدارة المبيعات الميدانية"
+          userName={t('distributor.title')}
+          subtitle={t('distributor.subtitle')}
           icon={<ShoppingBag className="w-4 h-4 text-primary-foreground" />}
           iconBgClass="bg-primary"
           onLogout={handleLogout}
           loggingOut={loggingOut}
           rightActions={
             <button onClick={() => setShowAddCustomerModal(true)}
-              className="p-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-all" title="إضافة زبون جديد">
+              className="p-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-all" title={t('distributor.addNewCustomer')}>
               <UserPlus className="w-4 h-4" />
             </button>
           }
@@ -160,9 +162,9 @@ const DistributorDashboard: React.FC = () => {
         <div className="px-4 pb-3">
           <GlassCard className="!p-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-muted-foreground text-xs font-bold">الزبون المحدد للعمليات</span>
+              <span className="text-muted-foreground text-xs font-bold">{t('distributor.selectedCustomer')}</span>
               {selectedCustomer && (
-                <button onClick={() => setSelectedCustomer(null)} className="text-xs text-destructive hover:text-destructive/80 font-bold">إلغاء</button>
+                <button onClick={() => setSelectedCustomer(null)} className="text-xs text-destructive hover:text-destructive/80 font-bold">{t('distributor.deselect')}</button>
               )}
             </div>
             <button onClick={() => setShowCustomerPicker(true)}
@@ -175,10 +177,10 @@ const DistributorDashboard: React.FC = () => {
                   {selectedCustomer ? (
                     <>
                       <p className="font-bold text-foreground text-sm">{selectedCustomer.name}</p>
-                      <p className="text-xs text-muted-foreground">الرصيد: {Number(selectedCustomer.balance).toLocaleString('ar-SA')} {CURRENCY}</p>
+                      <p className="text-xs text-muted-foreground">{t('distributor.balance')}: {Number(selectedCustomer.balance).toLocaleString('ar-SA')} {CURRENCY}</p>
                     </>
                   ) : (
-                    <p className="text-muted-foreground font-medium text-sm">اختر زبون من القائمة</p>
+                    <p className="text-muted-foreground font-medium text-sm">{t('distributor.selectCustomer')}</p>
                   )}
                 </div>
               </div>
