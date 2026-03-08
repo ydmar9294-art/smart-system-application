@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import AnimatedTabContent from '@/components/ui/AnimatedTabContent';
 import DeletionRequestsManager from '@/features/shared/components/DeletionRequestsManager';
 import { createPortal } from 'react-dom';
 import { copyToClipboard } from '@/lib/clipboard';
