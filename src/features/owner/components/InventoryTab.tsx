@@ -625,7 +625,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
 
           {deliveryItems.length > 0 && (
             <div className="space-y-3 bg-muted p-4 rounded-2xl">
-              <p className="text-xs font-black text-muted-foreground uppercase">الأصناف المختارة ({deliveryItems.length}):</p>
+              <p className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.selectedItems')} ({deliveryItems.length}):</p>
               {deliveryItems.map((item) => (
                 <div key={item.product_id} className="flex justify-between items-center bg-card p-4 rounded-xl">
                   <span className="font-bold">{item.product_name}</span>
