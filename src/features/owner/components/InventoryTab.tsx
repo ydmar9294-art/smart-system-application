@@ -146,7 +146,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
       resetDeliveryForm();
     } catch (err) {
       // Error already shown via handleError notification — just prevent success path
-      console.error('Delivery failed:', err);
+      logger.error('Delivery failed', 'InventoryTab');
     }
   };
 
