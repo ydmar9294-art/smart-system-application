@@ -1,11 +1,11 @@
 /**
- * DataContext - Refactored to compose domain-specific hooks
+ * DataContext - Role-Scoped Data Fetching
  * 
  * Architecture:
+ * - Only fetches queries relevant to the user's role
  * - Thin composition layer over domain mutation hooks
  * - Backward compatible interface for all useData() consumers
  * - Staggered refresh to prevent network bursts
- * - Service layer handles all Supabase calls
  */
 import React, { createContext, useContext, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -27,6 +27,7 @@ import { useCustomerMutations } from '@/hooks/data/useCustomerMutations';
 import { useCollectionMutations } from '@/hooks/data/useCollectionMutations';
 import { useInventoryMutations } from '@/hooks/data/useInventoryMutations';
 import { staggeredRefresh } from '@/hooks/data/staggeredRefresh';
+import { getRoleQueryScope } from '@/hooks/data/useRoleScopedQueries';
 
 // ============================================
 // Context Type (unchanged interface)
@@ -85,7 +86,7 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | null>(null);
 
 // ============================================
-// Provider — composes domain hooks
+// Provider — Role-scoped query activation
 // ============================================
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -96,24 +97,64 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const orgId = organization?.id;
   const employeeType = user?.employeeType as EmployeeType | undefined;
 
+  // Determine which queries this role needs
+  const scope = getRoleQueryScope(role, employeeType);
+
   // Realtime subscriptions
   useRealtimeSync(orgId, role);
 
   // ============================================
-  // Query hooks — automatic caching & deduplication
+  // Query hooks — ONLY activated when role needs them
   // ============================================
-  const { data: products = [] } = useProductsQuery(orgId, role);
-  const { data: customers = [] } = useCustomersQuery(orgId, role);
-  const { data: sales = [] } = useSalesQuery(orgId, role);
-  const { data: payments = [] } = usePaymentsQuery(orgId, role);
-  const { data: purchases = [] } = usePurchasesQuery(orgId, role);
-  const { data: deliveries = [] } = useDeliveriesQuery(orgId, role);
-  const { data: pendingEmployees = [] } = usePendingEmployeesQuery(orgId, role, employeeType);
-  const { data: distributorInventory = [] } = useDistributorInventoryQuery(orgId, role);
-  const { data: purchaseReturns = [] } = usePurchaseReturnsQuery(orgId, role, employeeType);
-  const { data: users = [] } = useUsersQuery(orgId, role, employeeType);
-  const { data: licenses = [] } = useLicensesQuery(role);
-  const { data: orgStats = [] } = useOrgStatsQuery(role);
+  const { data: products = [] } = useProductsQuery(
+    scope.products ? orgId : undefined,
+    scope.products ? role : null
+  );
+  const { data: customers = [] } = useCustomersQuery(
+    scope.customers ? orgId : undefined,
+    scope.customers ? role : null
+  );
+  const { data: sales = [] } = useSalesQuery(
+    scope.sales ? orgId : undefined,
+    scope.sales ? role : null
+  );
+  const { data: payments = [] } = usePaymentsQuery(
+    scope.payments ? orgId : undefined,
+    scope.payments ? role : null
+  );
+  const { data: purchases = [] } = usePurchasesQuery(
+    scope.purchases ? orgId : undefined,
+    scope.purchases ? role : null
+  );
+  const { data: deliveries = [] } = useDeliveriesQuery(
+    scope.deliveries ? orgId : undefined,
+    scope.deliveries ? role : null
+  );
+  const { data: pendingEmployees = [] } = usePendingEmployeesQuery(
+    scope.pendingEmployees ? orgId : undefined,
+    scope.pendingEmployees ? role : null,
+    employeeType
+  );
+  const { data: distributorInventory = [] } = useDistributorInventoryQuery(
+    scope.distributorInventory ? orgId : undefined,
+    scope.distributorInventory ? role : null
+  );
+  const { data: purchaseReturns = [] } = usePurchaseReturnsQuery(
+    scope.purchaseReturns ? orgId : undefined,
+    scope.purchaseReturns ? role : null,
+    employeeType
+  );
+  const { data: users = [] } = useUsersQuery(
+    scope.users ? orgId : undefined,
+    scope.users ? role : null,
+    employeeType
+  );
+  const { data: licenses = [] } = useLicensesQuery(
+    scope.licenses ? role : null
+  );
+  const { data: orgStats = [] } = useOrgStatsQuery(
+    scope.orgStats ? role : null
+  );
 
   // ============================================
   // Notification callbacks for mutation hooks

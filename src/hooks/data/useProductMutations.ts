@@ -1,5 +1,6 @@
 /**
  * Product Mutations Hook
+ * Now with conflict detection before updates
  */
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -10,6 +11,7 @@ import { generateUUID } from '@/lib/uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { QueryError } from '@/lib/safeQuery';
 import { extractErrorMessage } from '@/lib/errorHandler';
+import { checkConflict } from '@/utils/monitoring/conflictDetection';
 
 export function useProductMutations(orgId?: string | null, onSuccess?: (msg: string) => void, onError?: (msg: string) => void) {
   const queryClient = useQueryClient();
@@ -46,6 +48,20 @@ export function useProductMutations(orgId?: string | null, onSuccess?: (msg: str
       const prodKey = queryKeys.products(orgId);
       const previousProducts = queryClient.getQueryData<Product[]>(prodKey);
       const oldProduct = previousProducts?.find(p => p.id === product.id);
+
+      // Conflict detection: check if product was modified by another user
+      if (oldProduct) {
+        try {
+          await checkConflict('products', product.id, new Date().toISOString());
+        } catch (conflictErr: any) {
+          if (conflictErr?.name === 'ConflictError') {
+            onError?.('تعارض بيانات: تم تعديل المنتج بواسطة مستخدم آخر. يرجى تحديث الصفحة والمحاولة مجدداً');
+            queryClient.invalidateQueries({ queryKey: prodKey });
+            return;
+          }
+        }
+      }
+
       queryClient.setQueryData<Product[]>(prodKey, old =>
         (old || []).map(p => p.id === product.id ? product : p)
       );
@@ -69,7 +85,7 @@ export function useProductMutations(orgId?: string | null, onSuccess?: (msg: str
 
       queryClient.invalidateQueries({ queryKey: prodKey });
     } catch (e) { handleError(e); }
-  }, [queryClient, orgId, handleError]);
+  }, [queryClient, orgId, onError, handleError]);
 
   const deleteProduct = useCallback(async (id: string) => {
     try {
