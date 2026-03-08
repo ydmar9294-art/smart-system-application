@@ -824,7 +824,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-black text-muted-foreground uppercase">سعر البيع</label>
+              <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.salePrice')}</label>
               <input 
                 name="basePrice" 
                 type="number" 
