@@ -8,7 +8,6 @@ import {
   ChevronDown,
   Tag
 } from 'lucide-react';
-} from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
 import { supabase } from '@/integrations/supabase/client';
