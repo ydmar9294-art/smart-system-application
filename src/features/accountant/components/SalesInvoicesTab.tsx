@@ -57,23 +57,16 @@ const SalesInvoicesTab: React.FC = () => {
 
   const selectedSale = sales.find(s => s.id === selectedSaleId);
 
-  // Fetch discount data from DB for the selected sale
-  const [saleDiscountData, setSaleDiscountData] = useState<{ discount_type: string | null; discount_percentage: number; discount_value: number } | null>(null);
-
-  useEffect(() => {
-    if (!selectedSaleId && !printInvoice) { setSaleDiscountData(null); return; }
-    const saleId = selectedSaleId || printInvoice?.id;
-    if (!saleId) return;
-    const fetchDiscount = async () => {
-      const { data } = await supabase
-        .from('sales')
-        .select('discount_type, discount_percentage, discount_value')
-        .eq('id', saleId)
-        .single();
-      setSaleDiscountData(data || null);
+  // Use discount data directly from the Sale object (now included in the query)
+  const saleDiscountData = (() => {
+    const sale = selectedSaleId ? sales.find(s => s.id === selectedSaleId) : printInvoice;
+    if (!sale) return null;
+    return {
+      discount_type: sale.discountType || null,
+      discount_percentage: sale.discountPercentage || 0,
+      discount_value: sale.discountValue || 0,
     };
-    fetchDiscount();
-  }, [selectedSaleId, printInvoice]);
+  })();
 
   const handlePrint = async (sale: typeof sales[0]) => {
     try {
