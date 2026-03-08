@@ -333,11 +333,35 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
             </div>
             
             <EmailPasswordAuth onError={handleAuthError} />
-            
+
+            {/* Divider before guest */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-xs text-muted-foreground font-bold">أو</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+
+            {/* Guest preview button */}
+            <button
+              type="button"
+              onClick={() => setShowGuestSelector(true)}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-muted-foreground bg-muted/60 hover:bg-muted transition-all duration-200 active:scale-[0.97]"
+            >
+              <Eye className="w-4 h-4" />
+              دخول كزائر
+            </button>
+
             <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground">
               <ShieldCheck className="w-4 h-4" />
               <span>تسجيل دخول آمن ومشفر</span>
             </div>
+
+            {/* Guest role selector modal */}
+            <GuestRoleSelector
+              open={showGuestSelector}
+              onClose={() => setShowGuestSelector(false)}
+              onSelect={handleGuestSelect}
+            />
           </div>);
     }
   };
