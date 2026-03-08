@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
 import { 
