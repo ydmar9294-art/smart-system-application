@@ -6,7 +6,7 @@ import {
   Database, Download, FileText, Loader2, CheckCircle2,
   Users, Receipt, Wallet, Activity, AlertTriangle, FileSpreadsheet
 } from 'lucide-react';
-import jsPDF from 'jspdf';
+import { generateBackupPdf } from '@/lib/backupPdfService';
 
 // ── Types ────────────────────────────────────────────────────────
 interface BackupCustomer {
