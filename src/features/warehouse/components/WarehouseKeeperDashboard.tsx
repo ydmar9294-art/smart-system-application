@@ -48,10 +48,8 @@ const WarehouseKeeperDashboard: React.FC = () => {
     return { totalProducts, lowStockProducts, totalStock, todayDeliveries, todayPurchases };
   }, [products, deliveries, purchases]);
 
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    try { await logout(); } finally { setLoggingOut(false); }
-  };
+
+
 
   const handlePriceSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

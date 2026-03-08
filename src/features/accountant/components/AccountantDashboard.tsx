@@ -32,10 +32,8 @@ const AccountantDashboard: React.FC = () => {
     else if (['sales-returns', 'purchase-returns'].includes(activeTab)) setBottomNav('returns');
   }, [activeTab]);
 
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    try { await logout(); } finally { setLoggingOut(false); }
-  };
+
+
 
   const handleBottomNavChange = (navId: string) => {
     setBottomNav(navId as BottomNavType);

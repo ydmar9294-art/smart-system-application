@@ -145,6 +145,7 @@ const OwnerDashboard: React.FC = () => {
         { id: 'performance', label: t('owner.performance'), icon: <BarChart3 className="w-4 h-4" />, bgColor: 'bg-indigo-600' },
       ];
       case 'settings': return [
+        { id: 'app-settings', label: t('common.settings'), icon: <Settings className="w-4 h-4" />, bgColor: 'bg-primary' },
         { id: 'subscription', label: t('owner.subscription'), icon: <Shield className="w-4 h-4" />, bgColor: 'bg-primary' },
         { id: 'legal', label: t('owner.legal'), icon: <ShieldCheck className="w-4 h-4" />, bgColor: 'bg-amber-600' },
         { id: 'backup', label: t('owner.backup'), icon: <Database className="w-4 h-4" />, bgColor: 'bg-emerald-600' },

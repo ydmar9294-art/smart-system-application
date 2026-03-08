@@ -67,10 +67,8 @@ const DistributorDashboard: React.FC = () => {
   const totalDebt = myCustomers.reduce((sum, c) => sum + Number(c.balance), 0);
   const totalCustomers = myCustomers.length;
 
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    try { await logout(); } finally { setLoggingOut(false); }
-  };
+
+
 
   const handleAddCustomer = async () => {
     if (!newCustomerName.trim()) { addNotification('يرجى إدخال اسم الزبون', 'warning'); return; }

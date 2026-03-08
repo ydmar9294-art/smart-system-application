@@ -66,10 +66,8 @@ const SalesManagerDashboard: React.FC = () => {
     pe.is_used && (pe.employee_type === EmployeeType.FIELD_AGENT || pe.employee_type === EmployeeType.WAREHOUSE_KEEPER)
   );
 
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    try { await logout(); } finally { setLoggingOut(false); }
-  };
+
+
 
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
