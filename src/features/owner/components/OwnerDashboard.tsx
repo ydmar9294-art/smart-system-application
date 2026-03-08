@@ -28,6 +28,7 @@ import { DashboardHeader } from '@/components/ui/DashboardHeader';
 import { BottomTabNav } from '@/components/ui/BottomTabNav';
 import { GlassCard, GlassKPI } from '@/components/ui/GlassCard';
 import { lazy, Suspense } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 
