@@ -19,9 +19,9 @@ const WelcomeSplash: React.FC<WelcomeSplashProps> = ({ onComplete, duration = 30
   const isRtl = document.documentElement.dir === 'rtl';
 
   const messages = [
-    { text: t('welcome.accountSafe'), icon: <Shield className="w-5 h-5 text-primary" /> },
-    { text: t('welcome.dataProtected'), icon: <Lock className="w-5 h-5 text-primary" /> },
-    { text: t('welcome.trustedExperience'), icon: <CheckCircle className="w-5 h-5 text-primary" /> },
+    { text: t('welcomeSplash.msg1'), icon: <Shield className="w-5 h-5 text-primary" /> },
+    { text: t('welcomeSplash.msg2'), icon: <Lock className="w-5 h-5 text-primary" /> },
+    { text: t('welcomeSplash.msg3'), icon: <CheckCircle className="w-5 h-5 text-primary" /> },
   ];
 
   const playWelcomeSound = useCallback(() => {
