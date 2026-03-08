@@ -5,7 +5,7 @@
 @tailwind utilities;
 
 /* ==========================================
-   SMART SALES SYSTEM — LIQUID-GLASS NATIVE v2
+   SMART SALES SYSTEM — LIQUID-GLASS NATIVE v3
    Premium Native Mobile Design System
    All colors MUST be HSL.
 ========================================== */
@@ -19,8 +19,8 @@
     /* Card — frosted white glass */
     --card: 0 0% 100%;
     --card-foreground: 222 24% 16%;
-    --card-glass-bg: hsla(220, 40%, 99%, 0.72);
-    --card-glass-border: hsla(220, 30%, 88%, 0.55);
+    --card-glass-bg: hsla(220, 40%, 99%, 0.68);
+    --card-glass-border: hsla(220, 30%, 88%, 0.5);
 
     /* Popover — crisp glass */
     --popover: 0 0% 100%;
@@ -63,12 +63,13 @@
 
     --radius: 0.75rem;
 
-    /* Glass tokens — light */
-    --glass-blur: 28px;
-    --glass-saturation: 1.8;
-    --glass-shadow: 0 4px 24px hsla(220, 25%, 20%, 0.06), 0 1px 6px hsla(220, 25%, 20%, 0.03);
-    --glass-highlight: inset 0 1px 0 0 hsla(0, 0%, 100%, 0.75), inset 0 -0.5px 0 0 hsla(220, 30%, 80%, 0.08);
-    --glass-reflection: linear-gradient(145deg, hsla(0, 0%, 100%, 0.22) 0%, transparent 35%, transparent 65%, hsla(0, 0%, 100%, 0.05) 100%);
+    /* Glass tokens — light v3 */
+    --glass-blur: 32px;
+    --glass-saturation: 1.9;
+    --glass-shadow: 0 2px 16px hsla(220, 25%, 20%, 0.05), 0 0.5px 4px hsla(220, 25%, 20%, 0.03);
+    --glass-highlight: inset 0 0.5px 0 0 hsla(0, 0%, 100%, 0.8), inset 0 -0.5px 0 0 hsla(220, 30%, 80%, 0.06);
+    --glass-reflection: linear-gradient(135deg, hsla(0, 0%, 100%, 0.18) 0%, transparent 40%, transparent 60%, hsla(0, 0%, 100%, 0.04) 100%);
+    --glass-depth: 0 8px 32px hsla(220, 20%, 20%, 0.08);
 
     /* Sidebar */
     --sidebar-background: 220 20% 97%;
@@ -88,21 +89,19 @@
   }
 
   .dark {
-    /* Dark — deep slate with subtle blue undertone */
     --background: 224 28% 7%;
     --foreground: 218 25% 92%;
 
     --card: 224 22% 11%;
     --card-foreground: 218 25% 92%;
-    --card-glass-bg: hsla(224, 22%, 12%, 0.72);
-    --card-glass-border: hsla(222, 18%, 24%, 0.45);
+    --card-glass-bg: hsla(224, 22%, 12%, 0.68);
+    --card-glass-border: hsla(222, 18%, 22%, 0.45);
 
     --popover: 224 22% 11%;
     --popover-foreground: 218 25% 92%;
     --popover-glass-bg: hsla(224, 22%, 12%, 0.85);
     --popover-glass-border: hsla(222, 18%, 26%, 0.5);
 
-    /* Primary — brighter for dark bg */
     --primary: 217 91% 65%;
     --primary-foreground: 0 0% 100%;
 
@@ -128,12 +127,12 @@
     --input: 224 14% 17%;
     --ring: 217 91% 65%;
 
-    /* Glass tokens — dark */
-    --glass-blur: 32px;
-    --glass-saturation: 2;
-    --glass-shadow: 0 4px 24px hsla(224, 28%, 3%, 0.4), 0 1px 6px hsla(224, 28%, 3%, 0.2);
-    --glass-highlight: inset 0 1px 0 0 hsla(0, 0%, 100%, 0.07), inset 0 -0.5px 0 0 hsla(220, 30%, 50%, 0.04);
-    --glass-reflection: linear-gradient(145deg, hsla(0, 0%, 100%, 0.05) 0%, transparent 35%, transparent 65%, hsla(0, 0%, 100%, 0.02) 100%);
+    --glass-blur: 36px;
+    --glass-saturation: 2.1;
+    --glass-shadow: 0 2px 16px hsla(224, 28%, 3%, 0.35), 0 0.5px 4px hsla(224, 28%, 3%, 0.15);
+    --glass-highlight: inset 0 0.5px 0 0 hsla(0, 0%, 100%, 0.06), inset 0 -0.5px 0 0 hsla(220, 30%, 50%, 0.03);
+    --glass-reflection: linear-gradient(135deg, hsla(0, 0%, 100%, 0.04) 0%, transparent 40%, transparent 60%, hsla(0, 0%, 100%, 0.015) 100%);
+    --glass-depth: 0 8px 32px hsla(224, 28%, 3%, 0.3);
 
     --sidebar-background: 224 28% 6%;
     --sidebar-foreground: 218 22% 86%;
@@ -246,42 +245,42 @@
 }
 
 /* ==========================================
-   LIQUID-GLASS SCROLL-UNDER BARS
+   LIQUID-GLASS SCROLL-UNDER BARS v3
 ========================================== */
 .glass-bar-top {
   position: fixed; top: 0; left: 0; right: 0; z-index: 9990;
   height: calc(env(safe-area-inset-top, 0px) + 2px);
   min-height: env(safe-area-inset-top, 0px);
-  background: hsla(220, 20%, 97%, 0.6);
-  backdrop-filter: blur(32px) saturate(2.2);
-  -webkit-backdrop-filter: blur(32px) saturate(2.2);
-  border-bottom: 0.5px solid hsla(220, 20%, 88%, 0.3);
-  box-shadow: 0 1px 12px hsla(220, 20%, 20%, 0.04);
+  background: hsla(220, 20%, 97%, 0.55);
+  backdrop-filter: blur(36px) saturate(2.2);
+  -webkit-backdrop-filter: blur(36px) saturate(2.2);
+  border-bottom: 0.5px solid hsla(220, 20%, 88%, 0.25);
+  box-shadow: 0 0.5px 8px hsla(220, 20%, 20%, 0.03);
   pointer-events: none;
   will-change: transform; transform: translateZ(0); contain: layout style;
 }
 .dark .glass-bar-top {
-  background: hsla(224, 28%, 7%, 0.7);
-  border-bottom-color: hsla(224, 14%, 20%, 0.3);
-  box-shadow: 0 1px 12px hsla(224, 28%, 3%, 0.3);
+  background: hsla(224, 28%, 7%, 0.65);
+  border-bottom-color: hsla(224, 14%, 20%, 0.25);
+  box-shadow: 0 0.5px 8px hsla(224, 28%, 3%, 0.25);
 }
 
 .glass-bar-bottom {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 9990;
   height: calc(env(safe-area-inset-bottom, 0px) + 2px);
   min-height: env(safe-area-inset-bottom, 0px);
-  background: hsla(220, 20%, 97%, 0.6);
-  backdrop-filter: blur(32px) saturate(2.2);
-  -webkit-backdrop-filter: blur(32px) saturate(2.2);
-  border-top: 0.5px solid hsla(220, 20%, 88%, 0.3);
-  box-shadow: 0 -1px 12px hsla(220, 20%, 20%, 0.04);
+  background: hsla(220, 20%, 97%, 0.55);
+  backdrop-filter: blur(36px) saturate(2.2);
+  -webkit-backdrop-filter: blur(36px) saturate(2.2);
+  border-top: 0.5px solid hsla(220, 20%, 88%, 0.25);
+  box-shadow: 0 -0.5px 8px hsla(220, 20%, 20%, 0.03);
   pointer-events: none;
   will-change: transform; transform: translateZ(0); contain: layout style;
 }
 .dark .glass-bar-bottom {
-  background: hsla(224, 28%, 7%, 0.7);
-  border-top-color: hsla(224, 14%, 20%, 0.3);
-  box-shadow: 0 -1px 12px hsla(224, 28%, 3%, 0.3);
+  background: hsla(224, 28%, 7%, 0.65);
+  border-top-color: hsla(224, 14%, 20%, 0.25);
+  box-shadow: 0 -0.5px 8px hsla(224, 28%, 3%, 0.25);
 }
 
 .scroll-under-layout {
@@ -292,7 +291,7 @@
 
 @layer components {
   /* ==========================================
-     LIQUID GLASS SURFACES
+     LIQUID GLASS SURFACES v3
   ========================================== */
   .glass-surface {
     background: var(--card-glass-bg);
@@ -307,25 +306,22 @@
     background: var(--glass-reflection); pointer-events: none; z-index: 1;
   }
 
-  /* Card — Liquid Glass Elevated */
+  /* Card — Liquid Glass Elevated v3 */
   .card-elevated {
     background: var(--card-glass-bg);
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
     border: 0.5px solid var(--card-glass-border);
     box-shadow: var(--glass-shadow), var(--glass-highlight);
-    @apply text-card-foreground rounded-[1.75rem] transition-all duration-300;
+    @apply text-card-foreground rounded-[1.5rem] transition-all duration-200;
     position: relative; overflow: hidden;
   }
   .card-elevated::before {
     content: ''; position: absolute; inset: 0; border-radius: inherit;
     background: var(--glass-reflection); pointer-events: none; z-index: 1;
   }
-  .card-elevated:hover {
-    box-shadow: var(--glass-shadow), var(--glass-highlight), 0 8px 32px hsla(220, 20%, 20%, 0.08);
-  }
-  .dark .card-elevated:hover {
-    box-shadow: var(--glass-shadow), var(--glass-highlight), 0 8px 32px hsla(224, 20%, 3%, 0.3);
+  .card-elevated:active {
+    transform: scale(0.985);
   }
 
   /* Professional Dark Header */
@@ -337,7 +333,7 @@
 
   /* Premium Glass Card */
   .card-glass-dark {
-    background: hsla(0, 0%, 100%, 0.07);
+    background: hsla(0, 0%, 100%, 0.06);
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
     @apply rounded-2xl border border-white/10;
@@ -347,33 +343,33 @@
   /* Premium Content Container */
   .content-container {
     background: var(--card-glass-bg);
-    backdrop-filter: blur(20px) saturate(1.6);
-    -webkit-backdrop-filter: blur(20px) saturate(1.6);
+    backdrop-filter: blur(24px) saturate(1.8);
+    -webkit-backdrop-filter: blur(24px) saturate(1.8);
     @apply rounded-t-[2rem] shadow-lg border -mx-4 px-4 pt-6 min-h-[60vh];
   }
 
   /* ==========================================
-     BUTTON STYLES — Glass Native
+     BUTTON STYLES — Glass Native v3
   ========================================== */
   .btn-primary {
     @apply bg-primary text-primary-foreground font-black rounded-2xl shadow-lg shadow-primary/20 
-           transition-all duration-200 active:scale-[0.97];
+           transition-all duration-150 active:scale-[0.97];
     box-shadow: var(--glass-highlight), 0 4px 16px hsla(217, 91%, 53%, 0.22);
   }
   .btn-secondary {
     background: var(--card-glass-bg);
-    backdrop-filter: blur(14px) saturate(1.4);
-    -webkit-backdrop-filter: blur(14px) saturate(1.4);
+    backdrop-filter: blur(16px) saturate(1.5);
+    -webkit-backdrop-filter: blur(16px) saturate(1.5);
     border: 0.5px solid var(--card-glass-border);
-    @apply text-secondary-foreground font-bold rounded-2xl transition-all duration-200 active:scale-[0.97];
+    @apply text-secondary-foreground font-bold rounded-2xl transition-all duration-150 active:scale-[0.97];
   }
   .btn-danger {
     @apply bg-destructive text-destructive-foreground font-black rounded-2xl shadow-lg shadow-destructive/20 
-           transition-all duration-200 active:scale-[0.97];
+           transition-all duration-150 active:scale-[0.97];
   }
   .btn-success {
     @apply bg-success text-success-foreground font-black rounded-2xl shadow-lg shadow-success/20 
-           transition-all duration-200 active:scale-[0.97];
+           transition-all duration-150 active:scale-[0.97];
   }
   .btn-logout {
     background: hsla(0, 0%, 100%, 0.07);
@@ -382,12 +378,12 @@
   }
 
   /* ==========================================
-     INPUT STYLES — Glass
+     INPUT STYLES — Glass v3
   ========================================== */
   .input-field {
     background: var(--card-glass-bg);
-    backdrop-filter: blur(12px) saturate(1.4);
-    -webkit-backdrop-filter: blur(12px) saturate(1.4);
+    backdrop-filter: blur(14px) saturate(1.5);
+    -webkit-backdrop-filter: blur(14px) saturate(1.5);
     border: 0.5px solid var(--card-glass-border);
     @apply w-full text-foreground rounded-2xl px-5 py-4 font-bold outline-none
            focus:ring-2 focus:ring-primary/20 transition-all duration-200 placeholder:text-muted-foreground;
@@ -446,11 +442,11 @@
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
     border: 0.5px solid var(--card-glass-border);
     box-shadow: var(--glass-shadow), var(--glass-highlight);
-    @apply p-5 rounded-[1.75rem] flex flex-col gap-4;
+    @apply p-5 rounded-[1.5rem] flex flex-col gap-4;
   }
 
   .kpi-dark {
-    background: hsla(0, 0%, 100%, 0.07);
+    background: hsla(0, 0%, 100%, 0.06);
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
     @apply rounded-2xl p-4 border border-white/10;
@@ -477,15 +473,15 @@
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
   /* ==========================================
-     NATIVE HEADER — Premium Glass v2
+     NATIVE HEADER — Premium Glass v3
   ========================================== */
   .native-header {
     position: relative;
     background: var(--card-glass-bg);
-    backdrop-filter: blur(36px) saturate(2.2);
-    -webkit-backdrop-filter: blur(36px) saturate(2.2);
+    backdrop-filter: blur(40px) saturate(2.4);
+    -webkit-backdrop-filter: blur(40px) saturate(2.4);
     border-bottom: 0.5px solid var(--card-glass-border);
-    box-shadow: 0 2px 20px hsla(220, 20%, 10%, 0.05), var(--glass-highlight);
+    box-shadow: 0 1px 12px hsla(220, 20%, 10%, 0.04), var(--glass-highlight);
     overflow: hidden;
   }
   .native-header::before {
@@ -493,7 +489,7 @@
     background: var(--glass-reflection); pointer-events: none; z-index: 1;
   }
   .dark .native-header {
-    box-shadow: 0 2px 20px hsla(224, 28%, 3%, 0.3), var(--glass-highlight);
+    box-shadow: 0 1px 12px hsla(224, 28%, 3%, 0.25), var(--glass-highlight);
   }
 
   .native-header-avatar {
@@ -501,31 +497,31 @@
   }
 
   .native-header-icon-btn {
-    width: 2.25rem; height: 2.25rem;
+    width: 2.125rem; height: 2.125rem;
     display: flex; align-items: center; justify-content: center;
-    border-radius: 0.75rem;
-    background: hsl(var(--muted) / 0.5);
+    border-radius: 0.875rem;
+    background: hsl(var(--muted) / 0.45);
     border: 0.5px solid var(--card-glass-border);
     color: hsl(var(--foreground));
-    transition: all 180ms;
+    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
     -webkit-tap-highlight-color: transparent;
     position: relative; z-index: 2;
   }
   .native-header-icon-btn:active { transform: scale(0.88); }
 
   .native-header-icon-whatsapp {
-    background: hsla(142, 70%, 49%, 0.1);
-    border-color: hsla(142, 70%, 49%, 0.2);
+    background: hsla(142, 70%, 49%, 0.08);
+    border-color: hsla(142, 70%, 49%, 0.18);
     color: hsl(142, 70%, 42%);
   }
   .native-header-icon-whatsapp:active {
-    background: hsla(142, 70%, 49%, 0.18);
+    background: hsla(142, 70%, 49%, 0.16);
   }
 
   .native-header-action-pill {
     display: inline-flex; align-items: center; gap: 0.25rem;
-    padding: 0.25rem 0.5rem; border-radius: 0.75rem;
-    background: hsl(var(--muted) / 0.5);
+    padding: 0.25rem 0.5rem; border-radius: 0.875rem;
+    background: hsl(var(--muted) / 0.45);
     border: 0.5px solid var(--card-glass-border);
     position: relative; z-index: 2;
   }
@@ -533,27 +529,27 @@
   .native-header-edge {
     position: absolute; bottom: 0; left: 0; right: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent 5%, hsl(var(--primary) / 0.12) 35%, hsl(var(--primary) / 0.2) 50%, hsl(var(--primary) / 0.12) 65%, transparent 95%);
+    background: linear-gradient(90deg, transparent 5%, hsl(var(--primary) / 0.1) 35%, hsl(var(--primary) / 0.18) 50%, hsl(var(--primary) / 0.1) 65%, transparent 95%);
   }
 
   /* ==========================================
-     NATIVE BOTTOM NAVIGATION — Premium Floating Glass v2
+     NATIVE BOTTOM NAVIGATION — Floating Glass v3
   ========================================== */
   .native-bottom-nav {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 9980;
-    padding: 0 0.625rem 0.375rem;
+    padding: 0 0.5rem 0.375rem;
   }
 
   .native-bottom-nav-inner {
     display: flex; align-items: center; justify-content: space-around;
-    padding: 0.375rem 0.25rem 0.25rem;
-    border-radius: 1.375rem;
+    padding: 0.375rem 0.375rem 0.3rem;
+    border-radius: 1.5rem;
     background: var(--card-glass-bg);
-    backdrop-filter: blur(44px) saturate(2.4);
-    -webkit-backdrop-filter: blur(44px) saturate(2.4);
+    backdrop-filter: blur(48px) saturate(2.6);
+    -webkit-backdrop-filter: blur(48px) saturate(2.6);
     border: 0.5px solid var(--card-glass-border);
-    box-shadow: 0 -2px 24px hsla(220, 20%, 10%, 0.08),
-                0 1px 8px hsla(220, 20%, 10%, 0.04),
+    box-shadow: 0 -1px 16px hsla(220, 20%, 10%, 0.06),
+                0 0.5px 4px hsla(220, 20%, 10%, 0.03),
                 var(--glass-highlight);
     position: relative; overflow: hidden;
   }
@@ -562,35 +558,35 @@
     background: var(--glass-reflection); pointer-events: none; z-index: 0;
   }
   .dark .native-bottom-nav-inner {
-    box-shadow: 0 -2px 24px hsla(224, 28%, 3%, 0.45),
-                0 1px 8px hsla(224, 28%, 3%, 0.2),
+    box-shadow: 0 -1px 16px hsla(224, 28%, 3%, 0.4),
+                0 0.5px 4px hsla(224, 28%, 3%, 0.15),
                 var(--glass-highlight);
   }
 
   .native-tab-item {
     flex: 1; display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    gap: 0.125rem; padding: 0.375rem 0.25rem 0.25rem;
-    border-radius: 0.875rem;
-    transition: all 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    gap: 0.125rem; padding: 0.35rem 0.25rem 0.25rem;
+    border-radius: 1rem;
+    transition: all 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
     position: relative; z-index: 1;
     -webkit-tap-highlight-color: transparent;
   }
-  .native-tab-item:active { transform: scale(0.86); }
+  .native-tab-item:active { transform: scale(0.85); }
 
   .native-tab-icon {
     position: relative; display: flex; align-items: center; justify-content: center;
     width: 2rem; height: 2rem; border-radius: 0.75rem;
-    transition: all 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: all 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
   }
   .native-tab-icon-lit {
     background: hsl(var(--primary) / 0.1);
-    box-shadow: 0 0 12px hsl(var(--primary) / 0.12);
-    transform: scale(1.1) translateY(-1px);
+    box-shadow: 0 0 10px hsl(var(--primary) / 0.1);
+    transform: scale(1.08) translateY(-1px);
   }
   .dark .native-tab-icon-lit {
-    background: hsl(var(--primary) / 0.18);
-    box-shadow: 0 0 16px hsl(var(--primary) / 0.18);
+    background: hsl(var(--primary) / 0.16);
+    box-shadow: 0 0 14px hsl(var(--primary) / 0.16);
   }
 
   .native-tab-active { color: hsl(var(--primary)); }
@@ -598,7 +594,7 @@
 
   .native-tab-label {
     font-size: 0.55rem; font-weight: 800; line-height: 1;
-    transition: all 220ms;
+    transition: all 200ms;
   }
   .native-tab-label-lit {
     color: hsl(var(--primary));
@@ -607,25 +603,25 @@
 
   .native-tab-dot {
     position: absolute; bottom: -0.05rem;
-    width: 3.5px; height: 3.5px;
+    width: 3px; height: 3px;
     border-radius: 50%;
     background: hsl(var(--primary));
-    box-shadow: 0 0 6px hsl(var(--primary) / 0.45);
+    box-shadow: 0 0 5px hsl(var(--primary) / 0.4);
   }
 
   .native-tab-badge {
     position: absolute; top: -2px; right: -4px;
-    min-width: 15px; height: 15px; padding: 0 3.5px;
-    font-size: 7.5px; font-weight: 900; line-height: 15px; text-align: center;
+    min-width: 14px; height: 14px; padding: 0 3px;
+    font-size: 7px; font-weight: 900; line-height: 14px; text-align: center;
     color: hsl(var(--destructive-foreground));
     background: hsl(var(--destructive));
     border-radius: 999px;
-    box-shadow: 0 2px 6px hsl(var(--destructive) / 0.3);
+    box-shadow: 0 1px 4px hsl(var(--destructive) / 0.25);
     border: 1.5px solid hsl(var(--background));
   }
 
   /* ==========================================
-     NATIVE APP SHELL
+     NATIVE APP SHELL v3
   ========================================== */
   .native-app-shell {
     min-height: 100vh; min-height: 100dvh;
@@ -643,7 +639,7 @@
   }
 
   /* ==========================================
-     NATIVE GLASS CARD — Premium Elevated v2
+     NATIVE GLASS CARD — Premium v3
   ========================================== */
   .native-glass-card {
     background: var(--card-glass-bg);
@@ -651,7 +647,7 @@
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
     border: 0.5px solid var(--card-glass-border);
     box-shadow: var(--glass-shadow), var(--glass-highlight);
-    @apply rounded-[1.375rem] p-4;
+    @apply rounded-[1.25rem] p-4;
     position: relative; overflow: hidden;
   }
   .native-glass-card::before {
@@ -660,7 +656,7 @@
   }
   .native-glass-card-glow {
     box-shadow: var(--glass-shadow), var(--glass-highlight),
-                0 0 16px hsl(var(--primary) / 0.06);
+                0 0 14px hsl(var(--primary) / 0.05);
   }
 
   .native-glass-kpi {
@@ -669,7 +665,7 @@
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
     border: 0.5px solid var(--card-glass-border);
     box-shadow: var(--glass-shadow), var(--glass-highlight);
-    @apply p-3.5 rounded-[1.375rem];
+    @apply p-3 rounded-[1.25rem];
     position: relative; overflow: hidden;
   }
   .native-glass-kpi::before {
@@ -678,20 +674,20 @@
   }
 
   /* ==========================================
-     NATIVE FAB — Floating Action Button
+     NATIVE FAB — Floating Action Button v3
   ========================================== */
   .native-fab {
     position: fixed;
     bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
     left: 1rem; z-index: 9970;
-    width: 3rem; height: 3rem;
+    width: 2.75rem; height: 2.75rem;
     display: flex; align-items: center; justify-content: center;
     border-radius: 1rem;
-    box-shadow: 0 4px 20px hsl(var(--primary) / 0.25), var(--glass-highlight);
-    transition: all 180ms cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 3px 16px hsl(var(--primary) / 0.2), var(--glass-highlight);
+    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
     -webkit-tap-highlight-color: transparent;
   }
-  .native-fab:active { transform: scale(0.86); }
+  .native-fab:active { transform: scale(0.88); }
 
   /* Legacy compatibility aliases */
   .bottom-tab-nav { @apply native-bottom-nav; }
@@ -743,11 +739,11 @@
   }
 
   /* ==========================================
-     SECTION TAB BAR — Native Pill Tabs v2
+     SECTION TAB BAR — Native Pill Tabs v3
   ========================================== */
   .glass-section-tabs {
     display: flex; gap: 0.25rem; padding: 0.25rem;
-    border-radius: 1.125rem;
+    border-radius: 1rem;
     background: var(--card-glass-bg);
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
@@ -766,8 +762,8 @@
     flex: 1; min-width: fit-content;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 0.2rem; padding: 0.5rem 0.4rem;
-    border-radius: 0.875rem; font-size: 0.6rem; font-weight: 800;
-    transition: all 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    border-radius: 0.75rem; font-size: 0.6rem; font-weight: 800;
+    transition: all 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
     -webkit-tap-highlight-color: transparent;
     position: relative; z-index: 1;
   }
@@ -785,12 +781,12 @@
   }
 
   /* ==========================================
-     SETTINGS SHEET — Native Slide-Up v2
+     SETTINGS SHEET — Native Slide-Up v3
   ========================================== */
   .settings-sheet-backdrop {
     position: fixed; inset: 0; z-index: 9990;
-    background: hsla(222, 22%, 8%, 0.25);
-    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    background: hsla(222, 22%, 8%, 0.2);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
     animation: settings-backdrop-in 180ms ease-out;
   }
   @keyframes settings-backdrop-in {
@@ -800,17 +796,17 @@
   .settings-sheet {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 9991;
     background: var(--card-glass-bg);
-    backdrop-filter: blur(44px) saturate(2.4);
-    -webkit-backdrop-filter: blur(44px) saturate(2.4);
+    backdrop-filter: blur(48px) saturate(2.6);
+    -webkit-backdrop-filter: blur(48px) saturate(2.6);
     border-top: 0.5px solid var(--card-glass-border);
-    border-radius: 1.375rem 1.375rem 0 0;
-    box-shadow: 0 -8px 48px hsla(222, 22%, 8%, 0.12), var(--glass-highlight);
+    border-radius: 1.5rem 1.5rem 0 0;
+    box-shadow: 0 -6px 40px hsla(222, 22%, 8%, 0.1), var(--glass-highlight);
     max-height: 85vh; overflow-y: auto;
     animation: settings-sheet-in 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .dark .settings-sheet {
-    box-shadow: 0 -8px 48px hsla(224, 28%, 3%, 0.45), var(--glass-highlight);
+    box-shadow: 0 -6px 40px hsla(224, 28%, 3%, 0.4), var(--glass-highlight);
   }
   @keyframes settings-sheet-in {
     from { transform: translateY(100%); } to { transform: translateY(0); }
@@ -818,7 +814,7 @@
 
   .settings-sheet-handle {
     width: 2.25rem; height: 0.2rem; border-radius: 9999px;
-    background: hsl(var(--muted-foreground) / 0.25);
+    background: hsl(var(--muted-foreground) / 0.2);
     margin: 0.625rem auto 0;
   }
 
@@ -844,7 +840,7 @@
   .hover-lift { @apply transition-transform duration-200 hover:-translate-y-1; }
   .hover-scale { @apply transition-transform duration-200 hover:scale-105; }
 
-  .native-transition { transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1); }
+  .native-transition { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
   .native-press { transition: transform 0.1s ease-out; -webkit-tap-highlight-color: transparent; }
   .native-press:active { transform: scale(0.96); }
 
@@ -915,16 +911,16 @@
 }
 .tab-container-animated.switching::before { opacity: 1; }
 
-.tab-content-enter { animation: tab-content-in 0.35s ease-out forwards; }
+.tab-content-enter { animation: tab-content-in 0.3s ease-out forwards; }
 @keyframes tab-content-in {
-  0% { opacity: 0; transform: translateY(8px) scale(0.99); }
+  0% { opacity: 0; transform: translateY(6px) scale(0.99); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* Floating Animation */
 @keyframes float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+  50% { transform: translateY(-3px); }
 }
 .animate-float { animation: float 3s ease-in-out infinite; }
 

@@ -14,7 +14,7 @@ export const GlassCard: React.FC<GlassCardProps> = ({
 }) => (
   <div
     onClick={onClick}
-    className={`native-glass-card ${glow ? 'native-glass-card-glow' : ''} ${onClick ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''} ${className}`}
+    className={`native-glass-card ${glow ? 'native-glass-card-glow' : ''} ${onClick ? 'cursor-pointer active:scale-[0.98] transition-transform duration-150' : ''} ${className}`}
     style={accentColor ? { borderInlineEndColor: accentColor, borderInlineEndWidth: '2px' } : undefined}
   >
     {children}
@@ -32,11 +32,11 @@ interface GlassKPIProps {
 
 export const GlassKPI: React.FC<GlassKPIProps> = ({ icon, label, value, subValue, iconBgClass = 'bg-primary/10' }) => (
   <div className="native-glass-kpi">
-    <div className={`w-9 h-9 ${iconBgClass} rounded-xl flex items-center justify-center mb-1.5 relative z-[2]`}>
+    <div className={`w-8 h-8 ${iconBgClass} rounded-xl flex items-center justify-center mb-1 relative z-[2]`}>
       {icon}
     </div>
     <p className="text-[8px] text-muted-foreground font-black uppercase tracking-wider relative z-[2]">{label}</p>
-    <p className="text-lg font-black text-foreground leading-tight relative z-[2]">{typeof value === 'number' ? value.toLocaleString() : value}</p>
+    <p className="text-base font-black text-foreground leading-tight relative z-[2]">{typeof value === 'number' ? value.toLocaleString() : value}</p>
     {subValue && <p className="text-[9px] text-muted-foreground font-bold relative z-[2]">{subValue}</p>}
   </div>
 );
