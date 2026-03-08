@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import { ImpactStyle } from '@capacitor/haptics';
 import { useHaptics } from '@/platform/hooks/useHaptics';
 
 export interface BottomTab {
