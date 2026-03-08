@@ -289,7 +289,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           await cacheOrgInfo(orgRes.data?.name || '', legalRes.data || null);
         } catch { /* ignore */ }
       } catch (err) {
-        console.error('[InvoicePrint] fetchLegalInfo error:', err);
+        logger.error('fetchLegalInfo error', 'InvoicePrint');
       } finally {
         setLoading(false);
       }
