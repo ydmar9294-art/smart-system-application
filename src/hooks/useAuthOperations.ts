@@ -59,7 +59,7 @@ const callAuthStatus = async (accessToken: string): Promise<AuthStatusResponse> 
     clearTimeout(timeoutId);
     // Single retry on network/timeout errors
     if (err?.name === 'AbortError' || err?.message?.includes('fetch')) {
-      console.warn('[AuthOps] Retrying auth-status after failure...');
+      logger.warn('Retrying auth-status after failure...', 'AuthOps');
       const { data, error } = await supabase.functions.invoke('auth-status', {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
