@@ -146,6 +146,7 @@ const OwnerDashboard: React.FC = () => {
       case 'performance': return <PerformanceTab />;
       case 'subscription': return <SubscriptionTab />;
       case 'legal': return <><LegalInfoTab /><OrgDeletionRequest /></>;
+      case 'backup': return <BackupTab />;
       default: return null;
     }
   };
