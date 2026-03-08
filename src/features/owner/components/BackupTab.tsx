@@ -6,7 +6,7 @@ import {
   Database, Download, FileText, Loader2, CheckCircle2,
   Users, Receipt, Wallet, Activity, AlertTriangle, FileSpreadsheet
 } from 'lucide-react';
-import jsPDF from 'jspdf';
+import { generateBackupPdf } from '@/lib/backupPdfService';
 
 // ── Types ────────────────────────────────────────────────────────
 interface BackupCustomer {
@@ -232,244 +232,14 @@ const BackupTab: React.FC = () => {
     }
   }, [organization, getUserName]);
 
-  // ── PDF Export ──────────────────────────────────────────────────
+  // ── PDF Export (Arabic-supported via HTML rendering) ─────────────
   const exportPDF = useCallback(async () => {
     if (!backupData) return;
     setLoading(true);
     setProgress('جاري إنشاء ملف PDF...');
 
     try {
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const margin = 12;
-      const contentW = pageW - margin * 2;
-      let y = margin;
-      let pageNum = 1;
-
-      // Load Arabic font - use built-in helvetica as fallback
-      // jsPDF doesn't natively support Arabic, so we'll use html rendering approach
-      
-      const addHeader = () => {
-        pdf.setFillColor(30, 41, 59); // slate-800
-        pdf.rect(0, 0, pageW, 18, 'F');
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(10);
-        pdf.text(backupData.exportDate, margin, 11);
-        pdf.text(backupData.orgName, pageW - margin, 11, { align: 'right' });
-        pdf.setTextColor(0, 0, 0);
-        y = 24;
-      };
-
-      const addFooter = () => {
-        pdf.setFontSize(8);
-        pdf.setTextColor(150, 150, 150);
-        pdf.text(`${pageNum}`, pageW / 2, pageH - 6, { align: 'center' });
-        pdf.setTextColor(0, 0, 0);
-      };
-
-      const checkNewPage = (needed: number) => {
-        if (y + needed > pageH - 14) {
-          addFooter();
-          pdf.addPage();
-          pageNum++;
-          addHeader();
-        }
-      };
-
-      const drawTable = (headers: string[], rows: string[][], colWidths: number[]) => {
-        const rowH = 7;
-        const headerH = 8;
-
-        checkNewPage(headerH + rowH * Math.min(rows.length, 3));
-
-        // Header row
-        pdf.setFillColor(241, 245, 249); // slate-100
-        pdf.rect(margin, y, contentW, headerH, 'F');
-        pdf.setFontSize(7);
-        pdf.setFont('helvetica', 'bold');
-        let xPos = pageW - margin;
-        headers.forEach((h, i) => {
-          xPos -= colWidths[i];
-          pdf.text(h, xPos + colWidths[i] / 2, y + 5.5, { align: 'center' });
-        });
-        y += headerH;
-
-        // Data rows
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(6.5);
-        rows.forEach((row, ri) => {
-          checkNewPage(rowH);
-          if (ri % 2 === 1) {
-            pdf.setFillColor(248, 250, 252);
-            pdf.rect(margin, y, contentW, rowH, 'F');
-          }
-          xPos = pageW - margin;
-          row.forEach((cell, ci) => {
-            xPos -= colWidths[ci];
-            const truncated = cell.length > 30 ? cell.slice(0, 28) + '..' : cell;
-            pdf.text(truncated, xPos + colWidths[ci] / 2, y + 4.5, { align: 'center' });
-          });
-          y += rowH;
-        });
-
-        // Bottom border
-        pdf.setDrawColor(200, 200, 200);
-        pdf.line(margin, y, pageW - margin, y);
-        y += 4;
-      };
-
-      const addSectionTitle = (title: string, icon: string) => {
-        checkNewPage(16);
-        pdf.setFillColor(59, 130, 246); // blue-500
-        pdf.roundedRect(margin, y, contentW, 10, 2, 2, 'F');
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(`${icon}  ${title}`, pageW - margin - 4, y + 7, { align: 'right' });
-        pdf.setTextColor(0, 0, 0);
-        pdf.setFont('helvetica', 'normal');
-        y += 14;
-      };
-
-      // ── Cover page ──────────────────────────────────────────────
-      addHeader();
-      y = pageH / 2 - 20;
-      pdf.setFontSize(22);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(backupData.orgName, pageW / 2, y, { align: 'center' });
-      y += 12;
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text('Full Company Data Backup', pageW / 2, y, { align: 'center' });
-      y += 8;
-      pdf.setFontSize(10);
-      pdf.setTextColor(100, 100, 100);
-      pdf.text(backupData.exportDate, pageW / 2, y, { align: 'center' });
-      y += 12;
-      pdf.setTextColor(0, 0, 0);
-      pdf.setFontSize(9);
-      const summaryLines = [
-        `Customers: ${backupData.customers.length}`,
-        `Invoices: ${backupData.invoices.length}`,
-        `Collections: ${backupData.collections.length}`,
-        `Activity Logs: ${backupData.logs.length}`,
-      ];
-      summaryLines.forEach(line => {
-        pdf.text(line, pageW / 2, y, { align: 'center' });
-        y += 6;
-      });
-      addFooter();
-
-      // ── Customers ──────────────────────────────────────────────
-      pdf.addPage(); pageNum++;
-      addHeader();
-      addSectionTitle('Customers Database', '#');
-
-      const custHeaders = ['Balance', 'Distributor', 'Location', 'Phone', 'Name', 'ID'];
-      const custWidths = [25, 35, 35, 30, 45, contentW - 170];
-      const custRows = backupData.customers.map(c => [
-        `${c.balance.toLocaleString()} ${CURRENCY}`,
-        c.distributor_name || '—',
-        c.location || '—',
-        c.phone || '—',
-        c.name,
-        c.id.slice(0, 8),
-      ]);
-      drawTable(custHeaders, custRows, custWidths);
-      addFooter();
-
-      // ── Invoices ───────────────────────────────────────────────
-      pdf.addPage(); pageNum++;
-      addHeader();
-      addSectionTitle('Invoices', '#');
-
-      const invHeaders = ['Net Total', 'Discount', 'Paid', 'Total', 'Type', 'Date', 'Customer', 'No.'];
-      const invWidths = [28, 22, 25, 25, 18, 30, 45, contentW - 193];
-      const invRows = backupData.invoices.map(inv => {
-        const subtotal = inv.grand_total + inv.discount_value;
-        return [
-          `${inv.grand_total.toLocaleString()}`,
-          inv.discount_value > 0 ? `${inv.discount_value.toLocaleString()}` : '—',
-          `${inv.paid_amount.toLocaleString()}`,
-          `${subtotal.toLocaleString()}`,
-          inv.payment_type === 'CASH' ? 'Cash' : 'Credit',
-          formatDateShort(inv.created_at),
-          inv.customer_name,
-          inv.id.slice(0, 8),
-        ];
-      });
-      drawTable(invHeaders, invRows, invWidths);
-      addFooter();
-
-      // ── Invoice Items detail (grouped by invoice) ───────────────
-      const invoicesWithItems = backupData.invoices.filter(inv => inv.items.length > 0).slice(0, 100);
-      if (invoicesWithItems.length > 0) {
-        pdf.addPage(); pageNum++;
-        addHeader();
-        addSectionTitle('Invoice Items Detail', '#');
-
-        const itemHeaders = ['Total', 'Unit Price', 'Qty', 'Product'];
-        const itemWidths = [30, 30, 20, contentW - 80];
-
-        invoicesWithItems.forEach(inv => {
-          checkNewPage(20);
-          pdf.setFontSize(7);
-          pdf.setFont('helvetica', 'bold');
-          pdf.text(`Invoice: ${inv.id.slice(0, 8)} | ${inv.customer_name} | ${formatDateShort(inv.created_at)}`, pageW - margin, y, { align: 'right' });
-          pdf.setFont('helvetica', 'normal');
-          y += 5;
-
-          const itemRows = inv.items.map(it => [
-            it.total_price.toLocaleString(),
-            it.unit_price.toLocaleString(),
-            it.quantity.toString(),
-            it.product_name,
-          ]);
-          drawTable(itemHeaders, itemRows, itemWidths);
-          y += 2;
-        });
-        addFooter();
-      }
-
-      // ── Collections ────────────────────────────────────────────
-      pdf.addPage(); pageNum++;
-      addHeader();
-      addSectionTitle('Collections / Payments', '#');
-
-      const colHeaders = ['Status', 'Collector', 'Amount', 'Date', 'Customer', 'Invoice'];
-      const colWidths = [22, 35, 28, 30, 45, contentW - 160];
-      const colRows = backupData.collections.map(c => [
-        c.is_reversed ? 'Reversed' : 'Active',
-        c.collector_name || '—',
-        `${c.amount.toLocaleString()}`,
-        formatDateShort(c.created_at),
-        c.customer_name || '—',
-        c.sale_id.slice(0, 8),
-      ]);
-      drawTable(colHeaders, colRows, colWidths);
-      addFooter();
-
-      // ── Activity Logs ──────────────────────────────────────────
-      pdf.addPage(); pageNum++;
-      addHeader();
-      addSectionTitle('Operational Activity Log', '#');
-
-      const logHeaders = ['Details', 'Date', 'User', 'Operation'];
-      const logWidths = [contentW - 100, 30, 35, 35];
-      const logRows = backupData.logs.slice(0, 300).map(l => [
-        l.details,
-        l.date,
-        l.user_name,
-        l.type,
-      ]);
-      drawTable(logHeaders, logRows, logWidths);
-      addFooter();
-
-      // ── Save PDF ───────────────────────────────────────────────
-      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 16);
-      pdf.save(`backup_${backupData.orgName}_${ts}.pdf`);
-
+      await generateBackupPdf(backupData, setProgress);
       setProgress('');
     } catch (err) {
       console.error('[Backup PDF]:', err);
@@ -485,33 +255,33 @@ const BackupTab: React.FC = () => {
 
     const sheets: { name: string; headers: string[]; rows: string[][] }[] = [
       {
-        name: 'Customers',
-        headers: ['ID', 'Name', 'Phone', 'Location', 'Balance', 'Distributor'],
+        name: 'الزبائن',
+        headers: ['المعرّف', 'الاسم', 'الهاتف', 'الموقع', 'الرصيد', 'الموزع'],
         rows: backupData.customers.map(c => [c.id, c.name, c.phone || '', c.location || '', c.balance.toString(), c.distributor_name || '']),
       },
       {
-        name: 'Invoices',
-        headers: ['ID', 'Customer', 'Date', 'Payment Type', 'Total', 'Discount Type', 'Discount %', 'Discount Value', 'Net Total', 'Paid', 'Remaining', 'Voided', 'Distributor'],
+        name: 'الفواتير',
+        headers: ['المعرّف', 'الزبون', 'التاريخ', 'نوع الدفع', 'المجموع', 'نوع الخصم', 'نسبة الخصم', 'قيمة الخصم', 'الصافي', 'المدفوع', 'المتبقي', 'ملغاة', 'الموزع'],
         rows: backupData.invoices.map(inv => [
-          inv.id, inv.customer_name, inv.created_at, inv.payment_type,
+          inv.id, inv.customer_name, inv.created_at, inv.payment_type === 'CASH' ? 'نقدي' : 'آجل',
           (inv.grand_total + inv.discount_value).toString(),
           inv.discount_type || '', (inv.discount_percentage || 0).toString(),
           (inv.discount_value || 0).toString(), inv.grand_total.toString(),
           inv.paid_amount.toString(), inv.remaining.toString(),
-          inv.is_voided ? 'Yes' : 'No', inv.distributor_name || '',
+          inv.is_voided ? 'نعم' : 'لا', inv.distributor_name || '',
         ]),
       },
       {
-        name: 'Collections',
-        headers: ['ID', 'Invoice ID', 'Customer', 'Amount', 'Date', 'Collector', 'Reversed', 'Notes'],
+        name: 'التحصيلات',
+        headers: ['المعرّف', 'رقم الفاتورة', 'الزبون', 'المبلغ', 'التاريخ', 'المحصّل', 'معكوسة', 'ملاحظات'],
         rows: backupData.collections.map(c => [
           c.id, c.sale_id, c.customer_name || '', c.amount.toString(),
-          c.created_at, c.collector_name || '', c.is_reversed ? 'Yes' : 'No', c.notes || '',
+          c.created_at, c.collector_name || '', c.is_reversed ? 'نعم' : 'لا', c.notes || '',
         ]),
       },
       {
-        name: 'Activity Logs',
-        headers: ['Type', 'User', 'Date', 'Details'],
+        name: 'سجل_العمليات',
+        headers: ['العملية', 'المستخدم', 'التاريخ', 'التفاصيل'],
         rows: backupData.logs.map(l => [l.type, l.user_name, l.date, l.details]),
       },
     ];
