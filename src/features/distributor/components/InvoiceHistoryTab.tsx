@@ -92,7 +92,7 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
       // Fetch sales
       const { data: sales } = await supabase
         .from('sales')
-        .select('id, customer_id, customer_name, grand_total, paid_amount, remaining, payment_type, created_by, created_at, is_voided')
+        .select('id, customer_id, customer_name, grand_total, paid_amount, remaining, payment_type, created_by, created_at, is_voided, discount_type, discount_percentage, discount_value')
         .eq('created_by', user.id)
         .eq('is_voided', false)
         .order('created_at', { ascending: false })
