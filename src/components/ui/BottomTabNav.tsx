@@ -31,9 +31,9 @@ export const BottomTabNav: React.FC<BottomTabNavProps> = ({ tabs, activeTab, onT
     <nav className="native-bottom-nav safe-area-bottom" role="tablist" aria-label="Main navigation">
       <motion.div
         className="native-bottom-nav-inner"
-        initial={{ y: 40, opacity: 0 }}
+        initial={{ y: 60, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 28, delay: 0.1 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 24, delay: 0.15 }}
       >
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
@@ -49,10 +49,10 @@ export const BottomTabNav: React.FC<BottomTabNavProps> = ({ tabs, activeTab, onT
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={isActive ? 'active' : 'inactive'}
-                    initial={{ scale: 0.7, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.7, opacity: 0 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                    initial={{ scale: 0.6, opacity: 0, y: 4 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.6, opacity: 0, y: -4 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 22 }}
                   >
                     {isActive && tab.activeIcon ? tab.activeIcon : tab.icon}
                   </motion.div>
@@ -68,14 +68,18 @@ export const BottomTabNav: React.FC<BottomTabNavProps> = ({ tabs, activeTab, onT
                   </motion.span>
                 )}
               </div>
-              <span className={`native-tab-label ${isActive ? 'native-tab-label-lit' : ''}`}>
+              <motion.span
+                className={`native-tab-label ${isActive ? 'native-tab-label-lit' : ''}`}
+                animate={{ opacity: isActive ? 1 : 0.7 }}
+                transition={{ duration: 0.2 }}
+              >
                 {tab.label}
-              </span>
+              </motion.span>
               <AnimatePresence>
                 {isActive && (
                   <motion.div
                     className="native-tab-dot"
-                    layoutId="tab-dot-indicator"
+                    layoutId="nav-active-dot"
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0, opacity: 0 }}

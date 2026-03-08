@@ -17,11 +17,11 @@ export const GlassCard: React.FC<GlassCardProps> = ({
 }) => (
   <motion.div
     onClick={onClick}
-    className={`native-glass-card ${glow ? 'native-glass-card-glow' : ''} ${shimmer ? 'native-glass-card-shimmer' : ''} ${onClick ? 'cursor-pointer active:scale-[0.98] transition-transform duration-150' : ''} ${className}`}
+    className={`native-glass-card ${glow ? 'native-glass-card-glow' : ''} ${shimmer ? 'native-glass-card-shimmer' : ''} ${onClick ? 'cursor-pointer active:scale-[0.97] transition-transform duration-150' : ''} ${className}`}
     style={accentColor ? { borderInlineEndColor: accentColor, borderInlineEndWidth: '2px' } : undefined}
-    initial={{ opacity: 0, y: 12 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.35, delay: delay * 0.08, ease: [0.34, 1.56, 0.64, 1] }}
+    initial={{ opacity: 0, y: 14, scale: 0.97 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    transition={{ duration: 0.4, delay: delay * 0.08, ease: [0.34, 1.56, 0.64, 1] }}
   >
     {children}
   </motion.div>
@@ -40,11 +40,11 @@ interface GlassKPIProps {
 export const GlassKPI: React.FC<GlassKPIProps> = ({ icon, label, value, subValue, iconBgClass = 'bg-primary/10', delay = 0 }) => (
   <motion.div
     className="native-glass-kpi"
-    initial={{ opacity: 0, scale: 0.92 }}
+    initial={{ opacity: 0, scale: 0.9 }}
     animate={{ opacity: 1, scale: 1 }}
-    transition={{ duration: 0.3, delay: delay * 0.06, ease: [0.34, 1.56, 0.64, 1] }}
+    transition={{ duration: 0.35, delay: delay * 0.06, ease: [0.34, 1.56, 0.64, 1] }}
   >
-    <div className={`w-9 h-9 ${iconBgClass} rounded-[1rem] flex items-center justify-center mb-1.5 relative z-[2]`}>
+    <div className={`w-9 h-9 ${iconBgClass} rounded-[1.25rem] flex items-center justify-center mb-1.5 relative z-[2]`}>
       {icon}
     </div>
     <p className="text-[8px] text-muted-foreground font-black uppercase tracking-wider relative z-[2]">{label}</p>
@@ -70,8 +70,8 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
     title={label}
     initial={{ scale: 0, opacity: 0 }}
     animate={{ scale: 1, opacity: 1 }}
-    transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.3 }}
-    whileTap={{ scale: 0.85 }}
+    transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.35 }}
+    whileTap={{ scale: 0.82 }}
   >
     {icon}
   </motion.button>
