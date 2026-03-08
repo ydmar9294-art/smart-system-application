@@ -348,11 +348,20 @@ export async function retryAllFailedActions(): Promise<void> {
 
 export async function clearSyncedActions(): Promise<void> {
   const all = await getAllItems<OfflineAction>(STORES.ACTIONS);
-  for (const action of all) {
-    if (action.status === 'synced') {
-      await deleteItem(STORES.ACTIONS, action.id);
+  const syncedIds = all.filter(a => a.status === 'synced').map(a => a.id);
+  if (syncedIds.length === 0) return;
+
+  // Atomic: delete all synced actions in a single transaction
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.ACTIONS, 'readwrite');
+    const store = tx.objectStore(STORES.ACTIONS);
+    for (const id of syncedIds) {
+      store.delete(id);
     }
-  }
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
 export async function getActionStats(): Promise<{
