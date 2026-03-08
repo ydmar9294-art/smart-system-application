@@ -791,22 +791,22 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
       >
         <form id="product-form" onSubmit={handleProductSubmit} className="space-y-5">
           <div className="space-y-2">
-            <label className="text-xs font-black text-muted-foreground uppercase">اسم الصنف</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.productName')}</label>
             <input 
               name="name" 
               required 
               defaultValue={editingProduct?.name} 
-              placeholder="اسم الصنف" 
+              placeholder={t('ownerInventory.productName')} 
               className="input-field py-4 text-base" 
             />
           </div>
           
           <div className="space-y-2">
-            <label className="text-xs font-black text-muted-foreground uppercase">الفئة</label>
+            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.category')}</label>
             <input 
               name="category" 
               defaultValue={editingProduct?.category} 
-              placeholder="الفئة" 
+              placeholder={t('ownerInventory.category')} 
               className="input-field py-4" 
             />
           </div>
