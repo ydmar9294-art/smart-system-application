@@ -91,7 +91,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       onAuthComplete();
     } catch (err: any) {
       clearTimers(); clearOAuthPending(); setOauthPending(false);
-      console.error('[AuthFlow] Check profile error:', err);
+      logger.error('Check profile error', 'AuthFlow');
       const isTimeout = err?.message === 'VERIFY_TIMEOUT';
       setAuthState({ type: 'error', message: isTimeout ? t('auth.verifyTimeout') : err.message || t('auth.profileCheckError'), canRetry: true });
     }
