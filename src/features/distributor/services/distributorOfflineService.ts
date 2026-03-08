@@ -710,7 +710,7 @@ async function cleanupStaleCacheData(): Promise<void> {
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000; // 30 days
     
     // Clean old synced actions
-    const allActions = await getAllItems<OfflineAction>(STORES.ACTIONS);
+    const allActions = await getAllActionsDecrypted();
     for (const a of allActions) {
       if (a.status === 'synced' && a.createdAt < cutoff) {
         await deleteItem(STORES.ACTIONS, a.id);
