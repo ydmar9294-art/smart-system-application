@@ -369,21 +369,34 @@ export async function getAllActions(): Promise<OfflineAction[]> {
 }
 
 export async function updateAction(id: string, updates: Partial<OfflineAction>): Promise<void> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORES.ACTIONS, 'readwrite');
-    const store = tx.objectStore(STORES.ACTIONS);
-    const getReq = store.get(id);
-    
-    getReq.onsuccess = () => {
-      if (getReq.result) {
-        store.put({ ...getReq.result, ...updates });
-      }
-    };
-    
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+  // Read and decrypt outside the write transaction
+  const raw = await getItem<any>(STORES.ACTIONS, id);
+  if (!raw) return;
+
+  let existing: OfflineAction;
+  try {
+    if (raw._enc && isEncrypted(raw._enc)) {
+      existing = await decryptData<OfflineAction>(raw._enc);
+    } else {
+      existing = raw as OfflineAction;
+    }
+  } catch {
+    return;
+  }
+
+  const updated = { ...existing, ...updates };
+
+  // Re-encrypt before storing
+  if (isEncryptionAvailable()) {
+    try {
+      const encrypted = await encryptData(updated);
+      await putItem(STORES.ACTIONS, { id: updated.id, _enc: encrypted });
+      return;
+    } catch {
+      // fallback
+    }
+  }
+  await putItem(STORES.ACTIONS, updated);
 }
 
 export async function retryFailedAction(id: string): Promise<void> {
