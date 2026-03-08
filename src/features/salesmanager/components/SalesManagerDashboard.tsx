@@ -105,8 +105,8 @@ const SalesManagerDashboard: React.FC = () => {
   const getSectionTabs = () => {
     switch (bottomNav) {
       case 'reports': return [
-        { id: 'sales', label: 'المبيعات', icon: <TrendingUp className="w-4 h-4" />, bgColor: 'bg-purple-600' },
-        { id: 'kpi', label: 'الأداء', icon: <BarChart3 className="w-4 h-4" />, bgColor: 'bg-emerald-600' },
+        { id: 'sales', label: t('nav.sales'), icon: <TrendingUp className="w-4 h-4" />, bgColor: 'bg-purple-600' },
+        { id: 'kpi', label: t('salesManager.kpi'), icon: <BarChart3 className="w-4 h-4" />, bgColor: 'bg-emerald-600' },
       ];
       default: return null;
     }
@@ -115,9 +115,9 @@ const SalesManagerDashboard: React.FC = () => {
   const sectionTabs = getSectionTabs();
 
   const bottomTabs = [
-    { id: 'home', label: 'الرئيسية', icon: <Home className="w-5 h-5" /> },
-    { id: 'team', label: 'الفريق', icon: <Users className="w-5 h-5" /> },
-    { id: 'reports', label: 'التقارير', icon: <PieChart className="w-5 h-5" /> },
+    { id: 'home', label: t('nav.home'), icon: <Home className="w-5 h-5" /> },
+    { id: 'team', label: t('nav.team'), icon: <Users className="w-5 h-5" /> },
+    { id: 'reports', label: t('nav.reports'), icon: <PieChart className="w-5 h-5" /> },
   ];
 
   return (
