@@ -288,7 +288,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
           {lowStockCount > 0 && (
             <div className="bg-warning/10 p-4 rounded-2xl border border-warning/20 flex items-center gap-3">
               <AlertTriangle size={20} className="text-warning shrink-0" />
-              <p className="text-xs font-bold text-warning">{lowStockCount} صنف يحتاج إعادة تعبئة</p>
+              <p className="text-xs font-bold text-warning">{lowStockCount} {t('ownerInventory.lowStockAlert')}</p>
             </div>
           )}
 
@@ -298,7 +298,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
               <input 
                 value={searchTerm} 
                 onChange={(e) => setSearchTerm(e.target.value)} 
-                placeholder="بحث عن صنف..." 
+                placeholder={t('ownerInventory.searchProduct')} 
                 className="input-field pr-10" 
               />
             </div>
@@ -311,7 +311,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
             {filteredProducts.length === 0 ? (
               <div className="bg-card p-8 rounded-[2.5rem] border text-center">
                 <Box size={48} className="mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground font-bold">لا توجد منتجات</p>
+                <p className="text-muted-foreground font-bold">{t('ownerInventory.noProducts')}</p>
               </div>
             ) : (
               filteredProducts.map(p => (
