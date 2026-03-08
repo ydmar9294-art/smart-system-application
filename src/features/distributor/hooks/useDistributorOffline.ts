@@ -293,7 +293,7 @@ export function useDistributorOffline() {
       await cacheSales(mapped);
       await refreshStats();
     } catch {
-      console.warn('[DistributorOffline] Sales fetch failed, using cache');
+      logger.warn('Sales fetch failed, using cache', 'DistributorOffline');
     }
   }, [refreshStats]);
 
