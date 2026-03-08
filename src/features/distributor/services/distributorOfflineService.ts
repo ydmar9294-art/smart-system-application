@@ -1009,6 +1009,8 @@ async function sequentialSync(sorted: OfflineAction[]): Promise<{ synced: number
   return { synced, failed };
 }
 
+let onlineListenerActive = false;
+
 export function startDistributorSync(): void {
   if (syncIntervalId) return;
   
@@ -1021,8 +1023,11 @@ export function startDistributorSync(): void {
   // Periodic sync every 90s
   syncIntervalId = setInterval(syncAllPending, 90_000);
   
-  // Sync on reconnect
-  window.addEventListener('online', handleOnline);
+  // Sync on reconnect (only add once)
+  if (!onlineListenerActive) {
+    window.addEventListener('online', handleOnline);
+    onlineListenerActive = true;
+  }
 }
 
 export function stopDistributorSync(): void {
