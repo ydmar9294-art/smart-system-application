@@ -43,6 +43,12 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
+    // Service-role client for audit/idempotency logging (bypasses RLS)
+    const serviceClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+
     // Full server-side user validation
     const { data: { user }, error: userErr } = await supabase.auth.getUser();
     if (userErr || !user) {
