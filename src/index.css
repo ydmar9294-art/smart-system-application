@@ -1314,26 +1314,36 @@
    SETTINGS PAGE
    ========================================== */
 .settings-row {
-  @apply w-full flex items-center justify-between px-4 py-3.5 transition-all active:scale-[0.98] active:bg-muted/50;
+  @apply w-full flex items-center justify-between px-4 py-3.5 transition-all;
+  -webkit-tap-highlight-color: transparent;
+}
+.settings-row:active {
+  transform: scale(0.98);
+  background: hsl(var(--muted) / 0.5);
 }
 .settings-icon-box {
   @apply w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0;
 }
+.settings-divider {
+  height: 0.5px;
+  background: hsl(var(--border));
+  margin-inline: 1rem;
+}
 .settings-toggle {
-  @apply relative w-12 h-7 rounded-full transition-colors duration-300;
+  @apply relative w-11 h-[26px] rounded-full transition-colors duration-300;
 }
 .settings-toggle-on {
   @apply bg-primary;
 }
 .settings-toggle-off {
-  @apply bg-muted-foreground/20;
+  background: hsl(var(--muted-foreground) / 0.2);
 }
 .settings-toggle-thumb {
-  @apply absolute top-0.5 w-6 h-6 rounded-full bg-background shadow-md transition-all duration-300;
+  @apply absolute top-[3px] w-5 h-5 rounded-full bg-background shadow-md transition-all duration-300;
 }
 .settings-toggle-on .settings-toggle-thumb {
-  inset-inline-start: calc(100% - 1.625rem);
+  inset-inline-start: calc(100% - 1.4rem);
 }
 .settings-toggle-off .settings-toggle-thumb {
-  inset-inline-start: 0.125rem;
+  inset-inline-start: 3px;
 }
