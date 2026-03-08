@@ -43,6 +43,7 @@ export const useAuthActions = (deps: AuthActionsDeps) => {
         clearEncryptionKey();
         clearDeviceState();
         clearAllCachedData().catch(() => {});
+        clearDistributorOfflineData().catch(() => {});
         bootedFromCache.current = false;
 
         await supabase.auth.signOut().catch(() => {

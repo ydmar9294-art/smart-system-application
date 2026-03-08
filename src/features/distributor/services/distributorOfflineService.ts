@@ -1049,6 +1049,35 @@ export function getIsSyncing(): boolean {
   return isSyncing;
 }
 
+/**
+ * Clear all distributor offline data (call on logout).
+ * Deletes the entire IndexedDB database to ensure no data leaks between sessions.
+ */
+export async function clearDistributorOfflineData(): Promise<void> {
+  try {
+    stopDistributorSync();
+    // Close existing connection
+    if (dbInstance) {
+      dbInstance.close();
+      dbInstance = null;
+      dbOpenPromise = null;
+    }
+    // Delete the entire database
+    await new Promise<void>((resolve, reject) => {
+      const req = indexedDB.deleteDatabase(DB_NAME);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+      req.onblocked = () => resolve(); // proceed even if blocked
+    });
+    // Clear in-memory maps
+    customerIdMap.clear();
+    saleIdMap.clear();
+    logger.info('[DistributorOffline] All offline data cleared', 'DistributorOffline');
+  } catch (err) {
+    logger.warn('[DistributorOffline] Failed to clear offline data', 'DistributorOffline');
+  }
+}
+
 // ============================================
 // Sales Cache (encrypted, atomic writes)
 // ============================================
