@@ -25,8 +25,8 @@ type BottomNavType = 'home' | 'inventory' | 'operations' | 'prices';
 
 const WarehouseKeeperDashboard: React.FC = () => {
   const { user, products = [], deliveries = [], purchases = [], logout, updateProduct } = useApp();
+  const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<WarehouseTabType>('dashboard');
-  const [bottomNav, setBottomNav] = useState<BottomNavType>('home');
   const [loggingOut, setLoggingOut] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [priceSearch, setPriceSearch] = useState('');
