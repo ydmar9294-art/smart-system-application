@@ -176,7 +176,7 @@ export const resolveUserProfile = async (uid: string): Promise<ProfileResolution
 
     return { user, role, organization, success: true, fromCache: false };
   } catch (err) {
-    console.error('[Auth] resolveProfile error:', err);
+    logger.error('resolveProfile error', 'Auth');
     clearAuthCache();
     return { user: null, role: null, organization: null, success: false };
   }
