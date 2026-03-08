@@ -58,9 +58,8 @@ vi.mock('@/utils/monitoring/performanceMonitor', () => ({
 }));
 
 describe('Performance Monitor', () => {
-  it('startTimer returns a function that measures duration', () => {
-    // Use the mocked monitor since the real one is mocked globally
-    const { performanceMonitor } = require('@/utils/monitoring/performanceMonitor');
+  it('startTimer returns a function that measures duration', async () => {
+    const { performanceMonitor } = await import('@/utils/monitoring/performanceMonitor');
     const end = performanceMonitor.startTimer('test-op');
     expect(typeof end).toBe('function');
   });

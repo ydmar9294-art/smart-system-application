@@ -161,16 +161,6 @@ async function getAllItems<T>(storeName: string): Promise<T[]> {
   });
 }
 
-async function clearStore(storeName: string): Promise<void> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, 'readwrite');
-    tx.objectStore(storeName).clear();
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
 async function deleteItem(storeName: string, key: string): Promise<void> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -195,11 +185,13 @@ async function getItem<T>(storeName: string, key: string): Promise<T | null> {
 // Encrypted Store Helpers (for sensitive data)
 // ============================================
 
-/** Stores that contain sensitive business data and must be encrypted */
+/** ALL data stores are now encrypted for security */
 const SENSITIVE_STORES = new Set([
   STORES.INVOICES_CACHE,
   STORES.ORG_INFO_CACHE,
   STORES.SALES_CACHE,
+  STORES.CUSTOMERS_CACHE,
+  STORES.INVENTORY_CACHE,
 ]);
 
 /**
@@ -214,8 +206,6 @@ async function putEncryptedItem<T extends Record<string, any>>(
 ): Promise<void> {
   const keyValue = item[keyField];
   const encrypted = await encryptData(item);
-  // Store the key field in plaintext (required for IndexedDB keyPath)
-  // and the rest as encrypted payload
   await putItem(storeName, { [keyField]: keyValue, _enc: encrypted });
 }
 
@@ -258,6 +248,39 @@ async function getEncryptedItem<T>(storeName: string, key: string): Promise<T | 
     return null;
   }
 }
+
+/**
+ * ATOMIC clear-and-replace: clears a store and writes new items in a single transaction.
+ * Prevents data loss if app crashes mid-write.
+ */
+async function atomicReplaceStore(storeName: string, items: Array<{ key: string; value: any }>): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    const store = tx.objectStore(storeName);
+    store.clear();
+    for (const { value } of items) {
+      store.put(value);
+    }
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/**
+ * Encrypt an item and return the IndexedDB-ready record.
+ */
+async function prepareEncryptedRecord<T extends Record<string, any>>(
+  item: T,
+  keyField: string = 'id'
+): Promise<Record<string, any>> {
+  const keyValue = item[keyField];
+  const encrypted = await encryptData(item);
+  return { [keyField]: keyValue, _enc: encrypted };
+}
+
+// ============================================
+// Action Queue
 // ============================================
 
 export async function enqueueAction(
@@ -350,7 +373,7 @@ export async function getActionStats(): Promise<{
 }
 
 // ============================================
-// Inventory Cache
+// Inventory Cache (now encrypted)
 // ============================================
 
 export interface CachedInventoryItem {
@@ -364,50 +387,36 @@ export interface CachedInventoryItem {
 }
 
 export async function cacheInventory(items: CachedInventoryItem[]): Promise<void> {
-  // Atomic: write all items in a single transaction (no clear-then-add race)
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORES.INVENTORY_CACHE, 'readwrite');
-    const store = tx.objectStore(STORES.INVENTORY_CACHE);
-    store.clear();
-    for (const item of items) {
-      store.put({ ...item, updated_at: Date.now() });
-    }
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+  // Prepare all encrypted records first, then write atomically
+  const records: Array<{ key: string; value: any }> = [];
+  for (const item of items) {
+    const record = await prepareEncryptedRecord(
+      { ...item, updated_at: Date.now() },
+      'product_id'
+    );
+    records.push({ key: item.product_id, value: record });
+  }
+  await atomicReplaceStore(STORES.INVENTORY_CACHE, records);
 }
 
 export async function getCachedInventory(): Promise<CachedInventoryItem[]> {
-  return getAllItems<CachedInventoryItem>(STORES.INVENTORY_CACHE);
+  return getAllEncryptedItems<CachedInventoryItem>(STORES.INVENTORY_CACHE);
 }
 
 export async function updateCachedInventoryQuantity(
   productId: string,
   quantityDelta: number
 ): Promise<void> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORES.INVENTORY_CACHE, 'readwrite');
-    const store = tx.objectStore(STORES.INVENTORY_CACHE);
-    const getReq = store.get(productId);
-    
-    getReq.onsuccess = () => {
-      if (getReq.result) {
-        const item = getReq.result;
-        item.quantity = Math.max(0, item.quantity + quantityDelta);
-        item.updated_at = Date.now();
-        store.put(item);
-      }
-    };
-    
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+  const existing = await getEncryptedItem<CachedInventoryItem>(STORES.INVENTORY_CACHE, productId);
+  if (existing) {
+    existing.quantity = Math.max(0, existing.quantity + quantityDelta);
+    existing.updated_at = Date.now();
+    await putEncryptedItem(STORES.INVENTORY_CACHE, existing, 'product_id');
+  }
 }
 
 // ============================================
-// Customer Cache (offline-first)
+// Customer Cache (now encrypted)
 // ============================================
 
 export interface CachedCustomer {
@@ -425,36 +434,36 @@ export interface CachedCustomer {
 
 export async function cacheCustomers(customers: CachedCustomer[]): Promise<void> {
   // Read existing local customers BEFORE clearing
-  const existing = await getAllItems<CachedCustomer>(STORES.CUSTOMERS_CACHE);
+  const existing = await getAllEncryptedItems<CachedCustomer>(STORES.CUSTOMERS_CACHE);
   const localCustomers = existing.filter(c => c.isLocal && c.syncStatus !== 'synced');
   
-  // Atomic: clear + re-add in single transaction
-  const db = await openDB();
+  // Prepare all records (server + unsynced local) first
   const serverIds = new Set(customers.map(c => c.id));
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORES.CUSTOMERS_CACHE, 'readwrite');
-    const store = tx.objectStore(STORES.CUSTOMERS_CACHE);
-    store.clear();
-    for (const c of customers) {
-      store.put({ ...c, updated_at: Date.now() });
+  const records: Array<{ key: string; value: any }> = [];
+  
+  for (const c of customers) {
+    const record = await prepareEncryptedRecord({ ...c, updated_at: Date.now() });
+    records.push({ key: c.id, value: record });
+  }
+  
+  // Re-add local unsynced customers that aren't on server yet
+  for (const c of localCustomers) {
+    if (!serverIds.has(c.id)) {
+      const record = await prepareEncryptedRecord(c);
+      records.push({ key: c.id, value: record });
     }
-    // Re-add local unsynced customers that aren't on server yet
-    for (const c of localCustomers) {
-      if (!serverIds.has(c.id)) {
-        store.put(c);
-      }
-    }
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+  }
+  
+  // ATOMIC: clear + write all in a single transaction
+  await atomicReplaceStore(STORES.CUSTOMERS_CACHE, records);
 }
 
 export async function getCachedCustomers(): Promise<CachedCustomer[]> {
-  return getAllItems<CachedCustomer>(STORES.CUSTOMERS_CACHE);
+  return getAllEncryptedItems<CachedCustomer>(STORES.CUSTOMERS_CACHE);
 }
 
 export async function addLocalCustomer(customer: CachedCustomer): Promise<void> {
-  await putItem(STORES.CUSTOMERS_CACHE, customer);
+  await putEncryptedItem(STORES.CUSTOMERS_CACHE, customer);
 }
 
 export async function updateCustomerSyncStatus(
@@ -468,18 +477,31 @@ export async function updateCustomerSyncStatus(
     const store = tx.objectStore(STORES.CUSTOMERS_CACHE);
     const getReq = store.get(localId);
     
-    getReq.onsuccess = () => {
-      if (getReq.result) {
-        const c = getReq.result;
-        c.syncStatus = status;
-        if (status === 'synced' && serverId) {
-          store.delete(localId);
-          c.id = serverId;
-          c.isLocal = false;
-          store.put(c);
-        } else {
-          store.put(c);
+    getReq.onsuccess = async () => {
+      try {
+        if (getReq.result) {
+          let c: CachedCustomer;
+          // Decrypt if encrypted
+          if (getReq.result._enc && isEncrypted(getReq.result._enc)) {
+            c = await decryptData<CachedCustomer>(getReq.result._enc);
+          } else {
+            c = getReq.result;
+          }
+          
+          c.syncStatus = status;
+          if (status === 'synced' && serverId) {
+            store.delete(localId);
+            c.id = serverId;
+            c.isLocal = false;
+            const encrypted = await encryptData(c);
+            store.put({ id: serverId, _enc: encrypted });
+          } else {
+            const encrypted = await encryptData(c);
+            store.put({ id: c.id, _enc: encrypted });
+          }
         }
+      } catch (err) {
+        logger.warn(`[CustomerSync] Failed to update status for ${localId}`, 'DistributorOffline');
       }
     };
     
@@ -552,6 +574,9 @@ export async function loadPersistedIdMaps(): Promise<void> {
 
   // Crash recovery: reset any stuck "syncing" actions back to "pending"
   await recoverStuckActions();
+  
+  // Cleanup old ID maps (older than 7 days)
+  await cleanupOldIdMaps();
 }
 
 /**
@@ -570,6 +595,56 @@ export async function recoverStuckActions(): Promise<void> {
     }
     if (recovered > 0) {
       logger.info(`[CrashRecovery] Recovered ${recovered} stuck actions`, 'DistributorOffline');
+    }
+  } catch {
+    // non-critical
+  }
+}
+
+/**
+ * Clean up old ID mappings (>7 days) from both IndexedDB and in-memory maps.
+ * Prevents unbounded memory growth.
+ */
+async function cleanupOldIdMaps(): Promise<void> {
+  try {
+    const entries = await getAllItems<IdMapEntry>(STORES.ID_MAPS);
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000; // 7 days
+    let cleaned = 0;
+    
+    for (const entry of entries) {
+      if (entry.createdAt < cutoff) {
+        await deleteItem(STORES.ID_MAPS, entry.localId);
+        if (entry.type === 'customer') {
+          customerIdMap.delete(entry.localId);
+        } else {
+          saleIdMap.delete(entry.localId);
+        }
+        cleaned++;
+      }
+    }
+    
+    if (cleaned > 0) {
+      logger.info(`[IDMap] Cleaned ${cleaned} old ID mappings`, 'DistributorOffline');
+    }
+  } catch {
+    // non-critical
+  }
+}
+
+/**
+ * Clean up stale cached data (>30 days) to prevent unbounded storage growth.
+ * Called periodically during sync.
+ */
+async function cleanupStaleCacheData(): Promise<void> {
+  try {
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000; // 30 days
+    
+    // Clean old synced actions
+    const allActions = await getAllItems<OfflineAction>(STORES.ACTIONS);
+    for (const a of allActions) {
+      if (a.status === 'synced' && a.createdAt < cutoff) {
+        await deleteItem(STORES.ACTIONS, a.id);
+      }
     }
   } catch {
     // non-critical
@@ -781,6 +856,9 @@ export async function syncAllPending(): Promise<{ synced: number; failed: number
         await deleteItem(STORES.ACTIONS, a.id);
       }
     }
+    
+    // Periodic stale data cleanup
+    await cleanupStaleCacheData();
 
     notifySyncListeners({ type: 'complete', synced, failed, total: sorted.length });
     logger.info(`[Sync] Done: ${synced} synced, ${failed} failed`, 'DistributorOffline');
@@ -948,7 +1026,7 @@ export function getIsSyncing(): boolean {
 }
 
 // ============================================
-// Sales Cache (offline-first, includes locally-created sales)
+// Sales Cache (encrypted, atomic writes)
 // ============================================
 
 export interface CachedSaleItem {
@@ -980,10 +1058,12 @@ export async function cacheSales(sales: CachedSale[]): Promise<void> {
   const existing = await getAllEncryptedItems<CachedSale>(STORES.SALES_CACHE);
   const localSales = existing.filter(s => s.isLocal);
   
-  await clearStore(STORES.SALES_CACHE);
+  // Prepare all records first
+  const records: Array<{ key: string; value: any }> = [];
   
   for (const s of sales) {
-    await putEncryptedItem(STORES.SALES_CACHE, s);
+    const record = await prepareEncryptedRecord(s);
+    records.push({ key: s.id, value: record });
   }
   
   // Re-add local unsynced sales
@@ -992,9 +1072,13 @@ export async function cacheSales(sales: CachedSale[]): Promise<void> {
     const mappedId = saleIdMap.get(s.id);
     if (mappedId && serverIds.has(mappedId)) continue;
     if (!serverIds.has(s.id)) {
-      await putEncryptedItem(STORES.SALES_CACHE, s);
+      const record = await prepareEncryptedRecord(s);
+      records.push({ key: s.id, value: record });
     }
   }
+  
+  // ATOMIC: clear + write all in a single transaction
+  await atomicReplaceStore(STORES.SALES_CACHE, records);
 }
 
 export async function getCachedSales(): Promise<CachedSale[]> {
@@ -1013,7 +1097,7 @@ export async function updateCachedSale(saleId: string, updates: Partial<CachedSa
 }
 
 // ============================================
-// Invoices Cache
+// Invoices Cache (encrypted, atomic writes)
 // ============================================
 
 export interface CachedInvoice {
@@ -1058,10 +1142,12 @@ export async function cacheInvoices(invoices: CachedInvoice[]): Promise<void> {
   const existing = await getAllEncryptedItems<CachedInvoice>(STORES.INVOICES_CACHE);
   const localInvoices = existing.filter(inv => inv.isLocal);
   
-  await clearStore(STORES.INVOICES_CACHE);
+  // Prepare all records first
+  const records: Array<{ key: string; value: any }> = [];
   
   for (const inv of invoices) {
-    await putEncryptedItem(STORES.INVOICES_CACHE, inv);
+    const record = await prepareEncryptedRecord(inv);
+    records.push({ key: inv.id, value: record });
   }
   
   // Re-add local unsynced invoices
@@ -1070,9 +1156,13 @@ export async function cacheInvoices(invoices: CachedInvoice[]): Promise<void> {
     const mappedId = saleIdMap.get(inv.id);
     if (mappedId && serverIds.has(mappedId)) continue;
     if (!serverIds.has(inv.id)) {
-      await putEncryptedItem(STORES.INVOICES_CACHE, inv);
+      const record = await prepareEncryptedRecord(inv);
+      records.push({ key: inv.id, value: record });
     }
   }
+  
+  // ATOMIC: clear + write all in a single transaction
+  await atomicReplaceStore(STORES.INVOICES_CACHE, records);
 }
 
 export async function getCachedInvoices(): Promise<CachedInvoice[]> {
