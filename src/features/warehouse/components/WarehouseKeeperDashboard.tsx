@@ -316,6 +316,7 @@ const WarehouseKeeperDashboard: React.FC = () => {
           {activeTab === 'purchase-returns' && (
             <div className="bg-card rounded-3xl shadow-sm p-4"><InventoryTab forceSubTab="purchase-returns" /></div>
           )}
+          </AnimatedTabContent>
         </div>
       </div>
 
