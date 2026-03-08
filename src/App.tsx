@@ -58,6 +58,7 @@ const DashboardFallback: React.FC = () => (
 // ==========================================
 const ViewManager: React.FC = () => {
   const { role, user } = useApp();
+  const { t } = useTranslation();
   
   const dashboard = (() => {
     switch (role) {
@@ -80,7 +81,7 @@ const ViewManager: React.FC = () => {
       default:
         return (
           <div className="flex items-center justify-center h-64">
-            <p className="text-muted-foreground">لا يمكن تحديد نوع المستخدم</p>
+            <p className="text-muted-foreground">{t('errors.cannotDetermineUser')}</p>
           </div>
         );
     }
