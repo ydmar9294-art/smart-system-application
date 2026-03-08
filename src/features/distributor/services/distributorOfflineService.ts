@@ -326,8 +326,37 @@ export async function enqueueAction(
   return action;
 }
 
+/**
+ * Decrypt an action record from IndexedDB.
+ */
+async function decryptAction(raw: any): Promise<OfflineAction | null> {
+  try {
+    if (raw._enc && isEncrypted(raw._enc)) {
+      return await decryptData<OfflineAction>(raw._enc);
+    }
+    // Legacy unencrypted action
+    return raw as OfflineAction;
+  } catch {
+    logger.warn('Failed to decrypt offline action, skipping', 'DistributorOffline');
+    return null;
+  }
+}
+
+/**
+ * Get all raw actions and decrypt them.
+ */
+async function getAllActionsDecrypted(): Promise<OfflineAction[]> {
+  const rawAll = await getAllItems<any>(STORES.ACTIONS);
+  const results: OfflineAction[] = [];
+  for (const raw of rawAll) {
+    const action = await decryptAction(raw);
+    if (action) results.push(action);
+  }
+  return results;
+}
+
 export async function getPendingActions(): Promise<OfflineAction[]> {
-  const all = await getAllItems<OfflineAction>(STORES.ACTIONS);
+  const all = await getAllActionsDecrypted();
   const now = Date.now();
   return all
     .filter(a => a.status === 'pending' && (!a.nextRetryAt || a.nextRetryAt <= now))
@@ -335,7 +364,7 @@ export async function getPendingActions(): Promise<OfflineAction[]> {
 }
 
 export async function getAllActions(): Promise<OfflineAction[]> {
-  const all = await getAllItems<OfflineAction>(STORES.ACTIONS);
+  const all = await getAllActionsDecrypted();
   return all.sort((a, b) => b.createdAt - a.createdAt);
 }
 
