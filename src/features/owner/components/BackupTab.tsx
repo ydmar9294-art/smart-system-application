@@ -494,6 +494,30 @@ const BackupTab: React.FC = () => {
         ]),
       },
       {
+        name: t('backup.purchases'),
+        headers: [t('backup.pdfId'), t('backup.pdfProduct'), t('backup.pdfQuantity'), t('backup.pdfUnitPrice'), t('backup.pdfTotal'), t('backup.pdfSupplier'), t('backup.pdfDate'), t('backup.pdfNotes')],
+        rows: backupData.purchases.map(p => [
+          p.id, p.product_name, p.quantity.toString(), p.unit_price.toString(),
+          p.total_price.toString(), p.supplier_name || '', p.created_at, p.notes || '',
+        ]),
+      },
+      {
+        name: t('backup.salesReturns'),
+        headers: [t('backup.pdfId'), t('backup.pdfCustomer'), t('backup.pdfOriginalInvoice'), t('backup.pdfTotal'), t('backup.pdfReason'), t('backup.pdfDate')],
+        rows: backupData.salesReturns.map(sr => [
+          sr.id, sr.customer_name, sr.sale_id || '—', sr.total_amount.toString(),
+          sr.reason || '', sr.created_at,
+        ]),
+      },
+      {
+        name: t('backup.purchaseReturns'),
+        headers: [t('backup.pdfId'), t('backup.pdfSupplier'), t('backup.pdfTotal'), t('backup.pdfReason'), t('backup.pdfDate')],
+        rows: backupData.purchaseReturns.map(pr => [
+          pr.id, pr.supplier_name || '—', pr.total_amount.toString(),
+          pr.reason || '', pr.created_at,
+        ]),
+      },
+      {
         name: t('backup.activityLog'),
         headers: [t('backup.pdfOperation'), t('backup.pdfUser'), t('backup.pdfDate'), t('backup.pdfDetails')],
         rows: backupData.logs.map(l => [l.type, l.user_name, l.date, l.details]),
