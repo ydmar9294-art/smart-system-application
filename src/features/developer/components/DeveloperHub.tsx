@@ -79,7 +79,7 @@ const DeveloperHub: React.FC = () => {
       setShowForm(false);
       refreshOrgStats();
     } catch (err) {
-      console.error('License issue failed:', err);
+      logger.error('License issue failed', 'DeveloperHub');
     }
   };
 
