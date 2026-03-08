@@ -565,6 +565,277 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* ==========================================
+     BOTTOM TAB NAVIGATION — Liquid Glass
+  ========================================== */
+  .bottom-tab-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 9980;
+    background: var(--card-glass-bg);
+    backdrop-filter: blur(28px) saturate(1.8);
+    -webkit-backdrop-filter: blur(28px) saturate(1.8);
+    border-top: 1px solid var(--card-glass-border);
+    box-shadow: 0 -4px 30px hsla(220, 30%, 10%, 0.08), var(--glass-highlight);
+  }
+
+  .dark .bottom-tab-nav {
+    box-shadow: 0 -4px 30px hsla(222, 30%, 3%, 0.4), var(--glass-highlight);
+  }
+
+  .bottom-tab-nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0.35rem 0.5rem 0.25rem;
+    max-width: 32rem;
+    margin: 0 auto;
+  }
+
+  .bottom-tab-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+    padding: 0.35rem 0.25rem;
+    border-radius: 1rem;
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .bottom-tab-item:active {
+    transform: scale(0.92);
+  }
+
+  .bottom-tab-icon-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.875rem;
+    transition: all 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .bottom-tab-icon-active {
+    background: hsl(var(--primary) / 0.12);
+    box-shadow: 0 0 12px hsl(var(--primary) / 0.15);
+    transform: scale(1.08);
+  }
+
+  .dark .bottom-tab-icon-active {
+    background: hsl(var(--primary) / 0.2);
+  }
+
+  .bottom-tab-active {
+    color: hsl(var(--primary));
+  }
+
+  .bottom-tab-inactive {
+    color: hsl(var(--muted-foreground));
+  }
+
+  .bottom-tab-label {
+    font-size: 0.6rem;
+    font-weight: 800;
+    line-height: 1;
+    transition: color 200ms;
+  }
+
+  .bottom-tab-label-active {
+    color: hsl(var(--primary));
+  }
+
+  .bottom-tab-indicator {
+    position: absolute;
+    bottom: -0.15rem;
+    width: 1rem;
+    height: 2px;
+    border-radius: 999px;
+    background: hsl(var(--primary));
+    box-shadow: 0 0 8px hsl(var(--primary) / 0.4);
+  }
+
+  .bottom-tab-badge {
+    position: absolute;
+    top: -2px;
+    right: -4px;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 3px;
+    font-size: 8px;
+    font-weight: 900;
+    line-height: 14px;
+    text-align: center;
+    color: hsl(var(--destructive-foreground));
+    background: hsl(var(--destructive));
+    border-radius: 999px;
+    box-shadow: 0 2px 6px hsl(var(--destructive) / 0.3);
+  }
+
+  /* ==========================================
+     DASHBOARD HEADER — Glass
+  ========================================== */
+  .dashboard-header {
+    position: relative;
+    padding: 1rem 1rem 0.75rem;
+  }
+
+  .glass-profile-capsule {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem 0.5rem 0.75rem;
+    border-radius: 9999px;
+    background: var(--card-glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+    border: 1px solid var(--card-glass-border);
+    box-shadow: var(--glass-shadow), var(--glass-highlight);
+  }
+
+  .glass-action-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.875rem;
+    background: var(--card-glass-bg);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    border: 1px solid var(--card-glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+
+  .glass-logout-btn {
+    @apply p-2.5 rounded-full text-muted-foreground transition-all;
+    background: var(--card-glass-bg);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    border: 1px solid var(--card-glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+
+  .glass-logout-btn:hover {
+    @apply text-destructive;
+    background: hsl(var(--destructive) / 0.08);
+    border-color: hsl(var(--destructive) / 0.2);
+  }
+
+  /* ==========================================
+     GLASS CARD — Enhanced
+  ========================================== */
+  .glass-card-elevated {
+    background: var(--card-glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+    border: 1px solid var(--card-glass-border);
+    box-shadow: var(--glass-shadow), var(--glass-highlight);
+    @apply rounded-2xl p-4;
+  }
+
+  .glass-card-glow {
+    box-shadow: var(--glass-shadow), var(--glass-highlight),
+                0 0 20px hsl(var(--primary) / 0.06);
+  }
+
+  .glass-kpi-card {
+    background: var(--card-glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+    border: 1px solid var(--card-glass-border);
+    box-shadow: var(--glass-shadow), var(--glass-highlight);
+    @apply p-4 rounded-2xl;
+  }
+
+  /* ==========================================
+     SECTION TAB BAR — Inline Glass Tabs
+  ========================================== */
+  .glass-section-tabs {
+    display: flex;
+    gap: 0.375rem;
+    padding: 0.375rem;
+    border-radius: 1.5rem;
+    background: var(--card-glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+    border: 1px solid var(--card-glass-border);
+    box-shadow: var(--glass-shadow);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .glass-section-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .glass-section-tab {
+    flex: 1;
+    min-width: fit-content;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.6rem 0.5rem;
+    border-radius: 1.25rem;
+    font-size: 0.625rem;
+    font-weight: 800;
+    transition: all 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .glass-section-tab:active {
+    transform: scale(0.95);
+  }
+
+  .glass-section-tab-active {
+    @apply text-white shadow-lg;
+    transform: scale(1.02);
+  }
+
+  .glass-section-tab-inactive {
+    @apply text-muted-foreground;
+  }
+
+  .glass-section-tab-inactive:hover {
+    background: hsl(var(--muted) / 0.5);
+  }
+
+  /* ==========================================
+     FLOATING ACTION BUTTON
+  ========================================== */
+  .fab-button {
+    position: fixed;
+    bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+    left: 1rem;
+    z-index: 9970;
+    width: 3.25rem;
+    height: 3.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1.125rem;
+    box-shadow: 0 8px 24px hsl(var(--primary) / 0.3), var(--glass-highlight);
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .fab-button:active {
+    transform: scale(0.9);
+  }
+
+  /* Content needs bottom padding when bottom nav is visible */
+  .has-bottom-nav {
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 @layer utilities {
