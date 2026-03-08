@@ -90,11 +90,7 @@ const SalesManagerDashboard: React.FC = () => {
   };
 
   const getEmployeeTypeLabel = (type: EmployeeType) => {
-    switch (type) {
-      case EmployeeType.FIELD_AGENT: return 'موزع ميداني';
-      case EmployeeType.WAREHOUSE_KEEPER: return 'أمين مستودع';
-      default: return type;
-    }
+    return t(`employeeType.${type}`, type);
   };
 
   const handleBottomNavChange = (navId: string) => {
