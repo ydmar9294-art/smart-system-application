@@ -58,6 +58,8 @@ export interface OfflineAction {
   idempotencyKey: string;
   /** Cooldown: don't retry before this timestamp */
   nextRetryAt?: number;
+  /** HMAC signature for integrity verification */
+  _signature?: string;
 }
 
 // ============================================
