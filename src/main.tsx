@@ -34,9 +34,11 @@ if (Capacitor.isNativePlatform()) {
 createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
     <HashRouter>
-      <AppProvider>
-        <App />
-      </AppProvider>
+      <GuestProvider>
+        <AppProvider>
+          <App />
+        </AppProvider>
+      </GuestProvider>
     </HashRouter>
   </QueryClientProvider>
 );
