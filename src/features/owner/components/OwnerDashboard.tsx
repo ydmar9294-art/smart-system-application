@@ -176,10 +176,10 @@ const OwnerDashboard: React.FC = () => {
   };
 
   const bottomTabs = [
-    { id: 'home', label: 'الرئيسية', icon: <Home className="w-5 h-5" /> },
-    { id: 'operations', label: 'العمليات', icon: <Users className="w-5 h-5" /> },
-    { id: 'reports', label: 'التقارير', icon: <PieChart className="w-5 h-5" /> },
-    { id: 'settings', label: 'الإعدادات', icon: <Settings className="w-5 h-5" /> },
+    { id: 'home', label: t('nav.home'), icon: <Home className="w-5 h-5" /> },
+    { id: 'operations', label: t('nav.operations'), icon: <Users className="w-5 h-5" /> },
+    { id: 'reports', label: t('nav.reports'), icon: <PieChart className="w-5 h-5" /> },
+    { id: 'settings', label: t('nav.settings'), icon: <Settings className="w-5 h-5" /> },
   ];
 
   return (
