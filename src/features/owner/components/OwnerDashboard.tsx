@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import DeletionRequestsManager from '@/features/shared/components/DeletionRequestsManager';
 import { createPortal } from 'react-dom';
 import { copyToClipboard } from '@/lib/clipboard';
+import { useTranslation } from 'react-i18next';
 import { 
   FileText, Package, Users, TrendingUp, LogOut, LayoutDashboard,
   Receipt, Wallet, UserPlus, X, Copy, CheckCircle2, Clock,
@@ -27,6 +28,8 @@ import BackupTab from './BackupTab';
 type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup';
 
 const OwnerDashboard: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language === 'ar';
   const { 
     user, sales = [], payments = [], customers = [], users = [],
     products = [], logout, addDistributor, pendingEmployees = [],
@@ -105,10 +108,10 @@ const OwnerDashboard: React.FC = () => {
 
   const getEmployeeTypeLabel = (type: EmployeeType) => {
     switch (type) {
-      case EmployeeType.SALES_MANAGER: return 'مدير مبيعات';
-      case EmployeeType.ACCOUNTANT: return 'محاسب';
-      case EmployeeType.FIELD_AGENT: return 'موزع ميداني';
-      case EmployeeType.WAREHOUSE_KEEPER: return 'أمين مستودع';
+      case EmployeeType.SALES_MANAGER: return t('owner.salesManagerType');
+      case EmployeeType.ACCOUNTANT: return t('owner.accountantType');
+      case EmployeeType.FIELD_AGENT: return t('owner.fieldAgentType');
+      case EmployeeType.WAREHOUSE_KEEPER: return t('owner.warehouseKeeperType');
       default: return type;
     }
   };
@@ -117,17 +120,17 @@ const OwnerDashboard: React.FC = () => {
   const myActivatedEmployees = pendingEmployees.filter(pe => pe.is_used);
 
   const primaryTabs: { id: OwnerTabType; label: string; icon: React.ReactNode; color: string; bgColor: string }[] = [
-    { id: 'daily', label: 'الرئيسية', icon: <LayoutDashboard className="w-5 h-5" />, color: 'text-emerald-600', bgColor: 'bg-emerald-600' },
-    { id: 'team', label: 'الفريق', icon: <Users className="w-5 h-5" />, color: 'text-blue-600', bgColor: 'bg-blue-600' },
-    { id: 'customers', label: 'الزبائن', icon: <CircleDollarSign className="w-5 h-5" />, color: 'text-purple-600', bgColor: 'bg-purple-600' },
-    { id: 'finance', label: 'المالية', icon: <TrendingUp className="w-5 h-5" />, color: 'text-red-500', bgColor: 'bg-red-500' },
-    { id: 'performance', label: 'الأداء', icon: <BarChart3 className="w-5 h-5" />, color: 'text-indigo-600', bgColor: 'bg-indigo-600' },
+    { id: 'daily', label: t('owner.tabs.home'), icon: <LayoutDashboard className="w-5 h-5" />, color: 'text-emerald-600', bgColor: 'bg-emerald-600' },
+    { id: 'team', label: t('owner.tabs.team'), icon: <Users className="w-5 h-5" />, color: 'text-blue-600', bgColor: 'bg-blue-600' },
+    { id: 'customers', label: t('owner.tabs.customers'), icon: <CircleDollarSign className="w-5 h-5" />, color: 'text-purple-600', bgColor: 'bg-purple-600' },
+    { id: 'finance', label: t('owner.tabs.finance'), icon: <TrendingUp className="w-5 h-5" />, color: 'text-red-500', bgColor: 'bg-red-500' },
+    { id: 'performance', label: t('owner.tabs.performance'), icon: <BarChart3 className="w-5 h-5" />, color: 'text-indigo-600', bgColor: 'bg-indigo-600' },
   ];
 
   const secondaryTabs: { id: OwnerTabType; label: string; icon: React.ReactNode }[] = [
-    { id: 'backup', label: 'النسخ الاحتياطي', icon: <Database className="w-4 h-4" /> },
-    { id: 'subscription', label: 'الاشتراك', icon: <Shield className="w-4 h-4" /> },
-    { id: 'legal', label: 'القانونية', icon: <ShieldCheck className="w-4 h-4" /> },
+    { id: 'backup', label: t('owner.tabs.backup'), icon: <Database className="w-4 h-4" /> },
+    { id: 'subscription', label: t('owner.tabs.subscription'), icon: <Shield className="w-4 h-4" /> },
+    { id: 'legal', label: t('owner.tabs.legal'), icon: <ShieldCheck className="w-4 h-4" /> },
   ];
 
   const renderTabContent = () => {
@@ -152,20 +155,20 @@ const OwnerDashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir={isRtl ? 'rtl' : 'ltr'}>
       <div className="max-w-lg mx-auto">
         {/* Header */}
         <div className="bg-background pt-4 px-4 relative">
-          <div className="absolute -top-1 left-1 z-10"><NotificationCenter /></div>
+          <div className={`absolute -top-1 ${isRtl ? 'left-1' : 'right-1'} z-10`}><NotificationCenter /></div>
 
           <div className="flex justify-center pt-4 mb-3">
             <div className="flex items-center gap-3 bg-card px-4 py-2 rounded-full shadow-sm">
               <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                 <ShieldCheck className="w-4 h-4 text-primary-foreground" />
               </div>
-              <div className="text-end">
-                <p className="font-bold text-foreground text-sm">{user?.name || 'المالك'}</p>
-                <p className="text-[10px] text-muted-foreground">لوحة الإدارة</p>
+              <div className={isRtl ? 'text-end' : 'text-start'}>
+                <p className="font-bold text-foreground text-sm">{user?.name || t('roles.owner')}</p>
+                <p className="text-[10px] text-muted-foreground">{t('owner.dashboard')}</p>
               </div>
             </div>
           </div>
@@ -175,12 +178,12 @@ const OwnerDashboard: React.FC = () => {
               <AIAssistant className="!p-1.5 !rounded-lg" />
               <div className="w-px h-5 bg-border" />
               <a href="https://wa.me/963947744162" target="_blank" rel="noopener noreferrer"
-                className="p-1.5 bg-gradient-to-br from-green-400 to-green-600 rounded-lg text-white hover:shadow-md transition-all active:scale-95" title="فريق الدعم">
+                className="p-1.5 bg-gradient-to-br from-green-400 to-green-600 rounded-lg text-white hover:shadow-md transition-all active:scale-95" title={t('common.supportTeam')}>
                 <MessageCircle className="w-4 h-4" />
               </a>
             </div>
             <button onClick={handleLogout} disabled={loggingOut}
-              className="p-2.5 bg-card/80 backdrop-blur-sm rounded-full shadow-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all" title="تسجيل الخروج">
+              className="p-2.5 bg-card/80 backdrop-blur-sm rounded-full shadow-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all" title={t('common.logout')}>
               <LogOut className={`w-5 h-5 ${loggingOut ? 'animate-spin' : ''}`} />
             </button>
           </div>
@@ -188,7 +191,7 @@ const OwnerDashboard: React.FC = () => {
 
         <WelcomeSplash />
 
-        {/* Primary Tab Navigation - Same as Accountant */}
+        {/* Primary Tab Navigation */}
         <div className="px-4 pb-2">
           <div className="bg-card rounded-3xl p-2 shadow-sm flex gap-1">
             {primaryTabs.map((tab) => (
@@ -230,11 +233,11 @@ const OwnerDashboard: React.FC = () => {
 
       {/* Add Employee Modal */}
       {showAddUserModal && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir="rtl">
+        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir={isRtl ? 'rtl' : 'ltr'}>
           <div className="bg-card rounded-2xl w-full max-w-md p-6 space-y-4 animate-zoom-in shadow-2xl border border-border max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold text-foreground">
-                {newEmployeeCode ? 'تم إنشاء كود التفعيل' : 'إضافة موظف جديد'}
+                {newEmployeeCode ? t('owner.activationCodeCreated') : t('owner.addEmployee')}
               </h2>
               <button onClick={closeEmployeeModal} className="p-2 bg-muted rounded-full hover:bg-accent">
                 <X className="w-5 h-5 text-muted-foreground" />
@@ -245,35 +248,35 @@ const OwnerDashboard: React.FC = () => {
               <div className="space-y-4">
                 <div className="bg-success/10 p-6 rounded-2xl border border-success/20 text-center">
                   <CheckCircle2 className="w-12 h-12 mx-auto text-success mb-3" />
-                  <p className="text-sm text-muted-foreground mb-2">كود تفعيل الموظف:</p>
+                  <p className="text-sm text-muted-foreground mb-2">{t('owner.employeeActivationCode')}</p>
                   <p className="text-2xl font-mono font-bold text-primary tracking-widest">{newEmployeeCode}</p>
                 </div>
                 
                 {newEmployeeData && (
                   <div className="bg-muted p-4 rounded-xl space-y-2 text-sm">
-                    <p><span className="text-muted-foreground">الاسم:</span> <span className="font-bold text-foreground">{newEmployeeData.name}</span></p>
-                    <p><span className="text-muted-foreground">الهاتف:</span> <span className="font-bold text-foreground">{newEmployeeData.phone}</span></p>
-                    <p><span className="text-muted-foreground">النوع:</span> <span className="font-bold text-foreground">{getEmployeeTypeLabel(newEmployeeData.employee_type)}</span></p>
+                    <p><span className="text-muted-foreground">{t('common.name')}:</span> <span className="font-bold text-foreground">{newEmployeeData.name}</span></p>
+                    <p><span className="text-muted-foreground">{t('common.phone')}:</span> <span className="font-bold text-foreground">{newEmployeeData.phone}</span></p>
+                    <p><span className="text-muted-foreground">{t('owner.employeeType')}:</span> <span className="font-bold text-foreground">{getEmployeeTypeLabel(newEmployeeData.employee_type)}</span></p>
                   </div>
                 )}
                 
                 <button onClick={async () => { await copyToClipboard(newEmployeeCode); }}
                   className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold flex items-center justify-center gap-2">
-                  <Copy className="w-5 h-5" /> نسخ الكود
+                  <Copy className="w-5 h-5" /> {t('owner.copyCode')}
                 </button>
-                <button onClick={closeEmployeeModal} className="w-full py-3 bg-muted text-muted-foreground rounded-xl font-bold">إغلاق</button>
+                <button onClick={closeEmployeeModal} className="w-full py-3 bg-muted text-muted-foreground rounded-xl font-bold">{t('common.close')}</button>
               </div>
             ) : (
               <form onSubmit={handleAddEmployee} className="space-y-4">
-                <input name="name" required placeholder="اسم الموظف" 
+                <input name="name" required placeholder={t('owner.employeeName')} 
                   className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
-                <input name="phone" type="tel" inputMode="numeric" pattern="[0-9]*" required placeholder="رقم الهاتف" 
+                <input name="phone" type="tel" inputMode="numeric" pattern="[0-9]*" required placeholder={t('owner.employeePhone')} 
                   className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
                 <select name="type" className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-primary">
-                  <option value={EmployeeType.SALES_MANAGER}>مدير مبيعات</option>
-                  <option value={EmployeeType.ACCOUNTANT}>محاسب مالي</option>
+                  <option value={EmployeeType.SALES_MANAGER}>{t('owner.salesManagerType')}</option>
+                  <option value={EmployeeType.ACCOUNTANT}>{t('owner.accountantType')}</option>
                 </select>
-                <button type="submit" className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold">توليد كود التفعيل</button>
+                <button type="submit" className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold">{t('owner.generateCode')}</button>
               </form>
             )}
           </div>
@@ -288,110 +291,107 @@ const OwnerDashboard: React.FC = () => {
 const DailyContent: React.FC<{
   stats: any; sales: any[]; products: any[]; customers: any[];
   activeEmployeeCount: number; maxEmployees: number;
-}> = ({ stats, sales, products, customers, activeEmployeeCount, maxEmployees }) => (
+}> = ({ stats, sales, products, customers, activeEmployeeCount, maxEmployees }) => {
+  const { t } = useTranslation();
+  return (
   <div className="space-y-3">
-    {/* مبيعات اليوم */}
     <div className="p-4 rounded-2xl bg-card shadow-sm">
       <div className="flex items-center gap-2 mb-3">
         <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
           <Receipt className="w-4 h-4 text-primary" />
         </div>
-        <span className="text-xs font-bold text-foreground">مبيعات اليوم</span>
+        <span className="text-xs font-bold text-foreground">{t('owner.todaySales')}</span>
       </div>
       <p className="text-2xl font-black text-foreground mb-2">{stats.todayRevenue.toLocaleString()} <span className="text-xs font-medium text-muted-foreground">{CURRENCY}</span></p>
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-emerald-500/10 p-2.5 rounded-xl flex items-center gap-2">
           <Banknote className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           <div>
-            <p className="text-[8px] text-muted-foreground font-bold">نقدي</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('owner.cashLabel')}</p>
             <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">{stats.todayCash.toLocaleString()}</p>
           </div>
         </div>
         <div className="bg-amber-500/10 p-2.5 rounded-xl flex items-center gap-2">
           <CreditCard className="w-4 h-4 text-amber-600 dark:text-amber-400" />
           <div>
-            <p className="text-[8px] text-muted-foreground font-bold">آجل</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('owner.creditLabel')}</p>
             <p className="text-sm font-black text-amber-600 dark:text-amber-400">{stats.todayCredit.toLocaleString()}</p>
           </div>
         </div>
       </div>
     </div>
 
-    {/* إجمالي المبيعات */}
     <div className="p-4 rounded-2xl bg-card shadow-sm">
       <div className="flex items-center gap-2 mb-3">
         <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center">
           <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
         </div>
-        <span className="text-xs font-bold text-foreground">إجمالي المبيعات</span>
+        <span className="text-xs font-bold text-foreground">{t('owner.totalSales')}</span>
       </div>
       <p className="text-2xl font-black text-foreground mb-2">{stats.totalAllSales.toLocaleString()} <span className="text-xs font-medium text-muted-foreground">{CURRENCY}</span></p>
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-emerald-500/10 p-2.5 rounded-xl flex items-center gap-2">
           <Banknote className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           <div>
-            <p className="text-[8px] text-muted-foreground font-bold">نقدي</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('owner.cashLabel')}</p>
             <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">{stats.totalCashSales.toLocaleString()}</p>
           </div>
         </div>
         <div className="bg-amber-500/10 p-2.5 rounded-xl flex items-center gap-2">
           <CreditCard className="w-4 h-4 text-amber-600 dark:text-amber-400" />
           <div>
-            <p className="text-[8px] text-muted-foreground font-bold">آجل</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('owner.creditLabel')}</p>
             <p className="text-sm font-black text-amber-600 dark:text-amber-400">{stats.totalCreditSales.toLocaleString()}</p>
           </div>
         </div>
       </div>
     </div>
 
-    {/* تحصيلات + موظفين */}
     <div className="grid grid-cols-2 gap-2">
       <div className="p-3 rounded-2xl bg-card shadow-sm">
         <Wallet className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mb-1" />
-        <p className="text-[9px] text-muted-foreground font-bold">تحصيلات اليوم</p>
+        <p className="text-[9px] text-muted-foreground font-bold">{t('owner.todayCollections')}</p>
         <p className="text-lg font-black text-foreground">{stats.totalCollections.toLocaleString()}</p>
         <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
       </div>
       <div className="p-3 rounded-2xl bg-card shadow-sm">
         <Users className="w-5 h-5 text-primary mb-1" />
-        <p className="text-[9px] text-muted-foreground font-bold">الموظفين النشطين</p>
+        <p className="text-[9px] text-muted-foreground font-bold">{t('owner.totalEmployees')}</p>
         <p className="text-lg font-black text-foreground">{activeEmployeeCount}</p>
-        <p className="text-[10px] text-muted-foreground">من {maxEmployees}</p>
+        <p className="text-[10px] text-muted-foreground">{t('debts.from')} {maxEmployees}</p>
       </div>
     </div>
 
-    {/* ملخص النظام */}
     <div className="p-4 rounded-2xl bg-card shadow-sm">
-      <h3 className="font-bold text-foreground mb-3 text-sm">ملخص النظام</h3>
+      <h3 className="font-bold text-foreground mb-3 text-sm">{t('owner.quickStats')}</h3>
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-primary/5 p-3 rounded-xl text-center">
           <FileText className="w-5 h-5 mx-auto text-primary mb-1" />
           <p className="text-lg font-black text-foreground">{sales.filter(s => s.timestamp >= new Date().setHours(0,0,0,0) && !s.isVoided).length}</p>
-          <p className="text-[8px] text-muted-foreground font-bold">فواتير اليوم</p>
+          <p className="text-[8px] text-muted-foreground font-bold">{t('salesManager.invoiceCount')}</p>
         </div>
         <div className="bg-destructive/5 p-3 rounded-xl text-center">
           <AlertTriangle className="w-5 h-5 mx-auto text-destructive mb-1" />
           <p className="text-lg font-black text-foreground">{products.filter(p => p.stock <= p.minStock && !p.isDeleted).length}</p>
-          <p className="text-[8px] text-muted-foreground font-bold">مواد منخفضة</p>
+          <p className="text-[8px] text-muted-foreground font-bold">{t('warehouse.lowStockProducts')}</p>
         </div>
         <div className="bg-purple-500/5 p-3 rounded-xl text-center">
           <Users className="w-5 h-5 mx-auto text-purple-600 dark:text-purple-400 mb-1" />
           <p className="text-lg font-black text-foreground">{customers.length}</p>
-          <p className="text-[8px] text-muted-foreground font-bold">إجمالي الزبائن</p>
+          <p className="text-[8px] text-muted-foreground font-bold">{t('owner.totalCustomers')}</p>
         </div>
         <div className="bg-orange-500/5 p-3 rounded-xl text-center">
           <Package className="w-5 h-5 mx-auto text-orange-600 dark:text-orange-400 mb-1" />
           <p className="text-lg font-black text-foreground">{products.filter(p => !p.isDeleted).length}</p>
-          <p className="text-[8px] text-muted-foreground font-bold">المنتجات</p>
+          <p className="text-[8px] text-muted-foreground font-bold">{t('owner.totalProducts')}</p>
         </div>
       </div>
     </div>
 
-    {/* تحذير منتجات منخفضة */}
     {products.filter(p => p.stock <= p.minStock && !p.isDeleted).length > 0 && (
       <div className="p-4 rounded-2xl bg-card shadow-sm border-r-4 border-destructive">
         <h3 className="font-bold text-foreground mb-3 text-sm flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-destructive" /> منتجات قاربت على النفاد
+          <AlertTriangle className="w-4 h-4 text-destructive" /> {t('warehouse.lowStockProducts')}
         </h3>
         <div className="space-y-2 max-h-32 overflow-y-auto">
           {products.filter(p => p.stock <= p.minStock && !p.isDeleted).slice(0, 5).map(p => (
@@ -408,41 +408,34 @@ const DailyContent: React.FC<{
     )}
   </div>
 );
+};
 
 /* ========== Team Content ========== */
 const TeamContent: React.FC<any> = ({
   teamMembers, organization, activeEmployeeCount, maxEmployees, remainingSlots, usagePercent,
   showAddUserModal, setShowAddUserModal, myPendingEmployees, myActivatedEmployees,
   copiedId, setCopiedId, togglingEmployee, handleToggleEmployee, getEmployeeTypeLabel
-}) => (
+}) => {
+  const { t } = useTranslation();
+  return (
   <div className="space-y-4">
-    {/* Organization Status */}
     <div className="p-4 rounded-2xl bg-card shadow-sm">
       <h3 className="font-bold text-foreground text-sm mb-3 flex items-center gap-2">
-        <ShieldCheck className="w-4 h-4 text-primary" /> حالة المنشأة
+        <ShieldCheck className="w-4 h-4 text-primary" /> {t('owner.tabs.team')}
       </h3>
       <div className="space-y-2">
         <div className="flex justify-between text-xs">
-          <span className="text-muted-foreground">اسم المنشأة</span>
+          <span className="text-muted-foreground">{t('common.name')}</span>
           <span className="font-bold text-foreground">{organization?.name || '—'}</span>
         </div>
         <div className="flex justify-between text-xs">
-          <span className="text-muted-foreground">الموظفون / الحد</span>
+          <span className="text-muted-foreground">{t('owner.totalEmployees')}</span>
           <span className="font-bold text-foreground">{activeEmployeeCount} / {maxEmployees}</span>
-        </div>
-        <div className="flex justify-between text-xs">
-          <span className="text-muted-foreground">الأماكن المتبقية</span>
-          <span className={`font-bold ${remainingSlots <= 1 ? 'text-destructive' : 'text-foreground'}`}>{remainingSlots}</span>
         </div>
         <div className="w-full bg-muted rounded-full h-2 mt-1">
           <div className={`h-2 rounded-full transition-all ${usagePercent >= 100 ? 'bg-destructive' : usagePercent >= 80 ? 'bg-warning' : 'bg-primary'}`}
             style={{ width: `${Math.min(100, usagePercent)}%` }} />
         </div>
-        {usagePercent >= 100 && (
-          <p className="text-[10px] text-destructive font-bold flex items-center gap-1 mt-1">
-            <AlertTriangle className="w-3 h-3" /> تم الوصول للحد الأقصى
-          </p>
-        )}
       </div>
     </div>
 
@@ -450,13 +443,13 @@ const TeamContent: React.FC<any> = ({
       className={`w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all ${
         remainingSlots <= 0 ? 'bg-muted text-muted-foreground cursor-not-allowed' : 'bg-primary text-primary-foreground'
       }`}>
-      <UserPlus className="w-5 h-5" /> إضافة موظف
+      <UserPlus className="w-5 h-5" /> {t('owner.addEmployee')}
     </button>
     
     {myPendingEmployees.length > 0 && (
       <div className="space-y-2">
         <h3 className="font-bold text-foreground text-sm flex items-center gap-2 px-2">
-          <Clock className="w-4 h-4 text-warning" /> أكواد تفعيل معلقة
+          <Clock className="w-4 h-4 text-warning" /> {t('owner.pendingCodes')}
         </h3>
         {myPendingEmployees.map((pe: any) => (
           <div key={pe.id} className="bg-warning/10 p-4 rounded-2xl border border-warning/20">
@@ -482,7 +475,7 @@ const TeamContent: React.FC<any> = ({
     {myActivatedEmployees.length > 0 && (
       <div className="space-y-2">
         <h3 className="font-bold text-foreground text-sm flex items-center gap-2 px-2">
-          <CheckCircle2 className="w-4 h-4 text-success" /> أكواد مفعّلة
+          <CheckCircle2 className="w-4 h-4 text-success" /> {t('owner.activatedCodes')}
         </h3>
         {myActivatedEmployees.map((pe: any) => (
           <div key={pe.id} className="bg-success/10 p-4 rounded-2xl border border-success/20">
@@ -491,13 +484,13 @@ const TeamContent: React.FC<any> = ({
                 <p className="font-bold text-foreground">{pe.name}</p>
                 <p className="text-xs text-muted-foreground">{pe.phone}</p>
               </div>
-              <span className="bg-success/15 text-success px-2 py-1 rounded-lg text-xs font-bold">مفعّل ✓</span>
+              <span className="bg-success/15 text-success px-2 py-1 rounded-lg text-xs font-bold">{t('owner.activated')}</span>
             </div>
             <div className="bg-card p-3 rounded-xl">
               <span className="font-mono text-muted-foreground text-xs line-through">{pe.activation_code}</span>
               {pe.activated_at && (
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  تم التفعيل: {new Date(pe.activated_at).toLocaleDateString('ar-SY')}
+                  {t('owner.activatedAt')} {new Date(pe.activated_at).toLocaleDateString('ar-SY')}
                 </p>
               )}
             </div>
@@ -510,7 +503,7 @@ const TeamContent: React.FC<any> = ({
       {teamMembers.length === 0 && myPendingEmployees.length === 0 ? (
         <div className="p-8 rounded-3xl text-center bg-card shadow-sm">
           <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground font-medium">لا يوجد موظفين</p>
+          <p className="text-muted-foreground font-medium">{t('owner.noEmployees')}</p>
         </div>
       ) : (
         teamMembers.map((u: any) => {
@@ -529,7 +522,7 @@ const TeamContent: React.FC<any> = ({
                   </div>
                 </div>
                 <span className={`px-3 py-1 rounded-lg text-xs font-bold ${isActive ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
-                  {isActive ? 'نشط' : 'معطّل'}
+                  {isActive ? t('common.active') : t('common.inactive')}
                 </span>
               </div>
               {canManage && (
@@ -538,7 +531,7 @@ const TeamContent: React.FC<any> = ({
                     isActive ? 'bg-destructive/10 text-destructive hover:bg-destructive/20' : 'bg-success/10 text-success hover:bg-success/20'
                   }`}>
                   {togglingEmployee === u.id ? <Loader2 className="w-4 h-4 animate-spin" /> :
-                    isActive ? <><UserX className="w-4 h-4" /> إيقاف الموظف</> : <><UserCheck className="w-4 h-4" /> إعادة التنشيط</>}
+                    isActive ? <><UserX className="w-4 h-4" /> {t('owner.deactivateEmployee')}</> : <><UserCheck className="w-4 h-4" /> {t('owner.reactivateEmployee')}</>}
                 </button>
               )}
             </div>
@@ -547,14 +540,14 @@ const TeamContent: React.FC<any> = ({
       )}
     </div>
 
-    {/* Deletion Requests */}
     <div className="p-4 rounded-2xl bg-card shadow-sm">
       <h3 className="font-bold text-foreground mb-3 text-sm flex items-center gap-2">
-        <AlertTriangle className="w-4 h-4 text-destructive" /> طلبات حذف الحسابات
+        <AlertTriangle className="w-4 h-4 text-destructive" /> {t('owner.deletionRequests')}
       </h3>
       <DeletionRequestsManager />
     </div>
   </div>
 );
+};
 
 export default OwnerDashboard;
