@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Loader2, AlertCircle, XCircle, Zap, BarChart3, Lock, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Loader2, AlertCircle, XCircle, Zap, BarChart3, Lock, RefreshCw, ShieldCheck, Eye } from 'lucide-react';
 import AppLogo from '@/components/ui/AppLogo';
 import { supabase } from '@/integrations/supabase/client';
 import { getCachedAuth, clearAuthCache } from '@/lib/authCache';
