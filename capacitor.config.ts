@@ -5,9 +5,16 @@ const config: CapacitorConfig = {
   appName: 'Smart System',
   webDir: 'dist',
   server: {
-    url: 'https://bac2f6ed-2db5-4e82-8d26-2c37cac1581f.lovableproject.com?forceHideBadge=true',
-    cleartext: true,
-    androidScheme: 'myapp'
+    // Production: load from local dist folder (no remote URL)
+    // Development: uncomment the url below for hot-reload
+    // url: 'https://bac2f6ed-2db5-4e82-8d26-2c37cac1581f.lovableproject.com?forceHideBadge=true',
+    cleartext: false,
+    androidScheme: 'myapp',
+    allowNavigation: [
+      '*.supabase.co',
+      '*.supabase.in',
+      'accounts.google.com',
+    ],
   },
 
   plugins: {
@@ -40,7 +47,7 @@ const config: CapacitorConfig = {
     }
   },
   android: {
-    allowMixedContent: true,
+    allowMixedContent: false,
     backgroundColor: '#1e293b'
   },
   ios: {
