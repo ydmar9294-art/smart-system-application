@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bell, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { NotificationCenter } from '@/features/notifications/components/NotificationCenter';
 import { motion } from 'motion/react';
 
@@ -26,44 +26,33 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   const greeting = isRTL ? `مرحباً، ${userName} 👋` : `Welcome, ${userName} 👋`;
 
   return (
-    <motion.header
-      className="native-header safe-area-top"
-      dir={isRTL ? 'rtl' : 'ltr'}
-      initial={{ y: -24, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-    >
-      <div className="flex items-center justify-between px-4 pt-3 pb-3 min-h-[56px]">
+    <header className="native-header safe-area-top" dir={isRTL ? 'rtl' : 'ltr'}>
+      <motion.div
+        className="native-header-inner"
+        initial={{ y: -40, opacity: 0, scale: 0.92 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 24, delay: 0.05 }}
+      >
         {/* Profile capsule */}
-        <motion.div
-          className="flex items-center gap-3 min-w-0 flex-1"
-          initial={{ x: isRTL ? 16 : -16, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.08, type: 'spring', stiffness: 300, damping: 25 }}
-        >
+        <div className="flex items-center gap-2.5 min-w-0 flex-1 relative z-[2]">
           {icon && (
             <div className="native-header-avatar">
-              <div className={`w-10 h-10 ${iconBgClass} rounded-[1.25rem] flex items-center justify-center shadow-lg`}>
+              <div className={`w-8 h-8 ${iconBgClass} rounded-full flex items-center justify-center`}>
                 {icon}
               </div>
-              <div className="absolute -bottom-0.5 -end-0.5 w-2.5 h-2.5 rounded-full bg-success border-2 border-background" />
+              <div className="absolute -bottom-0.5 -end-0.5 w-2 h-2 rounded-full bg-success border-[1.5px] border-background" />
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="font-black text-foreground text-[14px] leading-tight truncate">{greeting}</p>
+            <p className="font-black text-foreground text-[12px] leading-tight truncate">{greeting}</p>
             {subtitle && (
-              <p className="text-[10px] text-muted-foreground font-bold mt-0.5 truncate">{subtitle}</p>
+              <p className="text-[9px] text-muted-foreground font-bold mt-0.5 truncate">{subtitle}</p>
             )}
           </div>
-        </motion.div>
+        </div>
 
         {/* Action buttons */}
-        <motion.div
-          className="flex items-center gap-1.5 flex-shrink-0"
-          initial={{ x: isRTL ? -16 : 16, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.12, type: 'spring', stiffness: 300, damping: 25 }}
-        >
+        <div className="flex items-center gap-1.5 flex-shrink-0 relative z-[2]">
           <div className="native-header-icon-btn">
             <NotificationCenter />
           </div>
@@ -74,14 +63,11 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               className="native-header-icon-btn"
               title={t('common.settings')}
             >
-              <Settings className="w-[15px] h-[15px]" />
+              <Settings className="w-[14px] h-[14px]" strokeWidth={1.5} />
             </button>
           )}
-        </motion.div>
-      </div>
-
-      {/* Bottom accent line */}
-      <div className="native-header-edge" />
-    </motion.header>
+        </div>
+      </motion.div>
+    </header>
   );
 };
