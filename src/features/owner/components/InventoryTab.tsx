@@ -30,6 +30,7 @@ interface InventoryTabProps {
 }
 
 export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false, forceSubTab }) => {
+  const { t } = useTranslation();
   const { 
     products, users, purchases = [], deliveries = [], 
     addPurchase, createDelivery, addProduct, updateProduct, deleteProduct,
