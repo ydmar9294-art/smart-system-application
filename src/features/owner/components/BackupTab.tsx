@@ -5,7 +5,8 @@ import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
 import {
   Database, Download, FileText, Loader2, CheckCircle2,
-  Users, Receipt, Wallet, Activity, AlertTriangle, FileSpreadsheet
+  Users, Receipt, Wallet, Activity, AlertTriangle, FileSpreadsheet,
+  ShoppingCart, RotateCcw, PackageX
 } from 'lucide-react';
 import { generateBackupPdf, PdfTranslations } from '@/lib/backupPdfService';
 
