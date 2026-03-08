@@ -21,6 +21,8 @@ import SecurityGate from '@/components/SecurityGate';
 import AccountStatusGate from '@/components/AccountStatusGate';
 import AppLoadingSkeleton from '@/components/ui/DashboardSkeleton';
 import ConsentGate from '@/components/ConsentGate';
+import { useGuest } from '@/store/GuestContext';
+import { GuestPromoOverlay, GuestBanner } from '@/features/guest';
 
 // ==========================================
 // LAZY-LOADED DASHBOARD COMPONENTS
