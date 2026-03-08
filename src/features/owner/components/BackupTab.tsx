@@ -124,7 +124,7 @@ const BackupTab: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState('');
   const [backupData, setBackupData] = useState<BackupData | null>(null);
-  const [previewSection, setPreviewSection] = useState<'customers' | 'invoices' | 'collections' | 'logs'>('customers');
+  const [previewSection, setPreviewSection] = useState<'customers' | 'invoices' | 'collections' | 'purchases' | 'salesReturns' | 'purchaseReturns' | 'logs'>('customers');
 
   const userNameMap = React.useMemo(() => {
     const map: Record<string, string> = {};
