@@ -19,7 +19,7 @@ export const GlassCard: React.FC<GlassCardProps> = ({
     <div
       onClick={onClick}
       className={`glass-card-elevated ${glow ? 'glass-card-glow' : ''} ${onClick ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''} ${className}`}
-      style={accentColor ? { borderRightColor: accentColor, borderRightWidth: '3px' } : undefined}
+      style={accentColor ? { borderRightColor: accentColor, borderRightWidth: '2px' } : undefined}
     >
       {children}
     </div>
