@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   FileText, 
   Search, 
   Eye,
   Ban,
   Printer,
-  ChevronDown
+  ChevronDown,
+  Tag
+} from 'lucide-react';
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
