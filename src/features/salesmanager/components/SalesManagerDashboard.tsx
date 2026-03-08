@@ -9,7 +9,7 @@ import {
   Warehouse as WarehouseIcon, BarChart3, UserX, UserCheck, Loader2, Trash2,
   Home, PieChart, Settings
 } from 'lucide-react';
-import { useApp } from '@/store/AppContext';
+import { motion, AnimatePresence } from 'motion/react';
 import { CURRENCY } from '@/constants';
 import { UserRole, EmployeeType } from '@/types';
 import AIAssistant from '@/features/ai/components/AIAssistant';

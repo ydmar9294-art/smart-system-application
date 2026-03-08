@@ -5,6 +5,7 @@ import {
   MessageCircle, AlertTriangle, ArrowDownCircle, ArrowUpCircle, ArrowUpDown,
   Loader2, DollarSign, Save, X, Search, Home, PieChart, Settings
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY, SUPPORT_WHATSAPP_URL } from '@/constants';
 import { InventoryTab } from '@/features/owner/components/InventoryTab';
