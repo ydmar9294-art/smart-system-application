@@ -20,7 +20,7 @@ export function useInventoryMutations(
   const queryClient = useQueryClient();
 
   const handleError = useCallback((err: any) => {
-    console.error('[Inventory Error]:', err);
+    logger.error('Inventory mutation error', 'InventoryMutations');
     onError?.(extractErrorMessage(err));
     throw err;
   }, [onError]);
