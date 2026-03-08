@@ -240,6 +240,8 @@ const en: TranslationKeys = {
     english: 'English',
     systemDefault: 'System Default',
     languageChanged: 'Language changed',
+    selectLanguage: 'Select app language',
+    switchHint: 'All text and layout direction update instantly',
   },
 
   deletion: {
