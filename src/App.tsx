@@ -127,6 +127,7 @@ const ViewManager: React.FC = () => {
 // ==========================================
 const MainContent: React.FC = () => {
   const { user, role, isLoading, refreshAuth, needsActivation, logout } = useApp();
+  const { isGuest } = useGuest();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   
   // Initialize theme early so loading/auth screens also get dark mode
@@ -178,7 +179,7 @@ const MainContent: React.FC = () => {
   if (isLoggingOut) return <LogoutScreen />;
 
   // Loading — show skeleton instead of spinner for instant perceived speed
-  if (isLoading) return <AppLoadingSkeleton />;
+  if (isLoading && !isGuest) return <AppLoadingSkeleton />;
 
   // Force update blocks everything
   if (isForceUpdate && showUpdateModal) {
@@ -190,6 +191,20 @@ const MainContent: React.FC = () => {
         currentVersion={checkResult?.currentVersion}
         onDismiss={() => {}}
       />
+    );
+  }
+
+  // ── Guest mode: show dashboard directly with banner + promo overlay ──
+  if (isGuest) {
+    return (
+      <>
+        <ToastManager />
+        <GuestBanner />
+        <div className="pt-[calc(2.25rem+env(safe-area-inset-top,0px))]">
+          <Layout><ViewManager /></Layout>
+        </div>
+        <GuestPromoOverlay />
+      </>
     );
   }
 
