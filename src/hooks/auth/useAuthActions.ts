@@ -8,6 +8,7 @@ import { authMutex } from '@/lib/concurrency';
 import { getCachedAuth, clearAuthCache } from '@/lib/authCache';
 import { clearEncryptionKey } from '@/lib/indexedDbEncryption';
 import { clearDeviceState } from '@/lib/deviceService';
+import { clearAllCachedData } from '@/lib/offlineCache';
 import { logger } from '@/lib/logger';
 import { buildUserFromCache, isCacheFullyActivated, isNetworkAvailable } from './authHelpers';
 
