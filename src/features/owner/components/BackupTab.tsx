@@ -67,12 +67,51 @@ interface BackupLogEntry {
   details: string;
 }
 
+interface BackupPurchase {
+  id: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  supplier_name: string | null;
+  created_at: string;
+  created_by: string | null;
+  notes: string | null;
+  creator_name?: string;
+}
+
+interface BackupSalesReturn {
+  id: string;
+  customer_name: string;
+  sale_id: string | null;
+  reason: string | null;
+  total_amount: number;
+  created_at: string;
+  created_by: string | null;
+  creator_name?: string;
+  items: { product_name: string; quantity: number; unit_price: number; total_price: number }[];
+}
+
+interface BackupPurchaseReturn {
+  id: string;
+  supplier_name: string | null;
+  reason: string | null;
+  total_amount: number;
+  created_at: string;
+  created_by: string | null;
+  creator_name?: string;
+  items: { product_name: string; quantity: number; unit_price: number; total_price: number }[];
+}
+
 interface BackupData {
   orgName: string;
   exportDate: string;
   customers: BackupCustomer[];
   invoices: BackupInvoice[];
   collections: BackupCollection[];
+  purchases: BackupPurchase[];
+  salesReturns: BackupSalesReturn[];
+  purchaseReturns: BackupPurchaseReturn[];
   logs: BackupLogEntry[];
 }
 
