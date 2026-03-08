@@ -7,7 +7,7 @@ import {
   Receipt, Wallet, UserPlus, X, Copy, CheckCircle2, Clock,
   ShieldCheck, MessageCircle, AlertTriangle, Phone, MapPin,
   CircleDollarSign, Shield, UserX, UserCheck, Loader2,
-  BarChart3, CreditCard, Banknote
+  BarChart3, CreditCard, Banknote, Database
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
@@ -22,8 +22,9 @@ import CustomersTab from './CustomersTab';
 import OrgDeletionRequest from './OrgDeletionRequest';
 import SubscriptionTab from './SubscriptionTab';
 import { PerformanceTab } from './PerformanceTab';
+import BackupTab from './BackupTab';
 
-type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal';
+type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup';
 
 const OwnerDashboard: React.FC = () => {
   const { 
@@ -124,6 +125,7 @@ const OwnerDashboard: React.FC = () => {
   ];
 
   const secondaryTabs: { id: OwnerTabType; label: string; icon: React.ReactNode }[] = [
+    { id: 'backup', label: 'النسخ الاحتياطي', icon: <Database className="w-4 h-4" /> },
     { id: 'subscription', label: 'الاشتراك', icon: <Shield className="w-4 h-4" /> },
     { id: 'legal', label: 'القانونية', icon: <ShieldCheck className="w-4 h-4" /> },
   ];
@@ -144,6 +146,7 @@ const OwnerDashboard: React.FC = () => {
       case 'performance': return <PerformanceTab />;
       case 'subscription': return <SubscriptionTab />;
       case 'legal': return <><LegalInfoTab /><OrgDeletionRequest /></>;
+      case 'backup': return <BackupTab />;
       default: return null;
     }
   };

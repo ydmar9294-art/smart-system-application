@@ -12,3 +12,4 @@ export { PerformanceTab } from './components/PerformanceTab';
 export { default as LegalInfoTab } from './components/LegalInfoTab';
 export { default as DeliveryDetailsModal } from './components/DeliveryDetailsModal';
 export { default as SubscriptionTab } from './components/SubscriptionTab';
+export { default as BackupTab } from './components/BackupTab';
