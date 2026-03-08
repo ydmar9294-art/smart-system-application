@@ -193,6 +193,7 @@ const SalesManagerDashboard: React.FC = () => {
 
         {/* Tab Content */}
         <div className="px-4 pb-8">
+          <AnimatedTabContent tabKey={activeTab}>
           {activeTab === 'dashboard' && (
             <SalesManagerDashboardContent stats={stats} customers={customers} distributors={distributors} warehouseKeepers={warehouseKeepers} sales={sales} />
           )}
