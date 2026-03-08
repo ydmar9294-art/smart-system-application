@@ -56,20 +56,25 @@ const DashboardFallback: React.FC = () => (
 );
 
 // ==========================================
-// VIEW MANAGER
+// VIEW MANAGER - handles both real and guest roles
 // ==========================================
 const ViewManager: React.FC = () => {
   const { role, user } = useApp();
   const { t } = useTranslation();
+  const { isGuest, guestRole } = useGuest();
+
+  // Resolve which role/employeeType to render
+  const effectiveRole = isGuest ? guestRole?.role : role;
+  const effectiveEmployeeType = isGuest ? guestRole?.employeeType : user?.employeeType;
   
   const dashboard = (() => {
-    switch (role) {
+    switch (effectiveRole) {
       case UserRole.DEVELOPER:
         return <DeveloperHub />;
       case UserRole.OWNER:
         return <OwnerDashboard />;
       case UserRole.EMPLOYEE:
-        switch (user?.employeeType) {
+        switch (effectiveEmployeeType) {
           case EmployeeType.ACCOUNTANT:
             return <AccountantDashboard />;
           case EmployeeType.SALES_MANAGER:
@@ -91,7 +96,28 @@ const ViewManager: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      <Suspense fallback={<DashboardFallback />}>{dashboard}</Suspense>
+      <Suspense fallback={<DashboardFallback />}>
+        {isGuest ? (
+          <div className="guest-readonly-shell pointer-events-none select-none" aria-disabled="true">
+            <style>{`
+              .guest-readonly-shell input,
+              .guest-readonly-shell textarea,
+              .guest-readonly-shell select,
+              .guest-readonly-shell button:not([data-guest-allow]),
+              .guest-readonly-shell [role="button"]:not([data-guest-allow]),
+              .guest-readonly-shell a:not([data-guest-allow]) {
+                pointer-events: none !important;
+                opacity: 0.6;
+              }
+              .guest-readonly-shell [data-radix-collection-item] {
+                pointer-events: auto !important;
+                opacity: 1 !important;
+              }
+            `}</style>
+            {dashboard}
+          </div>
+        ) : dashboard}
+      </Suspense>
     </ErrorBoundary>
   );
 };
