@@ -196,6 +196,22 @@ const BackupTab: React.FC = () => {
     invoices: t('backup.invoices'),
     collections: t('backup.collections'),
     activityLog: t('backup.activityLog'),
+    // New sections
+    purchases: t('backup.purchases'),
+    pdfPurchasesLog: t('backup.pdfPurchasesLog'),
+    pdfSupplier: t('backup.pdfSupplier'),
+    pdfPurchasesPage: t('backup.pdfPurchasesPage'),
+    pdfTotalPurchases: t('backup.pdfTotalPurchases'),
+    salesReturns: t('backup.salesReturns'),
+    pdfSalesReturnsLog: t('backup.pdfSalesReturnsLog'),
+    pdfReason: t('backup.pdfReason'),
+    pdfSalesReturnsPage: t('backup.pdfSalesReturnsPage'),
+    pdfTotalSalesReturns: t('backup.pdfTotalSalesReturns'),
+    pdfOriginalInvoice: t('backup.pdfOriginalInvoice'),
+    purchaseReturns: t('backup.purchaseReturns'),
+    pdfPurchaseReturnsLog: t('backup.pdfPurchaseReturnsLog'),
+    pdfPurchaseReturnsPage: t('backup.pdfPurchaseReturnsPage'),
+    pdfTotalPurchaseReturns: t('backup.pdfTotalPurchaseReturns'),
   }), [t]);
 
   // ── Fetch all data ──────────────────────────────────────────────
