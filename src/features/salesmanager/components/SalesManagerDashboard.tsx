@@ -203,66 +203,7 @@ const SalesManagerDashboard: React.FC = () => {
         {/* Tab Content */}
         <div className="px-4 pb-8">
           {activeTab === 'dashboard' && (
-            <div className="space-y-3 animate-fade-in">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-card p-4 rounded-2xl shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                  </div>
-                  <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">مبيعات اليوم</p>
-                  <p className="text-xl font-black text-foreground">{stats.todayRevenue.toLocaleString()}</p>
-                  <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
-                </div>
-                
-                <div className="bg-card p-4 rounded-2xl shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
-                      <Wallet className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                  </div>
-                  <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">التحصيلات</p>
-                  <p className="text-xl font-black text-foreground">{stats.totalCollections.toLocaleString()}</p>
-                  <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
-                </div>
-              </div>
-
-              <div className="bg-card p-4 rounded-2xl shadow-sm">
-                <h3 className="font-bold text-foreground mb-3 text-sm">إحصائيات الفريق</h3>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-blue-500/10 p-3 rounded-xl text-center">
-                    <Users className="w-5 h-5 mx-auto text-blue-600 dark:text-blue-400 mb-1" />
-                    <p className="text-lg font-black text-foreground">{distributors.length}</p>
-                    <p className="text-[8px] text-muted-foreground font-bold">الموزعين</p>
-                  </div>
-                  <div className="bg-purple-500/10 p-3 rounded-xl text-center">
-                    <WarehouseIcon className="w-5 h-5 mx-auto text-purple-600 dark:text-purple-400 mb-1" />
-                    <p className="text-lg font-black text-foreground">{warehouseKeepers.length}</p>
-                    <p className="text-[8px] text-muted-foreground font-bold">أمناء المستودع</p>
-                  </div>
-                  <div className="bg-orange-500/10 p-3 rounded-xl text-center">
-                    <FileText className="w-5 h-5 mx-auto text-orange-600 dark:text-orange-400 mb-1" />
-                    <p className="text-lg font-black text-foreground">{stats.todaySalesCount}</p>
-                    <p className="text-[8px] text-muted-foreground font-bold">فواتير اليوم</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-card p-4 rounded-2xl shadow-sm">
-                <h3 className="font-bold text-foreground mb-3 text-sm">إحصائيات الزبائن</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-emerald-500/10 p-3 rounded-xl text-center">
-                    <p className="text-lg font-black text-foreground">{customers.length}</p>
-                    <p className="text-[8px] text-muted-foreground font-bold">إجمالي الزبائن</p>
-                  </div>
-                  <div className="bg-red-500/10 p-3 rounded-xl text-center">
-                    <p className="text-lg font-black text-foreground">{customers.filter(c => c.balance > 0).length}</p>
-                    <p className="text-[8px] text-muted-foreground font-bold">ذمم مدينة</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <SalesManagerDashboardContent stats={stats} customers={customers} distributors={distributors} warehouseKeepers={warehouseKeepers} sales={sales} />
           )}
 
           {activeTab === 'team' && (

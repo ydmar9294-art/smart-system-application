@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   BarChart3, TrendingUp, TrendingDown, DollarSign,
-  ShoppingCart, Wallet, Package, Loader2
+  ShoppingCart, Wallet, Package, Loader2, Percent
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +13,7 @@ const ReportsTab: React.FC = () => {
   const [purchaseReturnsTotal, setPurchaseReturnsTotal] = useState(0);
   const [collectionsTotal, setCollectionsTotal] = useState(0);
   const [distributorInventory, setDistributorInventory] = useState<any[]>([]);
+  const [totalDiscounts, setTotalDiscounts] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { loadData(); }, []);
@@ -20,23 +21,24 @@ const ReportsTab: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [pRes, srRes, prRes, cRes, diRes] = await Promise.all([
+      const [pRes, srRes, prRes, cRes, diRes, discRes] = await Promise.all([
         supabase.from('purchases').select('total_price'),
         supabase.from('sales_returns').select('total_amount'),
         supabase.from('purchase_returns').select('total_amount'),
         supabase.from('collections').select('amount, is_reversed').eq('is_reversed', false),
         supabase.from('distributor_inventory').select('product_id, quantity'),
+        supabase.from('sales').select('discount_value, is_voided').eq('is_voided', false),
       ]);
       if (pRes.data) setPurchasesTotal(pRes.data.reduce((s, p) => s + Number(p.total_price), 0));
       if (srRes.data) setSalesReturnsTotal(srRes.data.reduce((s, r) => s + Number(r.total_amount), 0));
       if (prRes.data) setPurchaseReturnsTotal(prRes.data.reduce((s, r) => s + Number(r.total_amount), 0));
       if (cRes.data) setCollectionsTotal(cRes.data.reduce((s, c) => s + Number(c.amount), 0));
       if (diRes.data) setDistributorInventory(diRes.data);
+      if (discRes.data) setTotalDiscounts(discRes.data.reduce((s, d) => s + Number(d.discount_value || 0), 0));
     } catch (error) { console.error('Error loading report data:', error); }
     finally { setLoading(false); }
   };
 
-  // إجمالي تكلفة المبيعات (النقدية والآجلة) - بسعر التكلفة
   const totalSalesCost = sales.filter(s => !s.isVoided).reduce((sum, sale) => {
     return sum + sale.items.reduce((itemSum, item) => {
       const product = products.find(p => p.id === item.productId);
@@ -50,7 +52,6 @@ const ReportsTab: React.FC = () => {
   const netPurchases = purchasesTotal - purchaseReturnsTotal;
   const totalDebt = customers.reduce((sum, c) => sum + Math.max(0, c.balance), 0);
 
-  // قيمة المخزون الحالي (المخزن الرئيسي + مخازن الموزعين) بسعر التكلفة
   const mainWarehouseValue = products.filter(p => !p.isDeleted).reduce((s, p) => s + (p.costPrice * p.stock), 0);
   const distWarehouseValue = distributorInventory.reduce((s, item) => {
     const product = products.find(p => p.id === item.product_id);
@@ -58,7 +59,6 @@ const ReportsTab: React.FC = () => {
   }, 0);
   const totalCurrentInventoryValue = mainWarehouseValue + distWarehouseValue;
 
-  // الربح/الخسارة = تكلفة المبيعات + قيمة البضاعة الحالية - إجمالي المشتريات
   const profitOrLoss = totalSalesCost + totalCurrentInventoryValue - purchasesTotal;
 
   if (loading) {
@@ -92,7 +92,19 @@ const ReportsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Profit/Loss - New Formula */}
+      {/* Total Discounts Card */}
+      <div className="bg-amber-500/10 p-4 rounded-2xl">
+        <div className="flex items-center gap-2 mb-1">
+          <Percent className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+          <span className="text-[9px] text-muted-foreground font-bold">إجمالي الخصومات</span>
+        </div>
+        <p className="text-lg font-black text-amber-600 dark:text-amber-400">{totalDiscounts.toLocaleString('ar-SA')}</p>
+        <p className="text-[9px] text-muted-foreground">
+          التأثير على الإيرادات: -{totalSales > 0 ? ((totalDiscounts / (totalSales + totalDiscounts)) * 100).toFixed(1) : 0}%
+        </p>
+      </div>
+
+      {/* Profit/Loss */}
       <div className={`p-5 rounded-2xl text-center ${profitOrLoss >= 0 ? 'bg-emerald-500/10' : 'bg-destructive/10'}`}>
         <DollarSign className={`w-8 h-8 mx-auto mb-2 ${profitOrLoss >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`} />
         <p className="text-xs text-muted-foreground font-bold mb-1">الربح / الخسارة</p>
@@ -154,6 +166,10 @@ const ReportsTab: React.FC = () => {
         <div className="flex items-center justify-between p-2.5 bg-muted rounded-xl text-sm">
           <span className="text-muted-foreground">تكلفة المبيعات</span>
           <span className="font-bold text-foreground">{totalSalesCost.toLocaleString('ar-SA')}</span>
+        </div>
+        <div className="flex items-center justify-between p-2.5 bg-amber-500/10 rounded-xl text-sm">
+          <span className="text-muted-foreground">إجمالي الخصومات</span>
+          <span className="font-bold text-amber-600 dark:text-amber-400">-{totalDiscounts.toLocaleString('ar-SA')}</span>
         </div>
         <div className="flex items-center justify-between p-2.5 bg-muted rounded-xl text-sm">
           <span className="text-muted-foreground">مرتجعات المبيعات</span>
