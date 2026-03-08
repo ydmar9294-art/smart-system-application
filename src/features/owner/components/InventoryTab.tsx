@@ -695,7 +695,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-muted-foreground">الكمية</label>
+                <label className="text-[10px] font-bold text-muted-foreground">{t('ownerInventory.quantity')}</label>
                 <input 
                   type="number" 
                   min="1" 
