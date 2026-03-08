@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Loader2, AlertCircle, XCircle, Zap, BarChart3, Lock, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Loader2, AlertCircle, XCircle, Zap, BarChart3, Lock, RefreshCw, ShieldCheck, Eye } from 'lucide-react';
 import AppLogo from '@/components/ui/AppLogo';
 import { supabase } from '@/integrations/supabase/client';
 import { getCachedAuth, clearAuthCache } from '@/lib/authCache';
@@ -9,6 +9,8 @@ import EmailPasswordAuth from './EmailPasswordAuth';
 import GoogleSignInButton from './GoogleSignInButton';
 import LicenseActivation from './LicenseActivation';
 import AuthOverlay from './AuthOverlay';
+import GuestRoleSelector from './GuestRoleSelector';
+import { useGuest, GuestRole } from '@/store/GuestContext';
 
 interface AuthFlowProps {
   onAuthComplete: () => void;
@@ -39,6 +41,13 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
   const [authError, setAuthError] = useState<string>('');
   const [isSlow, setIsSlow] = useState(false);
   const [oauthPending, setOauthPending] = useState(() => isOAuthPending());
+  const [showGuestSelector, setShowGuestSelector] = useState(false);
+  const { enterGuestMode } = useGuest();
+
+  const handleGuestSelect = (role: GuestRole) => {
+    setShowGuestSelector(false);
+    enterGuestMode(role);
+  };
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -324,11 +333,35 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
             </div>
             
             <EmailPasswordAuth onError={handleAuthError} />
-            
+
+            {/* Divider before guest */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-xs text-muted-foreground font-bold">أو</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+
+            {/* Guest preview button */}
+            <button
+              type="button"
+              onClick={() => setShowGuestSelector(true)}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-muted-foreground bg-muted/60 hover:bg-muted transition-all duration-200 active:scale-[0.97]"
+            >
+              <Eye className="w-4 h-4" />
+              دخول كزائر
+            </button>
+
             <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground">
               <ShieldCheck className="w-4 h-4" />
               <span>تسجيل دخول آمن ومشفر</span>
             </div>
+
+            {/* Guest role selector modal */}
+            <GuestRoleSelector
+              open={showGuestSelector}
+              onClose={() => setShowGuestSelector(false)}
+              onSelect={handleGuestSelect}
+            />
           </div>);
     }
   };

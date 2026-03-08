@@ -20,6 +20,8 @@ import SecurityGate from '@/components/SecurityGate';
 import AccountStatusGate from '@/components/AccountStatusGate';
 import AppLoadingSkeleton from '@/components/ui/DashboardSkeleton';
 import ConsentGate from '@/components/ConsentGate';
+import { useGuest } from '@/store/GuestContext';
+import GuestDashboardShell from '@/features/auth/components/GuestDashboardShell';
 
 // ==========================================
 // LAZY-LOADED DASHBOARD COMPONENTS
@@ -161,6 +163,13 @@ const MainContent: React.FC = () => {
         onDismiss={() => {}}
       />
     );
+  }
+
+  // Guest mode — show guest dashboard shell instead of auth
+  const { isGuest } = useGuest();
+
+  if (isGuest) {
+    return <GuestDashboardShell />;
   }
 
   if (!user || needsActivation) {
