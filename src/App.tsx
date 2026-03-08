@@ -101,6 +101,8 @@ const ViewManager: React.FC = () => {
 const MainContent: React.FC = () => {
   const { user, role, isLoading, refreshAuth, needsActivation, logout } = useApp();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [deviceRevoked, setDeviceRevoked] = useState(false);
+  const [revokedDeviceName, setRevokedDeviceName] = useState<string | undefined>();
   
   // Initialize theme early so loading/auth screens also get dark mode
   usePageTheme();
