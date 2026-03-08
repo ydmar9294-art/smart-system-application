@@ -255,33 +255,33 @@ const BackupTab: React.FC = () => {
 
     const sheets: { name: string; headers: string[]; rows: string[][] }[] = [
       {
-        name: 'Customers',
-        headers: ['ID', 'Name', 'Phone', 'Location', 'Balance', 'Distributor'],
+        name: 'الزبائن',
+        headers: ['المعرّف', 'الاسم', 'الهاتف', 'الموقع', 'الرصيد', 'الموزع'],
         rows: backupData.customers.map(c => [c.id, c.name, c.phone || '', c.location || '', c.balance.toString(), c.distributor_name || '']),
       },
       {
-        name: 'Invoices',
-        headers: ['ID', 'Customer', 'Date', 'Payment Type', 'Total', 'Discount Type', 'Discount %', 'Discount Value', 'Net Total', 'Paid', 'Remaining', 'Voided', 'Distributor'],
+        name: 'الفواتير',
+        headers: ['المعرّف', 'الزبون', 'التاريخ', 'نوع الدفع', 'المجموع', 'نوع الخصم', 'نسبة الخصم', 'قيمة الخصم', 'الصافي', 'المدفوع', 'المتبقي', 'ملغاة', 'الموزع'],
         rows: backupData.invoices.map(inv => [
-          inv.id, inv.customer_name, inv.created_at, inv.payment_type,
+          inv.id, inv.customer_name, inv.created_at, inv.payment_type === 'CASH' ? 'نقدي' : 'آجل',
           (inv.grand_total + inv.discount_value).toString(),
           inv.discount_type || '', (inv.discount_percentage || 0).toString(),
           (inv.discount_value || 0).toString(), inv.grand_total.toString(),
           inv.paid_amount.toString(), inv.remaining.toString(),
-          inv.is_voided ? 'Yes' : 'No', inv.distributor_name || '',
+          inv.is_voided ? 'نعم' : 'لا', inv.distributor_name || '',
         ]),
       },
       {
-        name: 'Collections',
-        headers: ['ID', 'Invoice ID', 'Customer', 'Amount', 'Date', 'Collector', 'Reversed', 'Notes'],
+        name: 'التحصيلات',
+        headers: ['المعرّف', 'رقم الفاتورة', 'الزبون', 'المبلغ', 'التاريخ', 'المحصّل', 'معكوسة', 'ملاحظات'],
         rows: backupData.collections.map(c => [
           c.id, c.sale_id, c.customer_name || '', c.amount.toString(),
-          c.created_at, c.collector_name || '', c.is_reversed ? 'Yes' : 'No', c.notes || '',
+          c.created_at, c.collector_name || '', c.is_reversed ? 'نعم' : 'لا', c.notes || '',
         ]),
       },
       {
-        name: 'Activity Logs',
-        headers: ['Type', 'User', 'Date', 'Details'],
+        name: 'سجل_العمليات',
+        headers: ['العملية', 'المستخدم', 'التاريخ', 'التفاصيل'],
         rows: backupData.logs.map(l => [l.type, l.user_name, l.date, l.details]),
       },
     ];
