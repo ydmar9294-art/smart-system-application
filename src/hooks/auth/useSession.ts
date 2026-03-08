@@ -246,6 +246,8 @@ export const useSession = (deps: SessionDeps) => {
       }
     };
 
+    // Stagger: AccountStatusGate fires at 2s, so useSession fires at 0s (device check first)
+    // then resolveProfile at ~1s (after device check completes)
     window.addEventListener('online', handleOnline);
     document.addEventListener('visibilitychange', handleVisibility);
 
