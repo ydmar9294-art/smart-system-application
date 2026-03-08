@@ -588,6 +588,9 @@ const BackupTab: React.FC = () => {
             <SummaryCard icon={<Users className="w-4 h-4" />} label={t('backup.customers')} value={backupData.customers.length} color="blue" />
             <SummaryCard icon={<Receipt className="w-4 h-4" />} label={t('backup.invoices')} value={backupData.invoices.length} color="emerald" />
             <SummaryCard icon={<Wallet className="w-4 h-4" />} label={t('backup.collections')} value={backupData.collections.length} color="amber" />
+            <SummaryCard icon={<ShoppingCart className="w-4 h-4" />} label={t('backup.purchases')} value={backupData.purchases.length} color="rose" />
+            <SummaryCard icon={<RotateCcw className="w-4 h-4" />} label={t('backup.salesReturns')} value={backupData.salesReturns.length} color="orange" />
+            <SummaryCard icon={<PackageX className="w-4 h-4" />} label={t('backup.purchaseReturns')} value={backupData.purchaseReturns.length} color="red" />
             <SummaryCard icon={<Activity className="w-4 h-4" />} label={t('backup.activityLog')} value={backupData.logs.length} color="purple" />
           </div>
 
@@ -604,7 +607,7 @@ const BackupTab: React.FC = () => {
             <button
               onClick={exportCSV}
               disabled={loading}
-              className="py-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-emerald-500/20 transition-all active:scale-[0.98]"
+              className="py-3 bg-success/10 text-success rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-success/20 transition-all active:scale-[0.98]"
             >
               <FileSpreadsheet className="w-4 h-4" />
               {t('backup.exportExcelCsv')}
@@ -613,17 +616,20 @@ const BackupTab: React.FC = () => {
 
           {/* Preview Navigation */}
           <div className="bg-card rounded-2xl border shadow-sm overflow-hidden">
-            <div className="flex border-b border-border">
+            <div className="flex flex-wrap border-b border-border">
               {([
                 { id: 'customers' as const, label: t('backup.customers'), icon: <Users className="w-3.5 h-3.5" /> },
                 { id: 'invoices' as const, label: t('backup.invoices'), icon: <Receipt className="w-3.5 h-3.5" /> },
                 { id: 'collections' as const, label: t('backup.collections'), icon: <Wallet className="w-3.5 h-3.5" /> },
+                { id: 'purchases' as const, label: t('backup.purchases'), icon: <ShoppingCart className="w-3.5 h-3.5" /> },
+                { id: 'salesReturns' as const, label: t('backup.salesReturns'), icon: <RotateCcw className="w-3.5 h-3.5" /> },
+                { id: 'purchaseReturns' as const, label: t('backup.purchaseReturns'), icon: <PackageX className="w-3.5 h-3.5" /> },
                 { id: 'logs' as const, label: t('backup.logs'), icon: <Activity className="w-3.5 h-3.5" /> },
               ]).map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setPreviewSection(tab.id)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[10px] font-bold transition-all ${
+                  className={`flex-1 min-w-[80px] flex items-center justify-center gap-1 py-2.5 text-[9px] font-bold transition-all ${
                     previewSection === tab.id
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:bg-muted'
@@ -640,6 +646,9 @@ const BackupTab: React.FC = () => {
               {previewSection === 'customers' && <CustomersPreview data={backupData.customers} t={t} />}
               {previewSection === 'invoices' && <InvoicesPreview data={backupData.invoices} t={t} lang={lang} />}
               {previewSection === 'collections' && <CollectionsPreview data={backupData.collections} t={t} lang={lang} />}
+              {previewSection === 'purchases' && <PurchasesPreview data={backupData.purchases} t={t} />}
+              {previewSection === 'salesReturns' && <SalesReturnsPreview data={backupData.salesReturns} t={t} />}
+              {previewSection === 'purchaseReturns' && <PurchaseReturnsPreview data={backupData.purchaseReturns} t={t} />}
               {previewSection === 'logs' && <LogsPreview data={backupData.logs} t={t} />}
             </div>
           </div>
