@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import { useApp } from '@/store/AppContext';
@@ -439,7 +440,7 @@ const BackupTab: React.FC = () => {
       setBackupData(backup);
       setProgress('');
     } catch (err) {
-      console.error('[Backup] Error:', err);
+      logger.error('Backup generation error', 'BackupTab');
       setProgress(t('backup.errorGenerating'));
     } finally {
       setLoading(false);
@@ -456,7 +457,7 @@ const BackupTab: React.FC = () => {
       await generateBackupPdf(backupData, getPdfTranslations(), lang, setProgress);
       setProgress('');
     } catch (err) {
-      console.error('[Backup PDF]:', err);
+      logger.error('Backup PDF export error', 'BackupTab');
       setProgress(t('backup.errorPdf'));
     } finally {
       setLoading(false);

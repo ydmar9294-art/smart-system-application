@@ -43,6 +43,12 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
+    // Service-role client for audit/idempotency logging (bypasses RLS)
+    const serviceClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+
     // Full server-side user validation
     const { data: { user }, error: userErr } = await supabase.auth.getUser();
     if (userErr || !user) {
@@ -89,7 +95,7 @@ Deno.serve(async (req) => {
 
     const processedKeys = new Set<string>();
     if (idempotencyKeys.length > 0) {
-      const { data: existingLogs } = await supabase
+      const { data: existingLogs } = await serviceClient
         .from('audit_logs')
         .select('entity_id')
         .eq('action', 'BULK_SYNC_OP')
@@ -118,13 +124,13 @@ Deno.serve(async (req) => {
         results.push(result);
 
         if (result.status === 'synced' && op.idempotencyKey) {
-          await supabase.from('audit_logs').insert({
+          await serviceClient.from('audit_logs').insert({
             action: 'BULK_SYNC_OP',
             entity_type: op.type,
             entity_id: op.idempotencyKey,
             user_id: userId,
             details: { serverId: result.serverId },
-          }).then(() => {});
+          });
         }
       } catch (err) {
         results.push({
@@ -139,7 +145,8 @@ Deno.serve(async (req) => {
     const failedCount = results.filter(r => r.status === 'failed').length;
     const duplicateCount = results.filter(r => r.status === 'duplicate').length;
 
-    console.log(`[bulk-sync] user=${userId.substring(0, 8)}... total=${operations.length} synced=${syncedCount} failed=${failedCount} duplicates=${duplicateCount}`);
+    // Structured log (no sensitive data)
+    console.info(`[bulk-sync] uid=${userId.substring(0, 8)}… ops=${operations.length} ok=${syncedCount} err=${failedCount} dup=${duplicateCount}`);
 
     return new Response(JSON.stringify({
       results,

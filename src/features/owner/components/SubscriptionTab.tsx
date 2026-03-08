@@ -3,6 +3,7 @@
  * View subscription status, renew via ShamCash, upload payment receipts
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { logger } from '@/lib/logger';
 import { createPortal } from 'react-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/store/AuthContext';
@@ -103,7 +104,7 @@ const SubscriptionTab: React.FC = () => {
         })));
       }
     } catch (err) {
-      console.error('Failed to fetch subscription data:', err);
+      logger.error('Failed to fetch subscription data', 'SubscriptionTab');
     } finally {
       setLoading(false);
     }

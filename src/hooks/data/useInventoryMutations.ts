@@ -2,6 +2,7 @@
  * Inventory Mutations Hook - Purchases, deliveries, returns, employees
  */
 import { useCallback } from 'react';
+import { logger } from '@/lib/logger';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryClient';
 import { inventoryService } from '@/services/inventoryService';
@@ -19,7 +20,7 @@ export function useInventoryMutations(
   const queryClient = useQueryClient();
 
   const handleError = useCallback((err: any) => {
-    console.error('[Inventory Error]:', err);
+    logger.error('Inventory mutation error', 'InventoryMutations');
     onError?.(extractErrorMessage(err));
     throw err;
   }, [onError]);
@@ -112,7 +113,7 @@ export function useInventoryMutations(
   }, [queryClient, handleError]);
 
   const makeLicensePermanent = useCallback(async (_id: string, _ownerId: string | null) => {
-    console.warn('makeLicensePermanent is deprecated');
+    logger.warn('makeLicensePermanent is deprecated', 'InventoryMutations');
   }, []);
 
   const updateLicenseMaxEmployees = useCallback(async (licenseId: string, maxEmployees: number) => {

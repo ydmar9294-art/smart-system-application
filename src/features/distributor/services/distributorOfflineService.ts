@@ -299,14 +299,18 @@ export async function enqueueAction(
     idempotencyKey: generateUUID(),
   };
   
-  // Sign the action payload for integrity verification
+  // Sign the action payload for integrity verification (MANDATORY)
   if (isEncryptionAvailable()) {
     try {
       const signableData = JSON.stringify({ type: action.type, payload: action.payload, idempotencyKey: action.idempotencyKey });
       action._signature = await computeHMAC(signableData);
-    } catch {
-      logger.warn('Failed to sign offline action — storing unsigned', 'DistributorOffline');
+    } catch (err) {
+      logger.error('CRITICAL: Failed to sign offline action — action will be rejected during sync', 'DistributorOffline');
+      throw new Error('Cannot enqueue action without HMAC signature');
     }
+  } else {
+    logger.error('CRITICAL: Encryption unavailable — cannot sign offline actions', 'DistributorOffline');
+    throw new Error('Web Crypto API required for offline actions');
   }
 
   // Encrypt the entire action before storing
@@ -783,12 +787,16 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 
 async function executeAction(action: OfflineAction): Promise<ExecuteResult> {
   try {
-    // Verify HMAC integrity before processing
-    if (action._signature && isEncryptionAvailable()) {
+    // MANDATORY HMAC verification — reject unsigned or tampered actions
+    if (!action._signature) {
+      logger.error(`[Sync] REJECTED unsigned action ${action.id} (${action.type}) — missing HMAC signature`, 'DistributorOffline');
+      return 'failed';
+    }
+    if (isEncryptionAvailable()) {
       const signableData = JSON.stringify({ type: action.type, payload: action.payload, idempotencyKey: action.idempotencyKey });
       const isValid = await verifyHMAC(signableData, action._signature);
       if (!isValid) {
-        logger.error(`[Sync] HMAC verification failed for action ${action.id} — possible tampering`, 'DistributorOffline');
+        logger.error(`[Sync] REJECTED tampered action ${action.id} (${action.type}) — HMAC verification failed`, 'DistributorOffline');
         return 'failed';
       }
     }

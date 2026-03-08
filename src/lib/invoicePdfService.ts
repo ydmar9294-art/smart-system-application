@@ -8,6 +8,7 @@
  */
 
 import jsPDF from 'jspdf';
+import { logger } from '@/lib/logger';
 import html2canvas from 'html2canvas';
 
 // ── Detect Capacitor Android ────────────────────────────────────────────────
@@ -154,7 +155,7 @@ export async function shareInvoicePdf(
 
       return;
     } catch (err) {
-      console.error('[invoicePdfService] Capacitor share failed:', err);
+      logger.error('Capacitor share failed', 'InvoicePdf');
       // fall through to browser fallback
     }
   }
@@ -196,7 +197,7 @@ export async function saveInvoicePdf(
       });
       return;
     } catch (err) {
-      console.warn('[invoicePdfService] Documents directory failed, trying ExternalStorage:', err);
+      logger.warn('Documents directory failed, trying ExternalStorage', 'InvoicePdf');
     }
 
     try {
@@ -209,7 +210,7 @@ export async function saveInvoicePdf(
       });
       return;
     } catch (err) {
-      console.error('[invoicePdfService] All Capacitor save attempts failed:', err);
+      logger.error('All Capacitor save attempts failed', 'InvoicePdf');
       throw err;
     }
   }

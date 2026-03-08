@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { logger } from '@/lib/logger';
 import { useApp } from '@/store/AppContext';
 import { Truck, Plus, Package, Calendar, User, Check, Trash2, Loader2, AlertCircle, Eye } from 'lucide-react';
 import { EmployeeType } from '@/types';
@@ -123,7 +124,7 @@ export const DeliveriesTab: React.FC = () => {
       resetForm();
       addNotification('تم تسليم البضاعة بنجاح وتحديث مخزون الموزع', 'success');
     } catch (err: any) {
-      console.error('Delivery error:', err);
+      logger.error('Delivery error', 'DeliveriesTab');
       setError(err.message || 'حدث خطأ أثناء تسليم البضاعة');
     } finally {
       setLoading(false);

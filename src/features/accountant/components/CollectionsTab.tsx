@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { logger } from '@/lib/logger';
 import { useTranslation } from 'react-i18next';
 import { Wallet, ChevronDown, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -47,7 +48,7 @@ const CollectionsTab: React.FC = () => {
         customer_name: c.sales?.customer_name || t('common.unspecified')
       }));
       setCollections(mapped);
-    } catch (error) { console.error('Error loading collections:', error); }
+    } catch (error) { logger.error('Error loading collections', 'CollectionsTab'); }
     finally { setLoading(false); }
   };
 

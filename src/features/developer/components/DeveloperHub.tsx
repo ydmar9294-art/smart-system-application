@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 import AnimatedTabContent from '@/components/ui/AnimatedTabContent';
 import { createPortal } from 'react-dom';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -78,7 +79,7 @@ const DeveloperHub: React.FC = () => {
       setShowForm(false);
       refreshOrgStats();
     } catch (err) {
-      console.error('License issue failed:', err);
+      logger.error('License issue failed', 'DeveloperHub');
     }
   };
 
@@ -92,7 +93,7 @@ const DeveloperHub: React.FC = () => {
       setEditingLimit(null);
       refreshOrgStats();
     } catch (err) {
-      console.error('Update limit failed:', err);
+      logger.error('Update limit failed', 'DeveloperHub');
     }
   };
 
@@ -264,7 +265,7 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
       // Force refresh
       window.location.reload();
     } catch (err) {
-      console.error('Failed to update org name:', err);
+      logger.error('Failed to update org name', 'DeveloperHub');
     } finally {
       setSavingOrgName(false);
     }

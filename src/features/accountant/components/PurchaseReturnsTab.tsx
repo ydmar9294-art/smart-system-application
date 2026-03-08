@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '@/lib/logger';
 import { useTranslation } from 'react-i18next';
 import { RotateCcw, Search, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,7 +31,7 @@ const PurchaseReturnsTab: React.FC = () => {
       const { data, error } = await supabase.from('purchase_returns').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       setReturns(data || []);
-    } catch (error) { console.error('Error loading purchase returns:', error); }
+    } catch (error) { logger.error('Error loading purchase returns', 'PurchaseReturnsTab'); }
     finally { setLoading(false); }
   };
 

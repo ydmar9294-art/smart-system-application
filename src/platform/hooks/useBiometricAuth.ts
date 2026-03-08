@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { logger } from '@/lib/logger';
 
 // capacitor-native-biometric types
 let NativeBiometric: any = null;
@@ -32,8 +33,8 @@ export const useBiometricAuth = () => {
       setIsAvailable(result.isAvailable);
       setBiometricType(result.biometryType);
       return result.isAvailable;
-    } catch (error) {
-      console.error('Biometric check error:', error);
+    } catch {
+      logger.error('Biometric check error', 'BiometricAuth');
       setIsAvailable(false);
       return false;
     }
@@ -63,8 +64,8 @@ export const useBiometricAuth = () => {
     if (!isAvailable || !NativeBiometric) return;
     try {
       await NativeBiometric.setCredentials({ username, password, server: 'smart-system' });
-    } catch (error) {
-      console.error('Set credentials error:', error);
+    } catch {
+      logger.error('Set credentials error', 'BiometricAuth');
     }
   };
 
@@ -72,8 +73,8 @@ export const useBiometricAuth = () => {
     if (!isAvailable || !NativeBiometric) return null;
     try {
       return await NativeBiometric.getCredentials({ server: 'smart-system' });
-    } catch (error) {
-      console.error('Get credentials error:', error);
+    } catch {
+      logger.error('Get credentials error', 'BiometricAuth');
       return null;
     }
   };
@@ -82,8 +83,8 @@ export const useBiometricAuth = () => {
     if (!isAvailable || !NativeBiometric) return;
     try {
       await NativeBiometric.deleteCredentials({ server: 'smart-system' });
-    } catch (error) {
-      console.error('Delete credentials error:', error);
+    } catch {
+      logger.error('Delete credentials error', 'BiometricAuth');
     }
   };
 

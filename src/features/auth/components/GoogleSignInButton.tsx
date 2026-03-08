@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
@@ -107,7 +108,7 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
         if (error) throw error;
       }
     } catch (err: any) {
-      console.error('[GoogleAuth] Error:', err);
+      logger.error('Google Auth error', 'GoogleSignIn');
       clearOAuthPending(); stopShimmer(); setPhase('idle'); setLoading(false);
       const message = err?.message?.includes('rate limit') ? t('auth.rateLimited') : t('auth.googleAuthFailed');
       onError?.(message);

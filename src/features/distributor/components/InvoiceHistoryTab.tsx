@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { logger } from '@/lib/logger';
 import { useTranslation } from 'react-i18next';
 import {
   FileText,
@@ -211,7 +212,7 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
       
       try { await cacheInvoices(results); } catch { /* ignore */ }
     } catch (err) {
-      console.error('Error fetching invoices:', err);
+      logger.error('Error fetching invoices', 'InvoiceHistoryTab');
     } finally {
       setLoading(false);
       setRefreshing(false);

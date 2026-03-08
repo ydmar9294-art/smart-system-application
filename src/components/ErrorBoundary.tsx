@@ -3,6 +3,7 @@
  * Prevents entire app crash from a single component failure
  */
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { logger } from '@/lib/logger';
 
 interface Props {
   children: ReactNode;
@@ -31,7 +32,7 @@ export class ErrorBoundary extends Component<Props, State> {
       message: error.message,
       stack: error.stack?.substring(0, 500),
     };
-    console.error('[ErrorBoundary] Caught error:', JSON.stringify(errorData));
+    logger.error('Caught error', 'ErrorBoundary');
   }
 
   render(): ReactNode {

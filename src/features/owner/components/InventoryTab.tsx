@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { logger } from '@/lib/logger';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
@@ -89,7 +90,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
       setShowPurchaseModal(false);
       resetPurchaseForm();
     } catch (err) {
-      console.error('Purchase failed:', err);
+      logger.error('Purchase failed', 'InventoryTab');
     }
   };
 
@@ -145,7 +146,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
       resetDeliveryForm();
     } catch (err) {
       // Error already shown via handleError notification — just prevent success path
-      console.error('Delivery failed:', err);
+      logger.error('Delivery failed', 'InventoryTab');
     }
   };
 
@@ -205,7 +206,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
       setShowPurchaseReturnModal(false);
       resetPurchaseReturnForm();
     } catch (err) {
-      console.error('Purchase return failed:', err);
+      logger.error('Purchase return failed', 'InventoryTab');
     }
   };
 

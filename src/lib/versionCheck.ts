@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 /**
  * Version Check Service
  * Compares local app version with server version.
@@ -93,7 +94,7 @@ export async function checkAppVersion(
 
     return { status: 'up_to_date', versionInfo, currentVersion };
   } catch (err) {
-    console.error('[VersionCheck] Error:', err);
+    logger.error('Version check error', 'VersionCheck');
     return { status: 'error', currentVersion };
   }
 }

@@ -53,6 +53,6 @@ export default defineConfig(({ mode }) => ({
     },
     // Increase chunk size warning limit for vendor chunks
     chunkSizeWarningLimit: 600,
-    sourcemap: false,
+    sourcemap: mode === 'production' ? false : 'inline',
   },
 }));

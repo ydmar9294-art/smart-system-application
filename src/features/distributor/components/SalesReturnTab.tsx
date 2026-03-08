@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '@/lib/logger';
 import { generateUUID } from '@/lib/uuid';
 import { 
   RotateCcw, 
@@ -139,7 +140,7 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer, onQue
 
       setSaleItems(adjustedItems);
     } catch (err) {
-      console.error('Error loading sale items:', err);
+      logger.error('Error loading sale items', 'SalesReturnTab');
       // Fallback: try cached sale items, then cached invoices
       try {
         const sale = localSales.find(s => s.id === saleId);

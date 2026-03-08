@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '@/lib/logger';
 import { useTranslation } from 'react-i18next';
 import { 
   BarChart3, TrendingUp, TrendingDown, DollarSign,
@@ -39,7 +40,7 @@ const ReportsTab: React.FC = () => {
       if (cRes.data) setCollectionsTotal(cRes.data.reduce((s, c) => s + Number(c.amount), 0));
       if (diRes.data) setDistributorInventory(diRes.data);
       if (discRes.data) setTotalDiscounts(discRes.data.reduce((s, d) => s + Number(d.discount_value || 0), 0));
-    } catch (error) { console.error('Error loading report data:', error); }
+    } catch (error) { logger.error('Error loading report data', 'ReportsTab'); }
     finally { setLoading(false); }
   };
 

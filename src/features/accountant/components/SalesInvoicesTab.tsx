@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { logger } from '@/lib/logger';
 import { useTranslation } from 'react-i18next';
 import {
   FileText, 
@@ -79,7 +80,7 @@ const SalesInvoicesTab: React.FC = () => {
         .eq('sale_id', sale.id);
       setSaleItems(data || []);
     } catch (err) {
-      console.error('Error fetching sale items for print:', err);
+      logger.error('Error fetching sale items for print', 'SalesInvoicesTab');
     }
     setPrintInvoice(sale);
   };

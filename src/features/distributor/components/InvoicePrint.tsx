@@ -4,6 +4,7 @@
  * Fully localized with i18n.
  */
 import React, { useState, useEffect } from 'react';
+import { logger } from '@/lib/logger';
 import { useTranslation } from 'react-i18next';
 import { Share2, Download, Loader2, Receipt, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -288,7 +289,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
           await cacheOrgInfo(orgRes.data?.name || '', legalRes.data || null);
         } catch { /* ignore */ }
       } catch (err) {
-        console.error('[InvoicePrint] fetchLegalInfo error:', err);
+        logger.error('fetchLegalInfo error', 'InvoicePrint');
       } finally {
         setLoading(false);
       }
@@ -357,7 +358,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
     try {
       await ensurePdf();
     } catch (err) {
-      console.error('[InvoicePrint] PDF generation failed:', err);
+      logger.error('PDF generation failed', 'InvoicePrint');
     } finally {
       setGenerating(false);
     }
@@ -374,7 +375,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
       const { shareInvoicePdf, buildInvoiceFileName } = await import('@/lib/invoicePdfService');
       await shareInvoicePdf(b64, buildInvoiceFileName(invoiceId), getInvoiceTitle());
     } catch (err) {
-      console.error('[InvoicePrint] Share failed:', err);
+      logger.error('Share failed', 'InvoicePrint');
     } finally {
       setActionLoading(null);
     }
@@ -389,7 +390,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
       setSavedOk(true);
       setTimeout(() => setSavedOk(false), 3000);
     } catch (err) {
-      console.error('[InvoicePrint] Save failed:', err);
+      logger.error('Save failed', 'InvoicePrint');
     } finally {
       setActionLoading(null);
     }

@@ -3,9 +3,13 @@
  * 
  * Provides client-side security checks for Capacitor Android APK.
  * See docs/android-security-plugin.md for native setup instructions.
+ * 
+ * Security checks are re-evaluated periodically (every 30 minutes)
+ * to detect runtime state changes (e.g. device rooted after launch).
  */
 
 import { Capacitor, registerPlugin } from '@capacitor/core';
+import { logger } from '@/lib/logger';
 
 export interface SecurityCheckResult {
   isRooted: boolean;
@@ -13,27 +17,36 @@ export interface SecurityCheckResult {
   isSignatureValid: boolean;
   screenshotBlocked: boolean;
   details: string[];
+  checkedAt: number;
 }
 
 let cachedResult: SecurityCheckResult | null = null;
+
+/** Re-check interval: 30 minutes */
+const RECHECK_INTERVAL_MS = 30 * 60 * 1000;
 
 const AppSecurity = registerPlugin<any>('AppSecurity');
 
 async function callNativePlugin(method: string): Promise<any> {
   try {
     if (!Capacitor.isPluginAvailable('AppSecurity')) {
-      console.warn('[Security] AppSecurity plugin not available');
+      logger.warn('AppSecurity plugin not available', 'Security');
       return null;
     }
     return await AppSecurity[method]();
   } catch (e) {
-    console.warn(`[Security] Plugin call failed (${method}):`, e);
+    logger.warn(`Plugin call failed (${method})`, 'Security');
     return null;
   }
 }
 
-export async function runSecurityChecks(): Promise<SecurityCheckResult> {
-  if (cachedResult) return cachedResult;
+function isCacheExpired(): boolean {
+  if (!cachedResult) return true;
+  return Date.now() - cachedResult.checkedAt > RECHECK_INTERVAL_MS;
+}
+
+export async function runSecurityChecks(forceRefresh = false): Promise<SecurityCheckResult> {
+  if (cachedResult && !forceRefresh && !isCacheExpired()) return cachedResult;
 
   if (!Capacitor.isNativePlatform()) {
     cachedResult = {
@@ -42,6 +55,7 @@ export async function runSecurityChecks(): Promise<SecurityCheckResult> {
       isSignatureValid: true,
       screenshotBlocked: false,
       details: ['Running in web browser — native checks skipped'],
+      checkedAt: Date.now(),
     };
     return cachedResult;
   }
@@ -67,7 +81,14 @@ export async function runSecurityChecks(): Promise<SecurityCheckResult> {
   const isSignatureValid = sigResult?.isValid !== false;
   details.push(isSignatureValid ? '✓ APK signature valid' : '⚠ APK SIGNATURE MISMATCH');
 
-  cachedResult = { isRooted, isSideloaded, isSignatureValid, screenshotBlocked, details };
+  cachedResult = { isRooted, isSideloaded, isSignatureValid, screenshotBlocked, details, checkedAt: Date.now() };
+  
+  if (isRooted || isSideloaded || !isSignatureValid) {
+    logger.warn('Security check flagged issues', 'Security', {
+      isRooted, isSideloaded, isSignatureValid,
+    });
+  }
+  
   return cachedResult;
 }
 

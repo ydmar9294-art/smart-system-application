@@ -3,6 +3,7 @@ import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/store/AppContext';
+import { logger } from '@/lib/logger';
 
 export const useAppShortcuts = () => {
   const navigate = useNavigate();
@@ -23,8 +24,8 @@ export const useAppShortcuts = () => {
         } else if (path.startsWith('/inventory')) {
           navigate('/#/inventory');
         }
-      } catch (error) {
-        console.error('Deep link handling error:', error);
+      } catch {
+        logger.error('Deep link handling error', 'AppShortcuts');
       }
     };
 
