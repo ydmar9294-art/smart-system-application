@@ -1,63 +1,67 @@
 /**
  * Centralized Error Handler
- * Provides consistent error handling and user-friendly messages
+ * Provides consistent error handling with i18n support
  */
+import i18n from '@/lib/i18n';
 
 // ============================================
-// Error Message Translations
+// Error Message Translation Keys
 // ============================================
 
-const ERROR_TRANSLATIONS: Record<string, string> = {
-  'Invalid login credentials': 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
-  'Failed to fetch': 'خطأ في الاتصال بالسيرفر',
-  'Network Error': 'خطأ في الاتصال بالشبكة',
-  'timeout': 'انتهت مهلة الاتصال',
-  'User already registered': 'هذا البريد الإلكتروني مسجل مسبقاً',
-  'Email not confirmed': 'لم يتم تأكيد البريد الإلكتروني',
-  'Invalid token': 'جلسة غير صالحة، يرجى تسجيل الدخول مجدداً',
-  'JWT expired': 'انتهت صلاحية الجلسة، يرجى تسجيل الدخول مجدداً',
-  'Insufficient stock': 'المخزون غير كافٍ',
-  'Stock cannot be negative': 'لا يمكن أن يكون المخزون سالباً',
-  'No organization found': 'لم يتم العثور على المنشأة',
-  'Product not found': 'المنتج غير موجود',
-  'Customer not found': 'العميل غير موجود',
-  'Sale not found': 'الفاتورة غير موجودة',
-  'License not found': 'الترخيص غير موجود',
-  'License has expired': 'انتهت صلاحية الترخيص',
-  'Activation code not found': 'كود التفعيل غير موجود أو مستخدم',
-  'Unauthorized': 'غير مصرح بهذه العملية',
-  'Sale is already voided': 'الفاتورة ملغية بالفعل',
-  'Payment is already reversed': 'الدفعة معكوسة بالفعل',
-  'Amount exceeds remaining balance': 'المبلغ أكبر من الرصيد المتبقي',
-  'Cannot add collection to voided sale': 'لا يمكن إضافة تحصيل لفاتورة ملغية',
-  'Cannot return items from voided sale': 'لا يمكن إرجاع أصناف من فاتورة ملغية'
+const ERROR_KEY_MAP: Record<string, string> = {
+  'Invalid login credentials': 'errors.invalidCredentials',
+  'Failed to fetch': 'errors.serverConnection',
+  'Network Error': 'errors.networkError',
+  'timeout': 'errors.timeout',
+  'User already registered': 'errors.emailAlreadyRegistered',
+  'Email not confirmed': 'errors.emailNotConfirmed',
+  'Invalid token': 'errors.invalidToken',
+  'JWT expired': 'errors.jwtExpired',
+  'Insufficient stock': 'errors.insufficientStock',
+  'Stock cannot be negative': 'errors.stockNegative',
+  'No organization found': 'errors.noOrganization',
+  'Product not found': 'errors.productNotFound',
+  'Customer not found': 'errors.customerNotFound',
+  'Sale not found': 'errors.saleNotFound',
+  'License not found': 'errors.licenseNotFound',
+  'License has expired': 'errors.licenseExpired',
+  'Activation code not found': 'errors.activationCodeNotFound',
+  'Unauthorized': 'errors.unauthorized',
+  'Sale is already voided': 'errors.saleAlreadyVoided',
+  'Payment is already reversed': 'errors.paymentAlreadyReversed',
+  'Amount exceeds remaining balance': 'errors.amountExceedsBalance',
+  'Cannot add collection to voided sale': 'errors.collectionOnVoidedSale',
+  'Cannot return items from voided sale': 'errors.returnOnVoidedSale',
 };
 
 /**
- * Translate technical error messages to user-friendly Arabic messages
+ * Translate technical error messages using i18n keys
  */
 export const translateError = (message: string): string => {
   // Check for exact matches first
-  if (ERROR_TRANSLATIONS[message]) {
-    return ERROR_TRANSLATIONS[message];
+  const key = ERROR_KEY_MAP[message];
+  if (key && i18n.exists(key)) {
+    return i18n.t(key);
   }
 
   // Check for partial matches
-  for (const [key, value] of Object.entries(ERROR_TRANSLATIONS)) {
-    if (message.toLowerCase().includes(key.toLowerCase())) {
-      return value;
+  for (const [pattern, translationKey] of Object.entries(ERROR_KEY_MAP)) {
+    if (message.toLowerCase().includes(pattern.toLowerCase())) {
+      if (i18n.exists(translationKey)) {
+        return i18n.t(translationKey);
+      }
     }
   }
 
   // Return original message if no translation found
-  return message || 'حدث خطأ غير متوقع';
+  return message || i18n.t('errors.unexpected');
 };
 
 /**
  * Extract error message from various error types
  */
 export const extractErrorMessage = (error: unknown): string => {
-  if (!error) return 'حدث خطأ غير متوقع';
+  if (!error) return i18n.t('errors.unexpected');
 
   // Supabase error format
   if (typeof error === 'object' && 'message' in error) {
@@ -74,7 +78,7 @@ export const extractErrorMessage = (error: unknown): string => {
     return translateError(error);
   }
 
-  return 'حدث خطأ غير متوقع';
+  return i18n.t('errors.unexpected');
 };
 
 /**
@@ -98,12 +102,12 @@ export const createErrorHandler = (
 export const withTimeout = <T>(
   promise: Promise<T>,
   timeoutMs: number,
-  timeoutMessage: string = 'انتهت مهلة العملية'
+  timeoutMessage?: string
 ): Promise<T> => {
   return Promise.race([
     promise,
     new Promise<T>((_, reject) => {
-      setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+      setTimeout(() => reject(new Error(timeoutMessage || i18n.t('errors.operationTimeout'))), timeoutMs);
     })
   ]);
 };
