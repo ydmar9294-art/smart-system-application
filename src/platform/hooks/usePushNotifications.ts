@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { pushNotificationService } from '@/services/pushNotifications';
+import { logger } from '@/lib/logger';
 
 export const usePushNotifications = () => {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -12,7 +13,7 @@ export const usePushNotifications = () => {
         setIsInitialized(true);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to initialize push notifications');
-        console.error('Push notification initialization error:', err);
+        logger.error('Push notification initialization error', 'PushNotifications');
       }
     };
 
@@ -22,16 +23,16 @@ export const usePushNotifications = () => {
   const sendTestNotification = async () => {
     try {
       await pushNotificationService.sendTestNotification();
-    } catch (err) {
-      console.error('Error sending test notification:', err);
+    } catch {
+      logger.error('Error sending test notification', 'PushNotifications');
     }
   };
 
   const showNotification = async (title: string, body: string, data?: Record<string, unknown>) => {
     try {
       await pushNotificationService.showLocalNotification({ title, body, data });
-    } catch (err) {
-      console.error('Error showing notification:', err);
+    } catch {
+      logger.error('Error showing notification', 'PushNotifications');
     }
   };
 

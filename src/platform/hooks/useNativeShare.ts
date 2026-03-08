@@ -1,6 +1,8 @@
 import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 import { copyToClipboard } from '@/lib/clipboard';
+import { logger } from '@/lib/logger';
+
 export const useNativeShare = () => {
   const share = async (options: {
     title: string;
@@ -27,7 +29,7 @@ export const useNativeShare = () => {
       });
     } catch (error: any) {
       if (error.message !== 'User cancelled') {
-        console.error('Share error:', error);
+        logger.error('Share error', 'NativeShare');
       }
     }
   };

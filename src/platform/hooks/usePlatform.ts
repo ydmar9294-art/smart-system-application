@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core';
+import { logger } from '@/lib/logger';
 
 export const usePlatform = () => {
   const getPlatform = () => Capacitor.getPlatform();
@@ -12,8 +13,8 @@ export const usePlatform = () => {
       const { Device } = await import('@capacitor/device');
       const info = await Device.getInfo();
       return info;
-    } catch (error) {
-      console.error('Device info error:', error);
+    } catch {
+      logger.error('Device info error', 'Platform');
       return null;
     }
   };
