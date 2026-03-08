@@ -4,6 +4,7 @@
  * Fully localized with i18n.
  */
 import React, { useState, useEffect } from 'react';
+import { logger } from '@/lib/logger';
 import { useTranslation } from 'react-i18next';
 import { Share2, Download, Loader2, Receipt, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
