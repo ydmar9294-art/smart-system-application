@@ -1,9 +1,10 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { MessageCircle, Settings } from 'lucide-react';
+import { MessageCircle, Settings, Sparkles } from 'lucide-react';
 import AIAssistant from '@/features/ai/components/AIAssistant';
 import { NotificationCenter } from '@/features/notifications/components/NotificationCenter';
 import { SUPPORT_WHATSAPP_URL } from '@/constants';
+import { motion } from 'motion/react';
 
 interface DashboardHeaderProps {
   userName: string;
@@ -31,20 +32,39 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   const greeting = isRTL ? `مرحباً، ${userName} 👋` : `Hello, ${userName} 👋`;
 
   return (
-    <div className="native-header safe-area-top" dir={isRTL ? 'rtl' : 'ltr'}>
+    <motion.div
+      className="native-header safe-area-top"
+      dir={isRTL ? 'rtl' : 'ltr'}
+      initial={{ y: -24, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+    >
+      {/* Status badge row */}
+      <div className="flex items-center justify-center pt-2.5 pb-0.5 gap-2">
+        <motion.div
+          className="native-header-status-badge"
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.2, type: 'spring', stiffness: 400 }}
+        >
+          <Sparkles className="w-2.5 h-2.5" />
+          <span>{isRTL ? 'منصة الإنتاج الذكي' : 'Smart Production'}</span>
+        </motion.div>
+      </div>
+
       {/* Main row: Profile + Actions */}
-      <div className="flex items-center justify-between px-4 pt-3 pb-2">
+      <div className="flex items-center justify-between px-4 pt-1.5 pb-2.5">
         {/* Profile capsule */}
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="native-header-avatar">
-            <div className={`w-9 h-9 ${iconBgClass} rounded-xl flex items-center justify-center`}>
+            <div className={`w-10 h-10 ${iconBgClass} rounded-[1rem] flex items-center justify-center shadow-lg`}>
               {icon}
             </div>
             {/* Online indicator */}
             <div className="absolute -bottom-0.5 -end-0.5 w-2.5 h-2.5 rounded-full bg-success border-2 border-background" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-black text-foreground text-[13px] leading-tight truncate">{greeting}</p>
+            <p className="font-black text-foreground text-[14px] leading-tight truncate">{greeting}</p>
             <p className="text-[10px] text-muted-foreground font-bold mt-0.5 truncate">{subtitle}</p>
           </div>
         </div>
@@ -81,6 +101,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
 
       {/* Bottom accent line */}
       <div className="native-header-edge" />
-    </div>
+    </motion.div>
   );
 };

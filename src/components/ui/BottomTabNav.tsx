@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { ImpactStyle } from '@capacitor/haptics';
 import { useHaptics } from '@/platform/hooks/useHaptics';
+import { motion, AnimatePresence } from 'motion/react';
 
 export interface BottomTab {
   id: string;
@@ -28,7 +29,12 @@ export const BottomTabNav: React.FC<BottomTabNavProps> = ({ tabs, activeTab, onT
 
   return (
     <nav className="native-bottom-nav safe-area-bottom" role="tablist" aria-label="Main navigation">
-      <div className="native-bottom-nav-inner">
+      <motion.div
+        className="native-bottom-nav-inner"
+        initial={{ y: 40, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 28, delay: 0.1 }}
+      >
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -40,19 +46,47 @@ export const BottomTabNav: React.FC<BottomTabNavProps> = ({ tabs, activeTab, onT
               role="tab"
             >
               <div className={`native-tab-icon ${isActive ? 'native-tab-icon-lit' : ''}`}>
-                {isActive && tab.activeIcon ? tab.activeIcon : tab.icon}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={isActive ? 'active' : 'inactive'}
+                    initial={{ scale: 0.7, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.7, opacity: 0 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                  >
+                    {isActive && tab.activeIcon ? tab.activeIcon : tab.icon}
+                  </motion.div>
+                </AnimatePresence>
                 {tab.badge != null && tab.badge > 0 && (
-                  <span className="native-tab-badge">{tab.badge > 99 ? '99+' : tab.badge}</span>
+                  <motion.span
+                    className="native-tab-badge"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 15 }}
+                  >
+                    {tab.badge > 99 ? '99+' : tab.badge}
+                  </motion.span>
                 )}
               </div>
               <span className={`native-tab-label ${isActive ? 'native-tab-label-lit' : ''}`}>
                 {tab.label}
               </span>
-              {isActive && <div className="native-tab-dot" />}
+              <AnimatePresence>
+                {isActive && (
+                  <motion.div
+                    className="native-tab-dot"
+                    layoutId="tab-dot-indicator"
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                  />
+                )}
+              </AnimatePresence>
             </button>
           );
         })}
-      </div>
+      </motion.div>
     </nav>
   );
 };
