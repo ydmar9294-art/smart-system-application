@@ -724,7 +724,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
               disabled={!selectedReturnProduct || returnItemQty <= 0}
               className="w-full py-4 bg-destructive/10 text-destructive rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98] transition-transform"
             >
-              <Plus size={20} /> إضافة للمرتجع
+              <Plus size={20} /> {t('ownerInventory.addToReturn')}
             </button>
           </div>
 
