@@ -1,4 +1,3 @@
-/**
 import { logger } from '@/lib/logger';
 /**
  * Auth Cache - Persistent offline-first caching strategy
