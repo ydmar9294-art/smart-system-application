@@ -227,7 +227,7 @@ export function useDistributorOffline() {
       await cacheCustomers(mapped);
       await refreshStats();
     } catch {
-      console.warn('[DistributorOffline] Customers fetch failed, using cache');
+      logger.warn('Customers fetch failed, using cache', 'DistributorOffline');
     }
   }, [refreshStats]);
 
