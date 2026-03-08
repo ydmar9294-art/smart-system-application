@@ -109,7 +109,6 @@ const ar = {
     takingLonger: 'يستغرق الأمر وقتاً أطول من المعتاد...',
     accessDenied: 'تم رفض الوصول',
     errorOccurred: 'حدث خطأ',
-    // Validation
     enterEmail: 'يرجى إدخال البريد الإلكتروني',
     enterPassword: 'يرجى إدخال كلمة المرور',
     passwordMin6: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل',
@@ -124,15 +123,15 @@ const ar = {
     googleAuthFailed: 'فشل تسجيل الدخول بجوجل. يرجى المحاولة مرة أخرى',
     emailNotFound: 'الإيميل غير موجود',
     verificationError: 'حدث خطأ أثناء التحقق',
-    // Loading phases
     phaseReturning: 'جارٍ تسجيل الدخول...',
     phaseValidating: 'جارٍ التحقق من الترخيص...',
     phaseChecking: 'جارٍ التحقق من حالة الحساب...',
     verifyTimeout: 'استغرق التحقق وقتاً طويلاً. يرجى المحاولة مرة أخرى.',
-    // Features
     secure: 'آمن',
     accurate: 'دقيق',
     fast: 'سريع',
+    enterEmailFirst: 'يرجى إدخال البريد الإلكتروني أولاً',
+    profileCheckError: 'حدث خطأ في التحقق من الحساب',
   },
 
   // ==========================================
@@ -177,6 +176,7 @@ const ar = {
     likeSystem: 'أعجبك النظام؟',
     promoText: 'للحصول على الوصول الكامل، تواصل مع الشركة لحجز ترخيص تجريبي وجلسة شخصية لتحديد احتياجاتك.',
     contactWhatsapp: 'تواصل عبر واتساب',
+    previewBanner: 'وضع المعاينة —',
   },
 
   // ==========================================
@@ -233,6 +233,8 @@ const ar = {
     totalCustomers: 'العملاء',
     totalProducts: 'المنتجات',
     totalEmployees: 'الموظفين',
+    cashLabel: 'نقدي',
+    creditLabel: 'آجل',
   },
 
   // ==========================================
@@ -556,6 +558,30 @@ const ar = {
   },
 
   // ==========================================
+  // ORG DELETION
+  // ==========================================
+  orgDeletion: {
+    title: 'طلب حذف المنشأة',
+    pendingTitle: 'طلب حذف المنشأة',
+    pendingDate: 'تم تقديم طلب حذف المنشأة بتاريخ',
+    pendingStatus: 'الحالة: قيد المراجعة من قبل فريق الدعم',
+    reason: 'السبب:',
+    approvedNote: 'تمت الموافقة على طلبك. سيتم تنفيذ الحذف قريباً.',
+    requestButton: 'طلب حذف المنشأة',
+    confirmTitle: 'طلب حذف المنشأة',
+    confirmDesc: 'سيتم حذف منشأتك',
+    confirmDescEnd: 'نهائياً مع جميع البيانات والسجلات.',
+    irreversible: '⚠️ لا يمكن التراجع عن هذا الإجراء بعد الموافقة والتنفيذ.',
+    reasonLabel: 'سبب الحذف (اختياري)',
+    reasonPlaceholder: 'لماذا تريد حذف المنشأة؟',
+    typeOrgName: 'اكتب اسم المنشأة',
+    typeOrgNameConfirm: 'للتأكيد *',
+    confirmButton: 'تأكيد طلب الحذف',
+    submittingButton: 'جاري الإرسال...',
+    errorPrefix: 'خطأ: ',
+  },
+
+  // ==========================================
   // BACKUP
   // ==========================================
   backup: {
@@ -573,9 +599,39 @@ const ar = {
   // NOTIFICATIONS
   // ==========================================
   notifications: {
-    title: 'الإشعارات',
-    noNotifications: 'لا توجد إشعارات',
-    markRead: 'تعليم كمقروء',
+    title: 'مركز التنبيهات',
+    noNotifications: 'لا توجد تنبيهات',
+    markRead: 'قراءة الكل',
+    outOfStock: 'نفاد المخزون',
+    lowStock: 'مخزون منخفض',
+    dueInvoice: 'فاتورة مستحقة',
+    outOfStockDesc: 'نفد من المخزون',
+    lowStockDesc: 'متبقي',
+    now: 'الآن',
+    minutesAgo: 'منذ {{count}} دقيقة',
+    hoursAgo: 'منذ {{count}} ساعة',
+    daysAgo: 'منذ {{count}} يوم',
+    outLabel: 'نفاد',
+    lowLabel: 'منخفض',
+    dueLabel: 'مستحق',
+  },
+
+  // ==========================================
+  // STOCK MOVEMENTS
+  // ==========================================
+  stockMovements: {
+    transfer: 'تحويل',
+    sale: 'بيع',
+    return: 'مرتجع مبيعات',
+    purchase: 'شراء',
+    adjustment: 'تعديل',
+    delivery: 'تسليم',
+    all: 'الكل',
+    noMovements: 'لا توجد حركات مخزنية',
+    fromCentral: 'المستودع الرئيسي',
+    fromDistributor: 'مخزن الموزع',
+    toCustomer: 'العميل',
+    by: 'بواسطة:',
   },
 };
 
