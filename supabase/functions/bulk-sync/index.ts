@@ -3,6 +3,7 @@
  * Accepts batched offline operations from distributors.
  * Processes sequentially respecting dependency ordering.
  * Returns per-operation results for partial success/failure.
+ * Includes idempotency checking to prevent duplicate operations.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -21,7 +22,7 @@ interface SyncOperation {
 
 interface SyncResult {
   id: string;
-  status: 'synced' | 'failed' | 'deferred';
+  status: 'synced' | 'failed' | 'deferred' | 'duplicate';
   serverId?: string;
   error?: string;
 }
@@ -45,6 +46,7 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
+    // Validate token using getClaims (signing-keys compatible)
     const token = authHeader.replace('Bearer ', '');
     const { data: claims, error: claimsErr } = await supabase.auth.getClaims(token);
     if (claimsErr || !claims?.claims) {
@@ -84,15 +86,53 @@ Deno.serve(async (req) => {
       });
     }
 
+    // --- Idempotency check ---
+    // Collect all idempotency keys and check against audit_logs
+    const idempotencyKeys = operations
+      .map(op => op.idempotencyKey)
+      .filter(Boolean);
+
+    const processedKeys = new Set<string>();
+    if (idempotencyKeys.length > 0) {
+      const { data: existingLogs } = await supabase
+        .from('audit_logs')
+        .select('entity_id')
+        .eq('action', 'BULK_SYNC_OP')
+        .in('entity_id', idempotencyKeys);
+
+      if (existingLogs) {
+        for (const log of existingLogs) {
+          if (log.entity_id) processedKeys.add(log.entity_id);
+        }
+      }
+    }
+
     // Track ID mappings within this batch (local → server)
     const customerIdMap = new Map<string, string>();
     const saleIdMap = new Map<string, string>();
     const results: SyncResult[] = [];
 
     for (const op of operations) {
+      // Skip already-processed operations (idempotency)
+      if (op.idempotencyKey && processedKeys.has(op.idempotencyKey)) {
+        results.push({ id: op.id, status: 'duplicate' });
+        continue;
+      }
+
       try {
         const result = await processOperation(supabase, op, customerIdMap, saleIdMap);
         results.push(result);
+
+        // Record idempotency key on success
+        if (result.status === 'synced' && op.idempotencyKey) {
+          await supabase.from('audit_logs').insert({
+            action: 'BULK_SYNC_OP',
+            entity_type: op.type,
+            entity_id: op.idempotencyKey,
+            user_id: userId,
+            details: { serverId: result.serverId },
+          }).then(() => {});  // fire-and-forget
+        }
       } catch (err) {
         results.push({
           id: op.id,
@@ -105,12 +145,13 @@ Deno.serve(async (req) => {
     // Write audit summary
     const syncedCount = results.filter(r => r.status === 'synced').length;
     const failedCount = results.filter(r => r.status === 'failed').length;
+    const duplicateCount = results.filter(r => r.status === 'duplicate').length;
 
-    console.log(`[bulk-sync] user=${userId} total=${operations.length} synced=${syncedCount} failed=${failedCount}`);
+    console.log(`[bulk-sync] user=${userId} total=${operations.length} synced=${syncedCount} failed=${failedCount} duplicates=${duplicateCount}`);
 
     return new Response(JSON.stringify({
       results,
-      summary: { total: operations.length, synced: syncedCount, failed: failedCount },
+      summary: { total: operations.length, synced: syncedCount, failed: failedCount, duplicates: duplicateCount },
       idMappings: {
         customers: Object.fromEntries(customerIdMap),
         sales: Object.fromEntries(saleIdMap),

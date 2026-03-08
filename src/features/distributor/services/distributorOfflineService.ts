@@ -1035,7 +1035,10 @@ export function stopDistributorSync(): void {
     clearInterval(syncIntervalId);
     syncIntervalId = null;
   }
-  window.removeEventListener('online', handleOnline);
+  if (onlineListenerActive) {
+    window.removeEventListener('online', handleOnline);
+    onlineListenerActive = false;
+  }
 }
 
 function handleOnline(): void {
