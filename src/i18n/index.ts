@@ -6,13 +6,8 @@ import en from './locales/en';
 
 const LANGUAGE_STORAGE_KEY = 'smart_system_language';
 
-// Get stored language preference
 const getStoredLanguage = (): string | null => {
-  try {
-    return localStorage.getItem(LANGUAGE_STORAGE_KEY);
-  } catch {
-    return null;
-  }
+  try { return localStorage.getItem(LANGUAGE_STORAGE_KEY); } catch { return null; }
 };
 
 i18n
@@ -23,38 +18,46 @@ i18n
       ar: { translation: ar },
       en: { translation: en },
     },
-    lng: getStoredLanguage() || undefined, // Use stored preference if exists
+    lng: getStoredLanguage() || undefined,
     fallbackLng: 'en',
     supportedLngs: ['ar', 'en'],
-    interpolation: {
-      escapeValue: false,
-    },
+    interpolation: { escapeValue: false },
     detection: {
       order: ['localStorage', 'navigator'],
       lookupLocalStorage: LANGUAGE_STORAGE_KEY,
       caches: ['localStorage'],
     },
-    react: {
-      useSuspense: false,
-    },
+    react: { useSuspense: false },
   });
 
-// Apply direction on language change
+// Apply direction + smooth transition on language change
 const applyDirection = (lng: string) => {
   const dir = lng === 'ar' ? 'rtl' : 'ltr';
-  document.documentElement.dir = dir;
-  document.documentElement.lang = lng;
+  const el = document.documentElement;
+
+  // Add transition class for smooth language switch animation
+  el.classList.add('lang-transition');
+  
+  el.dir = dir;
+  el.lang = lng;
+  el.setAttribute('data-lang', lng);
+
+  // Remove transition class after animation completes
+  requestAnimationFrame(() => {
+    setTimeout(() => el.classList.remove('lang-transition'), 400);
+  });
 };
 
-// Apply initial direction
-applyDirection(i18n.language || 'ar');
+// Apply initial direction (no transition on first load)
+const initDir = (i18n.language || 'ar') === 'ar' ? 'rtl' : 'ltr';
+document.documentElement.dir = initDir;
+document.documentElement.lang = i18n.language || 'ar';
+document.documentElement.setAttribute('data-lang', i18n.language || 'ar');
 
 // Listen for language changes
 i18n.on('languageChanged', (lng) => {
   applyDirection(lng);
-  try {
-    localStorage.setItem(LANGUAGE_STORAGE_KEY, lng);
-  } catch {}
+  try { localStorage.setItem(LANGUAGE_STORAGE_KEY, lng); } catch {}
 });
 
 export const changeLanguage = async (lng: string) => {

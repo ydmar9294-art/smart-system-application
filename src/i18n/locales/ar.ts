@@ -252,6 +252,8 @@ const ar = {
     english: 'English',
     systemDefault: 'لغة النظام',
     languageChanged: 'تم تغيير اللغة',
+    selectLanguage: 'اختر لغة التطبيق',
+    switchHint: 'يتم تحديث جميع النصوص والاتجاه فوراً',
   },
 
   // ── Account Deletion ────────────────────────────────────────────
