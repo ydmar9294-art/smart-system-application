@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShoppingCart, Search, Package, ChevronDown } from 'lucide-react';
+import { VirtualList } from '@/components/ui/VirtualList';
 import { CURRENCY } from '@/constants';
 import { useAuth } from '@/store/AuthContext';
 import { usePurchasesPaginatedQuery } from '@/hooks/queries';
