@@ -1361,31 +1361,33 @@ export interface CachedInvoice {
 }
 
 export async function cacheInvoices(invoices: CachedInvoice[]): Promise<void> {
-  // Preserve local (unsynced) invoices during server refresh
-  const existing = await getAllEncryptedItems<CachedInvoice>(STORES.INVOICES_CACHE);
-  const localInvoices = existing.filter(inv => inv.isLocal);
-  
-  // Prepare all records first
-  const records: Array<{ key: string; value: any }> = [];
-  
-  for (const inv of invoices) {
-    const record = await prepareEncryptedRecord(inv);
-    records.push({ key: inv.id, value: record });
-  }
-  
-  // Re-add local unsynced invoices
-  const serverIds = new Set(invoices.map(inv => inv.id));
-  for (const inv of localInvoices) {
-    const mappedId = saleIdMap.get(inv.id);
-    if (mappedId && serverIds.has(mappedId)) continue;
-    if (!serverIds.has(inv.id)) {
+  return withWriteLock(STORES.INVOICES_CACHE, async () => {
+    // Preserve local (unsynced) invoices during server refresh
+    const existing = await getAllEncryptedItems<CachedInvoice>(STORES.INVOICES_CACHE);
+    const localInvoices = existing.filter(inv => inv.isLocal);
+    
+    // Prepare all records first
+    const records: Array<{ key: string; value: any }> = [];
+    
+    for (const inv of invoices) {
       const record = await prepareEncryptedRecord(inv);
       records.push({ key: inv.id, value: record });
     }
-  }
-  
-  // ATOMIC: clear + write all in a single transaction
-  await atomicReplaceStore(STORES.INVOICES_CACHE, records);
+    
+    // Re-add local unsynced invoices
+    const serverIds = new Set(invoices.map(inv => inv.id));
+    for (const inv of localInvoices) {
+      const mappedId = saleIdMap.get(inv.id);
+      if (mappedId && serverIds.has(mappedId)) continue;
+      if (!serverIds.has(inv.id)) {
+        const record = await prepareEncryptedRecord(inv);
+        records.push({ key: inv.id, value: record });
+      }
+    }
+    
+    // ATOMIC: clear + write all in a single transaction
+    await atomicReplaceStore(STORES.INVOICES_CACHE, records);
+  });
 }
 
 export async function getCachedInvoices(): Promise<CachedInvoice[]> {
