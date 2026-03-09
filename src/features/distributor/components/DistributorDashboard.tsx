@@ -47,7 +47,9 @@ const DistributorDashboard: React.FC = () => {
   const isRtl = i18n.language === 'ar';
   const { logout, addNotification, refreshAllData, organization, user: appUser } = useApp();
   const offline = useDistributorOffline();
+  const { role: authRole, organization: authOrg } = useAuth();
   const [activeTab, setActiveTab] = useState<DistributorTabType>('inventory');
+  useTabPrefetch(activeTab, authOrg?.id, authRole);
   const [loggingOut, setLoggingOut] = useState(false);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);

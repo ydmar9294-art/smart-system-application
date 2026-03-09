@@ -39,7 +39,9 @@ const OwnerDashboard: React.FC = () => {
     deactivateEmployee, reactivateEmployee, organization
   } = useApp();
   
+  const { role: authRole, organization: authOrg } = useAuth();
   const [activeTab, setActiveTab] = useState<OwnerTabType>('daily');
+  useTabPrefetch(activeTab, authOrg?.id, authRole);
   const [loggingOut, setLoggingOut] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
