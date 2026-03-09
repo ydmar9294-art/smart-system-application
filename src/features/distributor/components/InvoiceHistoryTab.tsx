@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { CURRENCY } from '@/constants';
+import { InvoiceListItem } from '@/components/ui/MemoizedListItems';
 import InvoiceHistoryPrint from './InvoiceHistoryPrint';
 import {
   cacheInvoices,
