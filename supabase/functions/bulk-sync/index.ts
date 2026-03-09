@@ -14,6 +14,8 @@ interface SyncOperation {
   type: 'ADD_CUSTOMER' | 'CREATE_SALE' | 'ADD_COLLECTION' | 'CREATE_RETURN' | 'TRANSFER_TO_WAREHOUSE';
   payload: Record<string, unknown>;
   idempotencyKey: string;
+  /** Client-side HMAC signature for integrity verification */
+  _signature?: string;
 }
 
 interface SyncResult {
