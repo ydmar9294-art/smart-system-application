@@ -61,7 +61,7 @@ export function useTabPrefetch(
                 ),
                 { label: 'prefetch_payments' }
               );
-              return (data || []).map(transformPayment);
+              return ((data || []) as any[]).map(transformPayment);
             },
           });
           break;
