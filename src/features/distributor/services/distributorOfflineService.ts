@@ -1374,11 +1374,31 @@ export async function cacheInvoices(invoices: CachedInvoice[]): Promise<void> {
       records.push({ key: inv.id, value: record });
     }
     
-    // Re-add local unsynced invoices
+    // Build a comprehensive set of server IDs + mapped IDs for deduplication
     const serverIds = new Set(invoices.map(inv => inv.id));
+    // Also collect all reference_ids from server invoices to match local ones
+    const serverRefIds = new Set(invoices.map(inv => inv.reference_id).filter(Boolean));
+    
+    // Re-add local unsynced invoices — but only if no server equivalent exists
     for (const inv of localInvoices) {
+      // Check if this local invoice's ID was mapped to a server ID (sale invoices)
       const mappedId = saleIdMap.get(inv.id);
       if (mappedId && serverIds.has(mappedId)) continue;
+      
+      // Check if the local invoice's reference_id was mapped and now exists on server
+      const mappedRefId = inv.reference_id ? saleIdMap.get(inv.reference_id) : null;
+      if (mappedRefId && serverRefIds.has(mappedRefId)) continue;
+      
+      // Check if server already has an invoice with the same reference_id and type
+      // (handles collections/returns where the local ID differs from server ID)
+      if (inv.reference_id && inv.invoice_type !== 'sale') {
+        const resolvedRefId = mappedRefId || inv.reference_id;
+        const serverHasEquivalent = invoices.some(
+          si => si.invoice_type === inv.invoice_type && si.reference_id === resolvedRefId
+        );
+        if (serverHasEquivalent) continue;
+      }
+      
       if (!serverIds.has(inv.id)) {
         const record = await prepareEncryptedRecord(inv);
         records.push({ key: inv.id, value: record });
