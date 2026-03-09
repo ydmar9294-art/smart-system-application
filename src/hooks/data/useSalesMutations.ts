@@ -11,6 +11,17 @@ import { generateUUID } from '@/lib/uuid';
 import { extractErrorMessage } from '@/lib/errorHandler';
 import { withOfflineQueue, processQueue } from './useOfflineMutationQueue';
 
+// Register service functions for offline replay
+const offlineCreateSale = withOfflineQueue('salesService.createSale', (args: any) =>
+  salesService.createSale(args)
+);
+const offlineAddCollection = withOfflineQueue('collectionService.addCollection', (saleId: string, amount: number, notes?: string) =>
+  collectionService.addCollection(saleId, amount, notes)
+);
+const offlineVoidSale = withOfflineQueue('salesService.voidSale', (args: any) =>
+  salesService.voidSale(args)
+);
+
 export function useSalesMutations(orgId?: string | null, onError?: (msg: string) => void) {
   const queryClient = useQueryClient();
 
