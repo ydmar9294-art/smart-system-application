@@ -99,7 +99,7 @@ export function useTabPrefetch(
                 ),
                 { label: 'prefetch_sales' }
               );
-              return (data || []).map(transformSale);
+              return ((data || []) as any[]).map(transformSale);
             },
           });
           break;
