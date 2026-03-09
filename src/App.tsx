@@ -103,6 +103,7 @@ const MainContent: React.FC = () => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [deviceRevoked, setDeviceRevoked] = useState(false);
   const [revokedDeviceName, setRevokedDeviceName] = useState<string | undefined>();
+  const [replacedWarning, setReplacedWarning] = useState<string | null>(null);
   
   // Initialize theme early so loading/auth screens also get dark mode
   usePageTheme();
