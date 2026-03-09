@@ -1,11 +1,11 @@
 /**
- * Collection Mutations Hook
+ * Collection Mutations Hook — with optimistic UI & rollback
  */
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryClient';
 import { collectionService } from '@/services/collectionService';
-import { Sale } from '@/types';
+import { Sale, Payment } from '@/types';
 import { extractErrorMessage } from '@/lib/errorHandler';
 
 export function useCollectionMutations(orgId?: string | null, onError?: (msg: string) => void) {
@@ -19,14 +19,14 @@ export function useCollectionMutations(orgId?: string | null, onError?: (msg: st
 
   const addCollection = useCallback(async (saleId: string, amount: number, notes?: string) => {
     try {
-      // Optimistic update
+      // Optimistic update on sales
       const salesKey = queryKeys.sales(orgId);
       const previousSales = queryClient.getQueryData<Sale[]>(salesKey);
       if (previousSales) {
         queryClient.setQueryData<Sale[]>(salesKey, old =>
           (old || []).map(sale =>
             sale.id === saleId
-              ? { ...sale, paidAmount: sale.paidAmount + amount, remaining: sale.remaining - amount }
+              ? { ...sale, paidAmount: sale.paidAmount + amount, remaining: Math.max(0, sale.remaining - amount) }
               : sale
           )
         );
@@ -46,12 +46,29 @@ export function useCollectionMutations(orgId?: string | null, onError?: (msg: st
   }, [queryClient, orgId, handleError]);
 
   const reversePayment = useCallback(async (paymentId: string, reason: string) => {
+    // Optimistic: mark payment as reversed in cache
+    const paymentsKey = queryKeys.payments(orgId);
+    const previousPayments = queryClient.getQueryData<Payment[]>(paymentsKey);
+
+    if (previousPayments) {
+      queryClient.setQueryData<Payment[]>(paymentsKey, old =>
+        (old || []).map(p =>
+          p.id === paymentId ? { ...p, isReversed: true, reverseReason: reason } : p
+        )
+      );
+    }
+
     try {
       await collectionService.reversePayment(paymentId, reason);
-      queryClient.invalidateQueries({ queryKey: queryKeys.sales(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.payments(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.customers(orgId) });
-    } catch (e) { handleError(e); }
+    } catch (err) {
+      if (previousPayments) queryClient.setQueryData(paymentsKey, previousPayments);
+      handleError(err);
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: queryKeys.sales(orgId) });
+    queryClient.invalidateQueries({ queryKey: paymentsKey });
+    queryClient.invalidateQueries({ queryKey: queryKeys.customers(orgId) });
   }, [queryClient, orgId, handleError]);
 
   return { addCollection, reversePayment };
