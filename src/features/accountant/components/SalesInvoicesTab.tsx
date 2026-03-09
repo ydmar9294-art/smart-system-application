@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { SaleListItem } from '@/components/ui/MemoizedListItems';
+import { VirtualList } from '@/components/ui/VirtualList';
 import { logger } from '@/lib/logger';
 import { useTranslation } from 'react-i18next';
 import {
