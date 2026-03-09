@@ -138,6 +138,22 @@ const MainContent: React.FC = () => {
     return () => window.removeEventListener('device-revoked', handleDeviceRevoked);
   }, []);
 
+  // Listen for new-device warning (shown on the NEW device after login replaces old one)
+  const warningShownRef = useRef(false);
+  useEffect(() => {
+    const handleDeviceReplaced = (e: Event) => {
+      if (warningShownRef.current) return;
+      warningShownRef.current = true;
+      const detail = (e as CustomEvent).detail;
+      const deviceName = detail?.replacedDeviceName || '';
+      // Use a custom toast-like banner
+      setReplacedWarning(deviceName);
+      setTimeout(() => setReplacedWarning(null), 6000);
+    };
+    window.addEventListener('device-replaced-warning', handleDeviceReplaced);
+    return () => window.removeEventListener('device-replaced-warning', handleDeviceReplaced);
+  }, []);
+
   // Handle user acknowledging the device revocation
   const handleRevokedAcknowledge = useCallback(async () => {
     setDeviceRevoked(false);
