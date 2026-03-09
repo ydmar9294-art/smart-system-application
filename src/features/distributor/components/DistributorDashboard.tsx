@@ -23,6 +23,8 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
+import { useAuth } from '@/store/AuthContext';
+import { useTabPrefetch } from '@/hooks/useTabPrefetch';
 import { supabase } from '@/integrations/supabase/client';
 import AIAssistant from '@/features/ai/components/AIAssistant';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
