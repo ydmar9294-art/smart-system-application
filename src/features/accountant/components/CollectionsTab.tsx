@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Wallet, ChevronDown, Loader2 } from 'lucide-react';
 import { CollectionListItem } from '@/components/ui/MemoizedListItems';
+import { VirtualList } from '@/components/ui/VirtualList';
 import { CURRENCY } from '@/constants';
 import { useAuth } from '@/store/AuthContext';
 import { usePaymentsPaginatedQuery } from '@/hooks/queries';
