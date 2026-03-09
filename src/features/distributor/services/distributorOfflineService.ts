@@ -1004,6 +1004,7 @@ async function attemptBulkSync(actions: OfflineAction[]): Promise<{ synced: numb
       type: a.type,
       payload: a.payload,
       idempotencyKey: a.idempotencyKey,
+      _signature: a._signature,
     }));
 
     // Mark all as syncing
