@@ -526,6 +526,8 @@ export function useDistributorOffline() {
           paidAmount: sale.paidAmount + saleUpdate.paidDelta,
           remaining: Math.max(0, sale.remaining - saleUpdate.paidDelta),
         });
+        // Also update the customer's cached balance optimistically
+        await updateCachedCustomerBalance(sale.customer_id, saleUpdate.paidDelta);
       }
     }
 
