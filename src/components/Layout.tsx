@@ -96,7 +96,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               {showSettingsMenu && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowSettingsMenu(false)} />
-                  <div className={`absolute top-full mt-2 ${isRtl ? 'start-0' : 'end-0'} bg-card border border-border rounded-2xl shadow-xl z-50 w-56 animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden`} dir={isRtl ? 'rtl' : 'ltr'}>
+                  <div className={`absolute top-full mt-2 ${isRtl ? 'end-0' : 'start-0'} bg-card border border-border rounded-2xl shadow-xl z-50 w-56 animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden`} dir={isRtl ? 'rtl' : 'ltr'}>
                     {/* Header */}
                     <div className="px-4 py-3 bg-muted/50 border-b border-border">
                       <p className="text-xs font-black text-foreground">{t('settings.title')}</p>
