@@ -235,6 +235,23 @@ const MainContent: React.FC = () => {
         currentVersion={checkResult?.currentVersion}
         onDismiss={dismiss}
       />
+      {/* New-device warning banner (shown on the device that just logged in) */}
+      {replacedWarning !== null && (
+        <div
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] max-w-sm w-[90%] animate-in slide-in-from-top-4 fade-in duration-400"
+          dir="rtl"
+        >
+          <div className="bg-amber-500/95 dark:bg-amber-600/95 text-white rounded-2xl px-4 py-3 shadow-xl flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+              <span className="text-lg">📱</span>
+            </div>
+            <p className="text-xs font-bold leading-relaxed">
+              تم تسجيل الخروج من جميع الأجهزة السابقة
+              {replacedWarning ? ` (${replacedWarning})` : ''}
+            </p>
+          </div>
+        </div>
+      )}
     </>
   );
 };
