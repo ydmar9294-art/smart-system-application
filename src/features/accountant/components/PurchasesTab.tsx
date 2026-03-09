@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShoppingCart, Search, Package, ChevronDown } from 'lucide-react';
+import { VirtualList } from '@/components/ui/VirtualList';
 import { CURRENCY } from '@/constants';
 import { useAuth } from '@/store/AuthContext';
 import { usePurchasesPaginatedQuery } from '@/hooks/queries';
@@ -80,36 +81,69 @@ const PurchasesTab: React.FC = () => {
           <p className="text-muted-foreground font-bold">{t('accountant.noPurchases')}</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {filteredPurchases.map((purchase) => (
-            <div key={purchase.id} className="bg-card p-4 rounded-2xl shadow-sm">
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center">
-                    <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-foreground">{purchase.product_name}</p>
-                    <p className="text-xs text-muted-foreground">{purchase.supplier_name || t('common.noSupplier')}</p>
+        <>
+          {filteredPurchases.length > 30 ? (
+            <VirtualList
+              items={filteredPurchases}
+              itemHeight={88}
+              overscan={5}
+              containerHeight={480}
+              className="rounded-2xl"
+              onEndReached={hasNextPage ? fetchNextPage : undefined}
+              renderItem={(purchase) => (
+                <div className="px-1 pb-2">
+                  <div className="bg-card p-4 rounded-2xl shadow-sm">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center">
+                          <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-foreground">{purchase.product_name}</p>
+                          <p className="text-xs text-muted-foreground">{purchase.supplier_name || t('common.noSupplier')}</p>
+                        </div>
+                      </div>
+                      <p className="font-black text-blue-600 dark:text-blue-400">{Number(purchase.total_price).toLocaleString(locale)}</p>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{purchase.quantity} × {Number(purchase.unit_price).toLocaleString(locale)}</span>
+                      <span>{new Date(purchase.created_at).toLocaleDateString(locale)}</span>
+                    </div>
                   </div>
                 </div>
-                <p className="font-black text-blue-600 dark:text-blue-400">{Number(purchase.total_price).toLocaleString(locale)}</p>
-              </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{purchase.quantity} × {Number(purchase.unit_price).toLocaleString(locale)}</span>
-                <span>{new Date(purchase.created_at).toLocaleDateString(locale)}</span>
-              </div>
+              )}
+            />
+          ) : (
+            <div className="space-y-2">
+              {filteredPurchases.map((purchase) => (
+                <div key={purchase.id} className="bg-card p-4 rounded-2xl shadow-sm">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center">
+                        <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-foreground">{purchase.product_name}</p>
+                        <p className="text-xs text-muted-foreground">{purchase.supplier_name || t('common.noSupplier')}</p>
+                      </div>
+                    </div>
+                    <p className="font-black text-blue-600 dark:text-blue-400">{Number(purchase.total_price).toLocaleString(locale)}</p>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{purchase.quantity} × {Number(purchase.unit_price).toLocaleString(locale)}</span>
+                    <span>{new Date(purchase.created_at).toLocaleDateString(locale)}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-          
-          {/* Infinite scroll trigger */}
+          )}
           <InfiniteScrollTrigger
             isFetchingNextPage={isFetchingNextPage}
             hasNextPage={!!hasNextPage}
             fetchNextPage={fetchNextPage}
             totalLoaded={totalLoaded}
           />
-        </div>
+        </>
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { SaleListItem } from '@/components/ui/MemoizedListItems';
+import { VirtualList } from '@/components/ui/VirtualList';
 import { logger } from '@/lib/logger';
 import { useTranslation } from 'react-i18next';
 import {
@@ -152,26 +153,31 @@ const SalesInvoicesTab: React.FC = () => {
       </div>
 
       {/* Sales List */}
-      <div className="space-y-2">
-        {filteredSales.map((sale) => (
-          <SaleListItem
-            key={sale.id}
-            sale={sale}
-            locale={locale}
-            onViewDetails={setSelectedSaleId}
-            onPrint={handlePrint}
-            getStatusBadge={getStatusBadge}
-            t={t}
-          />
-        ))}
-
-        {filteredSales.length === 0 && (
-          <div className="text-center py-12">
-            <FileText className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
-            <p className="text-muted-foreground font-bold">{t('accountant.noInvoices')}</p>
-          </div>
-        )}
-      </div>
+      {filteredSales.length === 0 ? (
+        <div className="text-center py-12">
+          <FileText className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
+          <p className="text-muted-foreground font-bold">{t('accountant.noInvoices')}</p>
+        </div>
+      ) : filteredSales.length > 30 ? (
+        <VirtualList
+          items={filteredSales}
+          itemHeight={88}
+          overscan={5}
+          containerHeight={480}
+          className="rounded-2xl"
+          renderItem={(sale) => (
+            <div className="px-1 pb-2">
+              <SaleListItem key={sale.id} sale={sale} locale={locale} onViewDetails={setSelectedSaleId} onPrint={handlePrint} getStatusBadge={getStatusBadge} t={t} />
+            </div>
+          )}
+        />
+      ) : (
+        <div className="space-y-2">
+          {filteredSales.map((sale) => (
+            <SaleListItem key={sale.id} sale={sale} locale={locale} onViewDetails={setSelectedSaleId} onPrint={handlePrint} getStatusBadge={getStatusBadge} t={t} />
+          ))}
+        </div>
+      )}
 
       {/* Sale Details Modal */}
       {selectedSale && (
