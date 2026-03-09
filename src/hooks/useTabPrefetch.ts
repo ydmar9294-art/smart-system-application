@@ -80,7 +80,7 @@ export function useTabPrefetch(
                 ),
                 { label: 'prefetch_customers' }
               );
-              return (data || []).map(transformCustomer);
+              return ((data || []) as any[]).map(transformCustomer);
             },
           });
           break;
