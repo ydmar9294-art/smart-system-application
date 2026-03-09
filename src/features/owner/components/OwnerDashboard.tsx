@@ -12,6 +12,8 @@ import {
   BarChart3, CreditCard, Banknote, Database
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
+import { useAuth } from '@/store/AuthContext';
+import { useTabPrefetch } from '@/hooks/useTabPrefetch';
 import { CURRENCY } from '@/constants';
 import { UserRole, EmployeeType, PaymentType } from '@/types';
 import { InventoryTab } from './InventoryTab';
