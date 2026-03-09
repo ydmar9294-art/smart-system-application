@@ -1,6 +1,9 @@
 /**
  * useSession - Session initialization, cache restore, and auth event handling
  * Manages the full lifecycle: cache boot → listener → session validation → online revalidation.
+ * 
+ * IMPORTANT: On Capacitor, AuthFlow handles SIGNED_IN for first-time logins.
+ * useSession only handles: cache boot, TOKEN_REFRESHED, SIGNED_OUT, and online revalidation.
  */
 import { useEffect, MutableRefObject } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,18 +13,14 @@ import { logger } from '@/lib/logger';
 import { buildUserFromCache, isCacheFullyActivated, isNetworkAvailable, HARD_TIMEOUT_MS } from './authHelpers';
 
 interface SessionDeps {
-  // State setters
   setUser: (u: any) => void;
   setRole: (r: any) => void;
   setOrganization: (o: any) => void;
   setIsAuthenticated: (v: boolean) => void;
   setIsLoading: (v: boolean) => void;
-  // Transitions
   resetToLogin: () => void;
   setAuthenticatedState: (result: { user: any; role: any; organization: any }) => void;
-  // Profile resolver
   resolveProfile: (uid: string, isBackground?: boolean) => Promise<boolean>;
-  // Refs
   initializingAuth: MutableRefObject<boolean>;
   isInternalAuthOp: MutableRefObject<boolean>;
   isPasswordRecoveryFlow: MutableRefObject<boolean>;
@@ -86,7 +85,7 @@ export const useSession = (deps: SessionDeps) => {
     const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (isInternalAuthOp.current) return;
 
-      // Use INITIAL_SESSION to quickly show login when no session exists (avoids silent wait in Capacitor WebView)
+      // INITIAL_SESSION: quickly show login when no session exists
       if (event === 'INITIAL_SESSION') {
         if (!session?.user && !bootedFromCache.current) {
           logger.info('INITIAL_SESSION: no session — showing login immediately', 'Auth');
@@ -115,10 +114,22 @@ export const useSession = (deps: SessionDeps) => {
 
       if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
         if (isPasswordRecoveryFlow.current) return;
+
+        // If already resolved for this user, skip
         if (hasResolved && lastResolvedUid.current === session.user.id) return;
+
+        // If booted from cache for this same user, skip (background revalidation handles it below)
         if (bootedFromCache.current && cached?.userId === session.user.id) return;
 
-        // New login or different user — must resolve
+        // For SIGNED_IN without cache: AuthFlow handles first-time login verification.
+        // useSession only resolves if we have stale/partial cache or TOKEN_REFRESHED.
+        if (event === 'SIGNED_IN' && !bootedFromCache.current) {
+          // Let AuthFlow handle this — it shows loading phases and calls auth-status
+          logger.info('SIGNED_IN without cache — deferring to AuthFlow', 'Auth');
+          return;
+        }
+
+        // TOKEN_REFRESHED or SIGNED_IN with cache mismatch
         if (!bootedFromCache.current && isMounted) setIsLoading(true);
         hasResolved = true;
         await resolveProfile(session.user.id);
@@ -162,6 +173,8 @@ export const useSession = (deps: SessionDeps) => {
             initializingAuth.current = false;
             return;
           }
+          // No session, no cache — AuthFlow will show login screen
+          // Don't call resetToLogin here if AuthFlow is already showing
           if (isMounted) resetToLogin();
           initializingAuth.current = false;
           return;
@@ -177,8 +190,14 @@ export const useSession = (deps: SessionDeps) => {
           return;
         }
 
-        // Has session but no cache → must resolve before showing UI
-        if (isMounted && !bootedFromCache.current) setIsLoading(true);
+        // Has session but no cache → AuthFlow handles first-time login
+        // We don't compete with AuthFlow here
+        if (!bootedFromCache.current) {
+          logger.info('Session found without cache — AuthFlow will handle', 'Auth');
+          initializingAuth.current = false;
+          return;
+        }
+
         hasResolved = true;
         await resolveProfile(data.session.user.id);
       } catch (err) {
@@ -197,11 +216,7 @@ export const useSession = (deps: SessionDeps) => {
     validateSession();
 
     // ── Phase 4: Listen for online events to trigger FULL background revalidation ──
-    // This runs regardless of cache state — whenever network is restored,
-    // we verify: device status, account active, license status, subscription status.
-    // All checks are silent (no loading indicators).
     const handleOnline = async () => {
-      // Must have a resolved user to revalidate
       if (!lastResolvedUid.current && !cached?.userId) return;
 
       logger.info('Network restored — running full background revalidation', 'Auth');
@@ -219,17 +234,15 @@ export const useSession = (deps: SessionDeps) => {
           return;
         }
       } catch {
-        // Verification failed — don't block, continue with revalidation
+        // Verification failed — don't block
       }
 
-      // Step 2: Full background revalidation (account status, license, subscription, profile active)
-      // resolveProfile with isBackground=true updates state silently without showing loading
+      // Step 2: Full background revalidation
       try {
         const { data } = await supabase.auth.getSession();
         if (data.session?.user) {
           await resolveProfile(data.session.user.id, true);
         } else if (!bootedFromCache.current) {
-          // No session and no cache — force login
           clearAuthCache();
           resetToLogin();
         }
@@ -238,16 +251,12 @@ export const useSession = (deps: SessionDeps) => {
       }
     };
 
-    // Also revalidate when app returns from background (Capacitor/mobile)
     const handleVisibility = () => {
       if (document.visibilityState === 'visible' && navigator.onLine) {
-        // Small delay to let network stabilize
         setTimeout(handleOnline, 1500);
       }
     };
 
-    // Stagger: AccountStatusGate fires at 2s, so useSession fires at 0s (device check first)
-    // then resolveProfile at ~1s (after device check completes)
     window.addEventListener('online', handleOnline);
     document.addEventListener('visibilitychange', handleVisibility);
 
