@@ -15,6 +15,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { CURRENCY } from '@/constants';
 import { InvoiceListItem } from '@/components/ui/MemoizedListItems';
+import { VirtualList } from '@/components/ui/VirtualList';
 import InvoiceHistoryPrint from './InvoiceHistoryPrint';
 import {
   cacheInvoices,
