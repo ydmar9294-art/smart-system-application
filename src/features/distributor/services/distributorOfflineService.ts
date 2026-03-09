@@ -1122,8 +1122,8 @@ let onlineListenerActive = false;
 export function startDistributorSync(): void {
   if (syncIntervalId) return;
   
-  // Load ID maps immediately
-  loadPersistedIdMaps();
+  // NOTE: loadPersistedIdMaps is called by useDistributorOffline before this.
+  // Do NOT call it again here to avoid redundant IndexedDB reads.
   
   // Check key rotation on startup (non-blocking)
   checkAndRotateKeyIfNeeded().catch(() => {});
