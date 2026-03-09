@@ -41,6 +41,7 @@ const CollectionTab: React.FC<CollectionTabProps> = ({ selectedCustomer, onQueue
     notes?: string;
   } | null>(null);
 
+  // Use localSales directly — remaining is updated optimistically by queueAction's saleUpdate
   const unpaidSales = useMemo(() => localSales.filter(s => {
     if (s.isVoided || Number(s.remaining) <= 0) return false;
     if (selectedCustomer) return s.customer_id === selectedCustomer.id;
