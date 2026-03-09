@@ -1,5 +1,5 @@
 /**
- * useDeviceRealtime - Real-time device session monitoring
+ * useDeviceRealtime - Real-time device session monitoring (WhatsApp-style)
  * Subscribes to Supabase Realtime on the devices table to instantly detect
  * when the current device's session is revoked by a new login elsewhere.
  */
@@ -18,7 +18,7 @@ export function useDeviceRealtime(userId: string | undefined) {
     const deviceId = getDeviceId();
 
     const channel = supabase
-      .channel(`device-watch-${userId}`)
+      .channel(`device-watch-${userId}-${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -41,7 +41,9 @@ export function useDeviceRealtime(userId: string | undefined) {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        logger.info(`Device realtime channel: ${status}`, 'Device');
+      });
 
     return () => {
       supabase.removeChannel(channel);

@@ -1,12 +1,10 @@
 /**
  * Device Check Edge Function
- * Manages single-active-device policy per user.
+ * Manages single-active-device policy per user (WhatsApp-style).
  * 
  * Actions:
- *   register  — Register/activate a device after login
- *   verify    — Verify a device is still active (called on every API request or reconnect)
- * 
- * All device mutations use the service role client for security.
+ *   register  — Register/activate a device after login. Deactivates ALL other devices.
+ *   verify    — Verify a device is still active.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -59,7 +57,6 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: false, reason: 'MISSING_DEVICE_ID' }, 400)
     }
 
-    // Determine action from URL or body
     const url = new URL(req.url)
     const action = url.searchParams.get('action') || 'verify'
 
@@ -80,38 +77,31 @@ Deno.serve(async (req) => {
 
 /**
  * Register a device after successful login.
- * Deactivates any previously active device for this user.
+ * Deactivates ALL other devices for this user, then upserts the new one as active.
+ * The deactivation triggers Realtime UPDATE events so old devices detect revocation instantly.
  */
 async function handleRegister(userId: string, deviceId: string, deviceName: string) {
-  // 1. Find current active device for this user
-  const { data: activeDevice } = await serviceClient
+  // 1. Find all currently active devices for this user (excluding this device)
+  const { data: activeDevices } = await serviceClient
     .from('devices')
     .select('id, device_id, device_name')
     .eq('user_id', userId)
     .eq('is_active', true)
-    .maybeSingle()
+    .neq('device_id', deviceId)
 
-  // Case B: Same device — just update last_seen
-  if (activeDevice && activeDevice.device_id === deviceId) {
-    await serviceClient
-      .from('devices')
-      .update({ last_seen: new Date().toISOString(), device_name: deviceName })
-      .eq('id', activeDevice.id)
+  const replacedDevices = activeDevices || []
+  const hadOtherDevice = replacedDevices.length > 0
 
-    return jsonResponse({ success: true, status: 'SAME_DEVICE' })
-  }
-
-  const oldDeviceId = activeDevice?.device_id || null
-
-  // Case C: Different device is active — deactivate old
-  if (activeDevice) {
+  // 2. Deactivate ALL other devices for this user (this triggers Realtime → old device gets notified)
+  if (hadOtherDevice) {
     await serviceClient
       .from('devices')
       .update({ is_active: false })
-      .eq('id', activeDevice.id)
+      .eq('user_id', userId)
+      .neq('device_id', deviceId)
   }
 
-  // Upsert new device record (may already exist from a previous session)
+  // 3. Upsert this device as active (unique on user_id + device_id)
   const { error: upsertError } = await serviceClient
     .from('devices')
     .upsert(
@@ -121,14 +111,14 @@ async function handleRegister(userId: string, deviceId: string, deviceName: stri
         device_name: deviceName,
         is_active: true,
         last_seen: new Date().toISOString(),
-        replaced_device_id: oldDeviceId,
+        replaced_device_id: replacedDevices[0]?.device_id || null,
       },
-      { onConflict: 'user_id', ignoreDuplicates: false }
+      { onConflict: 'user_id,device_id' }
     )
 
-  // If upsert fails due to unique constraint race, retry with explicit insert
   if (upsertError) {
-    // Deactivate all for this user, then insert fresh
+    console.error('[device-check] Upsert failed, using fallback:', upsertError)
+    // Fallback: deactivate all, insert fresh
     await serviceClient
       .from('devices')
       .update({ is_active: false })
@@ -142,20 +132,22 @@ async function handleRegister(userId: string, deviceId: string, deviceName: stri
         device_name: deviceName,
         is_active: true,
         last_seen: new Date().toISOString(),
-        replaced_device_id: oldDeviceId,
+        replaced_device_id: replacedDevices[0]?.device_id || null,
       })
   }
 
-  // Audit log if device was replaced
-  if (oldDeviceId && oldDeviceId !== deviceId) {
+  // 4. Audit log if device was replaced
+  if (hadOtherDevice) {
     await serviceClient.from('audit_logs').insert({
       user_id: userId,
       action: 'DEVICE_REPLACED',
       entity_type: 'device',
       entity_id: null,
       details: {
-        old_device_id: oldDeviceId,
-        old_device_name: activeDevice?.device_name || 'Unknown',
+        replaced_devices: replacedDevices.map(d => ({
+          device_id: d.device_id,
+          device_name: d.device_name,
+        })),
         new_device_id: deviceId,
         new_device_name: deviceName,
       },
@@ -164,17 +156,18 @@ async function handleRegister(userId: string, deviceId: string, deviceName: stri
     return jsonResponse({
       success: true,
       status: 'DEVICE_REPLACED',
-      replaced_device_id: oldDeviceId,
+      replaced_device_id: replacedDevices[0]?.device_id,
+      replaced_device_name: replacedDevices[0]?.device_name,
+      message: 'تم تسجيل الخروج من جميع الأجهزة السابقة',
     })
   }
 
-  // Case A: No previous device
-  return jsonResponse({ success: true, status: 'NEW_DEVICE' })
+  // Check if same device re-registering
+  return jsonResponse({ success: true, status: 'DEVICE_REGISTERED' })
 }
 
 /**
  * Verify that the given device is still the active device for this user.
- * Called on reconnect and periodically.
  */
 async function handleVerify(userId: string, deviceId: string) {
   const { data: activeDevice } = await serviceClient
@@ -185,22 +178,19 @@ async function handleVerify(userId: string, deviceId: string) {
     .maybeSingle()
 
   if (!activeDevice) {
-    // No device registered — allow (first-time or migration)
     return jsonResponse({ success: true, active: true, status: 'NO_DEVICE_REGISTERED' })
   }
 
   if (activeDevice.device_id === deviceId) {
-    // Update last_seen
     await serviceClient
       .from('devices')
       .update({ last_seen: new Date().toISOString() })
       .eq('user_id', userId)
-      .eq('is_active', true)
+      .eq('device_id', deviceId)
 
     return jsonResponse({ success: true, active: true, status: 'DEVICE_ACTIVE' })
   }
 
-  // Device is NOT the active one
   return jsonResponse({
     success: true,
     active: false,
