@@ -69,7 +69,14 @@ export const useProfileResolver = (deps: ProfileResolverDeps) => {
 
           // Register device after successful auth (fire-and-forget, non-blocking)
           if (!isBackground) {
-            registerDevice().catch((err) => {
+            registerDevice().then((deviceResult) => {
+              if (deviceResult.status === 'DEVICE_REPLACED') {
+                // Notify user that previous devices were logged out
+                window.dispatchEvent(new CustomEvent('device-replaced-warning', {
+                  detail: { replacedDeviceName: deviceResult.replaced_device_name },
+                }));
+              }
+            }).catch((err) => {
               logger.warn('Device registration failed (non-blocking)', 'Auth', { error: String(err) });
             });
           }
