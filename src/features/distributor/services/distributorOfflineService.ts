@@ -1125,11 +1125,18 @@ export function startDistributorSync(): void {
   // Load ID maps immediately
   loadPersistedIdMaps();
   
+  // Check key rotation on startup (non-blocking)
+  checkAndRotateKeyIfNeeded().catch(() => {});
+  
   // Initial sync after short delay
   setTimeout(syncAllPending, 2000);
   
-  // Periodic sync every 90s
-  syncIntervalId = setInterval(syncAllPending, 90_000);
+  // Periodic sync every 90s + periodic key rotation check
+  syncIntervalId = setInterval(() => {
+    syncAllPending();
+    // Check key rotation every sync cycle (non-blocking)
+    checkAndRotateKeyIfNeeded().catch(() => {});
+  }, 90_000);
   
   // Sync on reconnect (only add once)
   if (!onlineListenerActive) {
