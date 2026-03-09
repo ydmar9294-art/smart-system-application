@@ -31,8 +31,11 @@ const AccountantDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
   const { logout } = useApp();
+  const { organization, role } = useAuth();
   const [activeTab, setActiveTab] = useState<AccountantTabType>('sales');
   const [loggingOut, setLoggingOut] = useState(false);
+
+  useTabPrefetch(activeTab, organization?.id, role);
 
   const handleLogout = async () => {
     setLoggingOut(true);
