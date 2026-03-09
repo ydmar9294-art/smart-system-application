@@ -1274,31 +1274,33 @@ export interface CachedSale {
 }
 
 export async function cacheSales(sales: CachedSale[]): Promise<void> {
-  // Preserve local (unsynced) sales during server refresh
-  const existing = await getAllEncryptedItems<CachedSale>(STORES.SALES_CACHE);
-  const localSales = existing.filter(s => s.isLocal);
-  
-  // Prepare all records first
-  const records: Array<{ key: string; value: any }> = [];
-  
-  for (const s of sales) {
-    const record = await prepareEncryptedRecord(s);
-    records.push({ key: s.id, value: record });
-  }
-  
-  // Re-add local unsynced sales
-  const serverIds = new Set(sales.map(s => s.id));
-  for (const s of localSales) {
-    const mappedId = saleIdMap.get(s.id);
-    if (mappedId && serverIds.has(mappedId)) continue;
-    if (!serverIds.has(s.id)) {
+  return withWriteLock(STORES.SALES_CACHE, async () => {
+    // Preserve local (unsynced) sales during server refresh
+    const existing = await getAllEncryptedItems<CachedSale>(STORES.SALES_CACHE);
+    const localSales = existing.filter(s => s.isLocal);
+    
+    // Prepare all records first
+    const records: Array<{ key: string; value: any }> = [];
+    
+    for (const s of sales) {
       const record = await prepareEncryptedRecord(s);
       records.push({ key: s.id, value: record });
     }
-  }
-  
-  // ATOMIC: clear + write all in a single transaction
-  await atomicReplaceStore(STORES.SALES_CACHE, records);
+    
+    // Re-add local unsynced sales
+    const serverIds = new Set(sales.map(s => s.id));
+    for (const s of localSales) {
+      const mappedId = saleIdMap.get(s.id);
+      if (mappedId && serverIds.has(mappedId)) continue;
+      if (!serverIds.has(s.id)) {
+        const record = await prepareEncryptedRecord(s);
+        records.push({ key: s.id, value: record });
+      }
+    }
+    
+    // ATOMIC: clear + write all in a single transaction
+    await atomicReplaceStore(STORES.SALES_CACHE, records);
+  });
 }
 
 export async function getCachedSales(): Promise<CachedSale[]> {
