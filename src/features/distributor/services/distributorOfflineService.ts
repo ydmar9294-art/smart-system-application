@@ -143,6 +143,37 @@ function openDB(): Promise<IDBDatabase> {
 // Generic Store Helpers
 // ============================================
 
+// ============================================
+// Write Mutex — prevents concurrent cache operations from losing data
+// ============================================
+
+const writeLocks = new Map<string, Promise<void>>();
+
+async function withWriteLock<T>(storeName: string, fn: () => Promise<T>): Promise<T> {
+  // Wait for any existing operation on this store to finish
+  const existing = writeLocks.get(storeName);
+  if (existing) {
+    await existing.catch(() => {});
+  }
+  
+  let resolve: () => void;
+  const lock = new Promise<void>(r => { resolve = r; });
+  writeLocks.set(storeName, lock);
+  
+  try {
+    return await fn();
+  } finally {
+    resolve!();
+    if (writeLocks.get(storeName) === lock) {
+      writeLocks.delete(storeName);
+    }
+  }
+}
+
+// ============================================
+// Generic Store Helpers
+// ============================================
+
 async function putItem<T>(storeName: string, item: T): Promise<void> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
