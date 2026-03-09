@@ -246,3 +246,32 @@ export async function clearEncryptionKey(): Promise<void> {
     // Best-effort cleanup
   }
 }
+
+/**
+ * Check if the encryption key needs rotation and perform it if so.
+ * Re-imports the new key into the CryptoKey cache.
+ * Returns true if rotation occurred.
+ */
+export async function checkAndRotateKeyIfNeeded(): Promise<boolean> {
+  if (!isWebCryptoAvailable()) return false;
+
+  try {
+    const { isKeyRotationNeeded, rotateSecureKey } = await import('@/services/secureKeyStore');
+    const needsRotation = await isKeyRotationNeeded();
+    if (!needsRotation) return false;
+
+    const { newKeyB64 } = await rotateSecureKey();
+    // Reset cached CryptoKey so next operation uses the new key
+    cachedKey = null;
+    // Pre-warm the new key
+    const rawKey = base64ToBuffer(newKeyB64);
+    cachedKey = await crypto.subtle.importKey(
+      'raw', rawKey, { name: ALGO }, false, ['encrypt', 'decrypt']
+    );
+    logger.info('Encryption key rotated and re-imported', 'Encryption');
+    return true;
+  } catch (err) {
+    logger.error('Key rotation check failed', 'Encryption');
+    return false;
+  }
+}
