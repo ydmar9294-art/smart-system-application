@@ -155,7 +155,17 @@ const MainContent: React.FC = () => {
     return () => window.removeEventListener('device-replaced-warning', handleDeviceReplaced);
   }, []);
 
-  // Handle user acknowledging the device revocation
+  // Auto force-logout when device is revoked (no user action needed)
+  useEffect(() => {
+    if (!deviceRevoked) return;
+    const timer = setTimeout(async () => {
+      await logout();
+      setDeviceRevoked(false);
+    }, 3000); // Show screen for 3s then force logout
+    return () => clearTimeout(timer);
+  }, [deviceRevoked, logout]);
+
+  // Manual acknowledge as fallback
   const handleRevokedAcknowledge = useCallback(async () => {
     setDeviceRevoked(false);
     await logout();
