@@ -67,7 +67,7 @@ export function useCollectionMutations(orgId?: string | null, onError?: (msg: st
     }
 
     try {
-      await collectionService.reversePayment(paymentId, reason);
+      await offlineReversePayment(paymentId, reason);
     } catch (err) {
       if (previousPayments) queryClient.setQueryData(paymentsKey, previousPayments);
       handleError(err);
