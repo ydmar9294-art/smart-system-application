@@ -81,44 +81,40 @@ const sanitizeCSSKey = (key: string): string => {
 
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   const colorConfig = Object.entries(config).filter(([_, config]) => config.theme || config.color);
-  const containerRef = React.useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
-    if (!colorConfig.length || !containerRef.current) return;
+  if (!colorConfig.length) {
+    return null;
+  }
 
-    const sanitizedId = id.replace(/[^a-zA-Z0-9_-]/g, '');
+  // Sanitize the chart ID
+  const sanitizedId = id.replace(/[^a-zA-Z0-9_-]/g, '');
 
-    // Use CSSStyleSheet API to inject styles without dangerouslySetInnerHTML
-    const styleEl = document.createElement('style');
-    styleEl.setAttribute('data-chart-style', sanitizedId);
-
-    const cssRules = Object.entries(THEMES)
-      .map(([theme, prefix]) => {
-        const vars = colorConfig
-          .map(([key, itemConfig]) => {
-            const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
-            const sanitizedKey = sanitizeCSSKey(key);
-            if (color && sanitizedKey && isValidCSSColor(color)) {
-              return `  --color-${sanitizedKey}: ${color};`;
-            }
-            return null;
-          })
-          .filter(Boolean)
-          .join('\n');
-        return `${prefix} [data-chart=${sanitizedId}] {\n${vars}\n}`;
-      })
-      .join('\n');
-
-    styleEl.textContent = cssRules;
-    containerRef.current.appendChild(styleEl);
-
-    return () => {
-      styleEl.remove();
-    };
-  }, [id, colorConfig]);
-
-  // Hidden container for the style element
-  return <div ref={containerRef} style={{ display: 'none' }} />;
+  return (
+    <style
+      dangerouslySetInnerHTML={{
+        __html: Object.entries(THEMES)
+          .map(
+            ([theme, prefix]) => `
+${prefix} [data-chart=${sanitizedId}] {
+${colorConfig
+  .map(([key, itemConfig]) => {
+    const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
+    const sanitizedKey = sanitizeCSSKey(key);
+    // Only include valid colors and sanitized keys
+    if (color && sanitizedKey && isValidCSSColor(color)) {
+      return `  --color-${sanitizedKey}: ${color};`;
+    }
+    return null;
+  })
+  .filter(Boolean)
+  .join("\n")}
+}
+`,
+          )
+          .join("\n"),
+      }}
+    />
+  );
 };
 
 const ChartTooltip = RechartsPrimitive.Tooltip;
