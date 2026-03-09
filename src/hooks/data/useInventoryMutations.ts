@@ -1,5 +1,6 @@
 /**
- * Inventory Mutations Hook - Purchases, deliveries, returns, employees
+ * Inventory Mutations Hook — Purchases, deliveries, returns, employees
+ * With optimistic UI updates for addPurchase
  */
 import { useCallback } from 'react';
 import { logger } from '@/lib/logger';
@@ -7,9 +8,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryClient';
 import { inventoryService } from '@/services/inventoryService';
 import { licenseService } from '@/services/licenseService';
-import { UserRole, EmployeeType, LicenseStatus } from '@/types';
-import { PendingEmployee } from '@/hooks/useDataOperations';
+import { UserRole, EmployeeType, LicenseStatus, Product } from '@/types';
+import { PendingEmployee, Purchase } from '@/hooks/useDataOperations';
 import { extractErrorMessage } from '@/lib/errorHandler';
+import { generateUUID } from '@/lib/uuid';
 
 export function useInventoryMutations(
   orgId?: string | null,
@@ -38,32 +40,87 @@ export function useInventoryMutations(
   }, [queryClient, orgId, handleError]);
 
   const addPurchase = useCallback(async (productId: string, quantity: number, unitPrice: number, supplierName?: string, notes?: string) => {
+    // Optimistic: update product stock immediately
+    const prodKey = queryKeys.products(orgId);
+    const previousProducts = queryClient.getQueryData<Product[]>(prodKey);
+
+    if (previousProducts) {
+      queryClient.setQueryData<Product[]>(prodKey, old =>
+        (old || []).map(p =>
+          p.id === productId ? { ...p, stock: p.stock + quantity } : p
+        )
+      );
+    }
+
     try {
       await inventoryService.addPurchase(productId, quantity, unitPrice, supplierName, notes);
-      queryClient.invalidateQueries({ queryKey: queryKeys.purchases(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.products(orgId) });
-    } catch (e) { handleError(e); }
+    } catch (err) {
+      // Rollback
+      if (previousProducts) queryClient.setQueryData(prodKey, previousProducts);
+      handleError(err);
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: queryKeys.purchases(orgId) });
+    queryClient.invalidateQueries({ queryKey: prodKey });
   }, [queryClient, orgId, handleError]);
 
   const createDelivery = useCallback(async (distributorName: string, items: any[], notes?: string, distributorId?: string) => {
+    // Optimistic: deduct stock from products
+    const prodKey = queryKeys.products(orgId);
+    const previousProducts = queryClient.getQueryData<Product[]>(prodKey);
+
+    if (previousProducts) {
+      const itemMap = new Map<string, number>();
+      items.forEach(it => {
+        const pid = it.product_id || it.productId;
+        itemMap.set(pid, (itemMap.get(pid) || 0) + it.quantity);
+      });
+      queryClient.setQueryData<Product[]>(prodKey, old =>
+        (old || []).map(p => itemMap.has(p.id) ? { ...p, stock: Math.max(0, p.stock - (itemMap.get(p.id) || 0)) } : p)
+      );
+    }
+
     try {
       await inventoryService.createDelivery(distributorName, items, notes, distributorId);
-      queryClient.invalidateQueries({ queryKey: queryKeys.deliveries(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.products(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.distributorInventory(orgId) });
-    } catch (e) { handleError(e); }
+    } catch (err) {
+      if (previousProducts) queryClient.setQueryData(prodKey, previousProducts);
+      handleError(err);
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: queryKeys.deliveries(orgId) });
+    queryClient.invalidateQueries({ queryKey: prodKey });
+    queryClient.invalidateQueries({ queryKey: queryKeys.distributorInventory(orgId) });
   }, [queryClient, orgId, handleError]);
 
   const createPurchaseReturn = useCallback(async (
     items: { product_id: string; product_name: string; quantity: number; unit_price: number }[],
     reason?: string, supplierName?: string
   ) => {
+    // Optimistic: deduct stock
+    const prodKey = queryKeys.products(orgId);
+    const previousProducts = queryClient.getQueryData<Product[]>(prodKey);
+
+    if (previousProducts) {
+      const itemMap = new Map<string, number>();
+      items.forEach(it => itemMap.set(it.product_id, (itemMap.get(it.product_id) || 0) + it.quantity));
+      queryClient.setQueryData<Product[]>(prodKey, old =>
+        (old || []).map(p => itemMap.has(p.id) ? { ...p, stock: Math.max(0, p.stock - (itemMap.get(p.id) || 0)) } : p)
+      );
+    }
+
     try {
       await inventoryService.createPurchaseReturn(items, reason, supplierName);
-      queryClient.invalidateQueries({ queryKey: queryKeys.purchases(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.products(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.purchaseReturns(orgId) });
-    } catch (e) { handleError(e); }
+    } catch (err) {
+      if (previousProducts) queryClient.setQueryData(prodKey, previousProducts);
+      handleError(err);
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: queryKeys.purchases(orgId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.products(orgId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.purchaseReturns(orgId) });
   }, [queryClient, orgId, handleError]);
 
   const deactivateEmployee = useCallback(async (employeeId: string): Promise<boolean> => {

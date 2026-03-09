@@ -1,13 +1,13 @@
 /**
- * Sales Mutations Hook
- * Extracted from DataContext for separation of concerns
+ * Sales Mutations Hook — with optimistic UI updates
  */
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryClient';
 import { salesService } from '@/services/salesService';
 import { collectionService } from '@/services/collectionService';
-import { Sale } from '@/types';
+import { Sale, Payment } from '@/types';
+import { generateUUID } from '@/lib/uuid';
 import { extractErrorMessage } from '@/lib/errorHandler';
 
 export function useSalesMutations(orgId?: string | null, onError?: (msg: string) => void) {
@@ -33,31 +33,101 @@ export function useSalesMutations(orgId?: string | null, onError?: (msg: string)
   }, [invalidateSalesDeps, handleError]);
 
   const submitInvoice = useCallback(async (d: any) => {
+    // Optimistic: add a temporary sale to the cache
+    const salesKey = queryKeys.sales(orgId);
+    const previousSales = queryClient.getQueryData<Sale[]>(salesKey);
+    const tempId = `temp-${generateUUID()}`;
+
+    const grandTotal = (d.items || []).reduce((s: number, it: any) => s + (it.totalPrice || it.quantity * it.unitPrice), 0) - (d.discountValue || 0);
+    const optimisticSale: Sale = {
+      id: tempId,
+      organization_id: orgId || undefined,
+      customer_id: d.customerId,
+      customerName: d.customerName || '',
+      grandTotal: Math.max(0, grandTotal),
+      paidAmount: d.paymentType === 'CASH' ? Math.max(0, grandTotal) : 0,
+      remaining: d.paymentType === 'CASH' ? 0 : Math.max(0, grandTotal),
+      paymentType: d.paymentType || 'CASH',
+      isVoided: false,
+      timestamp: Date.now(),
+      items: (d.items || []).map((it: any) => ({
+        id: generateUUID(), productId: it.productId, productName: it.productName,
+        quantity: it.quantity, unitPrice: it.unitPrice, totalPrice: it.totalPrice || it.quantity * it.unitPrice,
+      })),
+      createdBy: undefined,
+      discountType: d.discountType,
+      discountValue: d.discountValue,
+      discountPercentage: d.discountPercentage,
+    };
+
+    queryClient.setQueryData<Sale[]>(salesKey, old => [optimisticSale, ...(old || [])]);
+
     try {
       await salesService.createSale({
         customerId: d.customerId, items: d.items, paymentType: d.paymentType,
         discountType: d.discountType, discountValue: d.discountValue,
         discountPercentage: d.discountPercentage,
       });
-      invalidateSalesDeps();
-    } catch (e) { handleError(e); }
-  }, [invalidateSalesDeps, handleError]);
+    } catch (err) {
+      // Rollback
+      if (previousSales) queryClient.setQueryData(salesKey, previousSales);
+      else queryClient.setQueryData<Sale[]>(salesKey, old => (old || []).filter(s => s.id !== tempId));
+      handleError(err);
+      return;
+    }
+
+    invalidateSalesDeps();
+  }, [queryClient, orgId, invalidateSalesDeps, handleError]);
 
   const submitPayment = useCallback(async (d: any) => {
+    // Optimistic: update the sale's paid/remaining
+    const salesKey = queryKeys.sales(orgId);
+    const previousSales = queryClient.getQueryData<Sale[]>(salesKey);
+
+    if (previousSales) {
+      queryClient.setQueryData<Sale[]>(salesKey, old =>
+        (old || []).map(sale =>
+          sale.id === d.saleId
+            ? { ...sale, paidAmount: sale.paidAmount + d.amount, remaining: Math.max(0, sale.remaining - d.amount) }
+            : sale
+        )
+      );
+    }
+
     try {
       await collectionService.addCollection(d.saleId, d.amount);
-      queryClient.invalidateQueries({ queryKey: queryKeys.sales(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.payments(orgId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.customers(orgId) });
-    } catch (e) { handleError(e); }
+    } catch (err) {
+      if (previousSales) queryClient.setQueryData(salesKey, previousSales);
+      handleError(err);
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: salesKey });
+    queryClient.invalidateQueries({ queryKey: queryKeys.payments(orgId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.customers(orgId) });
   }, [queryClient, orgId, handleError]);
 
   const voidSale = useCallback(async (saleId: string, reason: string) => {
+    // Optimistic: mark sale as voided
+    const salesKey = queryKeys.sales(orgId);
+    const previousSales = queryClient.getQueryData<Sale[]>(salesKey);
+
+    queryClient.setQueryData<Sale[]>(salesKey, old =>
+      (old || []).map(sale =>
+        sale.id === saleId ? { ...sale, isVoided: true, voidReason: reason } : sale
+      )
+    );
+
     try {
       await salesService.voidSale({ saleId, reason });
-      invalidateSalesDeps();
-    } catch (e) { handleError(e); }
-  }, [invalidateSalesDeps, handleError]);
+    } catch (err) {
+      if (previousSales) queryClient.setQueryData(salesKey, previousSales);
+      handleError(err);
+      return;
+    }
+
+    invalidateSalesDeps();
+  }, [queryClient, orgId, invalidateSalesDeps, handleError]);
 
   return { createSale, submitInvoice, submitPayment, voidSale };
 }

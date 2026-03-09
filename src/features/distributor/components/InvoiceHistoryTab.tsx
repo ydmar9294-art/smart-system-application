@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { CURRENCY } from '@/constants';
+import { InvoiceListItem } from '@/components/ui/MemoizedListItems';
 import InvoiceHistoryPrint from './InvoiceHistoryPrint';
 import {
   cacheInvoices,
@@ -343,58 +344,19 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
         </div>
       ) : (
         <div className="space-y-2">
-          {filteredInvoices.map((invoice) => (
-            <div key={invoice.id} className="bg-muted rounded-2xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold ${getTypeColor(invoice.invoice_type)}`}>
-                    {getTypeIcon(invoice.invoice_type)}
-                    {getTypeName(invoice.invoice_type)}
-                  </span>
-                  <span className="text-xs text-muted-foreground font-mono">{invoice.invoice_number}</span>
-                  {(invoice as any).isLocal && (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                      <WifiOff className="w-3 h-3" /> {t('invoice.local')}
-                    </span>
-                  )}
-                </div>
-                <div className={isRtl ? 'text-left' : 'text-right'}>
-                  <p className={`text-lg font-black ${invoice.invoice_type === 'return' ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                    {invoice.invoice_type === 'return' ? '-' : ''}{Number(invoice.grand_total).toLocaleString(locale)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{CURRENCY}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-bold text-foreground">{invoice.customer_name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(invoice.invoice_date).toLocaleDateString(locale)}
-                  </p>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  {invoice.invoice_type === 'sale' && invoice.payment_type && (
-                    <span className={`text-xs px-2 py-1 rounded-full font-bold ${
-                      invoice.payment_type === 'CASH' 
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
-                        : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                    }`}>
-                      {invoice.payment_type === 'CASH' ? t('invoice.cashPayment') : t('invoice.creditPayment')}
-                    </span>
-                  )}
-                  
-                  <button
-                    onClick={() => handlePrint(invoice)}
-                    className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary/20 transition-colors"
-                  >
-                    <Printer className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
+            {filteredInvoices.map((invoice) => (
+              <InvoiceListItem
+                key={invoice.id}
+                invoice={invoice as any}
+                locale={locale}
+                onPrint={handlePrint}
+                getTypeColor={getTypeColor}
+                getTypeIcon={getTypeIcon}
+                getTypeName={getTypeName}
+                isRtl={isRtl}
+                t={t as any}
+              />
+            ))}
         </div>
       )}
     </div>
