@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Wallet, ChevronDown, User, Loader2 } from 'lucide-react';
+import { Wallet, ChevronDown, Loader2 } from 'lucide-react';
+import { CollectionListItem } from '@/components/ui/MemoizedListItems';
 import { CURRENCY } from '@/constants';
 import { useAuth } from '@/store/AuthContext';
 import { usePaymentsPaginatedQuery } from '@/hooks/queries';
