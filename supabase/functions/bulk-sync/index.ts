@@ -14,6 +14,8 @@ interface SyncOperation {
   type: 'ADD_CUSTOMER' | 'CREATE_SALE' | 'ADD_COLLECTION' | 'CREATE_RETURN' | 'TRANSFER_TO_WAREHOUSE';
   payload: Record<string, unknown>;
   idempotencyKey: string;
+  /** Client-side HMAC signature for integrity verification */
+  _signature?: string;
 }
 
 interface SyncResult {
@@ -73,6 +75,26 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
+
+    // --- Handle tampered action reports ---
+    if (body.reportTampered === true) {
+      await serviceClient.from('audit_logs').insert({
+        action: 'TAMPERED_ACTION_REJECTED',
+        entity_type: body.actionType || 'UNKNOWN',
+        entity_id: body.actionId || null,
+        user_id: userId,
+        details: {
+          reason: body.reason,
+          idempotencyKey: body.idempotencyKey,
+          reportedAt: body.timestamp,
+        },
+      });
+      console.warn(`[bulk-sync] TAMPERED ACTION uid=${userId.substring(0, 8)}… type=${body.actionType} reason=${body.reason}`);
+      return new Response(JSON.stringify({ logged: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const operations: SyncOperation[] = body.operations;
 
     if (!Array.isArray(operations) || operations.length === 0) {
@@ -88,8 +110,28 @@ Deno.serve(async (req) => {
       });
     }
 
-    // --- Idempotency check ---
-    const idempotencyKeys = operations
+    // --- Reject unsigned operations and audit log them ---
+    const validOperations: SyncOperation[] = [];
+    const rejectedResults: SyncResult[] = [];
+    
+    for (const op of operations) {
+      if (!op._signature) {
+        rejectedResults.push({ id: op.id, status: 'failed', error: 'Missing client-side HMAC signature' });
+        // Audit log unsigned operation
+        await serviceClient.from('audit_logs').insert({
+          action: 'UNSIGNED_BULK_OP_REJECTED',
+          entity_type: op.type,
+          entity_id: op.idempotencyKey,
+          user_id: userId,
+          details: { operationId: op.id },
+        });
+      } else {
+        validOperations.push(op);
+      }
+    }
+
+    // --- Idempotency check (only for valid operations) ---
+    const idempotencyKeys = validOperations
       .map(op => op.idempotencyKey)
       .filter(Boolean);
 
@@ -111,9 +153,9 @@ Deno.serve(async (req) => {
     // Track ID mappings within this batch (local → server)
     const customerIdMap = new Map<string, string>();
     const saleIdMap = new Map<string, string>();
-    const results: SyncResult[] = [];
+    const results: SyncResult[] = [...rejectedResults];
 
-    for (const op of operations) {
+    for (const op of validOperations) {
       if (op.idempotencyKey && processedKeys.has(op.idempotencyKey)) {
         results.push({ id: op.id, status: 'duplicate' });
         continue;

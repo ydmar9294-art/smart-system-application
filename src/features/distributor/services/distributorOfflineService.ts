@@ -18,7 +18,7 @@
 import { generateUUID } from '@/lib/uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
-import { encryptData, decryptData, isEncrypted, computeHMAC, verifyHMAC, isEncryptionAvailable } from '@/lib/indexedDbEncryption';
+import { encryptData, decryptData, isEncrypted, computeHMAC, verifyHMAC, isEncryptionAvailable, checkAndRotateKeyIfNeeded } from '@/lib/indexedDbEncryption';
 
 // ============================================
 // Database Setup
@@ -790,6 +790,7 @@ async function executeAction(action: OfflineAction): Promise<ExecuteResult> {
     // MANDATORY HMAC verification — reject unsigned or tampered actions
     if (!action._signature) {
       logger.error(`[Sync] REJECTED unsigned action ${action.id} (${action.type}) — missing HMAC signature`, 'DistributorOffline');
+      await reportTamperedAction(action, 'MISSING_SIGNATURE');
       return 'failed';
     }
     if (isEncryptionAvailable()) {
@@ -797,6 +798,7 @@ async function executeAction(action: OfflineAction): Promise<ExecuteResult> {
       const isValid = await verifyHMAC(signableData, action._signature);
       if (!isValid) {
         logger.error(`[Sync] REJECTED tampered action ${action.id} (${action.type}) — HMAC verification failed`, 'DistributorOffline');
+        await reportTamperedAction(action, 'HMAC_MISMATCH');
         return 'failed';
       }
     }
@@ -805,6 +807,28 @@ async function executeAction(action: OfflineAction): Promise<ExecuteResult> {
   } catch (err: any) {
     logger.error(`[Sync] Action ${action.id} (${action.type}) failed: ${err.message}`, 'DistributorOffline');
     return 'failed';
+  }
+}
+
+/**
+ * Report a tampered or unsigned action to the server audit log.
+ * Uses the current user session — best-effort, non-blocking.
+ */
+async function reportTamperedAction(action: OfflineAction, reason: 'MISSING_SIGNATURE' | 'HMAC_MISMATCH'): Promise<void> {
+  try {
+    await supabase.functions.invoke('bulk-sync', {
+      body: {
+        reportTampered: true,
+        actionId: action.id,
+        actionType: action.type,
+        idempotencyKey: action.idempotencyKey,
+        reason,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch {
+    // Best-effort — don't block sync for audit logging failures
+    logger.warn('[Audit] Failed to report tampered action to server', 'DistributorOffline');
   }
 }
 
@@ -980,6 +1004,7 @@ async function attemptBulkSync(actions: OfflineAction[]): Promise<{ synced: numb
       type: a.type,
       payload: a.payload,
       idempotencyKey: a.idempotencyKey,
+      _signature: a._signature,
     }));
 
     // Mark all as syncing
@@ -1100,11 +1125,18 @@ export function startDistributorSync(): void {
   // Load ID maps immediately
   loadPersistedIdMaps();
   
+  // Check key rotation on startup (non-blocking)
+  checkAndRotateKeyIfNeeded().catch(() => {});
+  
   // Initial sync after short delay
   setTimeout(syncAllPending, 2000);
   
-  // Periodic sync every 90s
-  syncIntervalId = setInterval(syncAllPending, 90_000);
+  // Periodic sync every 90s + periodic key rotation check
+  syncIntervalId = setInterval(() => {
+    syncAllPending();
+    // Check key rotation every sync cycle (non-blocking)
+    checkAndRotateKeyIfNeeded().catch(() => {});
+  }, 90_000);
   
   // Sync on reconnect (only add once)
   if (!onlineListenerActive) {
