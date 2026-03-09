@@ -131,7 +131,7 @@ export function useSalesMutations(orgId?: string | null, onError?: (msg: string)
     );
 
     try {
-      await salesService.voidSale({ saleId, reason });
+      await offlineVoidSale({ saleId, reason });
     } catch (err) {
       if (previousSales) queryClient.setQueryData(salesKey, previousSales);
       handleError(err);
