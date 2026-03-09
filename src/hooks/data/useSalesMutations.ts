@@ -1,7 +1,7 @@
 /**
- * Sales Mutations Hook — with optimistic UI updates
+ * Sales Mutations Hook — with optimistic UI updates & offline queue
  */
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryClient';
 import { salesService } from '@/services/salesService';
@@ -9,6 +9,7 @@ import { collectionService } from '@/services/collectionService';
 import { Sale, Payment } from '@/types';
 import { generateUUID } from '@/lib/uuid';
 import { extractErrorMessage } from '@/lib/errorHandler';
+import { withOfflineQueue, processQueue } from './useOfflineMutationQueue';
 
 export function useSalesMutations(orgId?: string | null, onError?: (msg: string) => void) {
   const queryClient = useQueryClient();
