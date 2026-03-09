@@ -154,50 +154,15 @@ const SalesInvoicesTab: React.FC = () => {
       {/* Sales List */}
       <div className="space-y-2">
         {filteredSales.map((sale) => (
-          <div key={sale.id} className={`bg-card p-4 rounded-2xl shadow-sm ${sale.isVoided ? 'opacity-50' : ''}`}>
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <p className="font-bold text-foreground">{sale.customerName}</p>
-                <p className="text-xs text-muted-foreground">{new Date(sale.timestamp).toLocaleDateString(locale)}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {getStatusBadge(sale)}
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-center mb-3">
-              <div>
-                <p className="text-[9px] text-muted-foreground">{t('accountant.totalLabel')}</p>
-                <p className="text-sm font-black text-foreground">{Number(sale.grandTotal).toLocaleString(locale)}</p>
-              </div>
-              <div>
-                <p className="text-[9px] text-muted-foreground">{t('accountant.paidLabel')}</p>
-                <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">{Number(sale.paidAmount).toLocaleString(locale)}</p>
-              </div>
-              <div>
-                <p className="text-[9px] text-muted-foreground">{t('accountant.remainingLabel')}</p>
-                <p className="text-sm font-black text-warning">{Number(sale.remaining).toLocaleString(locale)}</p>
-              </div>
-            </div>
-            {Number(sale.discountValue || 0) > 0 && (
-              <div className="flex items-center gap-1.5 mb-3 px-2 py-1.5 bg-purple-500/10 rounded-lg">
-                <Tag className="w-3 h-3 text-purple-600 dark:text-purple-400" />
-                <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400">
-                  {t('accountant.discountLabel')}: {Number(sale.discountValue).toLocaleString(locale)} {CURRENCY}
-                  {sale.discountType === 'percentage' ? ` (${Number(sale.discountPercentage || 0).toFixed(1)}%)` : ''}
-                </span>
-              </div>
-            )}
-            <div className="flex gap-2">
-              <button onClick={() => setSelectedSaleId(sale.id)}
-                className="flex-1 flex items-center justify-center gap-1.5 bg-muted py-2 rounded-xl text-xs font-bold text-foreground hover:bg-accent transition-colors">
-                <Eye className="w-3.5 h-3.5" /> {t('common.details')}
-              </button>
-              <button onClick={() => handlePrint(sale)}
-                className="flex items-center justify-center gap-1.5 bg-primary/10 text-primary px-4 py-2 rounded-xl text-xs font-bold hover:bg-primary/20 transition-colors">
-                <Printer className="w-3.5 h-3.5" /> {t('common.print')}
-              </button>
-            </div>
-          </div>
+          <SaleListItem
+            key={sale.id}
+            sale={sale}
+            locale={locale}
+            onViewDetails={setSelectedSaleId}
+            onPrint={handlePrint}
+            getStatusBadge={getStatusBadge}
+            t={t}
+          />
         ))}
 
         {filteredSales.length === 0 && (
