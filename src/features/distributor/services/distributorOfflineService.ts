@@ -790,6 +790,7 @@ async function executeAction(action: OfflineAction): Promise<ExecuteResult> {
     // MANDATORY HMAC verification — reject unsigned or tampered actions
     if (!action._signature) {
       logger.error(`[Sync] REJECTED unsigned action ${action.id} (${action.type}) — missing HMAC signature`, 'DistributorOffline');
+      await reportTamperedAction(action, 'MISSING_SIGNATURE');
       return 'failed';
     }
     if (isEncryptionAvailable()) {
@@ -797,6 +798,7 @@ async function executeAction(action: OfflineAction): Promise<ExecuteResult> {
       const isValid = await verifyHMAC(signableData, action._signature);
       if (!isValid) {
         logger.error(`[Sync] REJECTED tampered action ${action.id} (${action.type}) — HMAC verification failed`, 'DistributorOffline');
+        await reportTamperedAction(action, 'HMAC_MISMATCH');
         return 'failed';
       }
     }
@@ -805,6 +807,28 @@ async function executeAction(action: OfflineAction): Promise<ExecuteResult> {
   } catch (err: any) {
     logger.error(`[Sync] Action ${action.id} (${action.type}) failed: ${err.message}`, 'DistributorOffline');
     return 'failed';
+  }
+}
+
+/**
+ * Report a tampered or unsigned action to the server audit log.
+ * Uses the current user session — best-effort, non-blocking.
+ */
+async function reportTamperedAction(action: OfflineAction, reason: 'MISSING_SIGNATURE' | 'HMAC_MISMATCH'): Promise<void> {
+  try {
+    await supabase.functions.invoke('bulk-sync', {
+      body: {
+        reportTampered: true,
+        actionId: action.id,
+        actionType: action.type,
+        idempotencyKey: action.idempotencyKey,
+        reason,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch {
+    // Best-effort — don't block sync for audit logging failures
+    logger.warn('[Audit] Failed to report tampered action to server', 'DistributorOffline');
   }
 }
 
