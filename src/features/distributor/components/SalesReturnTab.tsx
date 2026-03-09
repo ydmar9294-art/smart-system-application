@@ -22,7 +22,7 @@ import { Customer } from '@/types';
 import InvoicePrint from './InvoicePrint';
 import FullScreenModal from '@/components/ui/FullScreenModal';
 import type { OfflineActionType, CachedSale } from '../services/distributorOfflineService';
-import { getCachedInvoices } from '../services/distributorOfflineService';
+import { getCachedInvoices, getAllActions } from '../services/distributorOfflineService';
 
 interface ReturnCartItem {
   product_id: string;
