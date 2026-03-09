@@ -3,14 +3,9 @@
  * 
  * Shown immediately when another device logs into the same account.
  * Blocks all interaction until user acknowledges and is redirected to login.
- * 
- * Flow:
- *   1. Full-screen overlay appears instantly with animation
- *   2. Shows phone icon + clear message explaining what happened
- *   3. User taps "OK" → local session cleared → redirected to login
  */
 import React, { useEffect, useState } from 'react';
-import { Smartphone, ShieldAlert } from 'lucide-react';
+import { Smartphone, ShieldAlert, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 
@@ -23,78 +18,98 @@ const DeviceRevokedScreen: React.FC<DeviceRevokedScreenProps> = ({
   deviceName,
   onAcknowledge,
 }) => {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
   const [showContent, setShowContent] = useState(false);
+  const [showButton, setShowButton] = useState(false);
 
   useEffect(() => {
-    // Staggered entrance animation
-    const timer = setTimeout(() => setShowContent(true), 100);
-    return () => clearTimeout(timer);
+    const t1 = setTimeout(() => setShowContent(true), 150);
+    const t2 = setTimeout(() => setShowButton(true), 600);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
   return (
     <div
-      className="fixed inset-0 z-[99999] bg-background flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300"
+      className="fixed inset-0 z-[99999] flex flex-col items-center justify-center p-6 text-center"
       dir={isArabic ? 'rtl' : 'ltr'}
+      style={{
+        background: 'linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--muted)) 100%)',
+      }}
     >
-      {/* Dimmed overlay pulse */}
-      <div className="absolute inset-0 bg-destructive/5 animate-pulse pointer-events-none" />
+      {/* Subtle animated background pulse */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-[0.04]"
+          style={{
+            background: 'radial-gradient(circle, hsl(var(--destructive)), transparent 70%)',
+            animation: 'pulse 3s ease-in-out infinite',
+          }}
+        />
+      </div>
 
       <div
-        className={`relative flex flex-col items-center gap-6 max-w-sm transition-all duration-500 ${
-          showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+        className={`relative flex flex-col items-center gap-8 max-w-sm transition-all duration-700 ease-out ${
+          showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}
       >
-        {/* Icon cluster */}
+        {/* Icon */}
         <div className="relative">
-          {/* Outer ring pulse */}
-          <div className="absolute inset-0 w-24 h-24 rounded-full bg-destructive/10 animate-ping" />
-          <div className="relative w-24 h-24 rounded-full bg-destructive/15 flex items-center justify-center border-2 border-destructive/30">
-            <Smartphone className="w-10 h-10 text-destructive" strokeWidth={1.5} />
+          <div className="w-28 h-28 rounded-full bg-destructive/10 flex items-center justify-center border border-destructive/20 shadow-lg shadow-destructive/5">
+            <Smartphone className="w-12 h-12 text-destructive" strokeWidth={1.5} />
           </div>
-          {/* Shield badge */}
-          <div className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-background border-2 border-destructive/40 flex items-center justify-center shadow-lg">
+          <div className="absolute -bottom-1.5 -right-1.5 w-10 h-10 rounded-full bg-background border-2 border-destructive/30 flex items-center justify-center shadow-md">
             <ShieldAlert className="w-5 h-5 text-destructive" />
           </div>
         </div>
 
-        {/* Title */}
-        <div className="space-y-3">
-          <h1 className="text-xl font-black text-foreground leading-relaxed">
+        {/* Title & Description */}
+        <div className="space-y-4">
+          <h1 className="text-2xl font-black text-foreground leading-tight tracking-tight">
             {isArabic
               ? 'تم تسجيل الدخول من جهاز آخر'
               : 'Logged in from another device'}
           </h1>
-          <p className="text-sm text-muted-foreground font-medium leading-relaxed max-w-[280px] mx-auto">
+          <p className="text-sm text-muted-foreground font-medium leading-relaxed max-w-[300px] mx-auto">
             {isArabic
-              ? 'تم فتح حسابك على جهاز آخر. لا يمكن استخدام نفس الحساب على جهازين في نفس الوقت.'
-              : 'Your account was opened on another device. You cannot use the same account on two devices simultaneously.'}
+              ? 'تم فتح حسابك على جهاز آخر. لا يمكن استخدام نفس الحساب على أكثر من جهاز في نفس الوقت.'
+              : 'Your account was opened on another device. You cannot use the same account on multiple devices simultaneously.'}
           </p>
           {deviceName && (
-            <p className="text-xs text-muted-foreground/70 mt-1">
-              {isArabic ? `الجهاز الجديد: ${deviceName}` : `New device: ${deviceName}`}
-            </p>
+            <div className="inline-flex items-center gap-2 bg-muted/80 rounded-full px-4 py-2 mx-auto">
+              <Smartphone className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground font-medium">
+                {isArabic ? `الجهاز: ${deviceName}` : `Device: ${deviceName}`}
+              </span>
+            </div>
           )}
         </div>
 
-        {/* WhatsApp-style info box */}
-        <div className="w-full bg-muted/50 rounded-xl p-4 border border-border/50">
-          <p className="text-xs text-muted-foreground leading-relaxed">
+        {/* Security tip */}
+        <div className="w-full bg-muted/60 rounded-2xl p-4 border border-border/40 backdrop-blur-sm">
+          <p className="text-xs text-muted-foreground/80 leading-relaxed">
             {isArabic
-              ? 'إذا لم تكن أنت من قام بذلك، قم بتغيير كلمة المرور فوراً لحماية حسابك.'
-              : 'If this wasn\'t you, change your password immediately to protect your account.'}
+              ? '⚠️ إذا لم تكن أنت من قام بذلك، قم بتغيير كلمة المرور فوراً.'
+              : '⚠️ If this wasn\'t you, change your password immediately.'}
           </p>
         </div>
 
         {/* Action button */}
-        <Button
-          onClick={onAcknowledge}
-          className="w-full h-12 text-base font-bold rounded-xl shadow-lg"
-          variant="destructive"
+        <div
+          className={`w-full transition-all duration-500 ease-out ${
+            showButton ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
         >
-          {isArabic ? 'حسناً' : 'OK'}
-        </Button>
+          <Button
+            onClick={onAcknowledge}
+            className="w-full h-13 text-base font-bold rounded-2xl shadow-lg gap-2"
+            variant="destructive"
+            size="lg"
+          >
+            <LogOut className="w-5 h-5" />
+            {isArabic ? 'حسناً، تسجيل الخروج' : 'OK, Sign Out'}
+          </Button>
+        </div>
       </div>
     </div>
   );

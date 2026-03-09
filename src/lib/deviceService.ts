@@ -12,11 +12,12 @@ interface DeviceResponse {
   status?: string;
   message?: string;
   replaced_device_id?: string;
+  replaced_device_name?: string;
 }
 
 /**
  * Register the current device after successful login.
- * Should be called once after auth-status confirms user is fully activated.
+ * Returns info about whether a previous device was replaced.
  */
 export async function registerDevice(): Promise<DeviceResponse> {
   try {
@@ -54,8 +55,6 @@ export async function registerDevice(): Promise<DeviceResponse> {
 
 /**
  * Verify the current device is still active.
- * Called on reconnect (online event) and periodically.
- * Returns true if device is still active, false if revoked.
  */
 export async function verifyDevice(): Promise<{ active: boolean; message?: string }> {
   try {
@@ -63,7 +62,7 @@ export async function verifyDevice(): Promise<{ active: boolean; message?: strin
     const session = await supabase.auth.getSession();
     const token = session.data.session?.access_token;
     if (!token) {
-      return { active: true }; // No session = let auth flow handle it
+      return { active: true };
     }
 
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/device-check?action=verify`;
@@ -87,7 +86,6 @@ export async function verifyDevice(): Promise<{ active: boolean; message?: strin
       return { active: false, message: result.message || 'تم تسجيل الدخول من جهاز آخر' };
     }
 
-    // On error, assume active (don't break offline users)
     return { active: true };
   } catch (err) {
     logger.warn('Device verification failed (network?) — assuming active', 'Device');

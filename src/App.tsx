@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useCallback, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useCallback, useState, useRef } from 'react';
 import { useNavigate, useLocation, Routes, Route } from 'react-router-dom';
 import { App as CapacitorApp } from '@capacitor/app';
 import { useApp } from '@/store/AppContext';
@@ -103,6 +103,7 @@ const MainContent: React.FC = () => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [deviceRevoked, setDeviceRevoked] = useState(false);
   const [revokedDeviceName, setRevokedDeviceName] = useState<string | undefined>();
+  const [replacedWarning, setReplacedWarning] = useState<string | null>(null);
   
   // Initialize theme early so loading/auth screens also get dark mode
   usePageTheme();
@@ -136,6 +137,22 @@ const MainContent: React.FC = () => {
     };
     window.addEventListener('device-revoked', handleDeviceRevoked);
     return () => window.removeEventListener('device-revoked', handleDeviceRevoked);
+  }, []);
+
+  // Listen for new-device warning (shown on the NEW device after login replaces old one)
+  const warningShownRef = useRef(false);
+  useEffect(() => {
+    const handleDeviceReplaced = (e: Event) => {
+      if (warningShownRef.current) return;
+      warningShownRef.current = true;
+      const detail = (e as CustomEvent).detail;
+      const deviceName = detail?.replacedDeviceName || '';
+      // Use a custom toast-like banner
+      setReplacedWarning(deviceName);
+      setTimeout(() => setReplacedWarning(null), 6000);
+    };
+    window.addEventListener('device-replaced-warning', handleDeviceReplaced);
+    return () => window.removeEventListener('device-replaced-warning', handleDeviceReplaced);
   }, []);
 
   // Handle user acknowledging the device revocation
@@ -218,6 +235,23 @@ const MainContent: React.FC = () => {
         currentVersion={checkResult?.currentVersion}
         onDismiss={dismiss}
       />
+      {/* New-device warning banner (shown on the device that just logged in) */}
+      {replacedWarning !== null && (
+        <div
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] max-w-sm w-[90%] animate-in slide-in-from-top-4 fade-in duration-400"
+          dir="rtl"
+        >
+          <div className="bg-amber-500/95 dark:bg-amber-600/95 text-white rounded-2xl px-4 py-3 shadow-xl flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+              <span className="text-lg">📱</span>
+            </div>
+            <p className="text-xs font-bold leading-relaxed">
+              تم تسجيل الخروج من جميع الأجهزة السابقة
+              {replacedWarning ? ` (${replacedWarning})` : ''}
+            </p>
+          </div>
+        </div>
+      )}
     </>
   );
 };
