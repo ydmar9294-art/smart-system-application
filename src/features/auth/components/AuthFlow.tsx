@@ -39,6 +39,9 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
   const [showGuestSelector, setShowGuestSelector] = useState(false);
   const { enterGuestMode } = useGuest();
 
+  // Track whether we've already started processing to avoid double runs
+  const processingRef = useRef(false);
+
   const PHASE_LABELS: Record<LoadingPhase, string> = {
     returning: t('auth.phaseReturning'),
     validating_license: t('auth.phaseValidating'),
@@ -65,6 +68,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
     timeoutRef.current = setTimeout(() => {
       setAuthState({ type: 'error', message: t('auth.verifyTimeout'), canRetry: true });
       setIsSlow(false);
+      processingRef.current = false;
     }, VERIFY_TIMEOUT_MS);
   }, [clearTimers, t]);
 
@@ -84,50 +88,82 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       clearTimers();
       clearOAuthPending();
       setOauthPending(false);
-      if (!status.authenticated) { setAuthState({ type: 'needs_activation', userId, email, fullName }); return; }
+      if (!status.authenticated) { setAuthState({ type: 'needs_activation', userId, email, fullName }); processingRef.current = false; return; }
       setAuthState((prev) => prev.type === 'loading' ? { ...prev, phase: 'checking_status' } : prev);
       await yieldToRenderer();
-      if (status.access_denied) { setAuthState({ type: 'access_denied', reason: status.reason || 'UNKNOWN', message: status.message || t('auth.accessDenied') }); return; }
-      if (status.needs_activation) { setAuthState({ type: 'needs_activation', userId, email: status.email || email, fullName: status.full_name || fullName }); return; }
+      if (status.access_denied) { setAuthState({ type: 'access_denied', reason: status.reason || 'UNKNOWN', message: status.message || t('auth.accessDenied') }); processingRef.current = false; return; }
+      if (status.needs_activation) { setAuthState({ type: 'needs_activation', userId, email: status.email || email, fullName: status.full_name || fullName }); processingRef.current = false; return; }
       onAuthComplete();
+      processingRef.current = false;
     } catch (err: any) {
       clearTimers(); clearOAuthPending(); setOauthPending(false);
       logger.error('Check profile error', 'AuthFlow');
       const isTimeout = err?.message === 'VERIFY_TIMEOUT';
       setAuthState({ type: 'error', message: isTimeout ? t('auth.verifyTimeout') : err.message || t('auth.profileCheckError'), canRetry: true });
+      processingRef.current = false;
     }
-  }, [onAuthComplete, clearTimers, t]);
+  }, [onAuthComplete, clearTimers, t, yieldToRenderer]);
 
   useEffect(() => {
     const cached = getCachedAuth();
     const cacheIsFullyActivated = cached && cached.organizationId && cached.role;
+
     const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
-        // If cache is fully activated for this user, AuthContext (useSession) will handle it.
-        // Don't call onAuthComplete here — it triggers refreshAuth which causes a double
-        // edge function call and "silent loading" on Capacitor.
+        // If cache is fully activated for this user, AuthContext handles it — skip here
         if (cacheIsFullyActivated && cached.userId === session.user.id) return;
+
+        // Prevent double processing (both listener and checkSession may fire)
+        if (processingRef.current) return;
+        processingRef.current = true;
+
         if (cached && !cacheIsFullyActivated) clearAuthCache();
         startVerification();
         await yieldToRenderer();
         await checkUserProfile(session.user.id, session.user);
-      } else if (event === 'SIGNED_OUT') { clearAuthCache(); clearTimers(); setAuthState({ type: 'initial' }); }
+      } else if (event === 'SIGNED_OUT') {
+        clearAuthCache();
+        clearTimers();
+        setAuthState({ type: 'initial' });
+        processingRef.current = false;
+      }
     });
+
     const checkSession = async () => {
+      // Wait briefly for deep link tokens on Capacitor (tokens may arrive after app resumes)
+      if (isOAuthPending()) {
+        await new Promise(r => setTimeout(r, 1000));
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        // Same optimization: if cache matches, let AuthContext handle transition
         if (cacheIsFullyActivated && cached.userId === session.user.id) return;
+        if (processingRef.current) return;
+        processingRef.current = true;
+
         if (cached && !cacheIsFullyActivated) clearAuthCache();
-        startVerification(); await yieldToRenderer(); await checkUserProfile(session.user.id, session.user);
+        startVerification();
+        await yieldToRenderer();
+        await checkUserProfile(session.user.id, session.user);
       }
     };
+
     checkSession();
     return () => { listener.subscription.unsubscribe(); clearTimers(); };
-  }, [checkUserProfile, onAuthComplete, startVerification, clearTimers]);
+  }, [checkUserProfile, onAuthComplete, startVerification, clearTimers, yieldToRenderer]);
 
-  const handleLogout = async () => { clearAuthCache(); clearOAuthPending(); setOauthPending(false); await supabase.auth.signOut(); clearTimers(); setAuthState({ type: 'initial' }); setAuthError(''); };
-  const handleRetry = async () => { setAuthState({ type: 'initial' }); const { data: { session } } = await supabase.auth.getSession(); if (session?.user) { startVerification(); await yieldToRenderer(); await checkUserProfile(session.user.id, session.user); } };
+  const handleLogout = async () => { clearAuthCache(); clearOAuthPending(); setOauthPending(false); await supabase.auth.signOut(); clearTimers(); setAuthState({ type: 'initial' }); setAuthError(''); processingRef.current = false; };
+  const handleRetry = async () => {
+    setAuthState({ type: 'initial' });
+    processingRef.current = false;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      processingRef.current = true;
+      startVerification();
+      await yieldToRenderer();
+      await checkUserProfile(session.user.id, session.user);
+    }
+  };
   const handleActivationSuccess = () => onAuthComplete();
   const handleAuthError = (error: string) => setAuthError(error);
 

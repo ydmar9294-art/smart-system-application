@@ -96,7 +96,15 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
         if (data?.url) {
           await Browser.open({ url: data.url, windowName: '_blank' });
           const handle = await Browser.addListener('browserFinished', () => {
-            setTimeout(() => { if (isOAuthPending()) { clearOAuthPending(); stopShimmer(); setPhase('idle'); setLoading(false); } }, 1500);
+            // Give deep link handler 3s to deliver tokens before resetting
+            setTimeout(() => {
+              if (isOAuthPending()) {
+                clearOAuthPending();
+                stopShimmer();
+                setPhase('idle');
+                setLoading(false);
+              }
+            }, 3000);
             handle.remove();
           });
         }
