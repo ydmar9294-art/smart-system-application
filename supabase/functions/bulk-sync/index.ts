@@ -130,8 +130,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // --- Idempotency check ---
-    const idempotencyKeys = operations
+    // --- Idempotency check (only for valid operations) ---
+    const idempotencyKeys = validOperations
       .map(op => op.idempotencyKey)
       .filter(Boolean);
 
@@ -153,9 +153,9 @@ Deno.serve(async (req) => {
     // Track ID mappings within this batch (local → server)
     const customerIdMap = new Map<string, string>();
     const saleIdMap = new Map<string, string>();
-    const results: SyncResult[] = [];
+    const results: SyncResult[] = [...rejectedResults];
 
-    for (const op of operations) {
+    for (const op of validOperations) {
       if (op.idempotencyKey && processedKeys.has(op.idempotencyKey)) {
         results.push({ id: op.id, status: 'duplicate' });
         continue;
