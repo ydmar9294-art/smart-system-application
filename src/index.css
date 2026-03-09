@@ -1463,9 +1463,10 @@ html.lang-transition * {
   pointer-events: auto !important;
 }
 
-/* Exit button must always be clickable */
-.guest-preview-shell > button,
-.guest-preview-shell .fixed button {
+/* Exit button and any [data-guest-allow] must always be clickable */
+.guest-preview-shell button[data-guest-allow],
+.guest-preview-shell .fixed button[data-guest-allow] {
   pointer-events: auto !important;
   opacity: 1 !important;
+  cursor: pointer !important;
 }

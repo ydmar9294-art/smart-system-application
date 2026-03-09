@@ -58,7 +58,7 @@ const GuestDashboardShell: React.FC = () => {
       </div>
 
       {/* Exit button */}
-      <button onClick={exitGuestMode}
+      <button onClick={exitGuestMode} data-guest-allow
         className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9995] flex items-center gap-2 px-6 py-3 bg-destructive text-destructive-foreground rounded-full font-black text-sm shadow-2xl transition-transform active:scale-95 hover:brightness-110 safe-area-bottom">
         <LogOut className="w-4 h-4" />{t('guest.exitPreview')}
       </button>
