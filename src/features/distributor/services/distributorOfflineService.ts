@@ -579,6 +579,18 @@ export async function addLocalCustomer(customer: CachedCustomer): Promise<void> 
   await putEncryptedItem(STORES.CUSTOMERS_CACHE, customer);
 }
 
+/**
+ * Update a cached customer's balance optimistically (e.g., after offline collection).
+ */
+export async function updateCachedCustomerBalance(customerId: string, balanceDelta: number): Promise<void> {
+  const existing = await getEncryptedItem<CachedCustomer>(STORES.CUSTOMERS_CACHE, customerId);
+  if (existing) {
+    existing.balance = Math.max(0, existing.balance - balanceDelta);
+    existing.updated_at = Date.now();
+    await putEncryptedItem(STORES.CUSTOMERS_CACHE, existing);
+  }
+}
+
 export async function updateCustomerSyncStatus(
   localId: string,
   status: 'synced' | 'failed',

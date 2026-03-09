@@ -30,6 +30,7 @@ import {
   getCachedCustomers,
   addLocalCustomer,
   addLocalInvoice,
+  updateCachedCustomerBalance,
   retryFailedAction,
   retryAllFailedActions,
   type OfflineAction,
