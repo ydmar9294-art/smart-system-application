@@ -41,7 +41,7 @@ export function useCollectionMutations(orgId?: string | null, onError?: (msg: st
       }
 
       try {
-        await collectionService.addCollection(saleId, amount, notes);
+        await offlineAddCollection(saleId, amount, notes);
       } catch (err) {
         if (previousSales) queryClient.setQueryData(salesKey, previousSales);
         throw err;
