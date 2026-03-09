@@ -59,7 +59,7 @@ async function fetchAllRows<T>(
       () => buildQuery(offset, offset + BATCH_SIZE - 1),
       { label: `${label}_batch_${offset}` }
     );
-    const rows = data || [];
+    const rows = (data || []) as any[];
     allRows.push(...rows.map(transform));
     hasMore = rows.length === BATCH_SIZE;
     offset += BATCH_SIZE;
