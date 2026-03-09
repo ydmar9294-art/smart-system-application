@@ -10,6 +10,7 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { VirtualList } from '@/components/ui/VirtualList';
+import { CustomerListItem } from '@/components/ui/MemoizedListItems';
 
 const CustomersTab: React.FC = () => {
   const { t, i18n } = useTranslation();
