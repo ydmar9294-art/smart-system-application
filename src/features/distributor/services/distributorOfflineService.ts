@@ -543,29 +543,31 @@ export interface CachedCustomer {
 }
 
 export async function cacheCustomers(customers: CachedCustomer[]): Promise<void> {
-  // Read existing local customers BEFORE clearing
-  const existing = await getAllEncryptedItems<CachedCustomer>(STORES.CUSTOMERS_CACHE);
-  const localCustomers = existing.filter(c => c.isLocal && c.syncStatus !== 'synced');
-  
-  // Prepare all records (server + unsynced local) first
-  const serverIds = new Set(customers.map(c => c.id));
-  const records: Array<{ key: string; value: any }> = [];
-  
-  for (const c of customers) {
-    const record = await prepareEncryptedRecord({ ...c, updated_at: Date.now() });
-    records.push({ key: c.id, value: record });
-  }
-  
-  // Re-add local unsynced customers that aren't on server yet
-  for (const c of localCustomers) {
-    if (!serverIds.has(c.id)) {
-      const record = await prepareEncryptedRecord(c);
+  return withWriteLock(STORES.CUSTOMERS_CACHE, async () => {
+    // Read existing local customers BEFORE clearing
+    const existing = await getAllEncryptedItems<CachedCustomer>(STORES.CUSTOMERS_CACHE);
+    const localCustomers = existing.filter(c => c.isLocal && c.syncStatus !== 'synced');
+    
+    // Prepare all records (server + unsynced local) first
+    const serverIds = new Set(customers.map(c => c.id));
+    const records: Array<{ key: string; value: any }> = [];
+    
+    for (const c of customers) {
+      const record = await prepareEncryptedRecord({ ...c, updated_at: Date.now() });
       records.push({ key: c.id, value: record });
     }
-  }
-  
-  // ATOMIC: clear + write all in a single transaction
-  await atomicReplaceStore(STORES.CUSTOMERS_CACHE, records);
+    
+    // Re-add local unsynced customers that aren't on server yet
+    for (const c of localCustomers) {
+      if (!serverIds.has(c.id)) {
+        const record = await prepareEncryptedRecord(c);
+        records.push({ key: c.id, value: record });
+      }
+    }
+    
+    // ATOMIC: clear + write all in a single transaction
+    await atomicReplaceStore(STORES.CUSTOMERS_CACHE, records);
+  });
 }
 
 export async function getCachedCustomers(): Promise<CachedCustomer[]> {
