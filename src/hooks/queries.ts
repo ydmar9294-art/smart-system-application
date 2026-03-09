@@ -1,12 +1,15 @@
 /**
  * Domain Query Hooks - React Query based data fetching
  * 
- * NOW OFFLINE-FIRST: All queries persist results to IndexedDB via useOfflineQuery.
- * On app restart, cached data is served instantly while background fetch occurs.
+ * TWO QUERY MODES:
+ * 1. "Full" queries (useXxxQuery) — Load all data via auto-pagination for analytics/KPIs
+ *    Used by DataContext for FinanceTab, ReportsTab, etc.
+ * 2. "Paginated" queries (useXxxPaginatedQuery) — Cursor-based infinite scroll for UI lists
+ *    Used directly by list components for efficient rendering
  * 
- * Security: Every org-scoped query includes .eq('organization_id', orgId) (Section 1)
- * Performance: Partial selects to reduce payload size (Section 5)
- * Safety: Queries only run with valid org context (Section 2)
+ * Security: Every org-scoped query includes .eq('organization_id', orgId)
+ * Performance: Partial selects to reduce payload size
+ * Safety: Queries only run with valid org context
  */
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole, EmployeeType, Product, Customer, Sale, Payment, License, OrgStats } from '@/types';
@@ -19,8 +22,9 @@ import {
 import { queryKeys } from '@/lib/queryClient';
 import { safeQuery, canExecuteQuery, requireOrgContext } from '@/lib/safeQuery';
 import { useOfflineQuery } from '@/hooks/useOfflineQuery';
+import { useCursorPagination } from '@/hooks/data/useCursorPagination';
 
-// Domain-specific stale times (Section 7)
+// Domain-specific stale times
 const STALE = {
   fast: 2 * 60 * 1000,     // 2 min - sales, payments (frequently changing)
   normal: 5 * 60 * 1000,   // 5 min - products, customers
@@ -29,17 +33,68 @@ const STALE = {
 
 // Offline TTL per domain
 const OFFLINE_TTL = {
-  fast: 12 * 60 * 60 * 1000,   // 12 hours - sales, payments
-  normal: 24 * 60 * 60 * 1000, // 24 hours - products, customers
-  slow: 48 * 60 * 60 * 1000,   // 48 hours - licenses, org stats
+  fast: 12 * 60 * 60 * 1000,   // 12 hours
+  normal: 24 * 60 * 60 * 1000, // 24 hours
+  slow: 48 * 60 * 60 * 1000,   // 48 hours
 };
 
-// Increased from 500 to 1000 (Supabase max default) for better coverage
-// For datasets > 1000, use useCursorPagination hook
-const PAGE_LIMIT = 1000;
+/**
+ * Auto-paginating fetch: loads ALL rows by fetching in 1000-row batches.
+ * Used by analytics/KPI contexts that need complete datasets.
+ * Supabase max per request = 1000.
+ */
+const BATCH_SIZE = 1000;
+
+async function fetchAllRows<T>(
+  buildQuery: (from: number, to: number) => any,
+  transform: (row: any) => T,
+  label: string
+): Promise<T[]> {
+  const allRows: T[] = [];
+  let offset = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const data = await safeQuery(
+      () => buildQuery(offset, offset + BATCH_SIZE - 1),
+      { label: `${label}_batch_${offset}` }
+    );
+    const rows = (data || []) as any[];
+    allRows.push(...rows.map(transform));
+    hasMore = rows.length === BATCH_SIZE;
+    offset += BATCH_SIZE;
+  }
+
+  return allRows;
+}
+
+/**
+ * Cursor-based page fetch for infinite scroll.
+ * Uses created_at + id cursor pattern for stable pagination.
+ */
+const PAGE_SIZE = 50;
+
+interface CursorPage<T> {
+  data: T[];
+  nextCursor: string | null;
+}
+
+function parseCursor(cursor?: string): { cursorDate: string; cursorId: string } | null {
+  if (!cursor) return null;
+  try {
+    const [cursorDate, cursorId] = JSON.parse(cursor);
+    return { cursorDate, cursorId };
+  } catch {
+    return null;
+  }
+}
+
+function buildCursor(date: string, id: string): string {
+  return JSON.stringify([date, id]);
+}
 
 // ============================================
-// Product Queries
+// Product Queries (full only — typically <500 items)
 // ============================================
 
 export function useProductsQuery(orgId?: string | null, role?: UserRole | null) {
@@ -48,19 +103,17 @@ export function useProductsQuery(orgId?: string | null, role?: UserRole | null) 
     offlineTtlMs: OFFLINE_TTL.normal,
     queryFn: async (): Promise<Product[]> => {
       requireOrgContext(orgId, role);
-      let query = supabase
-        .from('products')
-        .select('id,name,category,cost_price,base_price,consumer_price,stock,min_stock,unit,is_deleted,organization_id')
-        .eq('is_deleted', false)
-        .order('created_at', { ascending: false })
-        .range(0, PAGE_LIMIT - 1);
-
-      if (orgId && role !== UserRole.DEVELOPER) {
-        query = query.eq('organization_id', orgId);
-      }
-
-      const data = await safeQuery(() => query, { label: 'products' });
-      return (data || []).map(transformProduct);
+      const buildQuery = (from: number, to: number) => {
+        let q = supabase
+          .from('products')
+          .select('id,name,category,cost_price,base_price,consumer_price,stock,min_stock,unit,is_deleted,organization_id')
+          .eq('is_deleted', false)
+          .order('created_at', { ascending: false })
+          .range(from, to);
+        if (orgId && role !== UserRole.DEVELOPER) q = q.eq('organization_id', orgId);
+        return q;
+      };
+      return fetchAllRows(buildQuery, transformProduct, 'products');
     },
     enabled: canExecuteQuery(orgId, role),
     staleTime: STALE.normal,
@@ -77,21 +130,55 @@ export function useCustomersQuery(orgId?: string | null, role?: UserRole | null)
     offlineTtlMs: OFFLINE_TTL.normal,
     queryFn: async (): Promise<Customer[]> => {
       requireOrgContext(orgId, role);
-      let query = supabase
-        .from('customers')
-        .select('id,name,phone,balance,organization_id,created_at,created_by,location')
-        .order('created_at', { ascending: false })
-        .range(0, PAGE_LIMIT - 1);
-
-      if (orgId && role !== UserRole.DEVELOPER) {
-        query = query.eq('organization_id', orgId);
-      }
-
-      const data = await safeQuery(() => query, { label: 'customers' });
-      return (data || []).map(transformCustomer);
+      const buildQuery = (from: number, to: number) => {
+        let q = supabase
+          .from('customers')
+          .select('id,name,phone,balance,organization_id,created_at,created_by,location')
+          .order('created_at', { ascending: false })
+          .range(from, to);
+        if (orgId && role !== UserRole.DEVELOPER) q = q.eq('organization_id', orgId);
+        return q;
+      };
+      return fetchAllRows(buildQuery, transformCustomer, 'customers');
     },
     enabled: canExecuteQuery(orgId, role),
     staleTime: STALE.normal,
+  });
+}
+
+export function useCustomersPaginatedQuery(orgId?: string | null, role?: UserRole | null) {
+  return useCursorPagination<Customer>({
+    queryKey: [...queryKeys.customers(orgId), 'paginated'],
+    orgId,
+    role,
+    staleTime: STALE.normal,
+    pageSize: PAGE_SIZE,
+    fetchFn: async (cursor?: string, limit = PAGE_SIZE): Promise<CursorPage<Customer>> => {
+      requireOrgContext(orgId, role);
+      let q = supabase
+        .from('customers')
+        .select('id,name,phone,balance,organization_id,created_at,created_by,location')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(limit + 1);
+
+      if (orgId && role !== UserRole.DEVELOPER) q = q.eq('organization_id', orgId);
+
+      const parsed = parseCursor(cursor);
+      if (parsed) {
+        q = q.or(`created_at.lt.${parsed.cursorDate},and(created_at.eq.${parsed.cursorDate},id.lt.${parsed.cursorId})`);
+      }
+
+      const data = await safeQuery(() => q, { label: 'customers_page' });
+      const rows = (data || []) as any[];
+      const hasMore = rows.length > limit;
+      const page = hasMore ? rows.slice(0, limit) : rows;
+      const lastRow = page[page.length - 1];
+      const nextCursor = hasMore && lastRow ? buildCursor(lastRow.created_at, lastRow.id) : null;
+
+      return { data: page.map(transformCustomer), nextCursor };
+    },
+    enabled: canExecuteQuery(orgId, role),
   });
 }
 
@@ -105,21 +192,55 @@ export function useSalesQuery(orgId?: string | null, role?: UserRole | null) {
     offlineTtlMs: OFFLINE_TTL.fast,
     queryFn: async (): Promise<Sale[]> => {
       requireOrgContext(orgId, role);
-      let query = supabase
-        .from('sales')
-        .select('id,customer_id,customer_name,grand_total,paid_amount,remaining,payment_type,is_voided,void_reason,created_at,organization_id,created_by,discount_type,discount_value,discount_percentage')
-        .order('created_at', { ascending: false })
-        .range(0, PAGE_LIMIT - 1);
-
-      if (orgId && role !== UserRole.DEVELOPER) {
-        query = query.eq('organization_id', orgId);
-      }
-
-      const data = await safeQuery(() => query, { label: 'sales' });
-      return (data || []).map(transformSale);
+      const buildQuery = (from: number, to: number) => {
+        let q = supabase
+          .from('sales')
+          .select('id,customer_id,customer_name,grand_total,paid_amount,remaining,payment_type,is_voided,void_reason,created_at,organization_id,created_by,discount_type,discount_value,discount_percentage')
+          .order('created_at', { ascending: false })
+          .range(from, to);
+        if (orgId && role !== UserRole.DEVELOPER) q = q.eq('organization_id', orgId);
+        return q;
+      };
+      return fetchAllRows(buildQuery, transformSale, 'sales');
     },
     enabled: canExecuteQuery(orgId, role),
     staleTime: STALE.fast,
+  });
+}
+
+export function useSalesPaginatedQuery(orgId?: string | null, role?: UserRole | null) {
+  return useCursorPagination<Sale>({
+    queryKey: [...queryKeys.sales(orgId), 'paginated'],
+    orgId,
+    role,
+    staleTime: STALE.fast,
+    pageSize: PAGE_SIZE,
+    fetchFn: async (cursor?: string, limit = PAGE_SIZE): Promise<CursorPage<Sale>> => {
+      requireOrgContext(orgId, role);
+      let q = supabase
+        .from('sales')
+        .select('id,customer_id,customer_name,grand_total,paid_amount,remaining,payment_type,is_voided,void_reason,created_at,organization_id,created_by,discount_type,discount_value,discount_percentage')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(limit + 1);
+
+      if (orgId && role !== UserRole.DEVELOPER) q = q.eq('organization_id', orgId);
+
+      const parsed = parseCursor(cursor);
+      if (parsed) {
+        q = q.or(`created_at.lt.${parsed.cursorDate},and(created_at.eq.${parsed.cursorDate},id.lt.${parsed.cursorId})`);
+      }
+
+      const data = await safeQuery(() => q, { label: 'sales_page' });
+      const rows = (data || []) as any[];
+      const hasMore = rows.length > limit;
+      const page = hasMore ? rows.slice(0, limit) : rows;
+      const lastRow = page[page.length - 1];
+      const nextCursor = hasMore && lastRow ? buildCursor(lastRow.created_at, lastRow.id) : null;
+
+      return { data: page.map(transformSale), nextCursor };
+    },
+    enabled: canExecuteQuery(orgId, role),
   });
 }
 
@@ -133,21 +254,55 @@ export function usePaymentsQuery(orgId?: string | null, role?: UserRole | null) 
     offlineTtlMs: OFFLINE_TTL.fast,
     queryFn: async (): Promise<Payment[]> => {
       requireOrgContext(orgId, role);
-      let query = supabase
-        .from('collections')
-        .select('id,sale_id,amount,notes,is_reversed,reverse_reason,created_at,organization_id,collected_by')
-        .order('created_at', { ascending: false })
-        .range(0, PAGE_LIMIT - 1);
-
-      if (orgId && role !== UserRole.DEVELOPER) {
-        query = query.eq('organization_id', orgId);
-      }
-
-      const data = await safeQuery(() => query, { label: 'payments' });
-      return (data || []).map(transformPayment);
+      const buildQuery = (from: number, to: number) => {
+        let q = supabase
+          .from('collections')
+          .select('id,sale_id,amount,notes,is_reversed,reverse_reason,created_at,organization_id,collected_by')
+          .order('created_at', { ascending: false })
+          .range(from, to);
+        if (orgId && role !== UserRole.DEVELOPER) q = q.eq('organization_id', orgId);
+        return q;
+      };
+      return fetchAllRows(buildQuery, transformPayment, 'payments');
     },
     enabled: canExecuteQuery(orgId, role),
     staleTime: STALE.fast,
+  });
+}
+
+export function usePaymentsPaginatedQuery(orgId?: string | null, role?: UserRole | null) {
+  return useCursorPagination<Payment>({
+    queryKey: [...queryKeys.payments(orgId), 'paginated'],
+    orgId,
+    role,
+    staleTime: STALE.fast,
+    pageSize: PAGE_SIZE,
+    fetchFn: async (cursor?: string, limit = PAGE_SIZE): Promise<CursorPage<Payment>> => {
+      requireOrgContext(orgId, role);
+      let q = supabase
+        .from('collections')
+        .select('id,sale_id,amount,notes,is_reversed,reverse_reason,created_at,organization_id,collected_by')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(limit + 1);
+
+      if (orgId && role !== UserRole.DEVELOPER) q = q.eq('organization_id', orgId);
+
+      const parsed = parseCursor(cursor);
+      if (parsed) {
+        q = q.or(`created_at.lt.${parsed.cursorDate},and(created_at.eq.${parsed.cursorDate},id.lt.${parsed.cursorId})`);
+      }
+
+      const data = await safeQuery(() => q, { label: 'payments_page' });
+      const rows = (data || []) as any[];
+      const hasMore = rows.length > limit;
+      const page = hasMore ? rows.slice(0, limit) : rows;
+      const lastRow = page[page.length - 1];
+      const nextCursor = hasMore && lastRow ? buildCursor(lastRow.created_at, lastRow.id) : null;
+
+      return { data: page.map(transformPayment), nextCursor };
+    },
+    enabled: canExecuteQuery(orgId, role),
   });
 }
 
@@ -161,21 +316,55 @@ export function usePurchasesQuery(orgId?: string | null, role?: UserRole | null)
     offlineTtlMs: OFFLINE_TTL.normal,
     queryFn: async (): Promise<Purchase[]> => {
       requireOrgContext(orgId, role);
-      let query = supabase
-        .from('purchases')
-        .select('id,product_id,product_name,quantity,unit_price,total_price,supplier_name,notes,created_at,organization_id')
-        .order('created_at', { ascending: false })
-        .range(0, PAGE_LIMIT - 1);
-
-      if (orgId && role !== UserRole.DEVELOPER) {
-        query = query.eq('organization_id', orgId);
-      }
-
-      const data = await safeQuery(() => query, { label: 'purchases' });
-      return (data || []).map(transformPurchase);
+      const buildQuery = (from: number, to: number) => {
+        let q = supabase
+          .from('purchases')
+          .select('id,product_id,product_name,quantity,unit_price,total_price,supplier_name,notes,created_at,organization_id')
+          .order('created_at', { ascending: false })
+          .range(from, to);
+        if (orgId && role !== UserRole.DEVELOPER) q = q.eq('organization_id', orgId);
+        return q;
+      };
+      return fetchAllRows(buildQuery, transformPurchase, 'purchases');
     },
     enabled: canExecuteQuery(orgId, role),
     staleTime: STALE.normal,
+  });
+}
+
+export function usePurchasesPaginatedQuery(orgId?: string | null, role?: UserRole | null) {
+  return useCursorPagination<Purchase>({
+    queryKey: [...queryKeys.purchases(orgId), 'paginated'],
+    orgId,
+    role,
+    staleTime: STALE.normal,
+    pageSize: PAGE_SIZE,
+    fetchFn: async (cursor?: string, limit = PAGE_SIZE): Promise<CursorPage<Purchase>> => {
+      requireOrgContext(orgId, role);
+      let q = supabase
+        .from('purchases')
+        .select('id,product_id,product_name,quantity,unit_price,total_price,supplier_name,notes,created_at,organization_id')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(limit + 1);
+
+      if (orgId && role !== UserRole.DEVELOPER) q = q.eq('organization_id', orgId);
+
+      const parsed = parseCursor(cursor);
+      if (parsed) {
+        q = q.or(`created_at.lt.${parsed.cursorDate},and(created_at.eq.${parsed.cursorDate},id.lt.${parsed.cursorId})`);
+      }
+
+      const data = await safeQuery(() => q, { label: 'purchases_page' });
+      const rows = (data || []) as any[];
+      const hasMore = rows.length > limit;
+      const page = hasMore ? rows.slice(0, limit) : rows;
+      const lastRow = page[page.length - 1];
+      const nextCursor = hasMore && lastRow ? buildCursor(lastRow.created_at, lastRow.id) : null;
+
+      return { data: page.map(transformPurchase), nextCursor };
+    },
+    enabled: canExecuteQuery(orgId, role),
   });
 }
 
@@ -189,26 +378,60 @@ export function useDeliveriesQuery(orgId?: string | null, role?: UserRole | null
     offlineTtlMs: OFFLINE_TTL.normal,
     queryFn: async (): Promise<Delivery[]> => {
       requireOrgContext(orgId, role);
-      let query = supabase
-        .from('deliveries')
-        .select('id,distributor_name,status,notes,created_at,organization_id,distributor_id')
-        .order('created_at', { ascending: false })
-        .range(0, PAGE_LIMIT - 1);
-
-      if (orgId && role !== UserRole.DEVELOPER) {
-        query = query.eq('organization_id', orgId);
-      }
-
-      const data = await safeQuery(() => query, { label: 'deliveries' });
-      return (data || []).map(transformDelivery);
+      const buildQuery = (from: number, to: number) => {
+        let q = supabase
+          .from('deliveries')
+          .select('id,distributor_name,status,notes,created_at,organization_id,distributor_id')
+          .order('created_at', { ascending: false })
+          .range(from, to);
+        if (orgId && role !== UserRole.DEVELOPER) q = q.eq('organization_id', orgId);
+        return q;
+      };
+      return fetchAllRows(buildQuery, transformDelivery, 'deliveries');
     },
     enabled: canExecuteQuery(orgId, role),
     staleTime: STALE.normal,
   });
 }
 
+export function useDeliveriesPaginatedQuery(orgId?: string | null, role?: UserRole | null) {
+  return useCursorPagination<Delivery>({
+    queryKey: [...queryKeys.deliveries(orgId), 'paginated'],
+    orgId,
+    role,
+    staleTime: STALE.normal,
+    pageSize: PAGE_SIZE,
+    fetchFn: async (cursor?: string, limit = PAGE_SIZE): Promise<CursorPage<Delivery>> => {
+      requireOrgContext(orgId, role);
+      let q = supabase
+        .from('deliveries')
+        .select('id,distributor_name,status,notes,created_at,organization_id,distributor_id')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(limit + 1);
+
+      if (orgId && role !== UserRole.DEVELOPER) q = q.eq('organization_id', orgId);
+
+      const parsed = parseCursor(cursor);
+      if (parsed) {
+        q = q.or(`created_at.lt.${parsed.cursorDate},and(created_at.eq.${parsed.cursorDate},id.lt.${parsed.cursorId})`);
+      }
+
+      const data = await safeQuery(() => q, { label: 'deliveries_page' });
+      const rows = (data || []) as any[];
+      const hasMore = rows.length > limit;
+      const page = hasMore ? rows.slice(0, limit) : rows;
+      const lastRow = page[page.length - 1];
+      const nextCursor = hasMore && lastRow ? buildCursor(lastRow.created_at, lastRow.id) : null;
+
+      return { data: page.map(transformDelivery), nextCursor };
+    },
+    enabled: canExecuteQuery(orgId, role),
+  });
+}
+
 // ============================================
-// Pending Employees Queries
+// Pending Employees Queries (small dataset — no pagination needed)
 // ============================================
 
 export function usePendingEmployeesQuery(
@@ -242,7 +465,7 @@ export function usePendingEmployeesQuery(
 }
 
 // ============================================
-// Distributor Inventory Queries
+// Distributor Inventory Queries (small dataset — no pagination needed)
 // ============================================
 
 export function useDistributorInventoryQuery(orgId?: string | null, role?: UserRole | null) {
@@ -269,7 +492,7 @@ export function useDistributorInventoryQuery(orgId?: string | null, role?: UserR
 }
 
 // ============================================
-// Users Queries
+// Users Queries (small dataset — no pagination needed)
 // ============================================
 
 export function useUsersQuery(
@@ -321,19 +544,16 @@ export function usePurchaseReturnsQuery(orgId?: string | null, role?: UserRole |
     offlineTtlMs: OFFLINE_TTL.normal,
     queryFn: async (): Promise<PurchaseReturn[]> => {
       requireOrgContext(orgId, role);
-      let query = supabase
-        .from('purchase_returns')
-        .select('id,supplier_name,total_amount,reason,created_at,created_by,organization_id')
-        .order('created_at', { ascending: false })
-        .range(0, PAGE_LIMIT - 1);
-
-      if (orgId && role !== UserRole.DEVELOPER) {
-        query = query.eq('organization_id', orgId);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data || []) as PurchaseReturn[];
+      const buildQuery = (from: number, to: number) => {
+        let q = supabase
+          .from('purchase_returns')
+          .select('id,supplier_name,total_amount,reason,created_at,created_by,organization_id')
+          .order('created_at', { ascending: false })
+          .range(from, to);
+        if (orgId && role !== UserRole.DEVELOPER) q = q.eq('organization_id', orgId);
+        return q;
+      };
+      return fetchAllRows(buildQuery, (r: any) => r as PurchaseReturn, 'purchaseReturns');
     },
     enabled: !!orgId && canView,
     staleTime: STALE.normal,
@@ -341,7 +561,7 @@ export function usePurchaseReturnsQuery(orgId?: string | null, role?: UserRole |
 }
 
 // ============================================
-// Licenses Queries (Developer only)
+// Licenses Queries (Developer only — small dataset)
 // ============================================
 
 export function useLicensesQuery(role?: UserRole | null) {
@@ -371,7 +591,7 @@ export function useOrgStatsQuery(role?: UserRole | null) {
   return useOfflineQuery({
     queryKey: queryKeys.orgStats(),
     offlineTtlMs: OFFLINE_TTL.slow,
-    skipOfflineCache: true, // Stats are too dynamic to cache offline
+    skipOfflineCache: true,
     queryFn: async (): Promise<OrgStats[]> => {
       const data = await safeQuery(
         () => supabase.rpc('get_organization_stats_rpc'),

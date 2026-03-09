@@ -1,49 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShoppingCart, Search, Package, ChevronDown } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { CURRENCY } from '@/constants';
-
-interface Purchase {
-  id: string;
-  product_name: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-  supplier_name: string | null;
-  notes: string | null;
-  created_at: string;
-}
+import { useAuth } from '@/store/AuthContext';
+import { usePurchasesPaginatedQuery } from '@/hooks/queries';
+import { InfiniteScrollTrigger } from '@/components/ui/InfiniteScrollList';
 
 const PurchasesTab: React.FC = () => {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { organization, role } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
-  useEffect(() => { loadPurchases(); }, []);
+  const {
+    data: purchases,
+    isLoading: loading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    totalLoaded,
+  } = usePurchasesPaginatedQuery(organization?.id, role);
 
-  const loadPurchases = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.from('purchases').select('*').order('created_at', { ascending: false });
-      if (error) throw error;
-      setPurchases(data || []);
-    } catch (error) { console.error('Error loading purchases:', error); }
-    finally { setLoading(false); }
-  };
-
-  const filteredPurchases = purchases.filter(p => {
+  const filteredPurchases = useMemo(() => (purchases || []).filter(p => {
     if (searchTerm && !p.product_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
         (!p.supplier_name || !p.supplier_name.toLowerCase().includes(searchTerm.toLowerCase()))) return false;
-    if (dateFrom && new Date(p.created_at) < new Date(dateFrom)) return false;
-    if (dateTo) { const to = new Date(dateTo); to.setHours(23,59,59); if (new Date(p.created_at) > to) return false; }
+    const ts = typeof p.created_at === 'number' ? p.created_at : new Date(p.created_at).getTime();
+    if (dateFrom && ts < new Date(dateFrom).getTime()) return false;
+    if (dateTo) { const to = new Date(dateTo); to.setHours(23,59,59); if (ts > to.getTime()) return false; }
     return true;
-  });
+  }), [purchases, searchTerm, dateFrom, dateTo]);
 
   const totalAmount = filteredPurchases.reduce((sum, p) => sum + Number(p.total_price), 0);
 
@@ -113,6 +101,14 @@ const PurchasesTab: React.FC = () => {
               </div>
             </div>
           ))}
+          
+          {/* Infinite scroll trigger */}
+          <InfiniteScrollTrigger
+            isFetchingNextPage={isFetchingNextPage}
+            hasNextPage={!!hasNextPage}
+            fetchNextPage={fetchNextPage}
+            totalLoaded={totalLoaded}
+          />
         </div>
       )}
     </div>
