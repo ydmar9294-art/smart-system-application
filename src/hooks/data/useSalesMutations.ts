@@ -107,7 +107,7 @@ export function useSalesMutations(orgId?: string | null, onError?: (msg: string)
     }
 
     try {
-      await collectionService.addCollection(d.saleId, d.amount);
+      await offlineAddCollection(d.saleId, d.amount);
     } catch (err) {
       if (previousSales) queryClient.setQueryData(salesKey, previousSales);
       handleError(err);
