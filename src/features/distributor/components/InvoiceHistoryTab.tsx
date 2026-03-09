@@ -344,7 +344,31 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        filteredInvoices.length > 30 ? (
+          <VirtualList
+            items={filteredInvoices}
+            itemHeight={80}
+            overscan={5}
+            containerHeight={480}
+            className="rounded-2xl"
+            renderItem={(invoice) => (
+              <div className="px-1 pb-2">
+                <InvoiceListItem
+                  key={invoice.id}
+                  invoice={invoice as any}
+                  locale={locale}
+                  onPrint={handlePrint}
+                  getTypeColor={getTypeColor}
+                  getTypeIcon={getTypeIcon}
+                  getTypeName={getTypeName}
+                  isRtl={isRtl}
+                  t={t as any}
+                />
+              </div>
+            )}
+          />
+        ) : (
+          <div className="space-y-2">
             {filteredInvoices.map((invoice) => (
               <InvoiceListItem
                 key={invoice.id}
@@ -358,7 +382,8 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
                 t={t as any}
               />
             ))}
-        </div>
+          </div>
+        )
       )}
     </div>
   );

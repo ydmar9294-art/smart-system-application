@@ -85,19 +85,35 @@ const CollectionsTab: React.FC = () => {
           <p className="text-muted-foreground font-bold">{t('accountant.noCollections')}</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {filteredCollections.map((coll) => (
-            <CollectionListItem key={coll.id} coll={coll} locale={locale} t={t} />
-          ))}
-          
-          {/* Infinite scroll trigger */}
+        <>
+          {filteredCollections.length > 30 ? (
+            <VirtualList
+              items={filteredCollections}
+              itemHeight={72}
+              overscan={5}
+              containerHeight={480}
+              className="rounded-2xl"
+              onEndReached={hasNextPage ? fetchNextPage : undefined}
+              renderItem={(coll) => (
+                <div className="px-1 pb-2">
+                  <CollectionListItem key={coll.id} coll={coll} locale={locale} t={t} />
+                </div>
+              )}
+            />
+          ) : (
+            <div className="space-y-2">
+              {filteredCollections.map((coll) => (
+                <CollectionListItem key={coll.id} coll={coll} locale={locale} t={t} />
+              ))}
+            </div>
+          )}
           <InfiniteScrollTrigger
             isFetchingNextPage={isFetchingNextPage}
             hasNextPage={!!hasNextPage}
             fetchNextPage={fetchNextPage}
             totalLoaded={totalLoaded}
           />
-        </div>
+        </>
       )}
     </div>
   );

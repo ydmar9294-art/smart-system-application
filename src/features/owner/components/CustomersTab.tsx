@@ -120,13 +120,14 @@ const CustomersTab: React.FC = () => {
           <Search className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
           <p className="text-muted-foreground font-medium text-sm">{t('ownerCustomers.noSearchResults')}</p>
         </div>
-      ) : filtered.length > 50 ? (
+      ) : filtered.length > 30 ? (
         <VirtualList
           items={filtered}
           itemHeight={120}
-          containerHeight={400}
+          overscan={5}
+          containerHeight={480}
           className="rounded-2xl"
-          renderItem={(c) => <div className="mx-1">{renderCustomerCard(c)}</div>}
+          renderItem={(c) => <div className="px-1 pb-2">{renderCustomerCard(c)}</div>}
         />
       ) : (
         <div className="space-y-2">
