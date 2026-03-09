@@ -143,6 +143,37 @@ function openDB(): Promise<IDBDatabase> {
 // Generic Store Helpers
 // ============================================
 
+// ============================================
+// Write Mutex — prevents concurrent cache operations from losing data
+// ============================================
+
+const writeLocks = new Map<string, Promise<void>>();
+
+async function withWriteLock<T>(storeName: string, fn: () => Promise<T>): Promise<T> {
+  // Wait for any existing operation on this store to finish
+  const existing = writeLocks.get(storeName);
+  if (existing) {
+    await existing.catch(() => {});
+  }
+  
+  let resolve: () => void;
+  const lock = new Promise<void>(r => { resolve = r; });
+  writeLocks.set(storeName, lock);
+  
+  try {
+    return await fn();
+  } finally {
+    resolve!();
+    if (writeLocks.get(storeName) === lock) {
+      writeLocks.delete(storeName);
+    }
+  }
+}
+
+// ============================================
+// Generic Store Helpers
+// ============================================
+
 async function putItem<T>(storeName: string, item: T): Promise<void> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -466,16 +497,17 @@ export interface CachedInventoryItem {
 }
 
 export async function cacheInventory(items: CachedInventoryItem[]): Promise<void> {
-  // Prepare all encrypted records first, then write atomically
-  const records: Array<{ key: string; value: any }> = [];
-  for (const item of items) {
-    const record = await prepareEncryptedRecord(
-      { ...item, updated_at: Date.now() },
-      'product_id'
-    );
-    records.push({ key: item.product_id, value: record });
-  }
-  await atomicReplaceStore(STORES.INVENTORY_CACHE, records);
+  return withWriteLock(STORES.INVENTORY_CACHE, async () => {
+    const records: Array<{ key: string; value: any }> = [];
+    for (const item of items) {
+      const record = await prepareEncryptedRecord(
+        { ...item, updated_at: Date.now() },
+        'product_id'
+      );
+      records.push({ key: item.product_id, value: record });
+    }
+    await atomicReplaceStore(STORES.INVENTORY_CACHE, records);
+  });
 }
 
 export async function getCachedInventory(): Promise<CachedInventoryItem[]> {
@@ -512,29 +544,31 @@ export interface CachedCustomer {
 }
 
 export async function cacheCustomers(customers: CachedCustomer[]): Promise<void> {
-  // Read existing local customers BEFORE clearing
-  const existing = await getAllEncryptedItems<CachedCustomer>(STORES.CUSTOMERS_CACHE);
-  const localCustomers = existing.filter(c => c.isLocal && c.syncStatus !== 'synced');
-  
-  // Prepare all records (server + unsynced local) first
-  const serverIds = new Set(customers.map(c => c.id));
-  const records: Array<{ key: string; value: any }> = [];
-  
-  for (const c of customers) {
-    const record = await prepareEncryptedRecord({ ...c, updated_at: Date.now() });
-    records.push({ key: c.id, value: record });
-  }
-  
-  // Re-add local unsynced customers that aren't on server yet
-  for (const c of localCustomers) {
-    if (!serverIds.has(c.id)) {
-      const record = await prepareEncryptedRecord(c);
+  return withWriteLock(STORES.CUSTOMERS_CACHE, async () => {
+    // Read existing local customers BEFORE clearing
+    const existing = await getAllEncryptedItems<CachedCustomer>(STORES.CUSTOMERS_CACHE);
+    const localCustomers = existing.filter(c => c.isLocal && c.syncStatus !== 'synced');
+    
+    // Prepare all records (server + unsynced local) first
+    const serverIds = new Set(customers.map(c => c.id));
+    const records: Array<{ key: string; value: any }> = [];
+    
+    for (const c of customers) {
+      const record = await prepareEncryptedRecord({ ...c, updated_at: Date.now() });
       records.push({ key: c.id, value: record });
     }
-  }
-  
-  // ATOMIC: clear + write all in a single transaction
-  await atomicReplaceStore(STORES.CUSTOMERS_CACHE, records);
+    
+    // Re-add local unsynced customers that aren't on server yet
+    for (const c of localCustomers) {
+      if (!serverIds.has(c.id)) {
+        const record = await prepareEncryptedRecord(c);
+        records.push({ key: c.id, value: record });
+      }
+    }
+    
+    // ATOMIC: clear + write all in a single transaction
+    await atomicReplaceStore(STORES.CUSTOMERS_CACHE, records);
+  });
 }
 
 export async function getCachedCustomers(): Promise<CachedCustomer[]> {
@@ -1122,8 +1156,8 @@ let onlineListenerActive = false;
 export function startDistributorSync(): void {
   if (syncIntervalId) return;
   
-  // Load ID maps immediately
-  loadPersistedIdMaps();
+  // NOTE: loadPersistedIdMaps is called by useDistributorOffline before this.
+  // Do NOT call it again here to avoid redundant IndexedDB reads.
   
   // Check key rotation on startup (non-blocking)
   checkAndRotateKeyIfNeeded().catch(() => {});
@@ -1183,7 +1217,25 @@ export async function clearDistributorOfflineData(): Promise<void> {
       const req = indexedDB.deleteDatabase(DB_NAME);
       req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
-      req.onblocked = () => resolve(); // proceed even if blocked
+      req.onblocked = () => {
+        // Database is blocked by another tab/connection — force clear all stores instead
+        logger.warn('[DistributorOffline] deleteDatabase blocked — clearing stores manually', 'DistributorOffline');
+        openDB().then(db => {
+          const storeNames = Array.from(db.objectStoreNames);
+          if (storeNames.length === 0) { resolve(); return; }
+          const tx = db.transaction(storeNames, 'readwrite');
+          for (const name of storeNames) {
+            tx.objectStore(name).clear();
+          }
+          tx.oncomplete = () => {
+            db.close();
+            dbInstance = null;
+            dbOpenPromise = null;
+            resolve();
+          };
+          tx.onerror = () => reject(tx.error);
+        }).catch(() => resolve()); // last resort: proceed anyway
+      };
     });
     // Clear in-memory maps
     customerIdMap.clear();
@@ -1223,31 +1275,33 @@ export interface CachedSale {
 }
 
 export async function cacheSales(sales: CachedSale[]): Promise<void> {
-  // Preserve local (unsynced) sales during server refresh
-  const existing = await getAllEncryptedItems<CachedSale>(STORES.SALES_CACHE);
-  const localSales = existing.filter(s => s.isLocal);
-  
-  // Prepare all records first
-  const records: Array<{ key: string; value: any }> = [];
-  
-  for (const s of sales) {
-    const record = await prepareEncryptedRecord(s);
-    records.push({ key: s.id, value: record });
-  }
-  
-  // Re-add local unsynced sales
-  const serverIds = new Set(sales.map(s => s.id));
-  for (const s of localSales) {
-    const mappedId = saleIdMap.get(s.id);
-    if (mappedId && serverIds.has(mappedId)) continue;
-    if (!serverIds.has(s.id)) {
+  return withWriteLock(STORES.SALES_CACHE, async () => {
+    // Preserve local (unsynced) sales during server refresh
+    const existing = await getAllEncryptedItems<CachedSale>(STORES.SALES_CACHE);
+    const localSales = existing.filter(s => s.isLocal);
+    
+    // Prepare all records first
+    const records: Array<{ key: string; value: any }> = [];
+    
+    for (const s of sales) {
       const record = await prepareEncryptedRecord(s);
       records.push({ key: s.id, value: record });
     }
-  }
-  
-  // ATOMIC: clear + write all in a single transaction
-  await atomicReplaceStore(STORES.SALES_CACHE, records);
+    
+    // Re-add local unsynced sales
+    const serverIds = new Set(sales.map(s => s.id));
+    for (const s of localSales) {
+      const mappedId = saleIdMap.get(s.id);
+      if (mappedId && serverIds.has(mappedId)) continue;
+      if (!serverIds.has(s.id)) {
+        const record = await prepareEncryptedRecord(s);
+        records.push({ key: s.id, value: record });
+      }
+    }
+    
+    // ATOMIC: clear + write all in a single transaction
+    await atomicReplaceStore(STORES.SALES_CACHE, records);
+  });
 }
 
 export async function getCachedSales(): Promise<CachedSale[]> {
@@ -1307,31 +1361,33 @@ export interface CachedInvoice {
 }
 
 export async function cacheInvoices(invoices: CachedInvoice[]): Promise<void> {
-  // Preserve local (unsynced) invoices during server refresh
-  const existing = await getAllEncryptedItems<CachedInvoice>(STORES.INVOICES_CACHE);
-  const localInvoices = existing.filter(inv => inv.isLocal);
-  
-  // Prepare all records first
-  const records: Array<{ key: string; value: any }> = [];
-  
-  for (const inv of invoices) {
-    const record = await prepareEncryptedRecord(inv);
-    records.push({ key: inv.id, value: record });
-  }
-  
-  // Re-add local unsynced invoices
-  const serverIds = new Set(invoices.map(inv => inv.id));
-  for (const inv of localInvoices) {
-    const mappedId = saleIdMap.get(inv.id);
-    if (mappedId && serverIds.has(mappedId)) continue;
-    if (!serverIds.has(inv.id)) {
+  return withWriteLock(STORES.INVOICES_CACHE, async () => {
+    // Preserve local (unsynced) invoices during server refresh
+    const existing = await getAllEncryptedItems<CachedInvoice>(STORES.INVOICES_CACHE);
+    const localInvoices = existing.filter(inv => inv.isLocal);
+    
+    // Prepare all records first
+    const records: Array<{ key: string; value: any }> = [];
+    
+    for (const inv of invoices) {
       const record = await prepareEncryptedRecord(inv);
       records.push({ key: inv.id, value: record });
     }
-  }
-  
-  // ATOMIC: clear + write all in a single transaction
-  await atomicReplaceStore(STORES.INVOICES_CACHE, records);
+    
+    // Re-add local unsynced invoices
+    const serverIds = new Set(invoices.map(inv => inv.id));
+    for (const inv of localInvoices) {
+      const mappedId = saleIdMap.get(inv.id);
+      if (mappedId && serverIds.has(mappedId)) continue;
+      if (!serverIds.has(inv.id)) {
+        const record = await prepareEncryptedRecord(inv);
+        records.push({ key: inv.id, value: record });
+      }
+    }
+    
+    // ATOMIC: clear + write all in a single transaction
+    await atomicReplaceStore(STORES.INVOICES_CACHE, records);
+  });
 }
 
 export async function getCachedInvoices(): Promise<CachedInvoice[]> {

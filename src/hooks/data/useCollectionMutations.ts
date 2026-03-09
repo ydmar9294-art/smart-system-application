@@ -1,5 +1,5 @@
 /**
- * Collection Mutations Hook — with optimistic UI & rollback
+ * Collection Mutations Hook — with optimistic UI, rollback & offline queue
  */
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -7,6 +7,14 @@ import { queryKeys } from '@/lib/queryClient';
 import { collectionService } from '@/services/collectionService';
 import { Sale, Payment } from '@/types';
 import { extractErrorMessage } from '@/lib/errorHandler';
+import { withOfflineQueue } from './useOfflineMutationQueue';
+
+const offlineAddCollection = withOfflineQueue('collectionService.addCollection2', (saleId: string, amount: number, notes?: string) =>
+  collectionService.addCollection(saleId, amount, notes)
+);
+const offlineReversePayment = withOfflineQueue('collectionService.reversePayment', (paymentId: string, reason: string) =>
+  collectionService.reversePayment(paymentId, reason)
+);
 
 export function useCollectionMutations(orgId?: string | null, onError?: (msg: string) => void) {
   const queryClient = useQueryClient();
@@ -33,7 +41,7 @@ export function useCollectionMutations(orgId?: string | null, onError?: (msg: st
       }
 
       try {
-        await collectionService.addCollection(saleId, amount, notes);
+        await offlineAddCollection(saleId, amount, notes);
       } catch (err) {
         if (previousSales) queryClient.setQueryData(salesKey, previousSales);
         throw err;
@@ -59,7 +67,7 @@ export function useCollectionMutations(orgId?: string | null, onError?: (msg: st
     }
 
     try {
-      await collectionService.reversePayment(paymentId, reason);
+      await offlineReversePayment(paymentId, reason);
     } catch (err) {
       if (previousPayments) queryClient.setQueryData(paymentsKey, previousPayments);
       handleError(err);

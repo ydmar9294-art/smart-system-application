@@ -1,7 +1,7 @@
 /**
- * Sales Mutations Hook — with optimistic UI updates
+ * Sales Mutations Hook — with optimistic UI updates & offline queue
  */
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryClient';
 import { salesService } from '@/services/salesService';
@@ -9,6 +9,18 @@ import { collectionService } from '@/services/collectionService';
 import { Sale, Payment } from '@/types';
 import { generateUUID } from '@/lib/uuid';
 import { extractErrorMessage } from '@/lib/errorHandler';
+import { withOfflineQueue, processQueue } from './useOfflineMutationQueue';
+
+// Register service functions for offline replay
+const offlineCreateSale = withOfflineQueue('salesService.createSale', (args: any) =>
+  salesService.createSale(args)
+);
+const offlineAddCollection = withOfflineQueue('collectionService.addCollection', (saleId: string, amount: number, notes?: string) =>
+  collectionService.addCollection(saleId, amount, notes)
+);
+const offlineVoidSale = withOfflineQueue('salesService.voidSale', (args: any) =>
+  salesService.voidSale(args)
+);
 
 export function useSalesMutations(orgId?: string | null, onError?: (msg: string) => void) {
   const queryClient = useQueryClient();
@@ -27,7 +39,7 @@ export function useSalesMutations(orgId?: string | null, onError?: (msg: string)
 
   const createSale = useCallback(async (customerId: string, items: any[]) => {
     try {
-      await salesService.createSale({ customerId, items });
+      await offlineCreateSale({ customerId, items });
       invalidateSalesDeps();
     } catch (e) { handleError(e); }
   }, [invalidateSalesDeps, handleError]);
@@ -63,7 +75,7 @@ export function useSalesMutations(orgId?: string | null, onError?: (msg: string)
     queryClient.setQueryData<Sale[]>(salesKey, old => [optimisticSale, ...(old || [])]);
 
     try {
-      await salesService.createSale({
+      await offlineCreateSale({
         customerId: d.customerId, items: d.items, paymentType: d.paymentType,
         discountType: d.discountType, discountValue: d.discountValue,
         discountPercentage: d.discountPercentage,
@@ -95,7 +107,7 @@ export function useSalesMutations(orgId?: string | null, onError?: (msg: string)
     }
 
     try {
-      await collectionService.addCollection(d.saleId, d.amount);
+      await offlineAddCollection(d.saleId, d.amount);
     } catch (err) {
       if (previousSales) queryClient.setQueryData(salesKey, previousSales);
       handleError(err);
@@ -119,7 +131,7 @@ export function useSalesMutations(orgId?: string | null, onError?: (msg: string)
     );
 
     try {
-      await salesService.voidSale({ saleId, reason });
+      await offlineVoidSale({ saleId, reason });
     } catch (err) {
       if (previousSales) queryClient.setQueryData(salesKey, previousSales);
       handleError(err);
