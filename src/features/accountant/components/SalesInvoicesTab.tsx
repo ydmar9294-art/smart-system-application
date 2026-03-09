@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { SaleListItem } from '@/components/ui/MemoizedListItems';
 import { logger } from '@/lib/logger';
 import { useTranslation } from 'react-i18next';
 import {
