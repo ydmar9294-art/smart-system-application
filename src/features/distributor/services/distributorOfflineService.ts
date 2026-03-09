@@ -1183,7 +1183,25 @@ export async function clearDistributorOfflineData(): Promise<void> {
       const req = indexedDB.deleteDatabase(DB_NAME);
       req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
-      req.onblocked = () => resolve(); // proceed even if blocked
+      req.onblocked = () => {
+        // Database is blocked by another tab/connection — force clear all stores instead
+        logger.warn('[DistributorOffline] deleteDatabase blocked — clearing stores manually', 'DistributorOffline');
+        openDB().then(db => {
+          const storeNames = Array.from(db.objectStoreNames);
+          if (storeNames.length === 0) { resolve(); return; }
+          const tx = db.transaction(storeNames, 'readwrite');
+          for (const name of storeNames) {
+            tx.objectStore(name).clear();
+          }
+          tx.oncomplete = () => {
+            db.close();
+            dbInstance = null;
+            dbOpenPromise = null;
+            resolve();
+          };
+          tx.onerror = () => reject(tx.error);
+        }).catch(() => resolve()); // last resort: proceed anyway
+      };
     });
     // Clear in-memory maps
     customerIdMap.clear();
