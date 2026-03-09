@@ -209,7 +209,7 @@ interface InvoiceListItemProps {
   getTypeIcon: (type: string) => React.ReactNode;
   getTypeName: (type: string) => string;
   isRtl: boolean;
-  t: (...args: any[]) => string;
+  t: any;
 }
 
 export const InvoiceListItem = React.memo<InvoiceListItemProps>(({

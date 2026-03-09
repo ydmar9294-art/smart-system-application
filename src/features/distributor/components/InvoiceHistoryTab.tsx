@@ -354,7 +354,7 @@ const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ isOnline }) => {
                 getTypeIcon={getTypeIcon}
                 getTypeName={getTypeName}
                 isRtl={isRtl}
-                t={t}
+                t={t as any}
               />
             ))}
         </div>
