@@ -12,6 +12,8 @@ import {
   MessageCircle
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
+import { useAuth } from '@/store/AuthContext';
+import { useTabPrefetch } from '@/hooks/useTabPrefetch';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
 import AIAssistant from '@/features/ai/components/AIAssistant';
 import { NotificationCenter } from '@/features/notifications/components/NotificationCenter';
