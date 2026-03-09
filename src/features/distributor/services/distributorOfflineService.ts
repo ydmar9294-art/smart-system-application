@@ -497,16 +497,17 @@ export interface CachedInventoryItem {
 }
 
 export async function cacheInventory(items: CachedInventoryItem[]): Promise<void> {
-  // Prepare all encrypted records first, then write atomically
-  const records: Array<{ key: string; value: any }> = [];
-  for (const item of items) {
-    const record = await prepareEncryptedRecord(
-      { ...item, updated_at: Date.now() },
-      'product_id'
-    );
-    records.push({ key: item.product_id, value: record });
-  }
-  await atomicReplaceStore(STORES.INVENTORY_CACHE, records);
+  return withWriteLock(STORES.INVENTORY_CACHE, async () => {
+    const records: Array<{ key: string; value: any }> = [];
+    for (const item of items) {
+      const record = await prepareEncryptedRecord(
+        { ...item, updated_at: Date.now() },
+        'product_id'
+      );
+      records.push({ key: item.product_id, value: record });
+    }
+    await atomicReplaceStore(STORES.INVENTORY_CACHE, records);
+  });
 }
 
 export async function getCachedInventory(): Promise<CachedInventoryItem[]> {
