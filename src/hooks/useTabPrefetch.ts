@@ -118,7 +118,7 @@ export function useTabPrefetch(
                 ),
                 { label: 'prefetch_purchases' }
               );
-              return (data || []).map(transformPurchase);
+              return ((data || []) as any[]).map(transformPurchase);
             },
           });
           break;
