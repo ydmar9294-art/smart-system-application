@@ -27,8 +27,9 @@ const PurchasesTab: React.FC = () => {
   const filteredPurchases = useMemo(() => (purchases || []).filter(p => {
     if (searchTerm && !p.product_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
         (!p.supplier_name || !p.supplier_name.toLowerCase().includes(searchTerm.toLowerCase()))) return false;
-    if (dateFrom && new Date(p.created_at) < new Date(dateFrom)) return false;
-    if (dateTo) { const to = new Date(dateTo); to.setHours(23,59,59); if (new Date(p.created_at) > to) return false; }
+    const ts = typeof p.created_at === 'number' ? p.created_at : new Date(p.created_at).getTime();
+    if (dateFrom && ts < new Date(dateFrom).getTime()) return false;
+    if (dateTo) { const to = new Date(dateTo); to.setHours(23,59,59); if (ts > to.getTime()) return false; }
     return true;
   }), [purchases, searchTerm, dateFrom, dateTo]);
 
