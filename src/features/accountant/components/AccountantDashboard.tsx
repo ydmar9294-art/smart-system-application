@@ -12,6 +12,8 @@ import {
   MessageCircle
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
+import { useAuth } from '@/store/AuthContext';
+import { useTabPrefetch } from '@/hooks/useTabPrefetch';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
 import AIAssistant from '@/features/ai/components/AIAssistant';
 import { NotificationCenter } from '@/features/notifications/components/NotificationCenter';
@@ -29,8 +31,11 @@ const AccountantDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
   const { logout } = useApp();
+  const { organization, role } = useAuth();
   const [activeTab, setActiveTab] = useState<AccountantTabType>('sales');
   const [loggingOut, setLoggingOut] = useState(false);
+
+  useTabPrefetch(activeTab, organization?.id, role);
 
   const handleLogout = async () => {
     setLoggingOut(true);

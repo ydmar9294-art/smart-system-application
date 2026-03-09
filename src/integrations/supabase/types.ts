@@ -1637,6 +1637,8 @@ export type Database = {
         Returns: Json
       }
       expire_overdue_licenses: { Args: never; Returns: number }
+      get_customer_debts_summary_rpc: { Args: never; Returns: Json }
+      get_financial_summary_rpc: { Args: never; Returns: Json }
       get_my_license_info: {
         Args: never
         Returns: {

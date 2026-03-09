@@ -26,20 +26,17 @@ const ReportsTab: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [pRes, srRes, prRes, cRes, diRes, discRes] = await Promise.all([
-        supabase.from('purchases').select('total_price'),
-        supabase.from('sales_returns').select('total_amount'),
-        supabase.from('purchase_returns').select('total_amount'),
-        supabase.from('collections').select('amount, is_reversed').eq('is_reversed', false),
-        supabase.from('distributor_inventory').select('product_id, quantity'),
-        supabase.from('sales').select('discount_value, is_voided').eq('is_voided', false),
-      ]);
-      if (pRes.data) setPurchasesTotal(pRes.data.reduce((s, p) => s + Number(p.total_price), 0));
-      if (srRes.data) setSalesReturnsTotal(srRes.data.reduce((s, r) => s + Number(r.total_amount), 0));
-      if (prRes.data) setPurchaseReturnsTotal(prRes.data.reduce((s, r) => s + Number(r.total_amount), 0));
-      if (cRes.data) setCollectionsTotal(cRes.data.reduce((s, c) => s + Number(c.amount), 0));
-      if (diRes.data) setDistributorInventory(diRes.data);
-      if (discRes.data) setTotalDiscounts(discRes.data.reduce((s, d) => s + Number(d.discount_value || 0), 0));
+      const { data, error } = await supabase.rpc('get_financial_summary_rpc');
+      if (error) throw error;
+      if (data) {
+        const summary = data as any;
+        setPurchasesTotal(Number(summary.purchases_total));
+        setSalesReturnsTotal(Number(summary.sales_returns_total));
+        setPurchaseReturnsTotal(Number(summary.purchase_returns_total));
+        setCollectionsTotal(Number(summary.collections_total));
+        setTotalDiscounts(Number(summary.total_discounts));
+        setDistributorInventory(summary.distributor_inventory || []);
+      }
     } catch (error) { logger.error('Error loading report data', 'ReportsTab'); }
     finally { setLoading(false); }
   };

@@ -23,6 +23,8 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
+import { useAuth } from '@/store/AuthContext';
+import { useTabPrefetch } from '@/hooks/useTabPrefetch';
 import { supabase } from '@/integrations/supabase/client';
 import AIAssistant from '@/features/ai/components/AIAssistant';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
@@ -45,7 +47,9 @@ const DistributorDashboard: React.FC = () => {
   const isRtl = i18n.language === 'ar';
   const { logout, addNotification, refreshAllData, organization, user: appUser } = useApp();
   const offline = useDistributorOffline();
+  const { role: authRole, organization: authOrg } = useAuth();
   const [activeTab, setActiveTab] = useState<DistributorTabType>('inventory');
+  useTabPrefetch(activeTab, authOrg?.id, authRole);
   const [loggingOut, setLoggingOut] = useState(false);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
