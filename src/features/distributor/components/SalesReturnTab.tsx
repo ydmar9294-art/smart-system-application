@@ -82,21 +82,48 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer, onQue
    * 2. Cached invoices (for locally-created sales)
    * 3. Server (when online)
    */
+  /**
+   * Calculate quantities already returned for this sale from pending offline actions.
+   * This prevents over-returning the same items when offline.
+   */
+  const getOfflineReturnedQuantities = async (saleId: string): Promise<Record<string, number>> => {
+    const returnedQtyMap: Record<string, number> = {};
+    try {
+      const allActions = await getAllActions();
+      for (const action of allActions) {
+        if (action.type === 'CREATE_RETURN' && action.status !== 'failed' &&
+            action.payload?.saleId === saleId && action.payload?.items) {
+          for (const item of action.payload.items) {
+            const pid = item.product_id;
+            returnedQtyMap[pid] = (returnedQtyMap[pid] || 0) + item.quantity;
+          }
+        }
+      }
+    } catch {
+      // non-critical
+    }
+    return returnedQtyMap;
+  };
+
   const loadSaleItems = async (saleId: string) => {
     setLoadingItems(true);
     try {
+      // Calculate already-returned quantities from offline queue
+      const offlineReturnedQty = await getOfflineReturnedQuantities(saleId);
+
       // === Offline path ===
       if (!navigator.onLine) {
         // Source 1: Items from CachedSale (most reliable for server-synced sales)
         const sale = localSales.find(s => s.id === saleId);
         if (sale?.items && sale.items.length > 0) {
-          setSaleItems(sale.items.map(item => ({
+          const adjusted = sale.items.map(item => ({
             product_id: item.product_id,
             product_name: item.product_name,
-            quantity: item.quantity,
+            quantity: item.quantity - (offlineReturnedQty[item.product_id] || 0),
             unit_price: item.unit_price,
             total_price: item.total_price,
-          })));
+          })).filter(item => item.quantity > 0);
+          setSaleItems(adjusted);
           return;
         }
 
@@ -104,13 +131,17 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer, onQue
         const cachedInvoices = await getCachedInvoices();
         const invoice = cachedInvoices.find(inv => inv.id === saleId || inv.reference_id === saleId);
         if (invoice && invoice.items.length > 0) {
-          setSaleItems(invoice.items.map(item => ({
-            product_id: (item as any).product_id || saleId + '_' + item.product_name,
-            product_name: item.product_name,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            total_price: item.total_price,
-          })));
+          const adjusted = invoice.items.map(item => {
+            const pid = (item as any).product_id || saleId + '_' + item.product_name;
+            return {
+              product_id: pid,
+              product_name: item.product_name,
+              quantity: item.quantity - (offlineReturnedQty[pid] || 0),
+              unit_price: item.unit_price,
+              total_price: item.total_price,
+            };
+          }).filter(item => item.quantity > 0);
+          setSaleItems(adjusted);
           return;
         }
 
