@@ -75,7 +75,7 @@ export function useSalesMutations(orgId?: string | null, onError?: (msg: string)
     queryClient.setQueryData<Sale[]>(salesKey, old => [optimisticSale, ...(old || [])]);
 
     try {
-      await salesService.createSale({
+      await offlineCreateSale({
         customerId: d.customerId, items: d.items, paymentType: d.paymentType,
         discountType: d.discountType, discountValue: d.discountValue,
         discountPercentage: d.discountPercentage,
