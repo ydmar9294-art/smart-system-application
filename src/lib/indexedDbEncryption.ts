@@ -260,18 +260,132 @@ export async function checkAndRotateKeyIfNeeded(): Promise<boolean> {
     const needsRotation = await isKeyRotationNeeded();
     if (!needsRotation) return false;
 
+    // Step 1: Save old key for re-encryption
+    const oldKey = cachedKey;
+    if (!oldKey) {
+      // No cached key means nothing was encrypted with it yet — just rotate
+      const { newKeyB64 } = await rotateSecureKey();
+      cachedKey = null;
+      const rawKey = base64ToBuffer(newKeyB64);
+      cachedKey = await crypto.subtle.importKey(
+        'raw', rawKey, { name: ALGO }, false, ['encrypt', 'decrypt']
+      );
+      logger.info('Encryption key rotated (no data to re-encrypt)', 'Encryption');
+      return true;
+    }
+
+    // Step 2: Rotate the key in secure storage
     const { newKeyB64 } = await rotateSecureKey();
-    // Reset cached CryptoKey so next operation uses the new key
-    cachedKey = null;
-    // Pre-warm the new key
-    const rawKey = base64ToBuffer(newKeyB64);
-    cachedKey = await crypto.subtle.importKey(
-      'raw', rawKey, { name: ALGO }, false, ['encrypt', 'decrypt']
+
+    // Step 3: Import new key
+    const rawNewKey = base64ToBuffer(newKeyB64);
+    const newCryptoKey = await crypto.subtle.importKey(
+      'raw', rawNewKey, { name: ALGO }, false, ['encrypt', 'decrypt']
     );
-    logger.info('Encryption key rotated and re-imported', 'Encryption');
+
+    // Step 4: Re-encrypt all data in both IndexedDB databases
+    await reEncryptDatabase('app_offline_cache_v1', 'query_cache', 'key', oldKey, newCryptoKey);
+    await reEncryptDatabase('distributor_offline_v4', 'inventory_cache', 'product_id', oldKey, newCryptoKey);
+    await reEncryptDatabase('distributor_offline_v4', 'customers_cache', 'id', oldKey, newCryptoKey);
+    await reEncryptDatabase('distributor_offline_v4', 'sales_cache', 'id', oldKey, newCryptoKey);
+    await reEncryptDatabase('distributor_offline_v4', 'invoices_cache', 'id', oldKey, newCryptoKey);
+    await reEncryptDatabase('distributor_offline_v4', 'org_info_cache', 'key', oldKey, newCryptoKey);
+    await reEncryptDatabase('distributor_offline_v4', 'offline_actions', 'id', oldKey, newCryptoKey);
+
+    // Step 5: Activate new key
+    cachedKey = newCryptoKey;
+    logger.info('Encryption key rotated and all data re-encrypted successfully', 'Encryption');
     return true;
   } catch (err) {
-    logger.error('Key rotation check failed', 'Encryption');
+    logger.error('Key rotation failed — keeping old key to prevent data loss', 'Encryption');
     return false;
+  }
+}
+
+/**
+ * Re-encrypt all records in a specific IndexedDB store from oldKey to newKey.
+ * Operates record-by-record to handle partial failures gracefully.
+ */
+async function reEncryptDatabase(
+  dbName: string,
+  storeName: string,
+  keyField: string,
+  oldKey: CryptoKey,
+  newKey: CryptoKey
+): Promise<void> {
+  try {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const req = indexedDB.open(dbName);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+
+    if (!db.objectStoreNames.contains(storeName)) {
+      db.close();
+      return;
+    }
+
+    // Read all records
+    const records = await new Promise<any[]>((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readonly');
+      const req = tx.objectStore(storeName).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+
+    if (records.length === 0) {
+      db.close();
+      return;
+    }
+
+    // Re-encrypt each record
+    const reEncrypted: any[] = [];
+    for (const record of records) {
+      if (record._enc && record._enc.__encrypted) {
+        try {
+          // Decrypt with old key
+          const combined = new Uint8Array(base64ToBuffer(record._enc.data));
+          const iv = combined.slice(0, IV_LENGTH);
+          const ciphertext = combined.slice(IV_LENGTH);
+          const decrypted = await crypto.subtle.decrypt({ name: ALGO, iv }, oldKey, ciphertext);
+
+          // Re-encrypt with new key
+          const newIv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
+          const newCiphertext = await crypto.subtle.encrypt({ name: ALGO, iv: newIv }, newKey, decrypted);
+          const newCombined = new Uint8Array(IV_LENGTH + newCiphertext.byteLength);
+          newCombined.set(newIv, 0);
+          newCombined.set(new Uint8Array(newCiphertext), IV_LENGTH);
+
+          reEncrypted.push({
+            ...record,
+            _enc: { __encrypted: true, data: bufferToBase64(newCombined.buffer), algo: 'aes-gcm' },
+          });
+        } catch {
+          // If decryption fails (already corrupted), skip this record
+          logger.warn(`[KeyRotation] Skipping unreadable record in ${storeName}`, 'Encryption');
+          reEncrypted.push(record);
+        }
+      } else {
+        // Unencrypted record — keep as-is
+        reEncrypted.push(record);
+      }
+    }
+
+    // Write all re-encrypted records atomically
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+      for (const rec of reEncrypted) {
+        store.put(rec);
+      }
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+
+    db.close();
+    logger.info(`[KeyRotation] Re-encrypted ${reEncrypted.length} records in ${dbName}/${storeName}`, 'Encryption');
+  } catch (err) {
+    logger.warn(`[KeyRotation] Failed to re-encrypt ${dbName}/${storeName}: ${err}`, 'Encryption');
+    // Non-fatal — we don't throw to allow rotation of other stores
   }
 }
