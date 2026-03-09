@@ -39,7 +39,7 @@ export function useSalesMutations(orgId?: string | null, onError?: (msg: string)
 
   const createSale = useCallback(async (customerId: string, items: any[]) => {
     try {
-      await salesService.createSale({ customerId, items });
+      await offlineCreateSale({ customerId, items });
       invalidateSalesDeps();
     } catch (e) { handleError(e); }
   }, [invalidateSalesDeps, handleError]);
