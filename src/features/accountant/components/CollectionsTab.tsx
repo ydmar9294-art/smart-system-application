@@ -86,29 +86,7 @@ const CollectionsTab: React.FC = () => {
       ) : (
         <div className="space-y-2">
           {filteredCollections.map((coll) => (
-            <div key={coll.id} className={`bg-card p-4 rounded-2xl shadow-sm ${coll.isReversed ? 'opacity-50' : ''}`}>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                    <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <p className="font-bold text-foreground text-sm">{coll.saleId?.slice(0, 8) || '—'}</p>
-                </div>
-                {coll.isReversed ? (
-                  <span className="bg-destructive/10 text-destructive px-2 py-0.5 rounded-lg text-[10px] font-bold">{t('accountant.cancelled')}</span>
-                ) : (
-                  <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-lg text-[10px] font-bold">{t('accountant.done')}</span>
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <p className="font-black text-lg text-emerald-600 dark:text-emerald-400">{Number(coll.amount).toLocaleString(locale)} {CURRENCY}</p>
-                <p className="text-xs text-muted-foreground">{new Date(coll.timestamp).toLocaleDateString(locale)}</p>
-              </div>
-              {coll.notes && <p className="text-xs text-muted-foreground mt-1">{coll.notes}</p>}
-              {coll.isReversed && coll.reverseReason && (
-                <p className="text-xs text-destructive mt-1">{t('common.cancelledReason')}: {coll.reverseReason}</p>
-              )}
-            </div>
+            <CollectionListItem key={coll.id} coll={coll} locale={locale} t={t} />
           ))}
           
           {/* Infinite scroll trigger */}
