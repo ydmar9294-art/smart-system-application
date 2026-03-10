@@ -7,25 +7,28 @@ import { supabase } from '@/integrations/supabase/client';
 import { getCachedAuth, clearAuthCache } from '@/lib/authCache';
 import { checkAuthStatus } from '@/hooks/useAuthOperations';
 import { isOAuthPending, clearOAuthPending } from '@/lib/oauthState';
+import { preCheckDevice, registerDevice } from '@/lib/deviceService';
 import EmailPasswordAuth from './EmailPasswordAuth';
 import GoogleSignInButton from './GoogleSignInButton';
 import LicenseActivation from './LicenseActivation';
 import AuthOverlay from './AuthOverlay';
 import GuestRoleSelector from './GuestRoleSelector';
+import ActiveSessionWarningDialog from '@/components/ui/ActiveSessionWarningDialog';
 import { useGuest, GuestRole } from '@/store/GuestContext';
 
 interface AuthFlowProps {
   onAuthComplete: () => void;
 }
 
-type LoadingPhase = 'returning' | 'validating_license' | 'checking_status';
+type LoadingPhase = 'returning' | 'validating_license' | 'checking_status' | 'checking_device';
 
 type AuthState =
 {type: 'initial';} |
 {type: 'loading';startedAt: number;phase: LoadingPhase;} |
 {type: 'needs_activation';userId: string;email: string;fullName: string;} |
 {type: 'access_denied';reason: string;message: string;} |
-{type: 'error';message: string;canRetry?: boolean;};
+{type: 'error';message: string;canRetry?: boolean;} |
+{type: 'device_warning';userId: string;activeDevices: Array<{device_name: string; last_seen: string}>;};
 
 const VERIFY_TIMEOUT_MS = 12_000;
 const SLOW_THRESHOLD_MS = 5_000;
@@ -37,6 +40,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
   const [isSlow, setIsSlow] = useState(false);
   const [oauthPending, setOauthPending] = useState(() => isOAuthPending());
   const [showGuestSelector, setShowGuestSelector] = useState(false);
+  const [deviceRegLoading, setDeviceRegLoading] = useState(false);
   const { enterGuestMode } = useGuest();
 
   // Track whether we've already started processing to avoid double runs
@@ -46,6 +50,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
     returning: t('auth.phaseReturning'),
     validating_license: t('auth.phaseValidating'),
     checking_status: t('auth.phaseChecking'),
+    checking_device: t('auth.phaseChecking'),
   };
 
   const handleGuestSelect = (role: GuestRole) => {
@@ -75,6 +80,44 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
   const yieldToRenderer = useCallback(() =>
   new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0))), []);
 
+  /**
+   * After profile check passes, do device pre-check.
+   * If another device is active, show warning dialog.
+   * Otherwise, register device and complete.
+   */
+  const handleDeviceFlow = useCallback(async (userId: string) => {
+    try {
+      setAuthState(prev => prev.type === 'loading' ? { ...prev, phase: 'checking_device' } : prev);
+      
+      const preCheck = await preCheckDevice();
+      
+      if (preCheck.success && preCheck.has_active_session && preCheck.active_devices?.length) {
+        // Show warning dialog — user must confirm
+        clearTimers();
+        setAuthState({
+          type: 'device_warning',
+          userId,
+          activeDevices: preCheck.active_devices,
+        });
+        processingRef.current = false;
+        return false; // Don't complete yet
+      }
+
+      // No active session elsewhere — register and complete
+      const regResult = await registerDevice();
+      if (regResult.status === 'DEVICE_REPLACED' && regResult.replaced_device_name) {
+        window.dispatchEvent(new CustomEvent('device-replaced-warning', {
+          detail: { replacedDeviceName: regResult.replaced_device_name },
+        }));
+      }
+      return true; // Complete auth
+    } catch {
+      // If device check fails, still allow login
+      logger.warn('Device flow failed — allowing login anyway', 'AuthFlow');
+      return true;
+    }
+  }, [clearTimers]);
+
   const checkUserProfile = useCallback(async (userId: string, user: any) => {
     try {
       const email = user.email || '';
@@ -85,16 +128,40 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
         checkAuthStatus(),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error('VERIFY_TIMEOUT')), VERIFY_TIMEOUT_MS - 1000))
       ]);
-      clearTimers();
+      
       clearOAuthPending();
       setOauthPending(false);
-      if (!status.authenticated) { setAuthState({ type: 'needs_activation', userId, email, fullName }); processingRef.current = false; return; }
+      
+      if (!status.authenticated) { 
+        clearTimers();
+        setAuthState({ type: 'needs_activation', userId, email, fullName }); 
+        processingRef.current = false; 
+        return; 
+      }
+      
       setAuthState((prev) => prev.type === 'loading' ? { ...prev, phase: 'checking_status' } : prev);
       await yieldToRenderer();
-      if (status.access_denied) { setAuthState({ type: 'access_denied', reason: status.reason || 'UNKNOWN', message: status.message || t('auth.accessDenied') }); processingRef.current = false; return; }
-      if (status.needs_activation) { setAuthState({ type: 'needs_activation', userId, email: status.email || email, fullName: status.full_name || fullName }); processingRef.current = false; return; }
-      onAuthComplete();
-      processingRef.current = false;
+      
+      if (status.access_denied) { 
+        clearTimers();
+        setAuthState({ type: 'access_denied', reason: status.reason || 'UNKNOWN', message: status.message || t('auth.accessDenied') }); 
+        processingRef.current = false; 
+        return; 
+      }
+      if (status.needs_activation) { 
+        clearTimers();
+        setAuthState({ type: 'needs_activation', userId, email: status.email || email, fullName: status.full_name || fullName }); 
+        processingRef.current = false; 
+        return; 
+      }
+
+      // Profile OK — now check device
+      const canComplete = await handleDeviceFlow(userId);
+      if (canComplete) {
+        clearTimers();
+        onAuthComplete();
+        processingRef.current = false;
+      }
     } catch (err: any) {
       clearTimers(); clearOAuthPending(); setOauthPending(false);
       logger.error('Check profile error', 'AuthFlow');
@@ -102,7 +169,39 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       setAuthState({ type: 'error', message: isTimeout ? t('auth.verifyTimeout') : err.message || t('auth.profileCheckError'), canRetry: true });
       processingRef.current = false;
     }
-  }, [onAuthComplete, clearTimers, t, yieldToRenderer]);
+  }, [onAuthComplete, clearTimers, t, yieldToRenderer, handleDeviceFlow]);
+
+  /** User confirmed the device warning — register and complete */
+  const handleDeviceWarningContinue = useCallback(async () => {
+    if (authState.type !== 'device_warning') return;
+    setDeviceRegLoading(true);
+    try {
+      const regResult = await registerDevice();
+      if (regResult.status === 'DEVICE_REPLACED' && regResult.replaced_device_name) {
+        window.dispatchEvent(new CustomEvent('device-replaced-warning', {
+          detail: { replacedDeviceName: regResult.replaced_device_name },
+        }));
+      }
+      onAuthComplete();
+    } catch {
+      logger.error('Device registration after warning failed', 'AuthFlow');
+      onAuthComplete(); // Still allow login
+    } finally {
+      setDeviceRegLoading(false);
+    }
+  }, [authState, onAuthComplete]);
+
+  /** User cancelled the device warning — sign out */
+  const handleDeviceWarningCancel = useCallback(async () => {
+    clearAuthCache();
+    clearOAuthPending();
+    setOauthPending(false);
+    await supabase.auth.signOut();
+    clearTimers();
+    setAuthState({ type: 'initial' });
+    setAuthError('');
+    processingRef.current = false;
+  }, [clearTimers]);
 
   useEffect(() => {
     const cached = getCachedAuth();
@@ -189,6 +288,16 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       case 'needs_activation':
         return <LicenseActivation userId={authState.userId} email={authState.email} fullName={authState.fullName} onSuccess={handleActivationSuccess} onLogout={handleLogout} />;
 
+      case 'device_warning':
+        return (
+          <div className="flex flex-col items-center justify-center py-12 space-y-4">
+            <Loader2 className="w-12 h-12 animate-spin text-primary opacity-30" />
+            <p className="text-muted-foreground font-bold text-sm">
+              {isRtl ? 'فحص الجهاز...' : 'Checking device...'}
+            </p>
+          </div>
+        );
+
       case 'access_denied':
         return (
           <div className="space-y-6 text-center py-8">
@@ -241,6 +350,16 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
   return (
     <div className={`min-h-screen flex flex-col font-tajawal relative bg-background`} dir={isRtl ? 'rtl' : 'ltr'}>
       <AuthOverlay visible={oauthPending && authState.type === 'initial'} />
+      
+      {/* Device warning dialog — rendered as overlay above everything */}
+      <ActiveSessionWarningDialog
+        open={authState.type === 'device_warning'}
+        activeDevices={authState.type === 'device_warning' ? authState.activeDevices : undefined}
+        onContinue={handleDeviceWarningContinue}
+        onCancel={handleDeviceWarningCancel}
+        loading={deviceRegLoading}
+      />
+      
       <div className="auth-edge-bar auth-edge-bar--top" />
       <div className="auth-edge-bar auth-edge-bar--bottom" />
       <div className="bg-slate-900 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] pb-16 px-6 relative overflow-hidden flex flex-col items-center shrink-0">
