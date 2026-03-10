@@ -161,7 +161,7 @@ const MainContent: React.FC = () => {
     const timer = setTimeout(async () => {
       await logout();
       setDeviceRevoked(false);
-    }, 10000); // Show screen for 10s then force logout
+    }, 3000); // Show screen for 3s then force logout
     return () => clearTimeout(timer);
   }, [deviceRevoked, logout]);
 
