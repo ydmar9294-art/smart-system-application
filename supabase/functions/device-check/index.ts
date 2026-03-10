@@ -3,6 +3,7 @@
  * Manages single-active-device policy per user (WhatsApp-style).
  * 
  * Actions:
+ *   pre-check — Check if user has an active session on another device (before confirming login).
  *   register  — Register/activate a device after login. Deactivates ALL other devices.
  *   verify    — Verify a device is still active.
  */
@@ -60,6 +61,10 @@ Deno.serve(async (req) => {
     const url = new URL(req.url)
     const action = url.searchParams.get('action') || 'verify'
 
+    if (action === 'pre-check') {
+      return await handlePreCheck(userId, deviceId)
+    }
+
     if (action === 'register') {
       return await handleRegister(userId, deviceId, deviceName)
     }
@@ -74,6 +79,38 @@ Deno.serve(async (req) => {
     return jsonResponse({ success: false, reason: 'SERVER_ERROR' }, 500)
   }
 })
+
+/**
+ * Pre-check: Does this user have an active session on ANOTHER device?
+ * Called after successful auth but BEFORE registering the device,
+ * so the client can show a warning dialog.
+ */
+async function handlePreCheck(userId: string, deviceId: string) {
+  const { data: activeDevices } = await serviceClient
+    .from('devices')
+    .select('device_id, device_name, last_seen')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .neq('device_id', deviceId)
+
+  const hasActiveSession = (activeDevices && activeDevices.length > 0) || false
+
+  if (hasActiveSession) {
+    return jsonResponse({
+      success: true,
+      has_active_session: true,
+      active_devices: activeDevices!.map(d => ({
+        device_name: d.device_name,
+        last_seen: d.last_seen,
+      })),
+    })
+  }
+
+  return jsonResponse({
+    success: true,
+    has_active_session: false,
+  })
+}
 
 /**
  * Register a device after successful login.
