@@ -2,11 +2,10 @@
  * DeviceRevokedScreen - WhatsApp-style device session takeover screen
  * 
  * Shown immediately when another device logs into the same account.
- * Blocks all interaction until user acknowledges and is redirected to login.
+ * Auto-logs out after 3 seconds. No button needed.
  */
 import React, { useEffect, useState } from 'react';
-import { Smartphone, ShieldAlert, LogOut } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Smartphone, ShieldAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface DeviceRevokedScreenProps {
@@ -21,12 +20,26 @@ const DeviceRevokedScreen: React.FC<DeviceRevokedScreenProps> = ({
   const { i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
   const [showContent, setShowContent] = useState(false);
-  const [showButton, setShowButton] = useState(false);
+  const [countdown, setCountdown] = useState(3);
 
   useEffect(() => {
     const t1 = setTimeout(() => setShowContent(true), 150);
-    const t2 = setTimeout(() => setShowButton(true), 600);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    return () => clearTimeout(t1);
+  }, []);
+
+  // Countdown timer
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const interval = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -72,8 +85,8 @@ const DeviceRevokedScreen: React.FC<DeviceRevokedScreenProps> = ({
           </h1>
           <p className="text-sm text-muted-foreground font-medium leading-relaxed max-w-[300px] mx-auto">
             {isArabic
-              ? 'تم فتح حسابك على جهاز آخر. لا يمكن استخدام نفس الحساب على أكثر من جهاز في نفس الوقت.'
-              : 'Your account was opened on another device. You cannot use the same account on multiple devices simultaneously.'}
+              ? 'تم فتح حسابك على جهاز آخر. لأسباب أمنية سيتم تسجيل خروجك تلقائياً.'
+              : 'Your account was opened on another device. For security reasons you will be logged out automatically.'}
           </p>
           {deviceName && (
             <div className="inline-flex items-center gap-2 bg-muted/80 rounded-full px-4 py-2 mx-auto">
@@ -85,6 +98,15 @@ const DeviceRevokedScreen: React.FC<DeviceRevokedScreenProps> = ({
           )}
         </div>
 
+        {/* Countdown */}
+        <div className="w-full bg-muted/60 rounded-2xl p-4 border border-border/40 backdrop-blur-sm">
+          <p className="text-sm text-muted-foreground/80 leading-relaxed font-bold">
+            {isArabic
+              ? `⏳ تسجيل الخروج تلقائياً خلال ${countdown} ثوانٍ...`
+              : `⏳ Logging out automatically in ${countdown}s...`}
+          </p>
+        </div>
+
         {/* Security tip */}
         <div className="w-full bg-muted/60 rounded-2xl p-4 border border-border/40 backdrop-blur-sm">
           <p className="text-xs text-muted-foreground/80 leading-relaxed">
@@ -92,23 +114,6 @@ const DeviceRevokedScreen: React.FC<DeviceRevokedScreenProps> = ({
               ? '⚠️ إذا لم تكن أنت من قام بذلك، قم بتغيير كلمة المرور فوراً.'
               : '⚠️ If this wasn\'t you, change your password immediately.'}
           </p>
-        </div>
-
-        {/* Action button */}
-        <div
-          className={`w-full transition-all duration-500 ease-out ${
-            showButton ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-          }`}
-        >
-          <Button
-            onClick={onAcknowledge}
-            className="w-full h-13 text-base font-bold rounded-2xl shadow-lg gap-2"
-            variant="destructive"
-            size="lg"
-          >
-            <LogOut className="w-5 h-5" />
-            {isArabic ? 'حسناً، تسجيل الخروج' : 'OK, Sign Out'}
-          </Button>
         </div>
       </div>
     </div>
