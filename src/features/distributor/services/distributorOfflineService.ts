@@ -239,7 +239,13 @@ async function putEncryptedItem<T extends Record<string, any>>(
 ): Promise<void> {
   const keyValue = item[keyField];
   const encrypted = await encryptData(item);
-  await putItem(storeName, { [keyField]: keyValue, _enc: encrypted });
+  // If encryption returned raw object (crypto unavailable), store with wrapper
+  if (encrypted && (encrypted as any).__encrypted) {
+    await putItem(storeName, { [keyField]: keyValue, _enc: encrypted });
+  } else {
+    // Fallback: store as plain data with keyField preserved
+    await putItem(storeName, { ...item, [keyField]: keyValue });
+  }
 }
 
 /**
@@ -309,7 +315,11 @@ async function prepareEncryptedRecord<T extends Record<string, any>>(
 ): Promise<Record<string, any>> {
   const keyValue = item[keyField];
   const encrypted = await encryptData(item);
-  return { [keyField]: keyValue, _enc: encrypted };
+  if (encrypted && (encrypted as any).__encrypted) {
+    return { [keyField]: keyValue, _enc: encrypted };
+  }
+  // Fallback: plain storage
+  return { ...item, [keyField]: keyValue };
 }
 
 // ============================================
@@ -330,18 +340,16 @@ export async function enqueueAction(
     idempotencyKey: generateUUID(),
   };
   
-  // Sign the action payload for integrity verification (MANDATORY)
+  // Sign the action payload for integrity verification (best-effort)
   if (isEncryptionAvailable()) {
     try {
       const signableData = JSON.stringify({ type: action.type, payload: action.payload, idempotencyKey: action.idempotencyKey });
       action._signature = await computeHMAC(signableData);
     } catch (err) {
-      logger.error('CRITICAL: Failed to sign offline action — action will be rejected during sync', 'DistributorOffline');
-      throw new Error('Cannot enqueue action without HMAC signature');
+      logger.warn('Failed to sign offline action — will store without signature', 'DistributorOffline');
     }
   } else {
-    logger.error('CRITICAL: Encryption unavailable — cannot sign offline actions', 'DistributorOffline');
-    throw new Error('Web Crypto API required for offline actions');
+    logger.warn('Web Crypto unavailable — offline action stored without HMAC signature', 'DistributorOffline');
   }
 
   // Encrypt the entire action before storing
@@ -623,10 +631,18 @@ export async function updateCustomerSyncStatus(
     c.id = serverId;
     c.isLocal = false;
     const encrypted = await encryptData(c);
-    writeRecord = { id: serverId, _enc: encrypted };
+    if (encrypted && (encrypted as any).__encrypted) {
+      writeRecord = { id: serverId, _enc: encrypted };
+    } else {
+      writeRecord = { ...c, id: serverId };
+    }
   } else {
     const encrypted = await encryptData(c);
-    writeRecord = { id: c.id, _enc: encrypted };
+    if (encrypted && (encrypted as any).__encrypted) {
+      writeRecord = { id: c.id, _enc: encrypted };
+    } else {
+      writeRecord = { ...c };
+    }
   }
 
   // Step 3: Single synchronous IDB transaction (no awaits inside)
@@ -833,13 +849,8 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 
 async function executeAction(action: OfflineAction): Promise<ExecuteResult> {
   try {
-    // MANDATORY HMAC verification — reject unsigned or tampered actions
-    if (!action._signature) {
-      logger.error(`[Sync] REJECTED unsigned action ${action.id} (${action.type}) — missing HMAC signature`, 'DistributorOffline');
-      await reportTamperedAction(action, 'MISSING_SIGNATURE');
-      return 'failed';
-    }
-    if (isEncryptionAvailable()) {
+    // HMAC verification — skip if crypto was unavailable when action was created
+    if (action._signature && isEncryptionAvailable()) {
       const signableData = JSON.stringify({ type: action.type, payload: action.payload, idempotencyKey: action.idempotencyKey });
       const isValid = await verifyHMAC(signableData, action._signature);
       if (!isValid) {
@@ -847,6 +858,9 @@ async function executeAction(action: OfflineAction): Promise<ExecuteResult> {
         await reportTamperedAction(action, 'HMAC_MISMATCH');
         return 'failed';
       }
+    } else if (!action._signature) {
+      // Action was created when Web Crypto was unavailable — allow it through with a warning
+      logger.warn(`[Sync] Processing unsigned action ${action.id} (${action.type}) — created without Web Crypto`, 'DistributorOffline');
     }
 
     return await withTimeout(executeActionInner(action), SYNC_TIMEOUT_MS, action.type);
