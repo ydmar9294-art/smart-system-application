@@ -561,23 +561,15 @@ const BackupTab: React.FC = () => {
             <SummaryCard icon={<Activity className="w-4 h-4" />} label={t('backup.activityLog')} value={backupData.logs.length} color="purple" />
           </div>
 
-          {/* Export Buttons */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Export Button */}
+          <div>
             <button
               onClick={exportPDF}
               disabled={loading}
-              className="py-3 bg-destructive/10 text-destructive rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-destructive/20 transition-all active:scale-[0.98]"
+              className="w-full py-3 bg-destructive/10 text-destructive rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-destructive/20 transition-all active:scale-[0.98]"
             >
               <FileText className="w-4 h-4" />
               {t('backup.exportPdfA4')}
-            </button>
-            <button
-              onClick={exportCSV}
-              disabled={loading}
-              className="py-3 bg-success/10 text-success rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-success/20 transition-all active:scale-[0.98]"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              {t('backup.exportExcelCsv')}
             </button>
           </div>
 
