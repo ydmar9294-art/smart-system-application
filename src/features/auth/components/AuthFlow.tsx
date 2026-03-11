@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getCachedAuth, clearAuthCache } from '@/lib/authCache';
 import { checkAuthStatus } from '@/hooks/useAuthOperations';
 import { isOAuthPending, clearOAuthPending } from '@/lib/oauthState';
+import { Capacitor } from '@capacitor/core';
 import { preCheckDevice, registerDevice } from '@/lib/deviceService';
 import EmailPasswordAuth from './EmailPasswordAuth';
 import GoogleSignInButton from './GoogleSignInButton';
@@ -118,12 +119,15 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
     }
   }, [clearTimers]);
 
-  const checkUserProfile = useCallback(async (userId: string, user: any) => {
+  const checkUserProfile = useCallback(async (userId: string, user: any, retryCount = 0) => {
     try {
       const email = user.email || '';
       const fullName = user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0] || '';
       setAuthState((prev) => prev.type === 'loading' ? { ...prev, phase: 'validating_license' } : prev);
       await yieldToRenderer();
+      
+      logger.info(`[LICENSE_CHECK] Attempt ${retryCount + 1}`, 'AuthFlow');
+      
       const status = await Promise.race([
         checkAuthStatus(),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error('VERIFY_TIMEOUT')), VERIFY_TIMEOUT_MS - 1000))
@@ -132,7 +136,17 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       clearOAuthPending();
       setOauthPending(false);
       
-      if (!status.authenticated) { 
+      if (!status.authenticated) {
+        // On Capacitor, the edge function may fail on first call due to token propagation delay
+        // Retry once after a short delay
+        const isNative = Capacitor.isNativePlatform();
+        if (isNative && retryCount < 2 && status.reason === 'NO_SESSION') {
+          logger.warn(`[LICENSE_CHECK] Not authenticated (NO_SESSION) on native — retry ${retryCount + 1}/2`, 'AuthFlow');
+          await new Promise(r => setTimeout(r, 1500));
+          processingRef.current = false;
+          return checkUserProfile(userId, user, retryCount + 1);
+        }
+        
         clearTimers();
         setAuthState({ type: 'needs_activation', userId, email, fullName }); 
         processingRef.current = false; 
@@ -155,16 +169,19 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
         return; 
       }
 
+      logger.info('[LICENSE_VALID] Profile check passed', 'AuthFlow');
+
       // Profile OK — now check device
       const canComplete = await handleDeviceFlow(userId);
       if (canComplete) {
         clearTimers();
+        logger.info('[LOGIN_COMPLETE]', 'AuthFlow');
         onAuthComplete();
         processingRef.current = false;
       }
     } catch (err: any) {
       clearTimers(); clearOAuthPending(); setOauthPending(false);
-      logger.error('Check profile error', 'AuthFlow');
+      logger.error('[LICENSE_CHECK_ERROR]', 'AuthFlow', { error: err?.message });
       const isTimeout = err?.message === 'VERIFY_TIMEOUT';
       setAuthState({ type: 'error', message: isTimeout ? t('auth.verifyTimeout') : err.message || t('auth.profileCheckError'), canRetry: true });
       processingRef.current = false;
@@ -206,20 +223,31 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
   useEffect(() => {
     const cached = getCachedAuth();
     const cacheIsFullyActivated = cached && cached.organizationId && cached.role;
+    const isNative = Capacitor.isNativePlatform();
 
+    logger.info('[AUTH_BOOT_START] AuthFlow mounted', 'AuthFlow', { isNative, hasCachedAuth: !!cacheIsFullyActivated, oauthPending: isOAuthPending() });
+
+    const processUser = async (userId: string, user: any, source: string) => {
+      logger.info(`[SESSION_DETECTED] from ${source}`, 'AuthFlow', { userId });
+      if (cacheIsFullyActivated && cached.userId === userId) return;
+      if (processingRef.current) {
+        logger.info(`[AUTH_SKIP] Already processing — skipping ${source}`, 'AuthFlow');
+        return;
+      }
+      processingRef.current = true;
+
+      if (cached && !cacheIsFullyActivated) clearAuthCache();
+      startVerification();
+      await yieldToRenderer();
+      logger.info('[LICENSE_CHECK_START]', 'AuthFlow');
+      await checkUserProfile(userId, user);
+    };
+
+    // ── Listener 1: Supabase auth state changes ──
     const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
-        // If cache is fully activated for this user, AuthContext handles it — skip here
-        if (cacheIsFullyActivated && cached.userId === session.user.id) return;
-
-        // Prevent double processing (both listener and checkSession may fire)
-        if (processingRef.current) return;
-        processingRef.current = true;
-
-        if (cached && !cacheIsFullyActivated) clearAuthCache();
-        startVerification();
-        await yieldToRenderer();
-        await checkUserProfile(session.user.id, session.user);
+        logger.info('[OAUTH_SUCCESS] onAuthStateChange SIGNED_IN', 'AuthFlow');
+        await processUser(session.user.id, session.user, 'onAuthStateChange');
       } else if (event === 'SIGNED_OUT') {
         clearAuthCache();
         clearTimers();
@@ -228,28 +256,72 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       }
     });
 
+    // ── Listener 2: Capacitor deep link broadcast (bypasses onAuthStateChange race) ──
+    const handleCapacitorOAuthReady = async (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      logger.info('[CAPACITOR_OAUTH_SESSION_READY] Direct broadcast received', 'AuthFlow', { userId: detail?.userId });
+      
+      // Small delay to let Supabase persist the session internally
+      await new Promise(r => setTimeout(r, 300));
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await processUser(session.user.id, session.user, 'capacitor-oauth-broadcast');
+      } else {
+        logger.warn('[CAPACITOR_OAUTH] Session not found after broadcast — retrying', 'AuthFlow');
+        // Retry after another delay (session persistence lag on Capacitor)
+        await new Promise(r => setTimeout(r, 1500));
+        const retry = await supabase.auth.getSession();
+        if (retry.data.session?.user) {
+          await processUser(retry.data.session.user.id, retry.data.session.user, 'capacitor-oauth-broadcast-retry');
+        } else {
+          logger.error('[CAPACITOR_OAUTH] Session still not found after retry', 'AuthFlow');
+          clearOAuthPending();
+          setOauthPending(false);
+          processingRef.current = false;
+        }
+      }
+    };
+
+    const handleCapacitorOAuthFailed = () => {
+      logger.error('[CAPACITOR_OAUTH_FAILED]', 'AuthFlow');
+      clearTimers();
+      setOauthPending(false);
+      setAuthState({ type: 'error', message: t('auth.googleAuthFailed'), canRetry: true });
+      processingRef.current = false;
+    };
+
+    window.addEventListener('capacitor-oauth-session-ready', handleCapacitorOAuthReady);
+    window.addEventListener('capacitor-oauth-failed', handleCapacitorOAuthFailed);
+
+    // ── Initial session check ──
     const checkSession = async () => {
-      // Wait briefly for deep link tokens on Capacitor (tokens may arrive after app resumes)
+      // On Capacitor with OAuth pending, wait longer for deep link tokens to arrive
       if (isOAuthPending()) {
-        await new Promise(r => setTimeout(r, 1000));
+        const waitMs = isNative ? 2500 : 1000;
+        logger.info(`[AUTH_BOOT] OAuth pending — waiting ${waitMs}ms for tokens`, 'AuthFlow');
+        await new Promise(r => setTimeout(r, waitMs));
       }
 
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        if (cacheIsFullyActivated && cached.userId === session.user.id) return;
-        if (processingRef.current) return;
-        processingRef.current = true;
-
-        if (cached && !cacheIsFullyActivated) clearAuthCache();
-        startVerification();
-        await yieldToRenderer();
-        await checkUserProfile(session.user.id, session.user);
+        await processUser(session.user.id, session.user, 'checkSession');
+      } else if (isNative && isOAuthPending()) {
+        // On Capacitor, deep link may still be in flight — don't give up yet
+        logger.info('[AUTH_BOOT] No session yet on Capacitor with OAuth pending — waiting for deep link event', 'AuthFlow');
+        // The capacitor-oauth-session-ready event will handle it
       }
     };
 
     checkSession();
-    return () => { listener.subscription.unsubscribe(); clearTimers(); };
-  }, [checkUserProfile, onAuthComplete, startVerification, clearTimers, yieldToRenderer]);
+    return () => {
+      listener.subscription.unsubscribe();
+      clearTimers();
+      window.removeEventListener('capacitor-oauth-session-ready', handleCapacitorOAuthReady);
+      window.removeEventListener('capacitor-oauth-failed', handleCapacitorOAuthFailed);
+    };
+  }, [checkUserProfile, onAuthComplete, startVerification, clearTimers, yieldToRenderer, t]);
+  
 
   const handleLogout = async () => { clearAuthCache(); clearOAuthPending(); setOauthPending(false); await supabase.auth.signOut(); clearTimers(); setAuthState({ type: 'initial' }); setAuthError(''); processingRef.current = false; };
   const handleRetry = async () => {
