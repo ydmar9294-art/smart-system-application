@@ -105,18 +105,18 @@ export function useDistributorOffline() {
     if (!navigator.onLine) return null;
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return null;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
 
       const { data: profile } = await supabase
         .from('profiles')
         .select('organization_id')
-        .eq('id', session.user.id)
+        .eq('id', user.id)
         .single();
 
       if (profile?.organization_id) {
-        await cacheOfflineOrgContext(profile.organization_id, session.user.id);
-        return { organizationId: profile.organization_id, distributorId: session.user.id };
+        await cacheOfflineOrgContext(profile.organization_id, user.id);
+        return { organizationId: profile.organization_id, distributorId: user.id };
       }
     } catch {
       // no network
