@@ -79,7 +79,7 @@ export function getRoleQueryScope(
           return {
             ...none,
             products: true, deliveries: true, distributorInventory: true,
-            purchases: true, purchaseReturns: true,
+            purchases: true, purchaseReturns: true, users: true,
           };
 
         case EmployeeType.FIELD_AGENT:
