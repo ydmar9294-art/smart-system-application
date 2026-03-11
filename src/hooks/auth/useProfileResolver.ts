@@ -5,7 +5,7 @@
 import { useCallback, MutableRefObject } from 'react';
 import { resolveUserProfile } from '@/hooks/useAuthOperations';
 import { clearAuthCache } from '@/lib/authCache';
-import { registerDevice } from '@/lib/deviceService';
+import { verifyDevice } from '@/lib/deviceService';
 import { logger } from '@/lib/logger';
 import { RESOLVE_TIMEOUT_MS } from './authHelpers';
 
