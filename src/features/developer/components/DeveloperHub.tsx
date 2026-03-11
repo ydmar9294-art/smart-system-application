@@ -22,12 +22,12 @@ import {
 // ============================================
 // Tab definitions
 // ============================================
-type TabId = 'licenses' | 'subscriptions' | 'stats' | 'versions' | 'deletion';
+type TabId = 'licenses' | 'subscriptions' | 'monitoring' | 'versions' | 'deletion';
 
 const TABS: { id: TabId; label: string; icon: React.ElementType; bgColor: string }[] = [
   { id: 'licenses', label: 'التراخيص', icon: Key, bgColor: 'bg-primary' },
   { id: 'subscriptions', label: 'الاشتراكات', icon: Activity, bgColor: 'bg-amber-600' },
-  { id: 'stats', label: 'إحصائيات', icon: BarChart3, bgColor: 'bg-emerald-600' },
+  { id: 'monitoring', label: 'مراقبة', icon: BarChart3, bgColor: 'bg-emerald-600' },
   { id: 'versions', label: 'الإصدارات', icon: Smartphone, bgColor: 'bg-purple-600' },
   { id: 'deletion', label: 'الحذف', icon: Trash2, bgColor: 'bg-red-500' },
 ];
