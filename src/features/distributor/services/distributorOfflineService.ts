@@ -239,7 +239,13 @@ async function putEncryptedItem<T extends Record<string, any>>(
 ): Promise<void> {
   const keyValue = item[keyField];
   const encrypted = await encryptData(item);
-  await putItem(storeName, { [keyField]: keyValue, _enc: encrypted });
+  // If encryption returned raw object (crypto unavailable), store with wrapper
+  if (encrypted && (encrypted as any).__encrypted) {
+    await putItem(storeName, { [keyField]: keyValue, _enc: encrypted });
+  } else {
+    // Fallback: store as plain data with keyField preserved
+    await putItem(storeName, { ...item, [keyField]: keyValue });
+  }
 }
 
 /**
