@@ -185,7 +185,7 @@ export async function saveInvoicePdf(
   fileName: string
 ): Promise<void> {
   if (isCapacitor()) {
-    const { Filesystem, Directory } = await import('@capacitor/filesystem');
+    // Using static imports from top of file
 
     try {
       // Android: ExternalStorage → Downloads folder
