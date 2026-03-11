@@ -66,7 +66,7 @@ async function handleOAuthTokens(accessToken: string, refreshToken: string): Pro
       // Browser might already be closed
     }
 
-    logger.info('Setting session from deep link tokens', 'CapacitorDeepLink');
+    logger.info('[CAPACITOR_OAUTH] Setting session from deep link tokens', 'CapacitorDeepLink');
     
     const { data, error } = await supabase.auth.setSession({
       access_token: accessToken,
@@ -74,14 +74,25 @@ async function handleOAuthTokens(accessToken: string, refreshToken: string): Pro
     });
 
     if (error) {
-      logger.error('Failed to set session from deep link', 'CapacitorDeepLink', { reason: error.message });
+      logger.error('[CAPACITOR_OAUTH] Failed to set session', 'CapacitorDeepLink', { reason: error.message });
+      clearOAuthPending();
+      window.dispatchEvent(new CustomEvent('capacitor-oauth-failed', { detail: { error: error.message } }));
       return false;
     }
 
-    logger.info('Session set successfully', 'CapacitorDeepLink', { userId: data.user?.id });
+    logger.info('[CAPACITOR_OAUTH] Session set successfully — broadcasting', 'CapacitorDeepLink', { userId: data.user?.id });
+    
+    // Broadcast a reliable event that AuthFlow can listen to
+    // This bypasses race conditions with onAuthStateChange
+    window.dispatchEvent(new CustomEvent('capacitor-oauth-session-ready', {
+      detail: { userId: data.user?.id, user: data.user }
+    }));
+    
     return true;
   } catch (err) {
-    logger.error('Error setting session from deep link', 'CapacitorDeepLink');
+    logger.error('[CAPACITOR_OAUTH] Error setting session', 'CapacitorDeepLink');
+    clearOAuthPending();
+    window.dispatchEvent(new CustomEvent('capacitor-oauth-failed', { detail: { error: 'unknown' } }));
     return false;
   }
 }
