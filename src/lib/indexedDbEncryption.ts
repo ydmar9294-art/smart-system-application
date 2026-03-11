@@ -158,9 +158,8 @@ export function isEncryptionAvailable(): boolean {
 
 /**
  * Encrypt a JSON-serializable object.
- * Returns an EncryptedPayload that can be stored in IndexedDB.
- * 
- * THROWS if Web Crypto is unavailable — caller must handle gracefully.
+ * Returns an EncryptedPayload when Web Crypto is available,
+ * or the original object as-is when it's not (plaintext fallback).
  */
 export async function encryptData<T>(obj: T): Promise<EncryptedPayload | T> {
   if (!isWebCryptoAvailable()) {
