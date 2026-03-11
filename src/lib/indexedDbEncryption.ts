@@ -142,6 +142,13 @@ export interface EncryptedPayload {
 }
 
 /**
+ * Check if a value is a raw (unencrypted) passthrough from encryptData fallback.
+ */
+export function isRawPassthrough(obj: any): boolean {
+  return obj && typeof obj === 'object' && !obj.__encrypted;
+}
+
+/**
  * Check if Web Crypto is available for encryption.
  * UI should check this before attempting offline storage of sensitive data.
  */
