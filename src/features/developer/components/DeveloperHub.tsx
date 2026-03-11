@@ -185,7 +185,7 @@ const DeveloperHub: React.FC = () => {
               />
             )}
             {activeTab === 'subscriptions' && <SubscriptionsTab />}
-            {activeTab === 'stats' && <StatsTab orgStats={orgStats} />}
+            {activeTab === 'monitoring' && <MonitoringTab />}
             {activeTab === 'versions' && <VersionManagement />}
             {activeTab === 'deletion' && <OrgDeletionManager />}
           </AnimatedTabContent>
