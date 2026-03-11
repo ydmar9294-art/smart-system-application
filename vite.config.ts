@@ -129,8 +129,8 @@ export default defineConfig(({ mode }) => ({
           // ── Vendor: Form utilities ──
           if (id.includes('node_modules/zod') || id.includes('node_modules/react-hook-form') || id.includes('node_modules/@hookform/')) return 'vendor-forms';
 
-          // ── Vendor: Sonner/Vaul/misc UI ──
-          if (id.includes('node_modules/sonner') || id.includes('node_modules/vaul') || id.includes('node_modules/class-variance-authority') || id.includes('node_modules/clsx') || id.includes('node_modules/tailwind-merge')) return 'vendor-ui-utils';
+          // ── Vendor: misc UI utilities ──
+          if (id.includes('node_modules/sonner') || id.includes('node_modules/class-variance-authority') || id.includes('node_modules/clsx') || id.includes('node_modules/tailwind-merge')) return 'vendor-ui-utils';
         },
       },
     },
