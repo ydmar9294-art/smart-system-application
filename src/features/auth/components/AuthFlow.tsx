@@ -305,7 +305,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       window.removeEventListener('capacitor-oauth-failed', handleCapacitorOAuthFailed);
     };
   }, [checkUserProfile, onAuthComplete, startVerification, clearTimers, yieldToRenderer, t]);
-  }, [checkUserProfile, onAuthComplete, startVerification, clearTimers, yieldToRenderer]);
+  
 
   const handleLogout = async () => { clearAuthCache(); clearOAuthPending(); setOauthPending(false); await supabase.auth.signOut(); clearTimers(); setAuthState({ type: 'initial' }); setAuthError(''); processingRef.current = false; };
   const handleRetry = async () => {
