@@ -330,18 +330,16 @@ export async function enqueueAction(
     idempotencyKey: generateUUID(),
   };
   
-  // Sign the action payload for integrity verification (MANDATORY)
+  // Sign the action payload for integrity verification (best-effort)
   if (isEncryptionAvailable()) {
     try {
       const signableData = JSON.stringify({ type: action.type, payload: action.payload, idempotencyKey: action.idempotencyKey });
       action._signature = await computeHMAC(signableData);
     } catch (err) {
-      logger.error('CRITICAL: Failed to sign offline action — action will be rejected during sync', 'DistributorOffline');
-      throw new Error('Cannot enqueue action without HMAC signature');
+      logger.warn('Failed to sign offline action — will store without signature', 'DistributorOffline');
     }
   } else {
-    logger.error('CRITICAL: Encryption unavailable — cannot sign offline actions', 'DistributorOffline');
-    throw new Error('Web Crypto API required for offline actions');
+    logger.warn('Web Crypto unavailable — offline action stored without HMAC signature', 'DistributorOffline');
   }
 
   // Encrypt the entire action before storing
