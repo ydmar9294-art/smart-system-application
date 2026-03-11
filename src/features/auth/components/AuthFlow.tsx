@@ -119,12 +119,15 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
     }
   }, [clearTimers]);
 
-  const checkUserProfile = useCallback(async (userId: string, user: any) => {
+  const checkUserProfile = useCallback(async (userId: string, user: any, retryCount = 0) => {
     try {
       const email = user.email || '';
       const fullName = user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0] || '';
       setAuthState((prev) => prev.type === 'loading' ? { ...prev, phase: 'validating_license' } : prev);
       await yieldToRenderer();
+      
+      logger.info(`[LICENSE_CHECK] Attempt ${retryCount + 1}`, 'AuthFlow');
+      
       const status = await Promise.race([
         checkAuthStatus(),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error('VERIFY_TIMEOUT')), VERIFY_TIMEOUT_MS - 1000))
@@ -133,7 +136,17 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       clearOAuthPending();
       setOauthPending(false);
       
-      if (!status.authenticated) { 
+      if (!status.authenticated) {
+        // On Capacitor, the edge function may fail on first call due to token propagation delay
+        // Retry once after a short delay
+        const isNative = Capacitor.isNativePlatform();
+        if (isNative && retryCount < 2 && status.reason === 'NO_SESSION') {
+          logger.warn(`[LICENSE_CHECK] Not authenticated (NO_SESSION) on native — retry ${retryCount + 1}/2`, 'AuthFlow');
+          await new Promise(r => setTimeout(r, 1500));
+          processingRef.current = false;
+          return checkUserProfile(userId, user, retryCount + 1);
+        }
+        
         clearTimers();
         setAuthState({ type: 'needs_activation', userId, email, fullName }); 
         processingRef.current = false; 
@@ -156,16 +169,19 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
         return; 
       }
 
+      logger.info('[LICENSE_VALID] Profile check passed', 'AuthFlow');
+
       // Profile OK — now check device
       const canComplete = await handleDeviceFlow(userId);
       if (canComplete) {
         clearTimers();
+        logger.info('[LOGIN_COMPLETE]', 'AuthFlow');
         onAuthComplete();
         processingRef.current = false;
       }
     } catch (err: any) {
       clearTimers(); clearOAuthPending(); setOauthPending(false);
-      logger.error('Check profile error', 'AuthFlow');
+      logger.error('[LICENSE_CHECK_ERROR]', 'AuthFlow', { error: err?.message });
       const isTimeout = err?.message === 'VERIFY_TIMEOUT';
       setAuthState({ type: 'error', message: isTimeout ? t('auth.verifyTimeout') : err.message || t('auth.profileCheckError'), canRetry: true });
       processingRef.current = false;
