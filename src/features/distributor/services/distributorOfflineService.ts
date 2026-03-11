@@ -631,10 +631,18 @@ export async function updateCustomerSyncStatus(
     c.id = serverId;
     c.isLocal = false;
     const encrypted = await encryptData(c);
-    writeRecord = { id: serverId, _enc: encrypted };
+    if (encrypted && (encrypted as any).__encrypted) {
+      writeRecord = { id: serverId, _enc: encrypted };
+    } else {
+      writeRecord = { ...c, id: serverId };
+    }
   } else {
     const encrypted = await encryptData(c);
-    writeRecord = { id: c.id, _enc: encrypted };
+    if (encrypted && (encrypted as any).__encrypted) {
+      writeRecord = { id: c.id, _enc: encrypted };
+    } else {
+      writeRecord = { ...c };
+    }
   }
 
   // Step 3: Single synchronous IDB transaction (no awaits inside)
