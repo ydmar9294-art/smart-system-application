@@ -50,7 +50,7 @@ export default defineConfig(({ mode }) => ({
           },
         ],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/auth\/callback/],
+        navigateFallbackDenylist: [/^\/auth\/callback/, /^\/~oauth/],
       },
       manifest: {
         name: 'Smart System',
