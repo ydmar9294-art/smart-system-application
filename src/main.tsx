@@ -9,6 +9,7 @@ import { GuestProvider } from "@/store/GuestContext";
 import { queryClient } from "@/lib/queryClient";
 import { initSessionGuard } from "@/lib/sessionGuard";
 import { initCapacitorOAuth } from "@/lib/capacitorOAuth";
+import { resolveNativeDeviceName } from "@/lib/deviceId";
 import { SplashScreen } from "@capacitor/splash-screen";
 import { Capacitor } from "@capacitor/core";
 
@@ -17,6 +18,9 @@ initSessionGuard();
 
 // Initialize Capacitor OAuth deep link listeners (native only)
 initCapacitorOAuth();
+
+// Resolve native device model name for device tracking (Capacitor only)
+resolveNativeDeviceName();
 
 // Hide splash screen after app loads
 if (Capacitor.isNativePlatform()) {
