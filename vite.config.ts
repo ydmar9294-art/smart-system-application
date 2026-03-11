@@ -50,7 +50,7 @@ export default defineConfig(({ mode }) => ({
           },
         ],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/auth\/callback/],
+        navigateFallbackDenylist: [/^\/auth\/callback/, /^\/~oauth/],
       },
       manifest: {
         name: 'Smart System',
@@ -111,9 +111,8 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('node_modules/jspdf')) return 'vendor-pdf';
           if (id.includes('node_modules/html2canvas')) return 'vendor-pdf';
 
-          // ── Vendor: Charts (only pulled if chart.tsx is imported) ──
-          if (id.includes('node_modules/recharts')) return 'vendor-charts';
-          if (id.includes('node_modules/d3-')) return 'vendor-charts';
+          // ── Vendor: Date utilities ──
+          if (id.includes('node_modules/date-fns')) return 'vendor-date';
 
           // ── Vendor: i18n ──
           if (id.includes('node_modules/i18next') || id.includes('node_modules/react-i18next')) return 'vendor-i18n';
@@ -130,8 +129,8 @@ export default defineConfig(({ mode }) => ({
           // ── Vendor: Form utilities ──
           if (id.includes('node_modules/zod') || id.includes('node_modules/react-hook-form') || id.includes('node_modules/@hookform/')) return 'vendor-forms';
 
-          // ── Vendor: Sonner/Vaul/misc UI ──
-          if (id.includes('node_modules/sonner') || id.includes('node_modules/vaul') || id.includes('node_modules/class-variance-authority') || id.includes('node_modules/clsx') || id.includes('node_modules/tailwind-merge')) return 'vendor-ui-utils';
+          // ── Vendor: misc UI utilities ──
+          if (id.includes('node_modules/sonner') || id.includes('node_modules/class-variance-authority') || id.includes('node_modules/clsx') || id.includes('node_modules/tailwind-merge')) return 'vendor-ui-utils';
         },
       },
     },
@@ -149,10 +148,6 @@ export default defineConfig(({ mode }) => ({
       '@supabase/supabase-js',
       '@tanstack/react-query',
       '@capacitor/core',
-    ],
-    exclude: [
-      // Don't pre-bundle these — they are lazy-loaded
-      'recharts',
     ],
   },
 }));
