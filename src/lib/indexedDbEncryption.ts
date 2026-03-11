@@ -155,9 +155,10 @@ export function isEncryptionAvailable(): boolean {
  * 
  * THROWS if Web Crypto is unavailable — caller must handle gracefully.
  */
-export async function encryptData<T>(obj: T): Promise<EncryptedPayload> {
+export async function encryptData<T>(obj: T): Promise<EncryptedPayload | T> {
   if (!isWebCryptoAvailable()) {
-    throw new Error('Web Crypto API unavailable — cannot encrypt data. Sensitive offline storage is disabled.');
+    logger.warn('Web Crypto API unavailable — storing data without encryption', 'Encryption');
+    return obj;
   }
 
   const json = JSON.stringify(obj);
