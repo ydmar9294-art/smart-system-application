@@ -96,6 +96,8 @@ const DistributorDashboard: React.FC = () => {
         newCustomerName.trim(),
         newCustomerPhone.trim(),
         newCustomerLocation.trim(),
+        authOrg?.id,
+        appUser?.id,
       );
 
       setNewCustomerName(''); setNewCustomerPhone(''); setNewCustomerLocation('');
