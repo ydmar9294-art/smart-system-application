@@ -7,6 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { getCachedAuth, clearAuthCache } from '@/lib/authCache';
 import { checkAuthStatus } from '@/hooks/useAuthOperations';
 import { isOAuthPending, clearOAuthPending } from '@/lib/oauthState';
+import { Capacitor } from '@capacitor/core';
+import { preCheckDevice, registerDevice } from '@/lib/deviceService';
 import { preCheckDevice, registerDevice } from '@/lib/deviceService';
 import EmailPasswordAuth from './EmailPasswordAuth';
 import GoogleSignInButton from './GoogleSignInButton';
