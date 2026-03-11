@@ -1,0 +1,1 @@
+ALTER TABLE public.distributor_inventory REPLICA IDENTITY FULL;
