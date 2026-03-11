@@ -625,6 +625,25 @@ export function useDistributorOffline() {
     // Cache org name + legal info (stamp, registrations) eagerly at login/init
     refreshOrgLegalCache();
 
+    // Listen for realtime changes to distributor_inventory (e.g. when owner creates a delivery)
+    let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+    resolveOfflineOrgContext().then((ctx) => {
+      if (!ctx?.organizationId || !mountedRef.current) return;
+      realtimeChannel = supabase
+        .channel(`dist-inv-${ctx.distributorId}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'distributor_inventory',
+          filter: `distributor_id=eq.${ctx.distributorId}`,
+        }, () => {
+          if (mountedRef.current) {
+            refreshInventory();
+          }
+        })
+        .subscribe();
+    });
+
     // Periodic stats refresh
     const statsInterval = setInterval(refreshStats, 30_000);
 
@@ -635,6 +654,9 @@ export function useDistributorOffline() {
       stopDistributorSync();
       unsub();
       clearInterval(statsInterval);
+      if (realtimeChannel) {
+        supabase.removeChannel(realtimeChannel);
+      }
     };
   }, [refreshStats, refreshInventory, refreshSales, refreshCustomers]);
 
