@@ -24,6 +24,7 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
+            // Cache Supabase API responses (GET only)
             urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
             handler: 'NetworkFirst',
             options: {
@@ -33,6 +34,7 @@ export default defineConfig(({ mode }) => ({
             },
           },
           {
+            // Cache Google Fonts
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
@@ -50,7 +52,7 @@ export default defineConfig(({ mode }) => ({
           },
         ],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/auth\/callback/, /^\/~oauth/],
+        navigateFallbackDenylist: [/^\/auth\/callback/],
       },
       manifest: {
         name: 'Smart System',
@@ -73,81 +75,65 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
+    // Production optimizations
     target: 'es2020',
     minify: 'terser',
     terserOptions: {
       compress: {
+        // Strip console.log/warn in production (keep errors)
         drop_console: mode === 'production',
         drop_debugger: true,
         pure_funcs: mode === 'production' ? ['console.log', 'console.warn', 'console.info'] : [],
-        passes: 2,
-      },
-      mangle: {
-        safari10: true,
       },
     },
     rollupOptions: {
       output: {
-        manualChunks(id) {
-          // ── Vendor: React core ──
-          if (id.includes('node_modules/react-dom/')) return 'vendor-react';
-          if (id.includes('node_modules/react/')) return 'vendor-react';
-          if (id.includes('node_modules/scheduler/')) return 'vendor-react';
-
-          // ── Vendor: Router ──
-          if (id.includes('node_modules/react-router')) return 'vendor-router';
-
-          // ── Vendor: Supabase ──
-          if (id.includes('node_modules/@supabase/')) return 'vendor-supabase';
-
-          // ── Vendor: React Query ──
-          if (id.includes('node_modules/@tanstack/')) return 'vendor-query';
-
-          // ── Vendor: Capacitor (all plugins in one chunk) ──
-          if (id.includes('node_modules/@capacitor/')) return 'vendor-capacitor';
-          if (id.includes('node_modules/capacitor-')) return 'vendor-capacitor';
-
-          // ── Vendor: PDF (heavy, lazy-loaded via features) ──
-          if (id.includes('node_modules/jspdf')) return 'vendor-pdf';
-          if (id.includes('node_modules/html2canvas')) return 'vendor-pdf';
-
-          // ── Vendor: Date utilities ──
-          if (id.includes('node_modules/date-fns')) return 'vendor-date';
-
-          // ── Vendor: i18n ──
-          if (id.includes('node_modules/i18next') || id.includes('node_modules/react-i18next')) return 'vendor-i18n';
-
-          // ── Vendor: Framer Motion ──
-          if (id.includes('node_modules/framer-motion')) return 'vendor-motion';
-
-          // ── Vendor: Radix UI (all primitives) ──
-          if (id.includes('node_modules/@radix-ui/')) return 'vendor-radix';
-
-          // ── Vendor: Icons ──
-          if (id.includes('node_modules/lucide-react')) return 'vendor-icons';
-
-          // ── Vendor: Form utilities ──
-          if (id.includes('node_modules/zod') || id.includes('node_modules/react-hook-form') || id.includes('node_modules/@hookform/')) return 'vendor-forms';
-
-          // ── Vendor: misc UI utilities ──
-          if (id.includes('node_modules/sonner') || id.includes('node_modules/class-variance-authority') || id.includes('node_modules/clsx') || id.includes('node_modules/tailwind-merge')) return 'vendor-ui-utils';
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-router': ['react-router-dom'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-query': ['@tanstack/react-query'],
+          'vendor-ui': ['lucide-react'],
+          'vendor-charts': ['recharts'],
+          'vendor-capacitor': [
+            '@capacitor/core',
+            '@capacitor/app',
+            '@capacitor/browser',
+            '@capacitor/device',
+            '@capacitor/clipboard',
+            '@capacitor/preferences',
+            '@capacitor/filesystem',
+            '@capacitor/share',
+            '@capacitor/haptics',
+            '@capacitor/keyboard',
+            '@capacitor/status-bar',
+            '@capacitor/splash-screen',
+          ],
+          'vendor-capacitor-push': [
+            '@capacitor/push-notifications',
+            '@capacitor/local-notifications',
+          ],
+          'vendor-pdf': ['jspdf', 'html2canvas'],
+          'vendor-i18n': ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
+          'vendor-radix': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-select',
+            '@radix-ui/react-popover',
+            '@radix-ui/react-toast',
+            '@radix-ui/react-tooltip',
+            '@radix-ui/react-accordion',
+            '@radix-ui/react-checkbox',
+            '@radix-ui/react-scroll-area',
+            '@radix-ui/react-switch',
+            '@radix-ui/react-label',
+          ],
+          'vendor-motion': ['framer-motion'],
         },
       },
     },
     chunkSizeWarningLimit: 700,
     sourcemap: mode === 'production' ? false : 'inline',
-    // Ensure CSS is extracted to a single file for caching
-    cssCodeSplit: true,
-  },
-  // Optimize dependency pre-bundling
-  optimizeDeps: {
-    include: [
-      'react',
-      'react-dom',
-      'react-router-dom',
-      '@supabase/supabase-js',
-      '@tanstack/react-query',
-      '@capacitor/core',
-    ],
   },
 }));
