@@ -126,8 +126,7 @@ export async function shareInvoicePdf(
   if (isCapacitor()) {
     try {
       // Save to temp location first, then share
-      const { Filesystem, Directory } = await import('@capacitor/filesystem');
-      const { Share } = await import('@capacitor/share');
+      // Using static imports from top of file
 
       const tempPath = `invoices/temp_${fileName}`;
 
