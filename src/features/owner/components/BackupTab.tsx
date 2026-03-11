@@ -6,9 +6,12 @@ import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
 import {
   Database, Download, FileText, Loader2, CheckCircle2,
-  Users, Receipt, Wallet, Activity, AlertTriangle, FileSpreadsheet,
+  Users, Receipt, Wallet, Activity, AlertTriangle,
   ShoppingCart, RotateCcw, PackageX
 } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import { generateBackupPdf, PdfTranslations } from '@/lib/backupPdfService';
 
 // ── Types ────────────────────────────────────────────────────────
@@ -447,102 +450,65 @@ const BackupTab: React.FC = () => {
     }
   }, [organization, getUserName, t, locale]);
 
-  // ── PDF Export ─────────────────────────────────────────────────
+  // ── PDF Export (works on both web and Capacitor) ────────────────
   const exportPDF = useCallback(async () => {
     if (!backupData) return;
     setLoading(true);
     setProgress(t('backup.creatingPdf'));
 
     try {
-      await generateBackupPdf(backupData, getPdfTranslations(), lang, setProgress);
+      const { blob, filename } = await generateBackupPdf(backupData, getPdfTranslations(), lang, setProgress);
+
+      if (Capacitor.isNativePlatform()) {
+        // Convert blob to base64 for Capacitor Filesystem
+        const reader = new FileReader();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => {
+            const result = reader.result as string;
+            // Remove data:application/pdf;base64, prefix
+            resolve(result.split(',')[1]);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+
+        // Write to device filesystem
+        const savedFile = await Filesystem.writeFile({
+          path: filename,
+          data: base64,
+          directory: Directory.Cache,
+        });
+
+        // Share the file so user can save/send it
+        await Share.share({
+          title: filename,
+          url: savedFile.uri,
+          dialogTitle: t('backup.exportPdfA4'),
+        });
+      } else {
+        // Web: standard download
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
       setProgress('');
-    } catch (err) {
-      logger.error('Backup PDF export error', 'BackupTab');
-      setProgress(t('backup.errorPdf'));
+    } catch (err: any) {
+      if (err?.message !== 'User cancelled') {
+        logger.error('Backup PDF export error', 'BackupTab');
+        setProgress(t('backup.errorPdf'));
+      } else {
+        setProgress('');
+      }
     } finally {
       setLoading(false);
     }
   }, [backupData, t, lang, getPdfTranslations]);
-
-  // ── Excel CSV Export ───────────────────────────────────────────
-  const exportCSV = useCallback(() => {
-    if (!backupData) return;
-
-    const sheets: { name: string; headers: string[]; rows: string[][] }[] = [
-      {
-        name: t('backup.customers'),
-        headers: [t('backup.pdfId'), t('backup.pdfCustomerName'), t('backup.pdfPhone'), t('backup.pdfLocation'), t('backup.pdfBalance'), t('backup.pdfDistributor')],
-        rows: backupData.customers.map(c => [c.id, c.name, c.phone || '', c.location || '', c.balance.toString(), c.distributor_name || '']),
-      },
-      {
-        name: t('backup.invoices'),
-        headers: [t('backup.pdfId'), t('backup.pdfCustomer'), t('backup.pdfDate'), t('backup.csvPaymentType'), t('backup.pdfTotal'), t('backup.csvDiscountType'), t('backup.csvDiscountPercent'), t('backup.csvDiscountValue'), t('backup.pdfNet'), t('backup.pdfPaid'), t('backup.pdfRemaining'), t('backup.csvVoided'), t('backup.pdfDistributor')],
-        rows: backupData.invoices.map(inv => [
-          inv.id, inv.customer_name, inv.created_at, inv.payment_type === 'CASH' ? t('backup.pdfCash') : t('backup.pdfCredit'),
-          (inv.grand_total + inv.discount_value).toString(),
-          inv.discount_type || '', (inv.discount_percentage || 0).toString(),
-          (inv.discount_value || 0).toString(), inv.grand_total.toString(),
-          inv.paid_amount.toString(), inv.remaining.toString(),
-          inv.is_voided ? t('backup.csvYes') : t('backup.csvNo'), inv.distributor_name || '',
-        ]),
-      },
-      {
-        name: t('backup.collections'),
-        headers: [t('backup.pdfId'), t('backup.pdfInvoiceNumber'), t('backup.pdfCustomer'), t('backup.pdfAmount'), t('backup.pdfDate'), t('backup.pdfCollector'), t('backup.csvReversed'), t('backup.pdfNotes')],
-        rows: backupData.collections.map(c => [
-          c.id, c.sale_id, c.customer_name || '', c.amount.toString(),
-          c.created_at, c.collector_name || '', c.is_reversed ? t('backup.csvYes') : t('backup.csvNo'), c.notes || '',
-        ]),
-      },
-      {
-        name: t('backup.purchases'),
-        headers: [t('backup.pdfId'), t('backup.pdfProduct'), t('backup.pdfQuantity'), t('backup.pdfUnitPrice'), t('backup.pdfTotal'), t('backup.pdfSupplier'), t('backup.pdfDate'), t('backup.pdfNotes')],
-        rows: backupData.purchases.map(p => [
-          p.id, p.product_name, p.quantity.toString(), p.unit_price.toString(),
-          p.total_price.toString(), p.supplier_name || '', p.created_at, p.notes || '',
-        ]),
-      },
-      {
-        name: t('backup.salesReturns'),
-        headers: [t('backup.pdfId'), t('backup.pdfCustomer'), t('backup.pdfOriginalInvoice'), t('backup.pdfTotal'), t('backup.pdfReason'), t('backup.pdfDate')],
-        rows: backupData.salesReturns.map(sr => [
-          sr.id, sr.customer_name, sr.sale_id || '—', sr.total_amount.toString(),
-          sr.reason || '', sr.created_at,
-        ]),
-      },
-      {
-        name: t('backup.purchaseReturns'),
-        headers: [t('backup.pdfId'), t('backup.pdfSupplier'), t('backup.pdfTotal'), t('backup.pdfReason'), t('backup.pdfDate')],
-        rows: backupData.purchaseReturns.map(pr => [
-          pr.id, pr.supplier_name || '—', pr.total_amount.toString(),
-          pr.reason || '', pr.created_at,
-        ]),
-      },
-      {
-        name: t('backup.activityLog'),
-        headers: [t('backup.pdfOperation'), t('backup.pdfUser'), t('backup.pdfDate'), t('backup.pdfDetails')],
-        rows: backupData.logs.map(l => [l.type, l.user_name, l.date, l.details]),
-      },
-    ];
-
-    sheets.forEach(sheet => {
-      const csvContent = [
-        sheet.headers.join(','),
-        ...sheet.rows.map(row => row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',')),
-      ].join('\n');
-
-      const BOM = '\uFEFF';
-      const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${backupData.orgName}_${sheet.name}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    });
-  }, [backupData, t]);
 
   // ── Render ─────────────────────────────────────────────────────
   return (
@@ -595,23 +561,15 @@ const BackupTab: React.FC = () => {
             <SummaryCard icon={<Activity className="w-4 h-4" />} label={t('backup.activityLog')} value={backupData.logs.length} color="purple" />
           </div>
 
-          {/* Export Buttons */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Export Button */}
+          <div>
             <button
               onClick={exportPDF}
               disabled={loading}
-              className="py-3 bg-destructive/10 text-destructive rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-destructive/20 transition-all active:scale-[0.98]"
+              className="w-full py-3 bg-destructive/10 text-destructive rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-destructive/20 transition-all active:scale-[0.98]"
             >
               <FileText className="w-4 h-4" />
               {t('backup.exportPdfA4')}
-            </button>
-            <button
-              onClick={exportCSV}
-              disabled={loading}
-              className="py-3 bg-success/10 text-success rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-success/20 transition-all active:scale-[0.98]"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              {t('backup.exportExcelCsv')}
             </button>
           </div>
 
