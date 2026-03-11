@@ -111,9 +111,8 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('node_modules/jspdf')) return 'vendor-pdf';
           if (id.includes('node_modules/html2canvas')) return 'vendor-pdf';
 
-          // ── Vendor: Charts (only pulled if chart.tsx is imported) ──
-          if (id.includes('node_modules/recharts')) return 'vendor-charts';
-          if (id.includes('node_modules/d3-')) return 'vendor-charts';
+          // ── Vendor: Date utilities ──
+          if (id.includes('node_modules/date-fns')) return 'vendor-date';
 
           // ── Vendor: i18n ──
           if (id.includes('node_modules/i18next') || id.includes('node_modules/react-i18next')) return 'vendor-i18n';
