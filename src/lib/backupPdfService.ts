@@ -555,7 +555,7 @@ export async function generateBackupPdf(
   translations: PdfTranslations,
   lang: string,
   onProgress?: (msg: string) => void
-): Promise<void> {
+): Promise<{ blob: Blob; filename: string }> {
   const html = buildBackupHtml(data, translations, lang);
 
   onProgress?.(translations.pdfPreparingDoc);
@@ -636,7 +636,10 @@ export async function generateBackupPdf(
   onProgress?.(translations.pdfSavingFile);
 
   const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 16);
-  pdf.save(`backup_${data.orgName}_${ts}.pdf`);
+  const filename = `backup_${data.orgName}_${ts}.pdf`;
+  const blob = pdf.output('blob');
 
   document.body.removeChild(container);
+
+  return { blob, filename };
 }

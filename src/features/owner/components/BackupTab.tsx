@@ -6,9 +6,12 @@ import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
 import {
   Database, Download, FileText, Loader2, CheckCircle2,
-  Users, Receipt, Wallet, Activity, AlertTriangle, FileSpreadsheet,
+  Users, Receipt, Wallet, Activity, AlertTriangle,
   ShoppingCart, RotateCcw, PackageX
 } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import { generateBackupPdf, PdfTranslations } from '@/lib/backupPdfService';
 
 // ── Types ────────────────────────────────────────────────────────
