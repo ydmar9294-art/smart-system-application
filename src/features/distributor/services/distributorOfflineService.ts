@@ -315,7 +315,11 @@ async function prepareEncryptedRecord<T extends Record<string, any>>(
 ): Promise<Record<string, any>> {
   const keyValue = item[keyField];
   const encrypted = await encryptData(item);
-  return { [keyField]: keyValue, _enc: encrypted };
+  if (encrypted && (encrypted as any).__encrypted) {
+    return { [keyField]: keyValue, _enc: encrypted };
+  }
+  // Fallback: plain storage
+  return { ...item, [keyField]: keyValue };
 }
 
 // ============================================
