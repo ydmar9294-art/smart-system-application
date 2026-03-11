@@ -9,6 +9,7 @@ import { sanitizeText, sanitizePhone } from '@/lib/validation';
 import VersionManagement from './VersionManagement';
 import OrgDeletionManager from './OrgDeletionManager';
 import SubscriptionsTab from './SubscriptionsTab';
+import MonitoringTab from './MonitoringTab';
 
 import {
   ShieldCheck, Key, UserPlus, LogOut,
@@ -21,12 +22,12 @@ import {
 // ============================================
 // Tab definitions
 // ============================================
-type TabId = 'licenses' | 'subscriptions' | 'stats' | 'versions' | 'deletion';
+type TabId = 'licenses' | 'subscriptions' | 'monitoring' | 'versions' | 'deletion';
 
 const TABS: { id: TabId; label: string; icon: React.ElementType; bgColor: string }[] = [
   { id: 'licenses', label: 'التراخيص', icon: Key, bgColor: 'bg-primary' },
   { id: 'subscriptions', label: 'الاشتراكات', icon: Activity, bgColor: 'bg-amber-600' },
-  { id: 'stats', label: 'إحصائيات', icon: BarChart3, bgColor: 'bg-emerald-600' },
+  { id: 'monitoring', label: 'مراقبة', icon: BarChart3, bgColor: 'bg-emerald-600' },
   { id: 'versions', label: 'الإصدارات', icon: Smartphone, bgColor: 'bg-purple-600' },
   { id: 'deletion', label: 'الحذف', icon: Trash2, bgColor: 'bg-red-500' },
 ];
@@ -184,7 +185,7 @@ const DeveloperHub: React.FC = () => {
               />
             )}
             {activeTab === 'subscriptions' && <SubscriptionsTab />}
-            {activeTab === 'stats' && <StatsTab orgStats={orgStats} />}
+            {activeTab === 'monitoring' && <MonitoringTab />}
             {activeTab === 'versions' && <VersionManagement />}
             {activeTab === 'deletion' && <OrgDeletionManager />}
           </AnimatedTabContent>
@@ -380,78 +381,6 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
           </div>
         );
       })}
-    </div>
-  );
-};
-
-// ============================================
-// Stats Tab (extracted)
-// ============================================
-const StatsTab: React.FC<{ orgStats: OrgStats[] }> = ({ orgStats }) => {
-  if (orgStats.length === 0) {
-    return (
-      <div className="text-center py-12 text-muted-foreground">
-        <BarChart3 className="w-12 h-12 mx-auto mb-3 opacity-30" />
-        <p className="font-bold">لا توجد بيانات</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {orgStats.map((stat) => (
-        <div key={stat.org_id} className="card-elevated p-4 space-y-3">
-          <div className="flex flex-wrap justify-between items-center gap-2">
-            <h3 className="font-black text-base text-foreground">{stat.org_name}</h3>
-            <span className={`badge ${
-              stat.license_status === 'ACTIVE' ? 'badge-success' :
-              stat.license_status === 'SUSPENDED' ? 'badge-danger' : ''
-            }`}>
-              {stat.license_status === 'ACTIVE' ? 'مفعل' : stat.license_status === 'SUSPENDED' ? 'موقوف' : stat.license_status || 'بدون'}
-            </span>
-          </div>
-
-          {/* Employee usage bar */}
-          <div>
-            <div className="flex justify-between text-xs font-bold text-muted-foreground mb-1">
-              <span className="flex items-center gap-1"><Users size={12}/> الموظفون</span>
-              <span>{stat.employee_count} / {stat.max_employees}</span>
-            </div>
-            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-              <div
-                className={`h-2 rounded-full transition-all ${stat.employee_count >= stat.max_employees ? 'bg-destructive' : stat.employee_count >= stat.max_employees * 0.8 ? 'bg-warning' : 'bg-primary'}`}
-                style={{ width: `${Math.min(100, (stat.employee_count / stat.max_employees) * 100)}%` }}
-              />
-            </div>
-            <p className="text-[10px] text-muted-foreground font-bold mt-1">
-              نشط: {stat.employee_count} | معلّق: {stat.pending_employees} | إجمالي: {stat.total_users}
-            </p>
-          </div>
-
-          {/* Stats grid */}
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { icon: ShoppingCart, label: 'المبيعات', value: stat.total_sales },
-              { icon: Package, label: 'المنتجات', value: stat.total_products },
-              { icon: Users, label: 'العملاء', value: stat.total_customers },
-              { icon: Truck, label: 'التسليمات', value: stat.total_deliveries },
-              { icon: ShoppingCart, label: 'المشتريات', value: stat.total_purchases },
-              { icon: Activity, label: 'التحصيلات', value: stat.total_collections },
-            ].map((item, i) => (
-              <div key={i} className="glass-surface p-2 rounded-2xl text-center">
-                <item.icon size={13} className="text-muted-foreground mx-auto mb-0.5" />
-                <p className="text-sm font-black text-foreground">{item.value.toLocaleString('ar-EG')}</p>
-                <p className="text-[8px] text-muted-foreground font-bold">{item.label}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap justify-between text-xs border-t border-border pt-2 gap-2">
-            <span className="font-bold text-muted-foreground">الإيرادات: <span className="text-foreground">{Number(stat.total_revenue).toLocaleString('ar-EG')} ل.س</span></span>
-            <span className="font-bold text-muted-foreground">السجلات: <span className="text-foreground">{stat.total_records.toLocaleString('ar-EG')}</span></span>
-          </div>
-        </div>
-      ))}
     </div>
   );
 };
