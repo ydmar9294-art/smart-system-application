@@ -7,10 +7,11 @@ import { useState, useEffect, useCallback } from 'react';
  */
 export function usePageTheme() {
   const [isDark, setIsDark] = useState(() => {
-    if (typeof window === 'undefined') return false;
+    if (typeof window === 'undefined') return true;
     const stored = localStorage.getItem('app-theme');
     if (stored) return stored === 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    // Default to dark mode when no preference is stored
+    return true;
   });
 
   useEffect(() => {
