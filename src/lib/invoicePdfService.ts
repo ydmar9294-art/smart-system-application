@@ -10,6 +10,8 @@
 import jsPDF from 'jspdf';
 import { logger } from '@/lib/logger';
 import html2canvas from 'html2canvas';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 
 // ── Detect Capacitor Android ────────────────────────────────────────────────
 const isCapacitor = (): boolean =>
@@ -124,8 +126,7 @@ export async function shareInvoicePdf(
   if (isCapacitor()) {
     try {
       // Save to temp location first, then share
-      const { Filesystem, Directory } = await import('@capacitor/filesystem');
-      const { Share } = await import('@capacitor/share');
+      // Using static imports from top of file
 
       const tempPath = `invoices/temp_${fileName}`;
 
@@ -184,7 +185,7 @@ export async function saveInvoicePdf(
   fileName: string
 ): Promise<void> {
   if (isCapacitor()) {
-    const { Filesystem, Directory } = await import('@capacitor/filesystem');
+    // Using static imports from top of file
 
     try {
       // Android: ExternalStorage → Downloads folder

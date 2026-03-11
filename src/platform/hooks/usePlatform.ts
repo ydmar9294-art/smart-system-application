@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core';
+import { Device } from '@capacitor/device';
 import { logger } from '@/lib/logger';
 
 export const usePlatform = () => {
@@ -10,7 +11,6 @@ export const usePlatform = () => {
   const getDeviceInfo = async () => {
     if (!isNative()) return null;
     try {
-      const { Device } = await import('@capacitor/device');
       const info = await Device.getInfo();
       return info;
     } catch {

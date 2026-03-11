@@ -3,11 +3,11 @@
  * Uses Capacitor Clipboard on native, falls back to navigator.clipboard on web.
  */
 import { Capacitor } from '@capacitor/core';
+import { Clipboard } from '@capacitor/clipboard';
 
 export async function copyToClipboard(text: string): Promise<boolean> {
   if (Capacitor.isNativePlatform()) {
     try {
-      const { Clipboard } = await import('@capacitor/clipboard');
       await Clipboard.write({ string: text });
       return true;
     } catch (e) {
