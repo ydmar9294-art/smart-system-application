@@ -4,6 +4,7 @@
  * On Capacitor, uses @capacitor/device for richer device names.
  */
 import { Capacitor } from '@capacitor/core';
+import { Device } from '@capacitor/device';
 import { generateUUID } from './uuid';
 
 const DEVICE_ID_KEY = 'app_device_id';
@@ -47,7 +48,6 @@ export function getDeviceName(): string {
 export async function resolveNativeDeviceName(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   try {
-    const { Device } = await import('@capacitor/device');
     const info = await Device.getInfo();
     // e.g. "Samsung Galaxy S24" or "iPhone 15 Pro"
     const name = info.model

@@ -10,6 +10,8 @@
 import jsPDF from 'jspdf';
 import { logger } from '@/lib/logger';
 import html2canvas from 'html2canvas';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 
 // ── Detect Capacitor Android ────────────────────────────────────────────────
 const isCapacitor = (): boolean =>

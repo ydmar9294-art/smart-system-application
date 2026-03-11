@@ -3,15 +3,11 @@
  * 
  * Provides secure storage for encryption keys:
  * - Native (Android/iOS): Uses Capacitor Preferences with native encryption
- *   (Android Keystore-backed EncryptedSharedPreferences via Capacitor)
- * - Web: Falls back to localStorage (acceptable for browser context where
- *   the OS provides the security boundary)
- * 
- * This abstraction ensures encryption keys are stored using the most
- * secure mechanism available on each platform.
+ * - Web: Falls back to localStorage
  */
 
 import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 import { logger } from '@/lib/logger';
 
 const DEVICE_KEY_STORAGE = 'ss_dek_v2';
@@ -25,7 +21,6 @@ const KEY_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 export async function getSecureKey(): Promise<string | null> {
   try {
     if (Capacitor.isNativePlatform()) {
-      const { Preferences } = await import('@capacitor/preferences');
       const { value } = await Preferences.get({ key: DEVICE_KEY_STORAGE });
       return value;
     }
@@ -43,7 +38,6 @@ export async function storeSecureKey(keyBase64: string): Promise<void> {
   try {
     const createdAt = Date.now().toString();
     if (Capacitor.isNativePlatform()) {
-      const { Preferences } = await import('@capacitor/preferences');
       await Preferences.set({ key: DEVICE_KEY_STORAGE, value: keyBase64 });
       await Preferences.set({ key: KEY_CREATED_AT, value: createdAt });
       return;
@@ -58,18 +52,15 @@ export async function storeSecureKey(keyBase64: string): Promise<void> {
 
 /**
  * Delete the device encryption key from secure storage.
- * Called on logout to make encrypted data irrecoverable.
  */
 export async function deleteSecureKey(): Promise<void> {
   try {
     if (Capacitor.isNativePlatform()) {
-      const { Preferences } = await import('@capacitor/preferences');
       await Preferences.remove({ key: DEVICE_KEY_STORAGE });
       await Preferences.remove({ key: KEY_CREATED_AT });
     }
     localStorage.removeItem(DEVICE_KEY_STORAGE);
     localStorage.removeItem(KEY_CREATED_AT);
-    // Also clear legacy v1 key
     localStorage.removeItem('ss_dek_v1');
   } catch (err) {
     logger.error('Failed to delete encryption key', 'SecureKeyStore');
@@ -78,13 +69,11 @@ export async function deleteSecureKey(): Promise<void> {
 
 /**
  * Check if the device encryption key needs rotation (older than 30 days).
- * Returns true if rotation is needed, false otherwise.
  */
 export async function isKeyRotationNeeded(): Promise<boolean> {
   try {
     let createdAtStr: string | null = null;
     if (Capacitor.isNativePlatform()) {
-      const { Preferences } = await import('@capacitor/preferences');
       const { value } = await Preferences.get({ key: KEY_CREATED_AT });
       createdAtStr = value;
     } else {
@@ -92,7 +81,6 @@ export async function isKeyRotationNeeded(): Promise<boolean> {
     }
 
     if (!createdAtStr) {
-      // No creation timestamp — key predates rotation tracking, needs rotation
       const existingKey = await getSecureKey();
       return existingKey !== null;
     }
@@ -106,18 +94,12 @@ export async function isKeyRotationNeeded(): Promise<boolean> {
 
 /**
  * Rotate the device encryption key.
- * Returns the OLD key (for re-encryption of existing data) and sets a NEW key.
- * Caller is responsible for re-encrypting cached data with the new key.
  */
 export async function rotateSecureKey(): Promise<{ oldKeyB64: string | null; newKeyB64: string }> {
   const oldKey = await getSecureKey();
-
-  // Generate new 256-bit key
   const newKeyBuffer = crypto.getRandomValues(new Uint8Array(32));
   const newKeyB64 = btoa(String.fromCharCode(...newKeyBuffer));
-
   await storeSecureKey(newKeyB64);
   logger.info('Device encryption key rotated successfully', 'SecureKeyStore');
-
   return { oldKeyB64: oldKey, newKeyB64 };
 }
