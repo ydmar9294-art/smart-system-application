@@ -5,7 +5,7 @@
 import { useCallback, MutableRefObject } from 'react';
 import { resolveUserProfile } from '@/hooks/useAuthOperations';
 import { clearAuthCache } from '@/lib/authCache';
-import { registerDevice } from '@/lib/deviceService';
+import { verifyDevice } from '@/lib/deviceService';
 import { logger } from '@/lib/logger';
 import { RESOLVE_TIMEOUT_MS } from './authHelpers';
 
@@ -67,18 +67,17 @@ export const useProfileResolver = (deps: ProfileResolverDeps) => {
             organization: result.organization,
           });
 
-          // Register device after successful auth (fire-and-forget, non-blocking)
+          // Verify device is still active (non-blocking, no registration)
+          // Registration ONLY happens through AuthFlow's pre-check → warning → register flow
           if (!isBackground) {
-            registerDevice().then((deviceResult) => {
-              if (deviceResult.status === 'DEVICE_REPLACED') {
-                // Notify user that previous devices were logged out
-                window.dispatchEvent(new CustomEvent('device-replaced-warning', {
-                  detail: { replacedDeviceName: deviceResult.replaced_device_name },
+            verifyDevice().then((result) => {
+              if (!result.active) {
+                logger.warn('Device revoked during profile resolve — forcing logout', 'Auth');
+                window.dispatchEvent(new CustomEvent('device-revoked', {
+                  detail: { message: result.message || 'تم تسجيل الدخول من جهاز آخر' },
                 }));
               }
-            }).catch((err) => {
-              logger.warn('Device registration failed (non-blocking)', 'Auth', { error: String(err) });
-            });
+            }).catch(() => {});
           }
 
           return true;
