@@ -149,9 +149,5 @@ export default defineConfig(({ mode }) => ({
       '@tanstack/react-query',
       '@capacitor/core',
     ],
-    exclude: [
-      // Don't pre-bundle these — they are lazy-loaded
-      'recharts',
-    ],
   },
 }));
