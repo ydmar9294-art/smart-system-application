@@ -19,6 +19,9 @@ initSessionGuard();
 // Initialize Capacitor OAuth deep link listeners (native only)
 initCapacitorOAuth();
 
+// Resolve native device model name for device tracking (Capacitor only)
+resolveNativeDeviceName();
+
 // Hide splash screen after app loads
 if (Capacitor.isNativePlatform()) {
   window.addEventListener('load', async () => {
