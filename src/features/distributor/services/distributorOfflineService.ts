@@ -1001,16 +1001,27 @@ function getRetryDelay(retryCount: number): number {
 const DEFERRED_RETRY_MS = 5000;
 
 export async function syncAllPending(): Promise<{ synced: number; failed: number }> {
-  if (isSyncing) return { synced: 0, failed: 0 };
+  // Robust mutex: if a sync is in progress, wait for it and skip
+  if (syncLockPromise) {
+    await syncLockPromise.catch(() => {});
+    return { synced: 0, failed: 0 };
+  }
   if (!navigator.onLine) return { synced: 0, failed: 0 };
 
+  let resolveLock: () => void;
+  syncLockPromise = new Promise<void>(r => { resolveLock = r; });
   isSyncing = true;
   let synced = 0;
   let failed = 0;
 
   try {
-    // ID maps already loaded by startDistributorSync; skip redundant load
-    const pending = await getPendingActions();
+    // Decrypt all actions once and reuse the cached list
+    const allDecrypted = await getAllActionsDecrypted();
+    const now = Date.now();
+    const pending = allDecrypted
+      .filter(a => a.status === 'pending' && (!a.nextRetryAt || a.nextRetryAt <= now))
+      .sort((a, b) => a.createdAt - b.createdAt);
+
     if (pending.length === 0) return { synced: 0, failed: 0 };
 
     notifySyncListeners({ type: 'start', total: pending.length });
@@ -1037,9 +1048,8 @@ export async function syncAllPending(): Promise<{ synced: number; failed: number
     }
 
     // Cleanup old synced actions (keep last 24h)
-    const allActions = await getAllActions();
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-    for (const a of allActions) {
+    for (const a of allDecrypted) {
       if (a.status === 'synced' && a.createdAt < cutoff) {
         await deleteItem(STORES.ACTIONS, a.id);
       }
@@ -1055,6 +1065,8 @@ export async function syncAllPending(): Promise<{ synced: number; failed: number
     logger.error('[Sync] Process error', 'DistributorOffline', { error: String(err) });
   } finally {
     isSyncing = false;
+    syncLockPromise = null;
+    resolveLock!();
   }
 
   return { synced, failed };
