@@ -2,27 +2,33 @@
  * Offline Sync Hook (Lightweight)
  * Provides online/offline status awareness to the app shell.
  * Reads real pending count from distributor offline queue when available.
+ * Only loads the distributor offline engine for FIELD_AGENT / distributor roles.
  */
 
 import { useState, useEffect, useCallback } from 'react';
 
-export function useOfflineSync() {
+export function useOfflineSync(userRole?: string) {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [pendingCount, setPendingCount] = useState(0);
 
+  // Only distributors (FIELD_AGENT employees) need the offline engine
+  const isDistributor = userRole === 'EMPLOYEE' || userRole === 'FIELD_AGENT';
+
   const refreshPendingCount = useCallback(async () => {
+    if (!isDistributor) {
+      setPendingCount(0);
+      return;
+    }
     try {
-      // Dynamically import to avoid loading distributor code for non-distributor roles
       const { getActionStats } = await import(
         '@/features/distributor/services/distributorOfflineService'
       );
       const stats = await getActionStats();
       setPendingCount(stats.pending + stats.failed);
     } catch {
-      // IndexedDB or module not available — no pending actions
       setPendingCount(0);
     }
-  }, []);
+  }, [isDistributor]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -31,7 +37,6 @@ export function useOfflineSync() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Check pending count on mount and periodically
     refreshPendingCount();
     const interval = setInterval(refreshPendingCount, 15_000);
 

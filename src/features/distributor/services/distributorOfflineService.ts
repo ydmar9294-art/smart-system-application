@@ -60,6 +60,8 @@ export interface OfflineAction {
   nextRetryAt?: number;
   /** HMAC signature for integrity verification */
   _signature?: string;
+  /** Number of times this action has been deferred (dependency not ready) */
+  deferralCount?: number;
 }
 
 // ============================================
@@ -805,7 +807,9 @@ async function cleanupStaleCacheData(): Promise<void> {
 // ============================================
 
 const MAX_RETRIES = 5;
+const MAX_DEFERRALS = 10;
 let isSyncing = false;
+let syncLockPromise: Promise<void> | null = null;
 let syncIntervalId: ReturnType<typeof setInterval> | null = null;
 
 type SyncListener = (event: { type: 'start' | 'progress' | 'complete' | 'error'; synced?: number; failed?: number; total?: number; message?: string }) => void;
@@ -997,16 +1001,27 @@ function getRetryDelay(retryCount: number): number {
 const DEFERRED_RETRY_MS = 5000;
 
 export async function syncAllPending(): Promise<{ synced: number; failed: number }> {
-  if (isSyncing) return { synced: 0, failed: 0 };
+  // Robust mutex: if a sync is in progress, wait for it and skip
+  if (syncLockPromise) {
+    await syncLockPromise.catch(() => {});
+    return { synced: 0, failed: 0 };
+  }
   if (!navigator.onLine) return { synced: 0, failed: 0 };
 
+  let resolveLock: () => void;
+  syncLockPromise = new Promise<void>(r => { resolveLock = r; });
   isSyncing = true;
   let synced = 0;
   let failed = 0;
 
   try {
-    // ID maps already loaded by startDistributorSync; skip redundant load
-    const pending = await getPendingActions();
+    // Decrypt all actions once and reuse the cached list
+    const allDecrypted = await getAllActionsDecrypted();
+    const now = Date.now();
+    const pending = allDecrypted
+      .filter(a => a.status === 'pending' && (!a.nextRetryAt || a.nextRetryAt <= now))
+      .sort((a, b) => a.createdAt - b.createdAt);
+
     if (pending.length === 0) return { synced: 0, failed: 0 };
 
     notifySyncListeners({ type: 'start', total: pending.length });
@@ -1033,9 +1048,8 @@ export async function syncAllPending(): Promise<{ synced: number; failed: number
     }
 
     // Cleanup old synced actions (keep last 24h)
-    const allActions = await getAllActions();
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-    for (const a of allActions) {
+    for (const a of allDecrypted) {
       if (a.status === 'synced' && a.createdAt < cutoff) {
         await deleteItem(STORES.ACTIONS, a.id);
       }
@@ -1051,6 +1065,8 @@ export async function syncAllPending(): Promise<{ synced: number; failed: number
     logger.error('[Sync] Process error', 'DistributorOffline', { error: String(err) });
   } finally {
     isSyncing = false;
+    syncLockPromise = null;
+    resolveLock!();
   }
 
   return { synced, failed };
@@ -1098,10 +1114,22 @@ async function attemptBulkSync(actions: OfflineAction[]): Promise<{ synced: numb
         await updateAction(result.id, { status: 'synced', syncedAt: Date.now(), error: undefined });
         synced++;
       } else if (result.status === 'deferred') {
-        await updateAction(result.id, {
-          status: 'pending',
-          nextRetryAt: Date.now() + DEFERRED_RETRY_MS,
-        });
+        const action = actions.find(a => a.id === result.id);
+        const newDeferral = (action?.deferralCount || 0) + 1;
+        if (newDeferral >= MAX_DEFERRALS) {
+          await updateAction(result.id, {
+            status: 'failed',
+            deferralCount: newDeferral,
+            error: 'تجاوز الحد الأقصى لتأجيل العملية — العنصر المرتبط لم يُزامَن',
+          });
+          failed++;
+        } else {
+          await updateAction(result.id, {
+            status: 'pending',
+            deferralCount: newDeferral,
+            nextRetryAt: Date.now() + DEFERRED_RETRY_MS,
+          });
+        }
       } else {
         const action = actions.find(a => a.id === result.id);
         const newRetry = (action?.retryCount || 0) + 1;
@@ -1145,13 +1173,25 @@ async function sequentialSync(sorted: OfflineAction[]): Promise<{ synced: number
     const result = await executeAction(action);
 
     if (result === 'synced') {
-      await updateAction(action.id, { status: 'synced', syncedAt: Date.now(), error: undefined });
+      await updateAction(action.id, { status: 'synced', syncedAt: Date.now(), error: undefined, deferralCount: 0 });
       synced++;
     } else if (result === 'deferred') {
-      await updateAction(action.id, {
-        status: 'pending',
-        nextRetryAt: Date.now() + DEFERRED_RETRY_MS,
-      });
+      const newDeferral = (action.deferralCount || 0) + 1;
+      if (newDeferral >= MAX_DEFERRALS) {
+        await updateAction(action.id, {
+          status: 'failed',
+          deferralCount: newDeferral,
+          error: 'تجاوز الحد الأقصى لتأجيل العملية — العنصر المرتبط لم يُزامَن',
+        });
+        failed++;
+        logger.warn(`[Sync] Action ${action.id} (${action.type}) exceeded max deferrals (${MAX_DEFERRALS}), marking failed`, 'DistributorOffline');
+      } else {
+        await updateAction(action.id, {
+          status: 'pending',
+          deferralCount: newDeferral,
+          nextRetryAt: Date.now() + DEFERRED_RETRY_MS,
+        });
+      }
     } else {
       const newRetry = action.retryCount + 1;
       if (newRetry >= MAX_RETRIES) {
