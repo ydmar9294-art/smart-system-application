@@ -100,6 +100,7 @@ const ViewManager: React.FC = () => {
 // ==========================================
 const MainContent: React.FC = () => {
   const { user, role, isLoading, refreshAuth, needsActivation, logout } = useApp();
+  const { isGuest } = useGuest();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [deviceRevoked, setDeviceRevoked] = useState(false);
   const [revokedDeviceName, setRevokedDeviceName] = useState<string | undefined>();
@@ -110,7 +111,7 @@ const MainContent: React.FC = () => {
   useStatusBar();
   
   usePushNotifications();
-  const { isOnline, pendingCount } = useOfflineSync();
+  const { isOnline, pendingCount } = useOfflineSync(role);
   const { showUpdateModal, isForceUpdate, checkResult, dismiss } = useVersionCheck();
   
   // Real-time device session monitoring
