@@ -1114,10 +1114,22 @@ async function attemptBulkSync(actions: OfflineAction[]): Promise<{ synced: numb
         await updateAction(result.id, { status: 'synced', syncedAt: Date.now(), error: undefined });
         synced++;
       } else if (result.status === 'deferred') {
-        await updateAction(result.id, {
-          status: 'pending',
-          nextRetryAt: Date.now() + DEFERRED_RETRY_MS,
-        });
+        const action = actions.find(a => a.id === result.id);
+        const newDeferral = (action?.deferralCount || 0) + 1;
+        if (newDeferral >= MAX_DEFERRALS) {
+          await updateAction(result.id, {
+            status: 'failed',
+            deferralCount: newDeferral,
+            error: 'تجاوز الحد الأقصى لتأجيل العملية — العنصر المرتبط لم يُزامَن',
+          });
+          failed++;
+        } else {
+          await updateAction(result.id, {
+            status: 'pending',
+            deferralCount: newDeferral,
+            nextRetryAt: Date.now() + DEFERRED_RETRY_MS,
+          });
+        }
       } else {
         const action = actions.find(a => a.id === result.id);
         const newRetry = (action?.retryCount || 0) + 1;

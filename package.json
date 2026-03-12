@@ -84,11 +84,8 @@
     "react-resizable-panels": "^2.1.9",
     "react-router-dom": "^6.30.3",
     "recharts": "^2.15.4",
-    "serialize-javascript": "7.0.4",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.0",
-    "tailwindcss-animate": "^1.0.7",
-    "terser": "^5.46.0",
     "vaul": "^0.9.9",
     "vite-plugin-pwa": "1.2.0",
     "zod": "^3.25.76"
