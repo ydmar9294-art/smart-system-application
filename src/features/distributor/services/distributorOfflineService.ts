@@ -807,7 +807,9 @@ async function cleanupStaleCacheData(): Promise<void> {
 // ============================================
 
 const MAX_RETRIES = 5;
+const MAX_DEFERRALS = 10;
 let isSyncing = false;
+let syncLockPromise: Promise<void> | null = null;
 let syncIntervalId: ReturnType<typeof setInterval> | null = null;
 
 type SyncListener = (event: { type: 'start' | 'progress' | 'complete' | 'error'; synced?: number; failed?: number; total?: number; message?: string }) => void;
