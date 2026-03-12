@@ -1161,13 +1161,25 @@ async function sequentialSync(sorted: OfflineAction[]): Promise<{ synced: number
     const result = await executeAction(action);
 
     if (result === 'synced') {
-      await updateAction(action.id, { status: 'synced', syncedAt: Date.now(), error: undefined });
+      await updateAction(action.id, { status: 'synced', syncedAt: Date.now(), error: undefined, deferralCount: 0 });
       synced++;
     } else if (result === 'deferred') {
-      await updateAction(action.id, {
-        status: 'pending',
-        nextRetryAt: Date.now() + DEFERRED_RETRY_MS,
-      });
+      const newDeferral = (action.deferralCount || 0) + 1;
+      if (newDeferral >= MAX_DEFERRALS) {
+        await updateAction(action.id, {
+          status: 'failed',
+          deferralCount: newDeferral,
+          error: 'تجاوز الحد الأقصى لتأجيل العملية — العنصر المرتبط لم يُزامَن',
+        });
+        failed++;
+        logger.warn(`[Sync] Action ${action.id} (${action.type}) exceeded max deferrals (${MAX_DEFERRALS}), marking failed`, 'DistributorOffline');
+      } else {
+        await updateAction(action.id, {
+          status: 'pending',
+          deferralCount: newDeferral,
+          nextRetryAt: Date.now() + DEFERRED_RETRY_MS,
+        });
+      }
     } else {
       const newRetry = action.retryCount + 1;
       if (newRetry >= MAX_RETRIES) {

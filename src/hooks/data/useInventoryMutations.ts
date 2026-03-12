@@ -85,6 +85,9 @@ export function useInventoryMutations(
       await inventoryService.createDelivery(distributorName, items, notes, distributorId);
     } catch (err) {
       if (previousProducts) queryClient.setQueryData(prodKey, previousProducts);
+      // Force refresh authoritative server state after rollback
+      queryClient.invalidateQueries({ queryKey: prodKey });
+      queryClient.invalidateQueries({ queryKey: queryKeys.distributorInventory(orgId) });
       handleError(err);
       return;
     }

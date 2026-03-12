@@ -207,8 +207,6 @@ const MainContent: React.FC = () => {
   }
 
   // Guest mode — show guest dashboard shell instead of auth
-  const { isGuest } = useGuest();
-
   if (isGuest) {
     return <GuestDashboardShell />;
   }

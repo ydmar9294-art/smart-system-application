@@ -249,7 +249,8 @@ export function useDistributorOffline() {
         .from('sales')
         .select('id, customer_id, customer_name, grand_total, paid_amount, remaining, payment_type, is_voided, created_at')
         .eq('created_by', session.user.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(500);
 
       if (error) throw error;
 
