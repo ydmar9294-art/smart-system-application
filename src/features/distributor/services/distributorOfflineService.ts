@@ -60,6 +60,8 @@ export interface OfflineAction {
   nextRetryAt?: number;
   /** HMAC signature for integrity verification */
   _signature?: string;
+  /** Number of times this action has been deferred (dependency not ready) */
+  deferralCount?: number;
 }
 
 // ============================================
