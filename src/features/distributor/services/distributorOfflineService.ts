@@ -355,10 +355,11 @@ export async function enqueueAction(
   }
 
   // Encrypt the entire action before storing
+  // Keep `status` in plaintext alongside encrypted payload for index-based counting
   if (isEncryptionAvailable()) {
     try {
       const encrypted = await encryptData(action);
-      await putItem(STORES.ACTIONS, { id: action.id, _enc: encrypted });
+      await putItem(STORES.ACTIONS, { id: action.id, status: action.status, _enc: encrypted });
     } catch {
       // Fallback: store unencrypted if encryption fails
       await putItem(STORES.ACTIONS, action);
@@ -431,11 +432,11 @@ export async function updateAction(id: string, updates: Partial<OfflineAction>):
 
   const updated = { ...existing, ...updates };
 
-  // Re-encrypt before storing
+  // Re-encrypt before storing — keep status in plaintext for fast counting
   if (isEncryptionAvailable()) {
     try {
       const encrypted = await encryptData(updated);
-      await putItem(STORES.ACTIONS, { id: updated.id, _enc: encrypted });
+      await putItem(STORES.ACTIONS, { id: updated.id, status: updated.status, _enc: encrypted });
       return;
     } catch {
       // fallback
@@ -475,6 +476,10 @@ export async function clearSyncedActions(): Promise<void> {
   });
 }
 
+/**
+ * Optimized: reads only the plaintext `status` field from IndexedDB records
+ * without decrypting payloads. This avoids the costly full-decrypt cycle.
+ */
 export async function getActionStats(): Promise<{
   pending: number;
   syncing: number;
@@ -482,14 +487,17 @@ export async function getActionStats(): Promise<{
   failed: number;
   total: number;
 }> {
-  const all = await getAllActionsDecrypted();
-  return {
-    pending: all.filter(a => a.status === 'pending').length,
-    syncing: all.filter(a => a.status === 'syncing').length,
-    synced: all.filter(a => a.status === 'synced').length,
-    failed: all.filter(a => a.status === 'failed').length,
-    total: all.length,
-  };
+  const raw = await getAllItems<{ id: string; status?: string; _enc?: any }>(STORES.ACTIONS);
+  const stats = { pending: 0, syncing: 0, synced: 0, failed: 0, total: raw.length };
+  for (const item of raw) {
+    // Status is stored in plaintext alongside encrypted payload
+    const status = item.status || (item as any)?.status;
+    if (status === 'pending') stats.pending++;
+    else if (status === 'syncing') stats.syncing++;
+    else if (status === 'synced') stats.synced++;
+    else if (status === 'failed') stats.failed++;
+  }
+  return stats;
 }
 
 // ============================================
