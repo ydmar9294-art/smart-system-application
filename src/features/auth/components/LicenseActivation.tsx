@@ -3,6 +3,7 @@ import { Key, Building2, User, Loader2, CheckCircle2, AlertCircle, Sparkles, Cop
 import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import { copyToClipboard } from '@/lib/clipboard';
+import { logger } from '@/lib/logger';
 
 interface LicenseActivationProps {
   userId: string;
