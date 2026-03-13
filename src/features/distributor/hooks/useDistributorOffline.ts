@@ -588,8 +588,8 @@ export function useDistributorOffline() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Load persisted ID maps first, then start sync engine
-    loadPersistedIdMaps().then(() => {
+    // Initialize offline system (load ID maps, recover stuck actions, cleanup)
+    initOfflineSystem().then(() => {
       startDistributorSync();
     });
 
