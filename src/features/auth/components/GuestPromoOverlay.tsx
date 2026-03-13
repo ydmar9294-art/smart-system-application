@@ -41,8 +41,13 @@ const GuestPromoOverlay: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    timerRef.current = setInterval(show, PROMO_INTERVAL_MS);
+    // Show first promo after 5 seconds, then every PROMO_INTERVAL_MS
+    const initialTimer = setTimeout(() => {
+      show();
+      timerRef.current = setInterval(show, PROMO_INTERVAL_MS);
+    }, 5000);
     return () => {
+      clearTimeout(initialTimer);
       if (timerRef.current) clearInterval(timerRef.current);
       if (dismissRef.current) clearTimeout(dismissRef.current);
     };

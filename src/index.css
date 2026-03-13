@@ -1457,6 +1457,13 @@ html.lang-transition * {
   opacity: 1 !important;
 }
 
+/* Keep custom tab navigation buttons clickable (data-guest-nav containers) */
+.guest-preview-shell [data-guest-nav] button {
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  cursor: pointer !important;
+}
+
 /* Keep scroll areas interactive */
 .guest-preview-shell [data-radix-scroll-area-viewport],
 .guest-preview-shell [class*="scroll-area"] {

@@ -257,7 +257,7 @@ const DistributorDashboard: React.FC = () => {
 
         {/* Secondary Tab (Returns) */}
         <div className="px-4 pb-4">
-          <div className="flex gap-2">
+          <div className="flex gap-2" data-guest-nav>
             {secondaryTabs.map((tab) => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs transition-all ${
