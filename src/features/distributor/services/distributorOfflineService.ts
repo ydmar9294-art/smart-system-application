@@ -355,10 +355,11 @@ export async function enqueueAction(
   }
 
   // Encrypt the entire action before storing
+  // Keep `status` in plaintext alongside encrypted payload for index-based counting
   if (isEncryptionAvailable()) {
     try {
       const encrypted = await encryptData(action);
-      await putItem(STORES.ACTIONS, { id: action.id, _enc: encrypted });
+      await putItem(STORES.ACTIONS, { id: action.id, status: action.status, _enc: encrypted });
     } catch {
       // Fallback: store unencrypted if encryption fails
       await putItem(STORES.ACTIONS, action);
