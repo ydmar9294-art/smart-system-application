@@ -19,9 +19,6 @@ import {
   atomicReplaceStore,
   prepareEncryptedRecord,
 } from './offlineDb';
-import { saleIdMap } from './offlineIdMap';
-
-// Re-import saleIdMap as a getter since it's a const Map
 import { getSaleIdMap } from './offlineIdMap';
 
 // ============================================
