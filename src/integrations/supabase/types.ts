@@ -478,32 +478,41 @@ export type Database = {
       }
       devices: {
         Row: {
+          app_version: string
           created_at: string
           device_id: string
           device_name: string
           id: string
+          ip_address: string | null
           is_active: boolean
           last_seen: string
+          platform: string
           replaced_device_id: string | null
           user_id: string
         }
         Insert: {
+          app_version?: string
           created_at?: string
           device_id: string
           device_name?: string
           id?: string
+          ip_address?: string | null
           is_active?: boolean
           last_seen?: string
+          platform?: string
           replaced_device_id?: string | null
           user_id: string
         }
         Update: {
+          app_version?: string
           created_at?: string
           device_id?: string
           device_name?: string
           id?: string
+          ip_address?: string | null
           is_active?: boolean
           last_seen?: string
+          platform?: string
           replaced_device_id?: string | null
           user_id?: string
         }
@@ -1285,6 +1294,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      security_events: {
+        Row: {
+          created_at: string
+          details: Json | null
+          device_id: string | null
+          device_name: string | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          platform: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          device_id?: string | null
+          device_name?: string | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          platform?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          device_id?: string | null
+          device_name?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          platform?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       stock_movements: {
         Row: {
