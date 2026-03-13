@@ -58,7 +58,7 @@ const LicenseActivation: React.FC<LicenseActivationProps> = ({ userId, email, fu
       }
       onSuccess();
     } catch (err: any) {
-      console.error('[LicenseActivation] Error:', err);
+      logger.error('License activation failed', 'LicenseActivation', { error: err?.message });
       setError(err.message || t('activation.failed'));
     } finally { setLoading(false); }
   };

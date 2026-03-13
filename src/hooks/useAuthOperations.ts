@@ -180,8 +180,11 @@ export const resolveUserProfile = async (uid: string): Promise<ProfileResolution
 
     return { user, role, organization, success: true, fromCache: false };
   } catch (err) {
+    // Do NOT clear cache here — callers (useProfileResolver) decide based on
+    // bootedFromCache / isBackground whether to keep or discard cached state.
+    // Clearing here causes a race condition when Promise.race timeout fires:
+    // timeout → caller keeps cache → this catch runs in background → cache wiped.
     logger.error('resolveProfile error', 'Auth');
-    clearAuthCache();
     return { user: null, role: null, organization: null, success: false };
   }
 };
