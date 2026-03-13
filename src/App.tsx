@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useState, useRef } from 'react';
+import React, { lazy, Suspense, useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useLocation, Routes, Route } from 'react-router-dom';
 import { App as CapacitorApp } from '@capacitor/app';
 import { useApp } from '@/store/AppContext';
@@ -14,6 +14,7 @@ import { useDeviceRealtime } from '@/hooks/useDeviceRealtime';
 import OfflineIndicator from '@/components/ui/OfflineIndicator';
 import UpdateModal from '@/components/ui/UpdateModal';
 import LogoutScreen from '@/components/ui/LogoutScreen';
+import DeviceRevokedScreen from '@/components/ui/DeviceRevokedScreen';
 import { usePageTheme } from '@/hooks/usePageTheme';
 import { useStatusBar } from '@/platform/hooks/useStatusBar';
 import SecurityGate from '@/components/SecurityGate';
@@ -102,6 +103,8 @@ const MainContent: React.FC = () => {
   const { isGuest } = useGuest();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [replacedWarning, setReplacedWarning] = useState<string | null>(null);
+  const [deviceRevoked, setDeviceRevoked] = useState(false);
+  const [revokedMessage, setRevokedMessage] = useState<string | undefined>();
   
   // Initialize theme early so loading/auth screens also get dark mode
   usePageTheme();
@@ -126,14 +129,21 @@ const MainContent: React.FC = () => {
     };
   }, []);
 
-  // Device revoked on another device: keep single-device policy, but logout مباشرة بدون شاشة قديمة
+  // Device revoked: show 3-second countdown screen then auto-logout
   useEffect(() => {
-    const handleDeviceRevoked = async () => {
-      await logout();
+    const handleDeviceRevoked = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setRevokedMessage(detail?.message);
+      setDeviceRevoked(true);
     };
 
     window.addEventListener('device-revoked', handleDeviceRevoked);
     return () => window.removeEventListener('device-revoked', handleDeviceRevoked);
+  }, []);
+
+  const handleRevokedComplete = useCallback(async () => {
+    setDeviceRevoked(false);
+    await logout();
   }, [logout]);
 
   // Listen for new-device warning (shown on the NEW device after login replaces old one)
@@ -161,6 +171,9 @@ const MainContent: React.FC = () => {
     window.addEventListener('unhandledrejection', handler);
     return () => window.removeEventListener('unhandledrejection', handler);
   }, []);
+
+  // Device revoked screen — 3 second countdown then logout
+  if (deviceRevoked) return <DeviceRevokedScreen message={revokedMessage} onComplete={handleRevokedComplete} />;
 
   // Logout goodbye screen — blocks everything
   if (isLoggingOut) return <LogoutScreen />;
