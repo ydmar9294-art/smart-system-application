@@ -172,6 +172,9 @@ const MainContent: React.FC = () => {
     return () => window.removeEventListener('unhandledrejection', handler);
   }, []);
 
+  // Device revoked screen — 3 second countdown then logout
+  if (deviceRevoked) return <DeviceRevokedScreen message={revokedMessage} onComplete={handleRevokedComplete} />;
+
   // Logout goodbye screen — blocks everything
   if (isLoggingOut) return <LogoutScreen />;
 
