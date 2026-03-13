@@ -13,7 +13,7 @@ import { logger } from '@/lib/logger';
 // ============================================
 
 export const DB_NAME = 'distributor_offline_v4';
-export const DB_VERSION = 4;
+export const DB_VERSION = 5; // Bumped for new index on id_maps.type
 
 export const STORES = {
   ACTIONS: 'offline_actions',
@@ -48,8 +48,9 @@ export function openDB(): Promise<IDBDatabase> {
   dbOpenPromise = new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const db = request.result;
+      const oldVersion = event.oldVersion;
 
       if (!db.objectStoreNames.contains(STORES.ACTIONS)) {
         const store = db.createObjectStore(STORES.ACTIONS, { keyPath: 'id' });
@@ -79,7 +80,24 @@ export function openDB(): Promise<IDBDatabase> {
       }
 
       if (!db.objectStoreNames.contains(STORES.ID_MAPS)) {
-        db.createObjectStore(STORES.ID_MAPS, { keyPath: 'localId' });
+        const idMapsStore = db.createObjectStore(STORES.ID_MAPS, { keyPath: 'localId' });
+        idMapsStore.createIndex('type', 'type', { unique: false });
+      }
+
+      // v4 → v5 migration: Add 'type' index to existing id_maps store
+      if (oldVersion < 5 && db.objectStoreNames.contains(STORES.ID_MAPS)) {
+        try {
+          const tx = (event.target as IDBOpenDBRequest).transaction;
+          if (tx) {
+            const store = tx.objectStore(STORES.ID_MAPS);
+            if (!store.indexNames.contains('type')) {
+              store.createIndex('type', 'type', { unique: false });
+            }
+          }
+        } catch {
+          // Non-critical: index creation failed, full scan still works
+          logger.warn('[OfflineDb] Failed to create type index on id_maps during migration', 'DistributorOffline');
+        }
       }
     };
 
@@ -91,11 +109,33 @@ export function openDB(): Promise<IDBDatabase> {
     };
     request.onerror = () => {
       dbOpenPromise = null;
-      reject(request.error);
+      // If IDB was deleted/corrupted, attempt to recreate
+      if (request.error?.name === 'VersionError' || request.error?.name === 'InvalidStateError') {
+        logger.error('[OfflineDb] Database corrupted, attempting recreation', 'DistributorOffline');
+        handleDatabaseRecreation().then(resolve).catch(reject);
+      } else {
+        reject(request.error);
+      }
     };
   });
 
   return dbOpenPromise;
+}
+
+/** Attempt to delete and recreate the database when corruption is detected. */
+async function handleDatabaseRecreation(): Promise<IDBDatabase> {
+  dbInstance = null;
+  dbOpenPromise = null;
+
+  await new Promise<void>((resolve) => {
+    const deleteReq = indexedDB.deleteDatabase(DB_NAME);
+    deleteReq.onsuccess = () => resolve();
+    deleteReq.onerror = () => resolve();
+    deleteReq.onblocked = () => resolve();
+  });
+
+  logger.warn('[OfflineDb] Database recreated after corruption', 'DistributorOffline');
+  return openDB();
 }
 
 /** Reset the cached DB connection (used during logout/clear). */

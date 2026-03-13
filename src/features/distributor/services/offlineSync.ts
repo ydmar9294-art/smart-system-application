@@ -2,12 +2,14 @@
  * Offline Sync Engine
  * 
  * Handles synchronization of queued offline actions to the server.
- * Supports bulk sync, sequential fallback, retry escalation, and deferral.
+ * Supports bulk sync with batch limits, sequential fallback, retry escalation, and deferral.
  */
 
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { isEncryptionAvailable, verifyHMAC, checkAndRotateKeyIfNeeded } from '@/lib/indexedDbEncryption';
+import { logStorageHealth, requestPersistentStorage } from '@/lib/storageMonitor';
+import { CircuitBreaker } from '@/lib/circuitBreaker';
 import {
   type OfflineAction,
   type OfflineActionType,
@@ -33,6 +35,24 @@ const MAX_RETRIES = 5;
 const MAX_DEFERRALS = 10;
 const SYNC_TIMEOUT_MS = 30_000;
 const DEFERRED_RETRY_MS = 5000;
+/** Maximum actions per bulk sync batch */
+const BULK_BATCH_LIMIT = 100;
+/** Adaptive timer intervals */
+const SYNC_INTERVAL_ACTIVE_MS = 15_000;
+const SYNC_INTERVAL_IDLE_MS = 60_000;
+/** Cleanup thresholds */
+const SYNCED_CLEANUP_MS = 24 * 60 * 60 * 1000; // 24h
+const STALE_CACHE_CLEANUP_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+// ============================================
+// Circuit Breaker for Sync
+// ============================================
+
+const syncCircuitBreaker = new CircuitBreaker({
+  name: 'sync-engine',
+  failureThreshold: 3,
+  resetTimeout: 60_000,
+});
 
 // ============================================
 // State
@@ -41,6 +61,7 @@ const DEFERRED_RETRY_MS = 5000;
 let isSyncing = false;
 let syncLockPromise: Promise<void> | null = null;
 let syncIntervalId: ReturnType<typeof setInterval> | null = null;
+let lastPendingCount = 0;
 
 type SyncListener = (event: { type: 'start' | 'progress' | 'complete' | 'error'; synced?: number; failed?: number; total?: number; message?: string }) => void;
 const syncListeners: Set<SyncListener> = new Set();
@@ -228,7 +249,7 @@ async function executeActionInner(action: OfflineAction): Promise<ExecuteResult>
 
 async function cleanupStaleCacheData(): Promise<void> {
   try {
-    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const cutoff = Date.now() - STALE_CACHE_CLEANUP_MS;
     const allActions = await getAllActionsDecrypted();
     for (const a of allActions) {
       if (a.status === 'synced' && a.createdAt < cutoff) {
@@ -241,12 +262,15 @@ async function cleanupStaleCacheData(): Promise<void> {
 }
 
 // ============================================
-// Bulk Sync
+// Bulk Sync (with batch limit)
 // ============================================
 
 async function attemptBulkSync(actions: OfflineAction[]): Promise<{ synced: number; failed: number } | null> {
   try {
-    const operations = actions.map(a => ({
+    // Enforce batch limit — only send up to BULK_BATCH_LIMIT at a time
+    const batch = actions.slice(0, BULK_BATCH_LIMIT);
+
+    const operations = batch.map(a => ({
       id: a.id,
       type: a.type,
       payload: a.payload,
@@ -254,7 +278,7 @@ async function attemptBulkSync(actions: OfflineAction[]): Promise<{ synced: numb
       _signature: a._signature,
     }));
 
-    for (const a of actions) {
+    for (const a of batch) {
       await updateAction(a.id, { status: 'syncing' });
     }
 
@@ -282,7 +306,7 @@ async function attemptBulkSync(actions: OfflineAction[]): Promise<{ synced: numb
         await updateAction(result.id, { status: 'synced', syncedAt: Date.now(), error: undefined });
         synced++;
       } else if (result.status === 'deferred') {
-        const action = actions.find(a => a.id === result.id);
+        const action = batch.find(a => a.id === result.id);
         const newDeferral = (action?.deferralCount || 0) + 1;
         if (newDeferral >= MAX_DEFERRALS) {
           await updateAction(result.id, {
@@ -299,7 +323,7 @@ async function attemptBulkSync(actions: OfflineAction[]): Promise<{ synced: numb
           });
         }
       } else {
-        const action = actions.find(a => a.id === result.id);
+        const action = batch.find(a => a.id === result.id);
         const newRetry = (action?.retryCount || 0) + 1;
         if (newRetry >= MAX_RETRIES) {
           await updateAction(result.id, {
@@ -322,7 +346,7 @@ async function attemptBulkSync(actions: OfflineAction[]): Promise<{ synced: numb
     return { synced, failed };
   } catch (err) {
     logger.warn('[Sync] Bulk sync request failed, will fallback', 'DistributorOffline', { error: String(err) });
-    for (const a of actions) {
+    for (const a of actions.slice(0, BULK_BATCH_LIMIT)) {
       await updateAction(a.id, { status: 'pending' });
     }
     return null;
@@ -405,45 +429,72 @@ export async function syncAllPending(): Promise<{ synced: number; failed: number
   let failed = 0;
 
   try {
-    const allDecrypted = await getAllActionsDecrypted();
-    const now = Date.now();
-    const pending = allDecrypted
-      .filter(a => a.status === 'pending' && (!a.nextRetryAt || a.nextRetryAt <= now))
-      .sort((a, b) => a.createdAt - b.createdAt);
+    const result = await syncCircuitBreaker.execute(
+      async () => {
+        const allDecrypted = await getAllActionsDecrypted();
+        const now = Date.now();
+        const pending = allDecrypted
+          .filter(a => a.status === 'pending' && (!a.nextRetryAt || a.nextRetryAt <= now))
+          .sort((a, b) => a.createdAt - b.createdAt);
 
-    if (pending.length === 0) return { synced: 0, failed: 0 };
+        if (pending.length === 0) return { synced: 0, failed: 0 };
 
-    notifySyncListeners({ type: 'start', total: pending.length });
-    logger.info(`[Sync] Processing ${pending.length} pending actions`, 'DistributorOffline');
+        notifySyncListeners({ type: 'start', total: pending.length });
+        logger.info(`[Sync] Processing ${pending.length} pending actions`, 'DistributorOffline');
 
-    const sorted = [...pending].sort((a, b) => {
-      const pDiff = syncPriority(a.type) - syncPriority(b.type);
-      return pDiff !== 0 ? pDiff : a.createdAt - b.createdAt;
-    });
+        const sorted = [...pending].sort((a, b) => {
+          const pDiff = syncPriority(a.type) - syncPriority(b.type);
+          return pDiff !== 0 ? pDiff : a.createdAt - b.createdAt;
+        });
 
-    const bulkResult = await attemptBulkSync(sorted);
+        // Process in batches of BULK_BATCH_LIMIT
+        let totalSynced = 0;
+        let totalFailed = 0;
+        let remaining = sorted;
 
-    if (bulkResult) {
-      synced = bulkResult.synced;
-      failed = bulkResult.failed;
-    } else {
-      logger.warn('[Sync] Bulk sync unavailable, falling back to sequential', 'DistributorOffline');
-      const seqResult = await sequentialSync(sorted);
-      synced = seqResult.synced;
-      failed = seqResult.failed;
-    }
+        while (remaining.length > 0) {
+          const batch = remaining.slice(0, BULK_BATCH_LIMIT);
+          remaining = remaining.slice(BULK_BATCH_LIMIT);
 
-    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-    for (const a of allDecrypted) {
-      if (a.status === 'synced' && a.createdAt < cutoff) {
-        await deleteItem(STORES.ACTIONS, a.id);
+          const bulkResult = await attemptBulkSync(batch);
+
+          if (bulkResult) {
+            totalSynced += bulkResult.synced;
+            totalFailed += bulkResult.failed;
+          } else {
+            logger.warn('[Sync] Bulk sync unavailable, falling back to sequential', 'DistributorOffline');
+            const seqResult = await sequentialSync(batch);
+            totalSynced += seqResult.synced;
+            totalFailed += seqResult.failed;
+          }
+        }
+
+        // Cleanup synced actions older than 24h
+        const cutoff = Date.now() - SYNCED_CLEANUP_MS;
+        for (const a of allDecrypted) {
+          if (a.status === 'synced' && a.createdAt < cutoff) {
+            await deleteItem(STORES.ACTIONS, a.id);
+          }
+        }
+
+        await cleanupStaleCacheData();
+
+        return { synced: totalSynced, failed: totalFailed };
+      },
+      () => {
+        logger.warn('[Sync] Circuit breaker OPEN — skipping sync cycle', 'DistributorOffline');
+        return { synced: 0, failed: 0 };
       }
+    );
+
+    synced = result.synced;
+    failed = result.failed;
+    lastPendingCount = failed;
+
+    notifySyncListeners({ type: 'complete', synced, failed, total: synced + failed });
+    if (synced > 0 || failed > 0) {
+      logger.info(`[Sync] Done: ${synced} synced, ${failed} failed`, 'DistributorOffline');
     }
-
-    await cleanupStaleCacheData();
-
-    notifySyncListeners({ type: 'complete', synced, failed, total: sorted.length });
-    logger.info(`[Sync] Done: ${synced} synced, ${failed} failed`, 'DistributorOffline');
   } catch (err) {
     notifySyncListeners({ type: 'error', message: String(err) });
     logger.error('[Sync] Process error', 'DistributorOffline', { error: String(err) });
@@ -457,6 +508,31 @@ export async function syncAllPending(): Promise<{ synced: number; failed: number
 }
 
 // ============================================
+// Adaptive Sync Timer
+// ============================================
+
+function getAdaptiveInterval(): number {
+  return lastPendingCount > 0 ? SYNC_INTERVAL_ACTIVE_MS : SYNC_INTERVAL_IDLE_MS;
+}
+
+function scheduleNextSync(): void {
+  if (syncIntervalId) {
+    clearInterval(syncIntervalId);
+  }
+
+  const interval = getAdaptiveInterval();
+  syncIntervalId = setInterval(async () => {
+    await syncAllPending();
+    checkAndRotateKeyIfNeeded().catch(() => {});
+    // Re-schedule with potentially different interval
+    const newInterval = getAdaptiveInterval();
+    if (newInterval !== interval) {
+      scheduleNextSync();
+    }
+  }, interval);
+}
+
+// ============================================
 // Sync Lifecycle
 // ============================================
 
@@ -466,6 +542,12 @@ export async function initOfflineSystem(): Promise<void> {
   await loadPersistedIdMaps();
   await recoverStuckActions();
   await cleanupOldIdMaps();
+
+  // Request persistent storage to prevent eviction on mobile
+  requestPersistentStorage().catch(() => {});
+
+  // Log storage health on init
+  logStorageHealth().catch(() => {});
 }
 
 export function startDistributorSync(): void {
@@ -475,10 +557,7 @@ export function startDistributorSync(): void {
 
   setTimeout(syncAllPending, 2000);
 
-  syncIntervalId = setInterval(() => {
-    syncAllPending();
-    checkAndRotateKeyIfNeeded().catch(() => {});
-  }, 90_000);
+  scheduleNextSync();
 
   if (!onlineListenerActive) {
     window.addEventListener('online', handleOnline);
@@ -499,5 +578,7 @@ export function stopDistributorSync(): void {
 
 function handleOnline(): void {
   logger.info('[Sync] Connection restored, syncing...', 'DistributorOffline');
+  // Reset circuit breaker on reconnect
+  syncCircuitBreaker.reset();
   setTimeout(syncAllPending, 1000);
 }
