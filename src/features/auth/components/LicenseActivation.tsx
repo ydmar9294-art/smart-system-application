@@ -3,6 +3,7 @@ import { Key, Building2, User, Loader2, CheckCircle2, AlertCircle, Sparkles, Cop
 import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import { copyToClipboard } from '@/lib/clipboard';
+import { logger } from '@/lib/logger';
 
 interface LicenseActivationProps {
   userId: string;
@@ -58,7 +59,7 @@ const LicenseActivation: React.FC<LicenseActivationProps> = ({ userId, email, fu
       }
       onSuccess();
     } catch (err: any) {
-      console.error('[LicenseActivation] Error:', err);
+      logger.error('License activation failed', 'LicenseActivation', { error: err?.message });
       setError(err.message || t('activation.failed'));
     } finally { setLoading(false); }
   };

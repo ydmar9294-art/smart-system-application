@@ -44,28 +44,31 @@ interface AuthStatusResponse {
 // Inflight deduplication
 let inflightAuthStatus: Promise<AuthStatusResponse> | null = null;
 
-/** Timeout-wrapped fetch with a single retry */
+/** Timeout-wrapped fetch with a single retry (both attempts timeout-protected) */
 const callAuthStatus = async (accessToken: string): Promise<AuthStatusResponse> => {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 6000);
-
-  try {
-    const { data, error } = await supabase.functions.invoke('auth-status', {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-    clearTimeout(timeoutId);
-    if (error) throw error;
-    return data as AuthStatusResponse;
-  } catch (err: any) {
-    clearTimeout(timeoutId);
-    // Single retry on network/timeout errors
-    if (err?.name === 'AbortError' || err?.message?.includes('fetch')) {
-      logger.warn('Retrying auth-status after failure...', 'AuthOps');
+  const invokeWithTimeout = async (): Promise<AuthStatusResponse> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    try {
       const { data, error } = await supabase.functions.invoke('auth-status', {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
+      clearTimeout(timeoutId);
       if (error) throw error;
       return data as AuthStatusResponse;
+    } catch (err) {
+      clearTimeout(timeoutId);
+      throw err;
+    }
+  };
+
+  try {
+    return await invokeWithTimeout();
+  } catch (err: any) {
+    // Single retry on network/timeout errors (also timeout-protected)
+    if (err?.name === 'AbortError' || err?.message?.includes('fetch')) {
+      logger.warn('Retrying auth-status after failure...', 'AuthOps');
+      return await invokeWithTimeout();
     }
     throw err;
   }
@@ -177,8 +180,11 @@ export const resolveUserProfile = async (uid: string): Promise<ProfileResolution
 
     return { user, role, organization, success: true, fromCache: false };
   } catch (err) {
+    // Do NOT clear cache here — callers (useProfileResolver) decide based on
+    // bootedFromCache / isBackground whether to keep or discard cached state.
+    // Clearing here causes a race condition when Promise.race timeout fires:
+    // timeout → caller keeps cache → this catch runs in background → cache wiped.
     logger.error('resolveProfile error', 'Auth');
-    clearAuthCache();
     return { user: null, role: null, organization: null, success: false };
   }
 };
