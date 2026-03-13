@@ -11,6 +11,7 @@ import { usePushNotifications } from '@/platform/hooks/usePushNotifications';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { useVersionCheck } from '@/hooks/useVersionCheck';
 import { useDeviceRealtime } from '@/hooks/useDeviceRealtime';
+import { useSessionHeartbeat } from '@/hooks/useSessionHeartbeat';
 import OfflineIndicator from '@/components/ui/OfflineIndicator';
 import UpdateModal from '@/components/ui/UpdateModal';
 import LogoutScreen from '@/components/ui/LogoutScreen';
@@ -115,7 +116,9 @@ const MainContent: React.FC = () => {
   const { showUpdateModal, isForceUpdate, checkResult, dismiss } = useVersionCheck();
   
   // Real-time device session monitoring
+  // Real-time device session monitoring + 30s heartbeat
   useDeviceRealtime(user?.id);
+  useSessionHeartbeat(user?.id);
 
   // Logout screen lifecycle
   useEffect(() => {

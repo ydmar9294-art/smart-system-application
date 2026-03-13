@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { authMutex } from '@/lib/concurrency';
 import { getCachedAuth, clearAuthCache } from '@/lib/authCache';
 import { clearEncryptionKey } from '@/lib/indexedDbEncryption';
-import { clearDeviceState } from '@/lib/deviceService';
+import { clearDeviceState, notifyLogout } from '@/lib/deviceService';
 import { clearAllCachedData } from '@/lib/offlineCache';
 import { clearDistributorOfflineData } from '@/features/distributor/services/distributorOfflineService';
 import { logger } from '@/lib/logger';
@@ -38,6 +38,9 @@ export const useAuthActions = (deps: AuthActionsDeps) => {
       try {
         // Dispatch event so App.tsx shows the goodbye screen immediately
         window.dispatchEvent(new CustomEvent('logout-started'));
+
+        // Notify server of logout (marks device inactive + logs security event)
+        await notifyLogout().catch(() => {});
 
         clearAuthCache();
         clearEncryptionKey().catch(() => {});

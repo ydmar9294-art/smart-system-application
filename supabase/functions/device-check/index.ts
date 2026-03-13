@@ -1,11 +1,19 @@
 /**
- * Device Check Edge Function
+ * Device Check Edge Function v2
  * Manages single-active-device policy per user (WhatsApp-style).
  * 
  * Actions:
- *   pre-check — Check if user has an active session on another device (before confirming login).
- *   register  — Register/activate a device after login. Deactivates ALL other devices.
- *   verify    — Verify a device is still active.
+ *   pre-check  — Check if user has an active session on another device.
+ *   register   — Register/activate a device after login. Deactivates ALL other devices.
+ *   verify     — Verify a device is still active.
+ *   heartbeat  — Update last_active timestamp (lightweight, 30s interval).
+ *   logout     — Mark device as inactive and log security event.
+ * 
+ * Security Features:
+ *   - IP address capture on all actions
+ *   - Platform & app version tracking
+ *   - Security event logging (login, logout, session_revoked)
+ *   - Race condition protection via single-row active constraint
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -16,7 +24,7 @@ const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-device-id, x-device-name, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-device-id, x-device-name, x-device-platform, x-app-version, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
@@ -24,6 +32,13 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
+}
+
+function getClientIp(req: Request): string {
+  return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || req.headers.get('x-real-ip')
+    || req.headers.get('cf-connecting-ip')
+    || 'unknown'
 }
 
 async function validateUser(req: Request) {
@@ -37,6 +52,31 @@ async function validateUser(req: Request) {
   const { data: { user }, error } = await userClient.auth.getUser(token)
   if (error || !user) return null
   return user
+}
+
+/** Log a security event (non-blocking) */
+async function logSecurityEvent(
+  userId: string,
+  eventType: string,
+  deviceId: string | null,
+  deviceName: string | null,
+  platform: string | null,
+  ipAddress: string,
+  details: Record<string, unknown> = {}
+) {
+  try {
+    await serviceClient.from('security_events').insert({
+      user_id: userId,
+      event_type: eventType,
+      device_id: deviceId,
+      device_name: deviceName,
+      platform: platform,
+      ip_address: ipAddress,
+      details,
+    })
+  } catch (err) {
+    console.error('[device-check] Failed to log security event:', err)
+  }
 }
 
 Deno.serve(async (req) => {
@@ -53,6 +93,9 @@ Deno.serve(async (req) => {
     const userId = user.id
     const deviceId = req.headers.get('x-device-id')
     const deviceName = req.headers.get('x-device-name') || 'Unknown'
+    const platform = req.headers.get('x-device-platform') || 'web'
+    const appVersion = req.headers.get('x-app-version') || '1.0.0'
+    const ipAddress = getClientIp(req)
 
     if (!deviceId) {
       return jsonResponse({ success: false, reason: 'MISSING_DEVICE_ID' }, 400)
@@ -61,19 +104,20 @@ Deno.serve(async (req) => {
     const url = new URL(req.url)
     const action = url.searchParams.get('action') || 'verify'
 
-    if (action === 'pre-check') {
-      return await handlePreCheck(userId, deviceId)
+    switch (action) {
+      case 'pre-check':
+        return await handlePreCheck(userId, deviceId)
+      case 'register':
+        return await handleRegister(userId, deviceId, deviceName, platform, appVersion, ipAddress)
+      case 'verify':
+        return await handleVerify(userId, deviceId, ipAddress)
+      case 'heartbeat':
+        return await handleHeartbeat(userId, deviceId)
+      case 'logout':
+        return await handleLogout(userId, deviceId, platform, ipAddress)
+      default:
+        return jsonResponse({ success: false, reason: 'INVALID_ACTION' }, 400)
     }
-
-    if (action === 'register') {
-      return await handleRegister(userId, deviceId, deviceName)
-    }
-
-    if (action === 'verify') {
-      return await handleVerify(userId, deviceId)
-    }
-
-    return jsonResponse({ success: false, reason: 'INVALID_ACTION' }, 400)
   } catch (error) {
     console.error('[device-check] Error:', error)
     return jsonResponse({ success: false, reason: 'SERVER_ERROR' }, 500)
@@ -82,13 +126,11 @@ Deno.serve(async (req) => {
 
 /**
  * Pre-check: Does this user have an active session on ANOTHER device?
- * Called after successful auth but BEFORE registering the device,
- * so the client can show a warning dialog.
  */
 async function handlePreCheck(userId: string, deviceId: string) {
   const { data: activeDevices } = await serviceClient
     .from('devices')
-    .select('device_id, device_name, last_seen')
+    .select('device_id, device_name, last_seen, platform')
     .eq('user_id', userId)
     .eq('is_active', true)
     .neq('device_id', deviceId)
@@ -102,26 +144,30 @@ async function handlePreCheck(userId: string, deviceId: string) {
       active_devices: activeDevices!.map(d => ({
         device_name: d.device_name,
         last_seen: d.last_seen,
+        platform: d.platform,
       })),
     })
   }
 
-  return jsonResponse({
-    success: true,
-    has_active_session: false,
-  })
+  return jsonResponse({ success: true, has_active_session: false })
 }
 
 /**
  * Register a device after successful login.
- * Deactivates ALL other devices for this user, then upserts the new one as active.
- * The deactivation triggers Realtime UPDATE events so old devices detect revocation instantly.
+ * Deactivates ALL other devices → triggers Realtime → old devices get notified.
  */
-async function handleRegister(userId: string, deviceId: string, deviceName: string) {
+async function handleRegister(
+  userId: string,
+  deviceId: string,
+  deviceName: string,
+  platform: string,
+  appVersion: string,
+  ipAddress: string
+) {
   // 1. Find all currently active devices for this user (excluding this device)
   const { data: activeDevices } = await serviceClient
     .from('devices')
-    .select('id, device_id, device_name')
+    .select('id, device_id, device_name, platform')
     .eq('user_id', userId)
     .eq('is_active', true)
     .neq('device_id', deviceId)
@@ -129,13 +175,21 @@ async function handleRegister(userId: string, deviceId: string, deviceName: stri
   const replacedDevices = activeDevices || []
   const hadOtherDevice = replacedDevices.length > 0
 
-  // 2. Deactivate ALL other devices for this user (this triggers Realtime → old device gets notified)
+  // 2. Deactivate ALL other devices (triggers Realtime → old device gets notified)
   if (hadOtherDevice) {
     await serviceClient
       .from('devices')
       .update({ is_active: false })
       .eq('user_id', userId)
       .neq('device_id', deviceId)
+
+    // Log revocation events for each replaced device
+    for (const d of replacedDevices) {
+      logSecurityEvent(userId, 'session_revoked', d.device_id, d.device_name, d.platform, ipAddress, {
+        revoked_by_device: deviceId,
+        revoked_by_name: deviceName,
+      })
+    }
   }
 
   // 3. Upsert this device as active (unique on user_id + device_id)
@@ -146,6 +200,9 @@ async function handleRegister(userId: string, deviceId: string, deviceName: stri
         user_id: userId,
         device_id: deviceId,
         device_name: deviceName,
+        platform,
+        app_version: appVersion,
+        ip_address: ipAddress,
         is_active: true,
         last_seen: new Date().toISOString(),
         replaced_device_id: replacedDevices[0]?.device_id || null,
@@ -167,13 +224,22 @@ async function handleRegister(userId: string, deviceId: string, deviceName: stri
         user_id: userId,
         device_id: deviceId,
         device_name: deviceName,
+        platform,
+        app_version: appVersion,
+        ip_address: ipAddress,
         is_active: true,
         last_seen: new Date().toISOString(),
         replaced_device_id: replacedDevices[0]?.device_id || null,
       })
   }
 
-  // 4. Audit log if device was replaced
+  // 4. Log login security event
+  logSecurityEvent(userId, 'login', deviceId, deviceName, platform, ipAddress, {
+    app_version: appVersion,
+    replaced_count: replacedDevices.length,
+  })
+
+  // 5. Audit log if device was replaced
   if (hadOtherDevice) {
     await serviceClient.from('audit_logs').insert({
       user_id: userId,
@@ -184,9 +250,12 @@ async function handleRegister(userId: string, deviceId: string, deviceName: stri
         replaced_devices: replacedDevices.map(d => ({
           device_id: d.device_id,
           device_name: d.device_name,
+          platform: d.platform,
         })),
         new_device_id: deviceId,
         new_device_name: deviceName,
+        new_platform: platform,
+        ip_address: ipAddress,
       },
     })
 
@@ -199,17 +268,17 @@ async function handleRegister(userId: string, deviceId: string, deviceName: stri
     })
   }
 
-  // Check if same device re-registering
   return jsonResponse({ success: true, status: 'DEVICE_REGISTERED' })
 }
 
 /**
  * Verify that the given device is still the active device for this user.
+ * Also serves as API-level session validation.
  */
-async function handleVerify(userId: string, deviceId: string) {
+async function handleVerify(userId: string, deviceId: string, ipAddress: string) {
   const { data: activeDevice } = await serviceClient
     .from('devices')
-    .select('device_id')
+    .select('device_id, is_active')
     .eq('user_id', userId)
     .eq('is_active', true)
     .maybeSingle()
@@ -219,9 +288,10 @@ async function handleVerify(userId: string, deviceId: string) {
   }
 
   if (activeDevice.device_id === deviceId) {
+    // Update last_seen and IP
     await serviceClient
       .from('devices')
-      .update({ last_seen: new Date().toISOString() })
+      .update({ last_seen: new Date().toISOString(), ip_address: ipAddress })
       .eq('user_id', userId)
       .eq('device_id', deviceId)
 
@@ -234,4 +304,47 @@ async function handleVerify(userId: string, deviceId: string) {
     status: 'DEVICE_REVOKED',
     message: 'تم تسجيل الدخول من جهاز آخر',
   })
+}
+
+/**
+ * Heartbeat — lightweight last_active update (called every 30s).
+ * Also validates session is still active (stolen token protection).
+ */
+async function handleHeartbeat(userId: string, deviceId: string) {
+  const { data, error } = await serviceClient
+    .from('devices')
+    .update({ last_seen: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('device_id', deviceId)
+    .eq('is_active', true)
+    .select('device_id')
+    .maybeSingle()
+
+  if (error || !data) {
+    // Device is no longer active — session was revoked
+    return jsonResponse({
+      success: true,
+      active: false,
+      status: 'SESSION_INVALID',
+      message: 'تم تسجيل الدخول من جهاز آخر',
+    })
+  }
+
+  return jsonResponse({ success: true, active: true, status: 'HEARTBEAT_OK' })
+}
+
+/**
+ * Logout — mark device inactive and log security event.
+ */
+async function handleLogout(userId: string, deviceId: string, platform: string, ipAddress: string) {
+  await serviceClient
+    .from('devices')
+    .update({ is_active: false })
+    .eq('user_id', userId)
+    .eq('device_id', deviceId)
+
+  // Log security event
+  logSecurityEvent(userId, 'logout', deviceId, null, platform, ipAddress)
+
+  return jsonResponse({ success: true, status: 'LOGGED_OUT' })
 }
