@@ -178,7 +178,7 @@ const SalesManagerDashboard: React.FC = () => {
 
         {/* Tab Navigation */}
         <div className="px-4 pb-4">
-          <div className="bg-card rounded-3xl p-2 shadow-sm flex gap-1">
+          <div className="bg-card rounded-3xl p-2 shadow-sm flex gap-1" data-guest-nav>
             {tabs.map((tab) => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl transition-all duration-300 ${

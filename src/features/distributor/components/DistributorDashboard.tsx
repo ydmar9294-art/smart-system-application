@@ -242,7 +242,7 @@ const DistributorDashboard: React.FC = () => {
 
         {/* Primary Tab Navigation */}
         <div className="px-4 pb-2">
-          <div className="bg-card rounded-3xl p-2 shadow-sm flex gap-1">
+          <div className="bg-card rounded-3xl p-2 shadow-sm flex gap-1" data-guest-nav>
             {primaryTabs.map((tab) => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl transition-all duration-300 ${
@@ -257,7 +257,7 @@ const DistributorDashboard: React.FC = () => {
 
         {/* Secondary Tab (Returns) */}
         <div className="px-4 pb-4">
-          <div className="flex gap-2">
+          <div className="flex gap-2" data-guest-nav>
             {secondaryTabs.map((tab) => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs transition-all ${
