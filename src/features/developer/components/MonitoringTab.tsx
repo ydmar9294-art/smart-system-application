@@ -2,6 +2,8 @@
  * Developer Monitoring Tab
  * Comprehensive monitoring dashboard: org summaries, errors, performance,
  * security, resources, breach alerts, and database health.
+ * 
+ * Enhanced: Shows full error details with AI-generated analysis & solutions.
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,7 +14,8 @@ import {
   Heart, RefreshCw, CheckCircle2, XCircle, Clock,
   TrendingUp, Server, HardDrive, Zap, Eye,
   Building2, FileWarning, Brain, Lock, MonitorCheck,
-  AlertCircle, Info, ChevronDown, ChevronUp
+  AlertCircle, Info, ChevronDown, ChevronUp, Loader2,
+  Lightbulb, Code, Wrench
 } from 'lucide-react';
 
 // ============================================
@@ -42,6 +45,13 @@ interface HealthCheck {
   checkedAt: string;
 }
 
+interface ErrorAnalysis {
+  errorId: string;
+  analysis: string;
+  solution: string;
+  loading: boolean;
+}
+
 type SectionId = 'orgs' | 'errors' | 'ai' | 'security' | 'resources' | 'alerts' | 'dbhealth';
 
 const SECTIONS: { id: SectionId; label: string; icon: React.ElementType; color: string }[] = [
@@ -53,6 +63,87 @@ const SECTIONS: { id: SectionId; label: string; icon: React.ElementType; color: 
   { id: 'alerts', label: 'تنبيهات الاختراق', icon: Bell, color: 'text-red-500' },
   { id: 'dbhealth', label: 'سلامة قاعدة البيانات', icon: Database, color: 'text-emerald-500' },
 ];
+
+// ============================================
+// AI Error Analysis Helper
+// ============================================
+function generateLocalErrorAnalysis(error: AuditError): { analysis: string; solution: string } {
+  const action = error.action.toLowerCase();
+  const entityType = error.entity_type.toLowerCase();
+  const details = error.details || {};
+  const detailsStr = typeof details === 'object' ? JSON.stringify(details) : String(details);
+
+  // Pattern-based intelligent analysis
+  if (action.includes('denied') || action.includes('unauthorized')) {
+    return {
+      analysis: `محاولة وصول غير مصرّح بها على ${error.entity_type}. المستخدم حاول تنفيذ عملية "${error.action}" لكن تم رفضها بواسطة سياسات RLS أو صلاحيات الدور.${detailsStr !== '{}' ? ` تفاصيل: ${detailsStr}` : ''}`,
+      solution: `1. تحقق من سياسات RLS على جدول ${error.entity_type} في Supabase Dashboard.\n2. تأكد أن دور المستخدم يملك الصلاحية المطلوبة.\n3. إذا كان الوصول شرعياً، أضف سياسة RLS جديدة تسمح بالعملية.\n4. راجع سجل التدقيق للمستخدم المعني للتأكد من عدم وجود نمط مشبوه.`,
+    };
+  }
+
+  if (action.includes('block') || action.includes('root') || action.includes('sideload')) {
+    return {
+      analysis: `تم اكتشاف نشاط أمني خطير: "${error.action}" على ${error.entity_type}. قد يشير هذا لمحاولة تشغيل التطبيق على جهاز مخترق (Root/Jailbreak) أو تحميل جانبي غير مصرح.${detailsStr !== '{}' ? ` بيانات إضافية: ${detailsStr}` : ''}`,
+      solution: `1. حظر الجهاز المعني فوراً من لوحة التحكم.\n2. تفعيل التحقق الثنائي لحساب المستخدم.\n3. مراجعة جميع العمليات التي تمت من هذا الجهاز.\n4. التأكد من تفعيل فحوصات أمان التطبيق (Root Detection, Tamper Detection).`,
+    };
+  }
+
+  if (action.includes('fail') && (action.includes('login') || action.includes('auth'))) {
+    return {
+      analysis: `فشل في عملية تسجيل الدخول/المصادقة: "${error.action}". قد يكون بسبب بيانات اعتماد خاطئة، جلسة منتهية، أو مشكلة في الشبكة.${detailsStr !== '{}' ? ` التفاصيل: ${detailsStr}` : ''}`,
+      solution: `1. تحقق من حالة خدمة Supabase Auth.\n2. راجع إعدادات مزوّد OAuth (Google) في Supabase Dashboard.\n3. تأكد من صحة Redirect URLs.\n4. إذا كان الفشل متكرراً لنفس المستخدم، تواصل معه لإعادة تعيين كلمة المرور.`,
+    };
+  }
+
+  if (action.includes('fail') && (action.includes('payment') || action.includes('subscription'))) {
+    return {
+      analysis: `فشل في عملية دفع/اشتراك: "${error.action}" على ${error.entity_type}.${detailsStr !== '{}' ? ` التفاصيل: ${detailsStr}` : ''}`,
+      solution: `1. تحقق من حالة الاشتراك في جدول subscription_payments.\n2. تأكد من رفع صورة إيصال الدفع بنجاح.\n3. راجع صلاحيات Storage Bucket.\n4. تحقق من قيود Rate Limiting على عمليات الدفع.`,
+    };
+  }
+
+  if (action.includes('fail') && entityType.includes('device')) {
+    return {
+      analysis: `فشل في عملية متعلقة بالجهاز: "${error.action}". قد يكون فشل في تسجيل جهاز جديد أو التحقق من الجلسة النشطة.${detailsStr !== '{}' ? ` التفاصيل: ${detailsStr}` : ''}`,
+      solution: `1. تحقق من جدول devices للمستخدم المعني.\n2. تأكد من عمل Edge Function "device-check" بشكل صحيح.\n3. راجع سجلات الـ Edge Function في Supabase Dashboard.\n4. تأكد من أن SERVICE_ROLE_KEY مُعدّ بشكل صحيح.`,
+    };
+  }
+
+  if (action.includes('fail')) {
+    return {
+      analysis: `عملية فاشلة: "${error.action}" على ${error.entity_type}. هذا يشير لخطأ في تنفيذ العملية قد يكون بسبب مشكلة في البيانات، الصلاحيات، أو الاتصال.${detailsStr !== '{}' ? ` التفاصيل: ${detailsStr}` : ''}`,
+      solution: `1. راجع سجلات Edge Functions ذات الصلة.\n2. تحقق من صحة البيانات المُرسلة في الطلب.\n3. تأكد من سياسات RLS على الجدول المعني.\n4. افحص حالة الاتصال بقاعدة البيانات وخدمات Supabase.`,
+    };
+  }
+
+  if (action.includes('error')) {
+    return {
+      analysis: `خطأ في النظام: "${error.action}" متعلق بـ ${error.entity_type}.${detailsStr !== '{}' ? ` المعلومات المتوفرة: ${detailsStr}` : ' لا تتوفر تفاصيل إضافية.'}`,
+      solution: `1. افحص سجلات الخادم (Edge Function Logs) للعثور على تفاصيل الخطأ.\n2. تحقق من اتصال قاعدة البيانات.\n3. راجع التبعيات والمكتبات المستخدمة.\n4. أعد تشغيل الخدمة المتأثرة إن أمكن.`,
+    };
+  }
+
+  // Generic fallback with full details
+  return {
+    analysis: `حدث "${error.action}" على ${error.entity_type} بتاريخ ${new Date(error.created_at).toLocaleString('ar-EG')}.${detailsStr !== '{}' ? ` البيانات المرفقة: ${detailsStr}` : ' لا توجد بيانات إضافية.'}`,
+    solution: `1. راجع السجل الكامل في لوحة تحكم Supabase.\n2. تحقق من الجدول والسياسات المتعلقة بـ ${error.entity_type}.\n3. قارن مع أحداث مشابهة سابقة لتحديد النمط.`,
+  };
+}
+
+function generateSecurityFindingDetails(finding: { recentErrors: AuditError[] }): { analysis: string; solution: string }[] {
+  const results: { analysis: string; solution: string }[] = [];
+  
+  const denied = finding.recentErrors.filter(e => e.action.toLowerCase().includes('denied') || e.action.toLowerCase().includes('block'));
+  denied.forEach(d => {
+    const details = d.details && typeof d.details === 'object' ? JSON.stringify(d.details) : '';
+    results.push({
+      analysis: `⚠️ ${d.action} — ${d.entity_type} في ${new Date(d.created_at).toLocaleString('ar-EG')}${details ? `\nالتفاصيل: ${details}` : ''}`,
+      solution: generateLocalErrorAnalysis(d).solution,
+    });
+  });
+
+  return results;
+}
 
 const MonitoringTab: React.FC = () => {
   const [expandedSections, setExpandedSections] = useState<Set<SectionId>>(new Set(['orgs', 'errors']));
@@ -78,7 +169,6 @@ const MonitoringTab: React.FC = () => {
     setLoading(true);
     const timer = performanceMonitor.startTimer('monitoring-data-fetch');
     try {
-      // Fetch org stats and recent errors in parallel
       const [statsRes, errorsRes, tableChecks] = await Promise.all([
         supabase.rpc('get_organization_stats_rpc'),
         supabase.from('audit_logs')
@@ -86,7 +176,6 @@ const MonitoringTab: React.FC = () => {
           .or('action.ilike.%error%,action.ilike.%fail%,action.ilike.%denied%,action.ilike.%block%')
           .order('created_at', { ascending: false })
           .limit(20),
-        // DB health: check key tables
         Promise.all([
           supabase.from('organizations').select('id', { count: 'exact', head: true }),
           supabase.from('profiles').select('id', { count: 'exact', head: true }),
@@ -110,7 +199,6 @@ const MonitoringTab: React.FC = () => {
         setRecentErrors(errorsRes.data as AuditError[]);
       }
 
-      // Build health checks
       const checks: HealthCheck[] = [];
       const tableNames = ['organizations', 'profiles', 'sales', 'products', 'customers'];
       tableChecks.forEach((res, i) => {
@@ -123,10 +211,8 @@ const MonitoringTab: React.FC = () => {
       });
       setHealthChecks(checks);
 
-      // Client-side metrics
       setSlowOps(performanceMonitor.getSlowOperations().slice(-10));
 
-      // Resource metrics
       const perf = performance as any;
       const mem = perf.memory;
       setResourceMetrics({
@@ -146,11 +232,7 @@ const MonitoringTab: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  // Auto-refresh every 60s
+  useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => {
     const interval = setInterval(fetchData, 60000);
     return () => clearInterval(interval);
@@ -160,17 +242,13 @@ const MonitoringTab: React.FC = () => {
   const errorLogs = recentLogs.filter(l => l.level === 'error' || l.level === 'critical');
   const warnLogs = recentLogs.filter(l => l.level === 'warn');
 
-  // Generate AI recommendations
   const aiRecommendations = generateAIRecommendations({
     orgSummaries, recentErrors, healthChecks, slowOps,
     errorLogs: errorLogs.length, warnLogs: warnLogs.length,
     resourceMetrics,
   });
 
-  // Security findings
   const securityFindings = generateSecurityFindings({ recentErrors, orgSummaries });
-
-  // Breach alerts
   const breachAlerts = generateBreachAlerts({ recentErrors });
 
   return (
@@ -214,7 +292,7 @@ const MonitoringTab: React.FC = () => {
               {section.id === 'orgs' && <OrgSummarySection summaries={orgSummaries} />}
               {section.id === 'errors' && <ErrorsSection errors={recentErrors} errorLogs={errorLogs} warnLogs={warnLogs} />}
               {section.id === 'ai' && <AIReportsSection recommendations={aiRecommendations} />}
-              {section.id === 'security' && <SecuritySection findings={securityFindings} />}
+              {section.id === 'security' && <SecuritySection findings={securityFindings} errors={recentErrors} />}
               {section.id === 'resources' && <ResourcesSection metrics={resourceMetrics} />}
               {section.id === 'alerts' && <BreachAlertsSection alerts={breachAlerts} />}
               {section.id === 'dbhealth' && <DBHealthSection checks={healthChecks} />}
@@ -264,13 +342,15 @@ const OrgSummarySection: React.FC<{ summaries: OrgSummary[] }> = ({ summaries })
 };
 
 // ============================================
-// 2. Errors & Warnings Section
+// 2. Errors & Warnings Section (Enhanced with details & AI solutions)
 // ============================================
 const ErrorsSection: React.FC<{
   errors: AuditError[];
   errorLogs: readonly any[];
   warnLogs: readonly any[];
 }> = ({ errors, errorLogs, warnLogs }) => {
+  const [expandedError, setExpandedError] = useState<string | null>(null);
+
   return (
     <div className="space-y-3">
       {/* Client-side log summary */}
@@ -287,38 +367,104 @@ const ErrorsSection: React.FC<{
         </div>
       </div>
 
-      {/* Recent client errors */}
+      {/* Recent client errors with details */}
       {errorLogs.length > 0 && (
         <div>
           <p className="text-xs font-black text-foreground mb-2">أخطاء حديثة (جانب العميل)</p>
-          <div className="space-y-1.5 max-h-40 overflow-y-auto">
+          <div className="space-y-1.5 max-h-60 overflow-y-auto">
             {errorLogs.slice(-5).reverse().map((log, i) => (
-              <div key={i} className="glass-surface p-2 rounded-xl">
-                <p className="text-[10px] font-bold text-destructive truncate">{log.message}</p>
+              <div key={i} className="glass-surface p-2.5 rounded-xl space-y-1.5">
+                <p className="text-[10px] font-bold text-destructive">{log.message}</p>
                 <p className="text-[9px] text-muted-foreground">{log.context || 'عام'} · {new Date(log.timestamp).toLocaleTimeString('ar-EG')}</p>
+                {/* AI Solution for client errors */}
+                <div className="bg-primary/5 border border-primary/10 rounded-lg p-2 mt-1">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Lightbulb size={10} className="text-primary" />
+                    <span className="text-[9px] font-black text-primary">تحليل ذكي</span>
+                  </div>
+                  <p className="text-[9px] text-muted-foreground leading-relaxed">
+                    {log.context?.includes('Auth') ? 'خطأ في المصادقة. تحقق من صحة الجلسة وإعدادات Supabase Auth.' :
+                     log.context?.includes('Network') ? 'مشكلة في الاتصال بالشبكة. تحقق من اتصال الإنترنت وحالة خوادم Supabase.' :
+                     log.context?.includes('Device') ? 'خطأ متعلق بالجهاز. تحقق من Edge Function "device-check" وجدول devices.' :
+                     'راجع سجلات الأخطاء في وحدة التحكم وتتبع مصدر الخطأ من الـ Stack Trace.'}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Audit log errors */}
+      {/* Audit log errors with full details and AI analysis */}
       {errors.length > 0 ? (
         <div>
           <p className="text-xs font-black text-foreground mb-2">أحداث مشبوهة من سجل التدقيق</p>
-          <div className="space-y-1.5 max-h-48 overflow-y-auto">
-            {errors.map(err => (
-              <div key={err.id} className="glass-surface p-2 rounded-xl">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-[10px] font-bold text-foreground">{err.action}</p>
-                  <span className="text-[9px] text-muted-foreground shrink-0">{err.entity_type}</span>
+          <div className="space-y-2 max-h-[500px] overflow-y-auto">
+            {errors.map(err => {
+              const isExpanded = expandedError === err.id;
+              const analysis = isExpanded ? generateLocalErrorAnalysis(err) : null;
+              
+              return (
+                <div key={err.id} className="glass-surface rounded-xl overflow-hidden">
+                  {/* Error header - clickable */}
+                  <button
+                    onClick={() => setExpandedError(isExpanded ? null : err.id)}
+                    className="w-full p-2.5 text-start hover:bg-muted/20 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <AlertCircle size={12} className="text-destructive shrink-0 mt-0.5" />
+                        <p className="text-[10px] font-bold text-foreground">{err.action}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[9px] text-muted-foreground">{err.entity_type}</span>
+                        {isExpanded ? <ChevronUp size={10} className="text-muted-foreground" /> : <ChevronDown size={10} className="text-muted-foreground" />}
+                      </div>
+                    </div>
+                    <p className="text-[9px] text-muted-foreground mt-0.5 ms-5">
+                      {new Date(err.created_at).toLocaleString('ar-EG')}
+                      {err.organization_id && ` · منشأة: ${err.organization_id.substring(0, 8)}...`}
+                    </p>
+                  </button>
+
+                  {/* Expanded details */}
+                  {isExpanded && analysis && (
+                    <div className="px-2.5 pb-2.5 space-y-2 border-t border-border pt-2 animate-in slide-in-from-top-2 duration-200">
+                      {/* Raw details */}
+                      {err.details && typeof err.details === 'object' && Object.keys(err.details).length > 0 && (
+                        <div className="bg-muted/30 rounded-lg p-2">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <Code size={10} className="text-muted-foreground" />
+                            <span className="text-[9px] font-black text-muted-foreground">البيانات الخام</span>
+                          </div>
+                          <pre className="text-[8px] text-muted-foreground font-mono whitespace-pre-wrap break-all max-h-24 overflow-y-auto" dir="ltr">
+                            {JSON.stringify(err.details, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+
+                      {/* AI Analysis */}
+                      <div className="bg-primary/5 border border-primary/10 rounded-lg p-2.5">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <Brain size={11} className="text-primary" />
+                          <span className="text-[9px] font-black text-primary">تحليل ذكي للخطأ</span>
+                        </div>
+                        <p className="text-[9px] text-foreground leading-relaxed">{analysis.analysis}</p>
+                      </div>
+
+                      {/* AI Solution */}
+                      <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-lg p-2.5">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <Wrench size={11} className="text-emerald-600" />
+                          <span className="text-[9px] font-black text-emerald-600">الحل المقترح</span>
+                        </div>
+                        <div className="text-[9px] text-foreground leading-relaxed whitespace-pre-line">{analysis.solution}</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <p className="text-[9px] text-muted-foreground mt-0.5">
-                  {new Date(err.created_at).toLocaleString('ar-EG')}
-                  {err.details && typeof err.details === 'object' && (err.details as any).reason && ` — ${(err.details as any).reason}`}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ) : (
@@ -440,13 +586,14 @@ const AIReportsSection: React.FC<{ recommendations: AIRecommendation[] }> = ({ r
 );
 
 // ============================================
-// 4. Security Findings
+// 4. Security Findings (Enhanced with details)
 // ============================================
 interface SecurityFinding {
   severity: 'low' | 'medium' | 'high';
   title: string;
   description: string;
   fix: string;
+  relatedErrors?: AuditError[];
 }
 
 function generateSecurityFindings(ctx: { recentErrors: AuditError[]; orgSummaries: OrgSummary[] }): SecurityFinding[] {
@@ -459,6 +606,7 @@ function generateSecurityFindings(ctx: { recentErrors: AuditError[]; orgSummarie
       title: 'محاولات وصول مرفوضة',
       description: `${deniedActions.length} محاولة وصول مرفوضة في الفترة الأخيرة.`,
       fix: 'مراجعة سياسات RLS والتأكد من صحة الصلاحيات.',
+      relatedErrors: deniedActions,
     });
   }
 
@@ -469,6 +617,7 @@ function generateSecurityFindings(ctx: { recentErrors: AuditError[]; orgSummarie
       title: 'عمليات فاشلة متكررة',
       description: `${failedActions.length} عملية فاشلة. قد تشير لمحاولات استغلال.`,
       fix: 'فحص سجلات العمليات الفاشلة وتحديد مصدرها.',
+      relatedErrors: failedActions,
     });
   }
 
@@ -484,32 +633,77 @@ function generateSecurityFindings(ctx: { recentErrors: AuditError[]; orgSummarie
   return findings;
 }
 
-const SecuritySection: React.FC<{ findings: SecurityFinding[] }> = ({ findings }) => (
-  <div className="space-y-2">
-    {findings.map((f, i) => (
-      <div key={i} className={`glass-surface p-3 rounded-2xl border-s-4 ${
-        f.severity === 'high' ? 'border-s-destructive' :
-        f.severity === 'medium' ? 'border-s-amber-500' : 'border-s-emerald-500'
-      }`}>
-        <div className="flex items-center gap-2 mb-1">
-          <Shield size={13} className={
-            f.severity === 'high' ? 'text-destructive' :
-            f.severity === 'medium' ? 'text-amber-500' : 'text-emerald-500'
-          } />
-          <p className="text-xs font-black text-foreground">{f.title}</p>
-          <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ms-auto ${
-            f.severity === 'high' ? 'bg-red-500/10 text-red-500' :
-            f.severity === 'medium' ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-600'
+const SecuritySection: React.FC<{ findings: SecurityFinding[]; errors: AuditError[] }> = ({ findings, errors }) => {
+  const [expandedFinding, setExpandedFinding] = useState<number | null>(null);
+
+  return (
+    <div className="space-y-2">
+      {findings.map((f, i) => {
+        const isExpanded = expandedFinding === i;
+        return (
+          <div key={i} className={`glass-surface rounded-2xl border-s-4 overflow-hidden ${
+            f.severity === 'high' ? 'border-s-destructive' :
+            f.severity === 'medium' ? 'border-s-amber-500' : 'border-s-emerald-500'
           }`}>
-            {f.severity === 'high' ? 'حرج' : f.severity === 'medium' ? 'متوسط' : 'منخفض'}
-          </span>
-        </div>
-        <p className="text-[10px] text-muted-foreground font-medium mb-1">{f.description}</p>
-        <p className="text-[10px] text-primary font-bold">🔧 {f.fix}</p>
-      </div>
-    ))}
-  </div>
-);
+            <button
+              onClick={() => setExpandedFinding(isExpanded ? null : i)}
+              className="w-full p-3 text-start hover:bg-muted/20 transition-colors"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Shield size={13} className={
+                  f.severity === 'high' ? 'text-destructive' :
+                  f.severity === 'medium' ? 'text-amber-500' : 'text-emerald-500'
+                } />
+                <p className="text-xs font-black text-foreground">{f.title}</p>
+                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ms-auto ${
+                  f.severity === 'high' ? 'bg-red-500/10 text-red-500' :
+                  f.severity === 'medium' ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-600'
+                }`}>
+                  {f.severity === 'high' ? 'حرج' : f.severity === 'medium' ? 'متوسط' : 'منخفض'}
+                </span>
+                {f.relatedErrors && f.relatedErrors.length > 0 && (
+                  isExpanded ? <ChevronUp size={10} className="text-muted-foreground" /> : <ChevronDown size={10} className="text-muted-foreground" />
+                )}
+              </div>
+              <p className="text-[10px] text-muted-foreground font-medium mb-1">{f.description}</p>
+              <p className="text-[10px] text-primary font-bold">🔧 {f.fix}</p>
+            </button>
+
+            {/* Expanded: show related errors with AI analysis */}
+            {isExpanded && f.relatedErrors && f.relatedErrors.length > 0 && (
+              <div className="px-3 pb-3 space-y-2 border-t border-border pt-2 animate-in slide-in-from-top-2 duration-200">
+                <p className="text-[9px] font-black text-muted-foreground">الأحداث المرتبطة ({f.relatedErrors.length})</p>
+                {f.relatedErrors.slice(0, 5).map((err, j) => {
+                  const analysis = generateLocalErrorAnalysis(err);
+                  return (
+                    <div key={j} className="bg-muted/20 rounded-lg p-2.5 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-bold text-foreground">{err.action}</span>
+                        <span className="text-[8px] text-muted-foreground">{new Date(err.created_at).toLocaleString('ar-EG')}</span>
+                      </div>
+                      {err.details && typeof err.details === 'object' && Object.keys(err.details).length > 0 && (
+                        <pre className="text-[8px] text-muted-foreground font-mono bg-muted/30 rounded p-1.5 whitespace-pre-wrap break-all max-h-16 overflow-y-auto" dir="ltr">
+                          {JSON.stringify(err.details, null, 2)}
+                        </pre>
+                      )}
+                      <div className="bg-emerald-500/5 border border-emerald-500/10 rounded p-2">
+                        <div className="flex items-center gap-1 mb-1">
+                          <Wrench size={9} className="text-emerald-600" />
+                          <span className="text-[8px] font-black text-emerald-600">الحل</span>
+                        </div>
+                        <p className="text-[8px] text-foreground leading-relaxed whitespace-pre-line">{analysis.solution}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 // ============================================
 // 5. Resources Section
@@ -519,7 +713,6 @@ const ResourcesSection: React.FC<{ metrics: any }> = ({ metrics }) => {
   
   return (
     <div className="space-y-3">
-      {/* Memory */}
       <div className="glass-surface p-3 rounded-2xl">
         <div className="flex items-center gap-2 mb-2">
           <HardDrive size={13} className="text-blue-500" />
@@ -538,7 +731,6 @@ const ResourcesSection: React.FC<{ metrics: any }> = ({ metrics }) => {
         )}
       </div>
 
-      {/* DOM & Connection */}
       <div className="grid grid-cols-2 gap-2">
         <div className="glass-surface p-2.5 rounded-2xl text-center">
           <MonitorCheck size={14} className="text-purple-500 mx-auto mb-1" />
@@ -552,7 +744,6 @@ const ResourcesSection: React.FC<{ metrics: any }> = ({ metrics }) => {
         </div>
       </div>
 
-      {/* Performance entries */}
       <div className="glass-surface p-3 rounded-2xl">
         <div className="flex items-center gap-2 mb-2">
           <TrendingUp size={13} className="text-amber-500" />

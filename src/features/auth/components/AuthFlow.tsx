@@ -137,16 +137,31 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       setOauthPending(false);
       
       if (!status.authenticated) {
-        // On Capacitor, the edge function may fail on first call due to token propagation delay
-        // Retry once after a short delay
-        const isNative = Capacitor.isNativePlatform();
-        if (isNative && retryCount < 2 && status.reason === 'NO_SESSION') {
-          logger.warn(`[LICENSE_CHECK] Not authenticated (NO_SESSION) on native — retry ${retryCount + 1}/2`, 'AuthFlow');
-          await new Promise(r => setTimeout(r, 1500));
+        const reason = status.reason || 'UNKNOWN';
+        
+        // Transient failures (NO_SESSION, ERROR, SERVER_ERROR) — retry on both platforms
+        const retriableReasons = ['NO_SESSION', 'ERROR', 'SERVER_ERROR', 'CIRCUIT_OPEN'];
+        if (retriableReasons.includes(reason) && retryCount < 2) {
+          const isNative = Capacitor.isNativePlatform();
+          const delayMs = isNative ? 1500 : 1000;
+          logger.warn(`[LICENSE_CHECK] Not authenticated (${reason}) — retry ${retryCount + 1}/2`, 'AuthFlow');
+          await new Promise(r => setTimeout(r, delayMs));
           processingRef.current = false;
           return checkUserProfile(userId, user, retryCount + 1);
         }
         
+        // INVALID_TOKEN or RATE_LIMITED — session is truly invalid, go back to login
+        if (reason === 'INVALID_TOKEN' || reason === 'RATE_LIMITED') {
+          logger.warn(`[LICENSE_CHECK] Auth failed: ${reason} — returning to login`, 'AuthFlow');
+          clearTimers();
+          clearAuthCache();
+          await supabase.auth.signOut();
+          setAuthState({ type: 'initial' });
+          processingRef.current = false;
+          return;
+        }
+        
+        // After retries exhausted for NO_SESSION/ERROR — show activation (profile may not exist yet)
         clearTimers();
         setAuthState({ type: 'needs_activation', userId, email, fullName }); 
         processingRef.current = false; 
