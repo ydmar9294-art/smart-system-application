@@ -15,13 +15,15 @@
  * - Simple FIFO queue with exponential backoff
  * - Max 3 retries before marking as failed
  * - Auto-processes on 'online' event
+ * - Encrypted at rest when Web Crypto is available
  */
 
 import { generateUUID } from '@/lib/uuid';
 import { logger } from '@/lib/logger';
+import { encryptData, decryptData, isEncrypted, isEncryptionAvailable } from '@/lib/indexedDbEncryption';
 
 const DB_NAME = 'general_offline_queue_v1';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Bumped for status index
 const STORE_NAME = 'queued_mutations';
 
 interface QueuedMutation {
@@ -33,6 +35,18 @@ interface QueuedMutation {
   status: 'pending' | 'syncing' | 'synced' | 'failed';
   retryCount: number;
   createdAt: number;
+  error?: string;
+}
+
+interface StoredMutation {
+  id: string;
+  status: string;
+  createdAt: number;
+  _enc?: any;
+  // Fallback plain fields when encryption is unavailable
+  serviceKey?: string;
+  args?: any;
+  retryCount?: number;
   error?: string;
 }
 
@@ -58,7 +72,8 @@ function openQueueDB(): Promise<IDBDatabase> {
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        store.createIndex('status', 'status', { unique: false });
       }
     };
     req.onsuccess = () => {
@@ -69,6 +84,40 @@ function openQueueDB(): Promise<IDBDatabase> {
     req.onerror = () => { dbPromise = null; reject(req.error); };
   });
   return dbPromise;
+}
+
+// ─── Encryption Helpers ────────────────────────────────────────────
+
+async function encryptMutation(mutation: QueuedMutation): Promise<StoredMutation> {
+  if (!isEncryptionAvailable()) {
+    return mutation as unknown as StoredMutation;
+  }
+  try {
+    const encrypted = await encryptData(mutation);
+    if (encrypted && (encrypted as any).__encrypted) {
+      return {
+        id: mutation.id,
+        status: mutation.status,
+        createdAt: mutation.createdAt,
+        _enc: encrypted,
+      };
+    }
+  } catch {
+    // fallback to plaintext
+  }
+  return mutation as unknown as StoredMutation;
+}
+
+async function decryptMutation(stored: StoredMutation): Promise<QueuedMutation | null> {
+  try {
+    if (stored._enc && isEncrypted(stored._enc)) {
+      return await decryptData<QueuedMutation>(stored._enc);
+    }
+    return stored as unknown as QueuedMutation;
+  } catch {
+    logger.warn('[OfflineQueue] Failed to decrypt mutation, skipping', 'OfflineMutationQueue');
+    return null;
+  }
 }
 
 // ─── Service Registry ──────────────────────────────────────────────
@@ -96,9 +145,10 @@ async function enqueue(serviceKey: string, args: any): Promise<void> {
     retryCount: 0,
     createdAt: Date.now(),
   };
+  const stored = await encryptMutation(mutation);
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).put(mutation);
+    tx.objectStore(STORE_NAME).put(stored);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
@@ -106,27 +156,42 @@ async function enqueue(serviceKey: string, args: any): Promise<void> {
 
 async function getPending(): Promise<QueuedMutation[]> {
   const db = await openQueueDB();
-  return new Promise((resolve, reject) => {
+  const raw: StoredMutation[] = await new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readonly');
     const req = tx.objectStore(STORE_NAME).getAll();
-    req.onsuccess = () => {
-      const all = (req.result || []) as QueuedMutation[];
-      resolve(all.filter(m => m.status === 'pending').sort((a, b) => a.createdAt - b.createdAt));
-    };
+    req.onsuccess = () => resolve((req.result || []) as StoredMutation[]);
     req.onerror = () => reject(req.error);
   });
+
+  const mutations: QueuedMutation[] = [];
+  for (const stored of raw) {
+    const m = await decryptMutation(stored);
+    if (m && m.status === 'pending') {
+      mutations.push(m);
+    }
+  }
+  return mutations.sort((a, b) => a.createdAt - b.createdAt);
 }
 
 async function updateMutation(id: string, updates: Partial<QueuedMutation>): Promise<void> {
   const db = await openQueueDB();
+  const raw: StoredMutation | undefined = await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).get(id);
+    req.onsuccess = () => resolve(req.result as StoredMutation | undefined);
+    req.onerror = () => reject(req.error);
+  });
+  if (!raw) return;
+
+  const existing = await decryptMutation(raw);
+  if (!existing) return;
+
+  const updated = { ...existing, ...updates };
+  const stored = await encryptMutation(updated);
+
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORE_NAME);
-    const getReq = store.get(id);
-    getReq.onsuccess = () => {
-      if (!getReq.result) { resolve(); return; }
-      store.put({ ...getReq.result, ...updates });
-    };
+    tx.objectStore(STORE_NAME).put(stored);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
@@ -139,7 +204,8 @@ export async function getQueueStats(): Promise<{ pending: number; failed: number
       const tx = db.transaction(STORE_NAME, 'readonly');
       const req = tx.objectStore(STORE_NAME).getAll();
       req.onsuccess = () => {
-        const all = (req.result || []) as QueuedMutation[];
+        const all = (req.result || []) as StoredMutation[];
+        // Use plaintext status field for efficient counting (no decryption needed)
         resolve({
           pending: all.filter(m => m.status === 'pending').length,
           failed: all.filter(m => m.status === 'failed').length,
@@ -201,7 +267,7 @@ export async function processQueue(): Promise<{ synced: number; failed: number }
       cursorReq.onsuccess = () => {
         const cursor = cursorReq.result;
         if (!cursor) { resolve(); return; }
-        const m = cursor.value as QueuedMutation;
+        const m = cursor.value as StoredMutation;
         if (m.status === 'synced' && m.createdAt < cutoff) cursor.delete();
         cursor.continue();
       };
