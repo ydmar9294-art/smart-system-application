@@ -11,6 +11,7 @@ import { usePushNotifications } from '@/platform/hooks/usePushNotifications';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { useVersionCheck } from '@/hooks/useVersionCheck';
 import { useDeviceRealtime } from '@/hooks/useDeviceRealtime';
+import { useSessionHeartbeat } from '@/hooks/useSessionHeartbeat';
 import OfflineIndicator from '@/components/ui/OfflineIndicator';
 import UpdateModal from '@/components/ui/UpdateModal';
 import LogoutScreen from '@/components/ui/LogoutScreen';
