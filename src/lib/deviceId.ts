@@ -2,6 +2,7 @@
  * Device ID Management
  * Generates a persistent, unique device identifier stored in localStorage.
  * On Capacitor, uses @capacitor/device for richer device names.
+ * Includes platform detection and app version tracking.
  */
 import { Capacitor } from '@capacitor/core';
 import { Device } from '@capacitor/device';
@@ -11,6 +12,9 @@ const DEVICE_ID_KEY = 'app_device_id';
 const DEVICE_VERIFIED_KEY = 'app_device_last_verified';
 const DEVICE_NAME_KEY = 'app_device_name_cached';
 
+/** App version — update on each release */
+const APP_VERSION = '1.5.0';
+
 /** Get or create a persistent device ID */
 export function getDeviceId(): string {
   let id = localStorage.getItem(DEVICE_ID_KEY);
@@ -19,6 +23,23 @@ export function getDeviceId(): string {
     localStorage.setItem(DEVICE_ID_KEY, id);
   }
   return id;
+}
+
+/**
+ * Detect the current platform: 'web' | 'android' | 'ios'
+ */
+export function getDevicePlatform(): 'web' | 'android' | 'ios' {
+  if (Capacitor.isNativePlatform()) {
+    const platform = Capacitor.getPlatform();
+    if (platform === 'ios') return 'ios';
+    if (platform === 'android') return 'android';
+  }
+  return 'web';
+}
+
+/** Get the current app version string */
+export function getAppVersion(): string {
+  return APP_VERSION;
 }
 
 /**
@@ -49,7 +70,6 @@ export async function resolveNativeDeviceName(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   try {
     const info = await Device.getInfo();
-    // e.g. "Samsung Galaxy S24" or "iPhone 15 Pro"
     const name = info.model
       ? `${info.manufacturer || ''} ${info.model}`.trim()
       : (info.platform === 'android' ? 'Android' : 'iOS');
