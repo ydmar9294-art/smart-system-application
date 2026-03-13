@@ -14,7 +14,7 @@ import {
   onSyncEvent,
   startDistributorSync,
   stopDistributorSync,
-  loadPersistedIdMaps,
+  initOfflineSystem,
   cacheOfflineOrgContext,
   getOfflineOrgContext,
   cacheOrgInfo,
