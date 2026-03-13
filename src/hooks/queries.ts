@@ -44,6 +44,7 @@ const OFFLINE_TTL = {
  * Supabase max per request = 1000.
  */
 const BATCH_SIZE = 1000;
+const MAX_BATCHES = 10; // Safety cap: max 10,000 rows
 
 async function fetchAllRows<T>(
   buildQuery: (from: number, to: number) => any,
@@ -53,8 +54,9 @@ async function fetchAllRows<T>(
   const allRows: T[] = [];
   let offset = 0;
   let hasMore = true;
+  let batchCount = 0;
 
-  while (hasMore) {
+  while (hasMore && batchCount < MAX_BATCHES) {
     const data = await safeQuery(
       () => buildQuery(offset, offset + BATCH_SIZE - 1),
       { label: `${label}_batch_${offset}` }
@@ -63,6 +65,11 @@ async function fetchAllRows<T>(
     allRows.push(...rows.map(transform));
     hasMore = rows.length === BATCH_SIZE;
     offset += BATCH_SIZE;
+    batchCount++;
+  }
+
+  if (batchCount >= MAX_BATCHES && hasMore) {
+    console.warn(`[fetchAllRows] Safety cap reached for "${label}": returned ${allRows.length} rows (max ${MAX_BATCHES * BATCH_SIZE}). Some data may be truncated.`);
   }
 
   return allRows;

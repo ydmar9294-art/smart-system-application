@@ -113,7 +113,7 @@ export default defineConfig(({ mode }) => ({
             '@capacitor/push-notifications',
             '@capacitor/local-notifications',
           ],
-          'vendor-pdf': ['jspdf', 'html2canvas'],
+          // PDF libs lazy-loaded via dynamic import — NOT in vendor chunk
           'vendor-i18n': ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
           'vendor-radix': [
             '@radix-ui/react-dialog',
