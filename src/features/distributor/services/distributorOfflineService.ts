@@ -432,11 +432,11 @@ export async function updateAction(id: string, updates: Partial<OfflineAction>):
 
   const updated = { ...existing, ...updates };
 
-  // Re-encrypt before storing
+  // Re-encrypt before storing — keep status in plaintext for fast counting
   if (isEncryptionAvailable()) {
     try {
       const encrypted = await encryptData(updated);
-      await putItem(STORES.ACTIONS, { id: updated.id, _enc: encrypted });
+      await putItem(STORES.ACTIONS, { id: updated.id, status: updated.status, _enc: encrypted });
       return;
     } catch {
       // fallback
