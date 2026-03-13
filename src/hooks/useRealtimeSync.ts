@@ -7,6 +7,7 @@
  * - dev-global: developer-only cross-org channel
  * - Automatic reconnection with exponential backoff per channel
  * - Fallback polling on WebSocket failure
+ * - Stabilized refs to prevent unnecessary resubscriptions
  */
 import { useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -18,39 +19,46 @@ import { performanceMonitor } from '@/utils/monitoring/performanceMonitor';
 const FALLBACK_POLL_MS = 30_000;
 const MAX_RECONNECT_ATTEMPTS = 5;
 
-function useChannelReconnect(channelName: string) {
-  const attemptsRef = useRef(0);
-  const fallbackRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const reset = useCallback(() => { attemptsRef.current = 0; }, []);
-  const increment = useCallback(() => {
-    attemptsRef.current++;
-    performanceMonitor.recordReconnect(channelName, attemptsRef.current);
-    return attemptsRef.current;
-  }, [channelName]);
-  const exceeded = useCallback(() => attemptsRef.current >= MAX_RECONNECT_ATTEMPTS, []);
-
-  const startFallback = useCallback((fn: () => void) => {
-    if (fallbackRef.current) return;
-    logger.warn(`[Realtime] Starting fallback polling for ${channelName}`, 'RealtimeSync');
-    fallbackRef.current = setInterval(fn, FALLBACK_POLL_MS);
-  }, [channelName]);
-
-  const stopFallback = useCallback(() => {
-    if (fallbackRef.current) { clearInterval(fallbackRef.current); fallbackRef.current = null; }
-  }, []);
-
-  return { reset, increment, exceeded, startFallback, stopFallback };
+interface ChannelReconnectState {
+  attempts: number;
+  fallbackInterval: ReturnType<typeof setInterval> | null;
 }
 
 export function useRealtimeSync(orgId?: string | null, role?: string | null) {
   const queryClient = useQueryClient();
-  const core = useChannelReconnect(`org-core-${orgId}`);
-  const txn = useChannelReconnect(`org-txn-${orgId}`);
+  
+  // Stabilize refs to prevent unnecessary effect reruns
+  const orgIdRef = useRef(orgId);
+  const roleRef = useRef(role);
+  orgIdRef.current = orgId;
+  roleRef.current = role;
+
+  // Channel reconnect state stored in refs (no re-renders)
+  const coreStateRef = useRef<ChannelReconnectState>({ attempts: 0, fallbackInterval: null });
+  const txnStateRef = useRef<ChannelReconnectState>({ attempts: 0, fallbackInterval: null });
+
+  const stopFallback = useCallback((stateRef: React.MutableRefObject<ChannelReconnectState>) => {
+    if (stateRef.current.fallbackInterval) {
+      clearInterval(stateRef.current.fallbackInterval);
+      stateRef.current.fallbackInterval = null;
+    }
+  }, []);
+
+  const startFallback = useCallback((
+    stateRef: React.MutableRefObject<ChannelReconnectState>,
+    channelName: string,
+    fn: () => void
+  ) => {
+    if (stateRef.current.fallbackInterval) return;
+    logger.warn(`[Realtime] Starting fallback polling for ${channelName}`, 'RealtimeSync');
+    stateRef.current.fallbackInterval = setInterval(fn, FALLBACK_POLL_MS);
+  }, []);
 
   // ─── Core channel: products, inventory, profiles, pending_employees, licenses ───
   useEffect(() => {
     if (!orgId) return;
+
+    const state = coreStateRef;
 
     const channel = supabase
       .channel(`org-core-${orgId}`)
@@ -66,14 +74,15 @@ export function useRealtimeSync(orgId?: string | null, role?: string | null) {
         () => { queryClient.invalidateQueries({ queryKey: queryKeys.licenses() }); })
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
-          core.reset();
-          core.stopFallback();
+          state.current.attempts = 0;
+          stopFallback(state);
           logger.info(`[Realtime] Core channel connected: ${orgId}`, 'RealtimeSync');
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          const attempt = core.increment();
-          logger.warn(`[Realtime] Core channel error (attempt ${attempt}): ${err}`, 'RealtimeSync');
-          if (core.exceeded()) {
-            core.startFallback(() => {
+          state.current.attempts++;
+          performanceMonitor.recordReconnect(`org-core-${orgId}`, state.current.attempts);
+          logger.warn(`[Realtime] Core channel error (attempt ${state.current.attempts}): ${err}`, 'RealtimeSync');
+          if (state.current.attempts >= MAX_RECONNECT_ATTEMPTS) {
+            startFallback(state, `org-core-${orgId}`, () => {
               queryClient.invalidateQueries({ queryKey: queryKeys.products(orgId) });
               queryClient.invalidateQueries({ queryKey: queryKeys.licenses() });
             });
@@ -81,12 +90,14 @@ export function useRealtimeSync(orgId?: string | null, role?: string | null) {
         }
       });
 
-    return () => { supabase.removeChannel(channel); core.stopFallback(); };
-  }, [orgId, queryClient, core]);
+    return () => { supabase.removeChannel(channel); stopFallback(state); };
+  }, [orgId, queryClient, stopFallback, startFallback]);
 
   // ─── Transactions channel: sales, collections, purchases, deliveries, customers, subscription_payments ───
   useEffect(() => {
     if (!orgId) return;
+
+    const state = txnStateRef;
 
     const channel = supabase
       .channel(`org-txn-${orgId}`)
@@ -114,14 +125,15 @@ export function useRealtimeSync(orgId?: string | null, role?: string | null) {
         () => { queryClient.invalidateQueries({ queryKey: queryKeys.licenses() }); })
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
-          txn.reset();
-          txn.stopFallback();
+          state.current.attempts = 0;
+          stopFallback(state);
           logger.info(`[Realtime] Transactions channel connected: ${orgId}`, 'RealtimeSync');
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          const attempt = txn.increment();
-          logger.warn(`[Realtime] Transactions channel error (attempt ${attempt}): ${err}`, 'RealtimeSync');
-          if (txn.exceeded()) {
-            txn.startFallback(() => {
+          state.current.attempts++;
+          performanceMonitor.recordReconnect(`org-txn-${orgId}`, state.current.attempts);
+          logger.warn(`[Realtime] Transactions channel error (attempt ${state.current.attempts}): ${err}`, 'RealtimeSync');
+          if (state.current.attempts >= MAX_RECONNECT_ATTEMPTS) {
+            startFallback(state, `org-txn-${orgId}`, () => {
               queryClient.invalidateQueries({ queryKey: queryKeys.sales(orgId) });
               queryClient.invalidateQueries({ queryKey: queryKeys.payments(orgId) });
             });
@@ -129,8 +141,8 @@ export function useRealtimeSync(orgId?: string | null, role?: string | null) {
         }
       });
 
-    return () => { supabase.removeChannel(channel); txn.stopFallback(); };
-  }, [orgId, queryClient, txn]);
+    return () => { supabase.removeChannel(channel); stopFallback(state); };
+  }, [orgId, queryClient, stopFallback, startFallback]);
 
   // ─── Developer-only global channel ───
   useEffect(() => {
@@ -164,9 +176,10 @@ export function useRealtimeSync(orgId?: string | null, role?: string | null) {
     const handleOnline = () => {
       logger.info('[Realtime] Back online, invalidating stale caches', 'RealtimeSync');
       queryClient.invalidateQueries({ queryKey: queryKeys.licenses() });
-      if (orgId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.products(orgId) });
-        queryClient.invalidateQueries({ queryKey: queryKeys.sales(orgId) });
+      const currentOrgId = orgIdRef.current;
+      if (currentOrgId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.products(currentOrgId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.sales(currentOrgId) });
       }
     };
 
@@ -182,5 +195,5 @@ export function useRealtimeSync(orgId?: string | null, role?: string | null) {
       window.removeEventListener('online', handleOnline);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [queryClient, orgId]);
+  }, [queryClient]);
 }

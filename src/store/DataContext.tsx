@@ -6,8 +6,9 @@
  * - Thin composition layer over domain mutation hooks
  * - Backward compatible interface for all useData() consumers
  * - Staggered refresh to prevent network bursts
+ * - Memoized context value to prevent unnecessary re-renders
  */
-import React, { createContext, useContext, useCallback } from 'react';
+import React, { createContext, useContext, useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { UserRole, Product, Customer, Sale, Payment, License, EmployeeType, LicenseStatus, OrgStats } from '@/types';
 import { Purchase, Delivery, PendingEmployee, DistributorInventoryItem } from '@/hooks/useDataOperations';
@@ -225,9 +226,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [queryClient, orgId]);
 
   // ============================================
-  // Compose context value from domain hooks
+  // Memoized context value — prevents re-creating on every render
   // ============================================
-  const value: DataContextType = {
+  const value: DataContextType = useMemo(() => ({
     products, customers, sales, payments, users, licenses,
     purchases, deliveries, pendingEmployees, distributorInventory,
     purchaseReturns, orgStats,
@@ -266,7 +267,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateLicenseStatus: inventoryMutations.updateLicenseStatus,
     makeLicensePermanent: inventoryMutations.makeLicensePermanent,
     updateLicenseMaxEmployees: inventoryMutations.updateLicenseMaxEmployees,
-  };
+  }), [
+    products, customers, sales, payments, users, licenses,
+    purchases, deliveries, pendingEmployees, distributorInventory,
+    purchaseReturns, orgStats,
+    refreshProducts, refreshCustomers, refreshSales, refreshPayments,
+    refreshPurchases, refreshDeliveries, refreshPendingEmployees,
+    refreshDistributorInventory, refreshPurchaseReturns, refreshLicenses,
+    refreshAllData, refreshOrgStats,
+    salesMutations, productMutations, customerMutations,
+    collectionMutations, inventoryMutations,
+  ]);
 
   return (
     <DataContext.Provider value={value}>

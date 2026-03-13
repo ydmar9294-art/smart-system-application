@@ -2,11 +2,21 @@
  * backupPdfService — Generates a professional bilingual backup PDF
  * 
  * Uses html2canvas + jsPDF to properly render Arabic/English text.
+ * PERFORMANCE: Libraries are lazy-loaded via dynamic import().
  * Accepts a translations object so all labels follow the current app language.
  */
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { CURRENCY } from '@/constants';
+
+// ── Lazy loaders ──────────────────────────────────────────────────────────
+async function loadJsPDF() {
+  const mod = await import('jspdf');
+  return mod.default;
+}
+
+async function loadHtml2Canvas() {
+  const mod = await import('html2canvas');
+  return mod.default;
+}
 
 // ── Types ────────────────────────────────────────────────────────
 interface PdfBackupData {
@@ -108,7 +118,6 @@ export interface PdfTranslations {
   invoices: string;
   collections: string;
   activityLog: string;
-  // New sections
   purchases: string;
   pdfPurchasesLog: string;
   pdfSupplier: string;
@@ -237,7 +246,6 @@ function buildBackupHtml(data: PdfBackupData, t: PdfTranslations, lang: string):
   const alignEnd = isRtl ? 'right' : 'left';
   const alignStart = isRtl ? 'left' : 'right';
 
-  // ── Cover page ──────────────────────────────────────────────
   const coverPage = `
     <div class="page">
       <div class="cover-center">
@@ -268,7 +276,6 @@ function buildBackupHtml(data: PdfBackupData, t: PdfTranslations, lang: string):
       </div>
     </div>`;
 
-  // ── Customers page ──────────────────────────────────────────
   const custRows = data.customers.map(c => `
     <tr>
       <td>${c.id.slice(0, 8)}</td>
@@ -293,7 +300,6 @@ function buildBackupHtml(data: PdfBackupData, t: PdfTranslations, lang: string):
       <div class="footer">${t.pdfCustomersPage} — ${data.orgName}</div>
     </div>`;
 
-  // ── Invoices page ───────────────────────────────────────────
   const invRows = data.invoices.map(inv => {
     const subtotal = inv.grand_total + (inv.discount_value || 0);
     const typeClass = inv.is_voided ? 'badge-void' : inv.payment_type === 'CASH' ? 'badge-cash' : 'badge-credit';
@@ -328,7 +334,6 @@ function buildBackupHtml(data: PdfBackupData, t: PdfTranslations, lang: string):
       <div class="footer">${t.pdfInvoicesPage} — ${data.orgName}</div>
     </div>`;
 
-  // ── Invoice Items Detail pages ──────────────────────────────
   const invoicesWithItems = data.invoices.filter(i => i.items.length > 0).slice(0, 100);
   let itemsHtml = '';
   if (invoicesWithItems.length > 0) {
@@ -357,7 +362,6 @@ function buildBackupHtml(data: PdfBackupData, t: PdfTranslations, lang: string):
       </div>`;
   }
 
-  // ── Collections page ────────────────────────────────────────
   const colRows = data.collections.map(c => {
     const statusClass = c.is_reversed ? 'badge-reversed' : 'badge-active';
     const statusLabel = c.is_reversed ? t.pdfReversed : t.pdfActive;
@@ -387,180 +391,131 @@ function buildBackupHtml(data: PdfBackupData, t: PdfTranslations, lang: string):
       <div class="footer">${t.pdfCollectionsPage} — ${data.orgName}</div>
     </div>`;
 
-  // ── Purchases page ──────────────────────────────────────────
-  let purchasesPage = '';
-  if (data.purchases.length > 0) {
-    const purchRows = data.purchases.map(p => `
-      <tr>
-        <td>${p.id.slice(0, 8)}</td>
-        <td style="font-weight: 700;">${p.product_name}</td>
-        <td>${p.quantity}</td>
-        <td>${fmtNum(p.unit_price, locale)} ${CURRENCY}</td>
-        <td style="font-weight: 800;">${fmtNum(p.total_price, locale)} ${CURRENCY}</td>
-        <td>${p.supplier_name || '—'}</td>
-        <td>${fmtDate(p.created_at, locale)}</td>
-        <td class="text-muted">${p.notes || '—'}</td>
-      </tr>`).join('');
-
-    purchasesPage = `
-      <div class="page">
-        <div class="header-bar"><span>${data.exportDate}</span><span>${data.orgName}</span></div>
-        <div class="section-title">🛒 ${t.pdfPurchasesLog} (${data.purchases.length})</div>
-        <table>
-          <thead><tr>
-            <th>${t.pdfNumber}</th><th>${t.pdfProduct}</th><th>${t.pdfQuantity}</th>
-            <th>${t.pdfUnitPrice}</th><th>${t.pdfTotal}</th><th>${t.pdfSupplier}</th>
-            <th>${t.pdfDate}</th><th>${t.pdfNotes}</th>
-          </tr></thead>
-          <tbody>${purchRows}</tbody>
-        </table>
-        <div class="footer">${t.pdfPurchasesPage} — ${data.orgName}</div>
-      </div>`;
-  }
-
-  // ── Sales Returns page ──────────────────────────────────────
-  let salesReturnsPage = '';
-  if (data.salesReturns.length > 0) {
-    const srRows = data.salesReturns.map(sr => `
-      <tr>
-        <td>${sr.id.slice(0, 8)}</td>
-        <td style="font-weight: 700;">${sr.customer_name}</td>
-        <td>${sr.sale_id ? sr.sale_id.slice(0, 8) : '—'}</td>
-        <td style="font-weight: 800; color: #ea580c;">${fmtNum(sr.total_amount, locale)} ${CURRENCY}</td>
-        <td class="text-muted">${sr.reason || '—'}</td>
-        <td>${fmtDate(sr.created_at, locale)}</td>
-        <td>${sr.creator_name || '—'}</td>
-      </tr>`).join('');
-
-    // Items detail
-    const srWithItems = data.salesReturns.filter(sr => sr.items.length > 0).slice(0, 50);
-    const srItemsHtml = srWithItems.map(sr => {
-      const rows = sr.items.map(it => `
-        <tr>
-          <td style="text-align: ${alignEnd}; font-weight: 600;">${it.product_name}</td>
-          <td>${it.quantity}</td>
-          <td>${fmtNum(it.unit_price, locale)} ${CURRENCY}</td>
-          <td style="font-weight: 700;">${fmtNum(it.total_price, locale)} ${CURRENCY}</td>
-        </tr>`).join('');
-      return `
-        <div class="inv-group-title" style="color: #ea580c;">${sr.customer_name} | ${sr.id.slice(0, 8)} | ${fmtDate(sr.created_at, locale)}</div>
-        <table>
-          <thead><tr><th style="text-align: ${alignEnd};">${t.pdfProduct}</th><th>${t.pdfQuantity}</th><th>${t.pdfUnitPrice}</th><th>${t.pdfItemTotal}</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>`;
-    }).join('');
-
-    salesReturnsPage = `
-      <div class="page">
-        <div class="header-bar"><span>${data.exportDate}</span><span>${data.orgName}</span></div>
-        <div class="section-title-orange">↩️ ${t.pdfSalesReturnsLog} (${data.salesReturns.length})</div>
-        <table>
-          <thead><tr>
-            <th>${t.pdfNumber}</th><th>${t.pdfCustomer}</th><th>${t.pdfOriginalInvoice}</th>
-            <th>${t.pdfTotal}</th><th>${t.pdfReason}</th><th>${t.pdfDate}</th><th>${t.pdfUser}</th>
-          </tr></thead>
-          <tbody>${srRows}</tbody>
-        </table>
-        ${srItemsHtml}
-        <div class="footer">${t.pdfSalesReturnsPage} — ${data.orgName}</div>
-      </div>`;
-  }
-
-  // ── Purchase Returns page ───────────────────────────────────
-  let purchaseReturnsPage = '';
-  if (data.purchaseReturns.length > 0) {
-    const prRows = data.purchaseReturns.map(pr => `
-      <tr>
-        <td>${pr.id.slice(0, 8)}</td>
-        <td style="font-weight: 700;">${pr.supplier_name || '—'}</td>
-        <td style="font-weight: 800; color: #dc2626;">${fmtNum(pr.total_amount, locale)} ${CURRENCY}</td>
-        <td class="text-muted">${pr.reason || '—'}</td>
-        <td>${fmtDate(pr.created_at, locale)}</td>
-        <td>${pr.creator_name || '—'}</td>
-      </tr>`).join('');
-
-    const prWithItems = data.purchaseReturns.filter(pr => pr.items.length > 0).slice(0, 50);
-    const prItemsHtml = prWithItems.map(pr => {
-      const rows = pr.items.map(it => `
-        <tr>
-          <td style="text-align: ${alignEnd}; font-weight: 600;">${it.product_name}</td>
-          <td>${it.quantity}</td>
-          <td>${fmtNum(it.unit_price, locale)} ${CURRENCY}</td>
-          <td style="font-weight: 700;">${fmtNum(it.total_price, locale)} ${CURRENCY}</td>
-        </tr>`).join('');
-      return `
-        <div class="inv-group-title" style="color: #dc2626;">${pr.supplier_name || '—'} | ${pr.id.slice(0, 8)} | ${fmtDate(pr.created_at, locale)}</div>
-        <table>
-          <thead><tr><th style="text-align: ${alignEnd};">${t.pdfProduct}</th><th>${t.pdfQuantity}</th><th>${t.pdfUnitPrice}</th><th>${t.pdfItemTotal}</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>`;
-    }).join('');
-
-    purchaseReturnsPage = `
-      <div class="page">
-        <div class="header-bar"><span>${data.exportDate}</span><span>${data.orgName}</span></div>
-        <div class="section-title-red">📦↩️ ${t.pdfPurchaseReturnsLog} (${data.purchaseReturns.length})</div>
-        <table>
-          <thead><tr>
-            <th>${t.pdfNumber}</th><th>${t.pdfSupplier}</th><th>${t.pdfTotal}</th>
-            <th>${t.pdfReason}</th><th>${t.pdfDate}</th><th>${t.pdfUser}</th>
-          </tr></thead>
-          <tbody>${prRows}</tbody>
-        </table>
-        ${prItemsHtml}
-        <div class="footer">${t.pdfPurchaseReturnsPage} — ${data.orgName}</div>
-      </div>`;
-  }
-
-  // ── Logs page ───────────────────────────────────────────────
-  const logRows = data.logs.slice(0, 300).map(l => `
+  // Purchases page
+  const purchaseRows = data.purchases.map(p => `
     <tr>
-      <td><span class="badge" style="background: #eff6ff; color: #3b82f6;">${l.type}</span></td>
-      <td style="font-weight: 600;">${l.user_name}</td>
-      <td>${l.date}</td>
-      <td style="text-align: ${alignEnd}; font-size: 9px;">${l.details.length > 80 ? l.details.slice(0, 78) + '...' : l.details}</td>
+      <td style="font-weight: 700;">${p.product_name}</td>
+      <td>${p.quantity}</td>
+      <td>${fmtNum(p.unit_price, locale)} ${CURRENCY}</td>
+      <td style="font-weight: 800;">${fmtNum(p.total_price, locale)} ${CURRENCY}</td>
+      <td>${p.supplier_name || '—'}</td>
+      <td>${p.creator_name || '—'}</td>
+      <td>${fmtDate(p.created_at, locale)}</td>
+      <td class="text-muted">${p.notes || '—'}</td>
     </tr>`).join('');
 
-  const logsPage = `
+  const purchasesPage = data.purchases.length > 0 ? `
     <div class="page">
       <div class="header-bar"><span>${data.exportDate}</span><span>${data.orgName}</span></div>
-      <div class="section-title">📊 ${t.pdfActivityLog} (${Math.min(data.logs.length, 300)})</div>
+      <div class="section-title-orange">🛒 ${t.pdfPurchasesLog} (${data.purchases.length})</div>
       <table>
-        <thead><tr><th>${t.pdfOperation}</th><th>${t.pdfUser}</th><th>${t.pdfDate}</th><th style="text-align: ${alignEnd};">${t.pdfDetails}</th></tr></thead>
+        <thead><tr>
+          <th>${t.pdfProduct}</th><th>${t.pdfQuantity}</th><th>${t.pdfUnitPrice}</th><th>${t.pdfTotal}</th>
+          <th>${t.pdfSupplier}</th><th>${t.pdfUser}</th><th>${t.pdfDate}</th><th>${t.pdfNotes}</th>
+        </tr></thead>
+        <tbody>${purchaseRows}</tbody>
+      </table>
+      <div class="footer">${t.pdfPurchasesPage} — ${data.orgName}</div>
+    </div>` : '';
+
+  // Sales Returns page
+  const salesReturnRows = data.salesReturns.map(sr => `
+    <tr>
+      <td>${sr.id.slice(0, 8)}</td>
+      <td style="font-weight: 700;">${sr.customer_name}</td>
+      <td>${sr.sale_id ? sr.sale_id.slice(0, 8) : '—'}</td>
+      <td style="font-weight: 800; color: #ea580c;">${fmtNum(sr.total_amount, locale)} ${CURRENCY}</td>
+      <td>${sr.reason || '—'}</td>
+      <td>${sr.creator_name || '—'}</td>
+      <td>${fmtDate(sr.created_at, locale)}</td>
+    </tr>`).join('');
+
+  const salesReturnsPage = data.salesReturns.length > 0 ? `
+    <div class="page">
+      <div class="header-bar"><span>${data.exportDate}</span><span>${data.orgName}</span></div>
+      <div class="section-title-red">↩️ ${t.pdfSalesReturnsLog} (${data.salesReturns.length})</div>
+      <table>
+        <thead><tr>
+          <th>${t.pdfNumber}</th><th>${t.pdfCustomer}</th><th>${t.pdfOriginalInvoice}</th>
+          <th>${t.pdfTotal}</th><th>${t.pdfReason}</th><th>${t.pdfUser}</th><th>${t.pdfDate}</th>
+        </tr></thead>
+        <tbody>${salesReturnRows}</tbody>
+      </table>
+      <div class="footer">${t.pdfSalesReturnsPage} — ${data.orgName}</div>
+    </div>` : '';
+
+  // Purchase Returns page
+  const purchaseReturnRows = data.purchaseReturns.map(pr => `
+    <tr>
+      <td>${pr.id.slice(0, 8)}</td>
+      <td>${pr.supplier_name || '—'}</td>
+      <td style="font-weight: 800; color: #ea580c;">${fmtNum(pr.total_amount, locale)} ${CURRENCY}</td>
+      <td>${pr.reason || '—'}</td>
+      <td>${pr.creator_name || '—'}</td>
+      <td>${fmtDate(pr.created_at, locale)}</td>
+    </tr>`).join('');
+
+  const purchaseReturnsPage = data.purchaseReturns.length > 0 ? `
+    <div class="page">
+      <div class="header-bar"><span>${data.exportDate}</span><span>${data.orgName}</span></div>
+      <div class="section-title-red">🔄 ${t.pdfPurchaseReturnsLog} (${data.purchaseReturns.length})</div>
+      <table>
+        <thead><tr>
+          <th>${t.pdfNumber}</th><th>${t.pdfSupplier}</th><th>${t.pdfTotal}</th>
+          <th>${t.pdfReason}</th><th>${t.pdfUser}</th><th>${t.pdfDate}</th>
+        </tr></thead>
+        <tbody>${purchaseReturnRows}</tbody>
+      </table>
+      <div class="footer">${t.pdfPurchaseReturnsPage} — ${data.orgName}</div>
+    </div>` : '';
+
+  // Activity Logs page
+  const logRows = data.logs.map(l => `
+    <tr>
+      <td>${l.type}</td>
+      <td style="font-weight: 700;">${l.user_name}</td>
+      <td>${fmtDate(l.date, locale)}</td>
+      <td class="text-muted" style="max-width: 300px; word-break: break-word; text-align: ${alignEnd};">${l.details}</td>
+    </tr>`).join('');
+
+  const logsPage = data.logs.length > 0 ? `
+    <div class="page">
+      <div class="header-bar"><span>${data.exportDate}</span><span>${data.orgName}</span></div>
+      <div class="section-title">📄 ${t.pdfActivityLog} (${data.logs.length})</div>
+      <table>
+        <thead><tr>
+          <th>${t.pdfOperation}</th><th>${t.pdfUser}</th><th>${t.pdfDate}</th><th>${t.pdfDetails}</th>
+        </tr></thead>
         <tbody>${logRows}</tbody>
       </table>
-      ${data.logs.length > 300 ? '<p style="text-align: center; color: #94a3b8; font-size: 9px;">... ' + (data.logs.length - 300) + ' ' + t.pdfAdditionalRecords + '</p>' : ''}
       <div class="footer">${t.pdfLogsPage} — ${data.orgName}</div>
-    </div>`;
+    </div>` : '';
 
-  const dir = isRtl ? 'rtl' : 'ltr';
-  const htmlLang = isRtl ? 'ar' : 'en';
-  const fontLink = isRtl 
-    ? '<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">'
-    : '';
-
-  return `<!DOCTYPE html><html dir="${dir}" lang="${htmlLang}">
-    <head>
-      <meta charset="UTF-8">
-      ${fontLink}
-      <style>${getBaseStyles(isRtl)}</style>
-    </head>
-    <body>${coverPage}${customersPage}${invoicesPage}${itemsHtml}${collectionsPage}${purchasesPage}${salesReturnsPage}${purchaseReturnsPage}${logsPage}</body>
-    </html>`;
+  const styles = getBaseStyles(isRtl);
+  return `<!DOCTYPE html><html lang="${lang}" dir="${isRtl ? 'rtl' : 'ltr'}"><head>
+    <meta charset="UTF-8" /><style>${styles}</style>
+    ${isRtl ? '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800;900&display=swap" />' : ''}
+  </head><body>
+    ${coverPage}${customersPage}${invoicesPage}${itemsHtml}${collectionsPage}${purchasesPage}${salesReturnsPage}${purchaseReturnsPage}${logsPage}
+  </body></html>`;
 }
 
-// ── Main export function ─────────────────────────────────────────
+// ── Main Export Function (lazy-loaded PDF libs) ──────────────────────
 export async function generateBackupPdf(
   data: PdfBackupData,
   translations: PdfTranslations,
   lang: string,
-  onProgress?: (msg: string) => void
-): Promise<{ blob: Blob; filename: string }> {
-  const html = buildBackupHtml(data, translations, lang);
-
+  onProgress?: (step: string) => void
+): Promise<Blob> {
   onProgress?.(translations.pdfPreparingDoc);
 
-  // Create hidden container
+  // Lazy-load heavy libraries
+  const [jsPDFClass, html2canvas] = await Promise.all([loadJsPDF(), loadHtml2Canvas()]);
+
+  const html = buildBackupHtml(data, translations, lang);
+  const isRtl = lang === 'ar';
+
+  // Create hidden container for rendering
   const container = document.createElement('div');
   Object.assign(container.style, {
     position: 'fixed',
@@ -572,74 +527,62 @@ export async function generateBackupPdf(
   });
   document.body.appendChild(container);
 
-  // Create iframe for isolated rendering
-  const iframe = document.createElement('iframe');
-  Object.assign(iframe.style, {
-    width: '1100px',
-    height: '1px',
-    border: 'none',
-    overflow: 'hidden',
-  });
-  container.appendChild(iframe);
-
-  await new Promise<void>((resolve) => {
-    iframe.onload = () => resolve();
-    iframe.srcdoc = html;
-  });
-
-  // Wait for fonts to load
-  await new Promise(r => setTimeout(r, 800));
-
-  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-  if (!iframeDoc) {
-    document.body.removeChild(container);
-    throw new Error('Failed to create PDF document');
-  }
-
-  // Wait for font
   try {
-    await (iframeDoc as any).fonts?.ready;
-  } catch { /* fallback */ }
+    const iframe = document.createElement('iframe');
+    Object.assign(iframe.style, {
+      width: '1100px',
+      height: '1px',
+      border: 'none',
+    });
+    container.appendChild(iframe);
 
-  const pages = iframeDoc.querySelectorAll('.page');
-  if (pages.length === 0) {
-    document.body.removeChild(container);
-    throw new Error('No pages found');
-  }
-
-  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  const pageW = pdf.internal.pageSize.getWidth();
-  const pageH = pdf.internal.pageSize.getHeight();
-
-  for (let i = 0; i < pages.length; i++) {
-    onProgress?.(`${translations.pdfPreparingDoc} (${i + 1}/${pages.length})`);
-
-    const pageEl = pages[i] as HTMLElement;
-    pageEl.style.pageBreakAfter = 'auto';
-
-    const canvas = await html2canvas(pageEl, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      allowTaint: true,
+    await new Promise<void>((resolve, reject) => {
+      iframe.addEventListener('load', () => resolve(), { once: true });
+      iframe.addEventListener('error', () => reject(new Error('iframe failed')), { once: true });
+      iframe.srcdoc = html;
     });
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.92);
-    const imgW = pageW;
-    const imgH = (canvas.height / canvas.width) * imgW;
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    await new Promise(r => setTimeout(r, 500));
 
-    if (i > 0) pdf.addPage();
-    pdf.addImage(imgData, 'JPEG', 0, 0, imgW, Math.min(imgH, pageH));
+    const iDoc = iframe.contentDocument!;
+    const pages = iDoc.querySelectorAll('.page');
+
+    const pdf = new jsPDFClass({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4',
+    });
+
+    const pdfW = pdf.internal.pageSize.getWidth();
+    const pdfH = pdf.internal.pageSize.getHeight();
+
+    for (let i = 0; i < pages.length; i++) {
+      const page = pages[i] as HTMLElement;
+      iframe.style.height = page.scrollHeight + 'px';
+      await new Promise(r => setTimeout(r, 100));
+
+      const canvas = await html2canvas(page, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        width: 1100,
+        height: page.scrollHeight,
+        windowWidth: 1100,
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+
+      if (i > 0) pdf.addPage();
+      const imgW = pdfW;
+      const imgH = (canvas.height * imgW) / canvas.width;
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgW, Math.min(imgH, pdfH));
+    }
+
+    onProgress?.(translations.pdfSavingFile);
+    return pdf.output('blob');
+  } finally {
+    try { document.body.removeChild(container); } catch (_) { /* ignore */ }
   }
-
-  onProgress?.(translations.pdfSavingFile);
-
-  const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 16);
-  const filename = `backup_${data.orgName}_${ts}.pdf`;
-  const blob = pdf.output('blob');
-
-  document.body.removeChild(container);
-
-  return { blob, filename };
 }
