@@ -188,6 +188,10 @@ const en = {
     promoText: 'For full access, contact the company to book a trial license and a personal session to define your needs.',
     contactWhatsapp: 'Contact via WhatsApp',
     previewBanner: 'Preview Mode —',
+    continueBrowsing: 'Continue browsing',
+    feature1: 'Complete sales & inventory management',
+    feature2: 'Detailed reports and analytics',
+    feature3: '24/7 dedicated technical support',
   },
 
   // ==========================================
