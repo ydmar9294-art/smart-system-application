@@ -39,6 +39,9 @@ export const useAuthActions = (deps: AuthActionsDeps) => {
         // Dispatch event so App.tsx shows the goodbye screen immediately
         window.dispatchEvent(new CustomEvent('logout-started'));
 
+        // Notify server of logout (marks device inactive + logs security event)
+        await notifyLogout().catch(() => {});
+
         clearAuthCache();
         clearEncryptionKey().catch(() => {});
         clearDeviceState();

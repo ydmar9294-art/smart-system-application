@@ -116,7 +116,9 @@ const MainContent: React.FC = () => {
   const { showUpdateModal, isForceUpdate, checkResult, dismiss } = useVersionCheck();
   
   // Real-time device session monitoring
+  // Real-time device session monitoring + 30s heartbeat
   useDeviceRealtime(user?.id);
+  useSessionHeartbeat(user?.id);
 
   // Logout screen lifecycle
   useEffect(() => {
