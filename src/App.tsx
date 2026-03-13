@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useCallback, useState, useRef } from 'react';
+import React, { lazy, Suspense, useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation, Routes, Route } from 'react-router-dom';
 import { App as CapacitorApp } from '@capacitor/app';
 import { useApp } from '@/store/AppContext';
@@ -14,7 +14,6 @@ import { useDeviceRealtime } from '@/hooks/useDeviceRealtime';
 import OfflineIndicator from '@/components/ui/OfflineIndicator';
 import UpdateModal from '@/components/ui/UpdateModal';
 import LogoutScreen from '@/components/ui/LogoutScreen';
-import DeviceRevokedScreen from '@/components/ui/DeviceRevokedScreen';
 import { usePageTheme } from '@/hooks/usePageTheme';
 import { useStatusBar } from '@/platform/hooks/useStatusBar';
 import SecurityGate from '@/components/SecurityGate';
