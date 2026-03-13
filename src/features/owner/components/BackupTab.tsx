@@ -457,7 +457,8 @@ const BackupTab: React.FC = () => {
     setProgress(t('backup.creatingPdf'));
 
     try {
-      const { blob, filename } = await generateBackupPdf(backupData, getPdfTranslations(), lang, setProgress);
+      const blob = await generateBackupPdf(backupData, getPdfTranslations(), lang, setProgress);
+      const filename = `backup_${organization?.name || 'org'}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
       if (Capacitor.isNativePlatform()) {
         // Convert blob to base64 for Capacitor Filesystem
