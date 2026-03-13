@@ -57,6 +57,11 @@ const GuestDashboardShell: React.FC = () => {
         <Suspense fallback={<Fallback />}><Dashboard /></Suspense>
       </div>
 
+      {/* Read-only notice */}
+      <div className="fixed bottom-[4.5rem] inset-x-0 z-[9989] flex justify-center pointer-events-none">
+        <span className="text-[10px] font-bold text-muted-foreground/50">{t('guest.readOnlyNote')}</span>
+      </div>
+
       {/* Exit button */}
       <button onClick={exitGuestMode} data-guest-allow
         className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9995] flex items-center gap-2 px-6 py-3 bg-destructive text-destructive-foreground rounded-full font-black text-sm shadow-2xl transition-transform active:scale-95 hover:brightness-110 safe-area-bottom">
