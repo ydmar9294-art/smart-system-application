@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { authMutex } from '@/lib/concurrency';
 import { getCachedAuth, clearAuthCache } from '@/lib/authCache';
 import { clearEncryptionKey } from '@/lib/indexedDbEncryption';
-import { clearDeviceState } from '@/lib/deviceService';
+import { clearDeviceState, notifyLogout } from '@/lib/deviceService';
 import { clearAllCachedData } from '@/lib/offlineCache';
 import { clearDistributorOfflineData } from '@/features/distributor/services/distributorOfflineService';
 import { logger } from '@/lib/logger';
