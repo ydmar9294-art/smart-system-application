@@ -44,28 +44,31 @@ interface AuthStatusResponse {
 // Inflight deduplication
 let inflightAuthStatus: Promise<AuthStatusResponse> | null = null;
 
-/** Timeout-wrapped fetch with a single retry */
+/** Timeout-wrapped fetch with a single retry (both attempts timeout-protected) */
 const callAuthStatus = async (accessToken: string): Promise<AuthStatusResponse> => {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 6000);
-
-  try {
-    const { data, error } = await supabase.functions.invoke('auth-status', {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-    clearTimeout(timeoutId);
-    if (error) throw error;
-    return data as AuthStatusResponse;
-  } catch (err: any) {
-    clearTimeout(timeoutId);
-    // Single retry on network/timeout errors
-    if (err?.name === 'AbortError' || err?.message?.includes('fetch')) {
-      logger.warn('Retrying auth-status after failure...', 'AuthOps');
+  const invokeWithTimeout = async (): Promise<AuthStatusResponse> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    try {
       const { data, error } = await supabase.functions.invoke('auth-status', {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
+      clearTimeout(timeoutId);
       if (error) throw error;
       return data as AuthStatusResponse;
+    } catch (err) {
+      clearTimeout(timeoutId);
+      throw err;
+    }
+  };
+
+  try {
+    return await invokeWithTimeout();
+  } catch (err: any) {
+    // Single retry on network/timeout errors (also timeout-protected)
+    if (err?.name === 'AbortError' || err?.message?.includes('fetch')) {
+      logger.warn('Retrying auth-status after failure...', 'AuthOps');
+      return await invokeWithTimeout();
     }
     throw err;
   }
