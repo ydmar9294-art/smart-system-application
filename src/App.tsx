@@ -129,14 +129,21 @@ const MainContent: React.FC = () => {
     };
   }, []);
 
-  // Device revoked on another device: keep single-device policy, but logout مباشرة بدون شاشة قديمة
+  // Device revoked: show 3-second countdown screen then auto-logout
   useEffect(() => {
-    const handleDeviceRevoked = async () => {
-      await logout();
+    const handleDeviceRevoked = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setRevokedMessage(detail?.message);
+      setDeviceRevoked(true);
     };
 
     window.addEventListener('device-revoked', handleDeviceRevoked);
     return () => window.removeEventListener('device-revoked', handleDeviceRevoked);
+  }, []);
+
+  const handleRevokedComplete = useCallback(async () => {
+    setDeviceRevoked(false);
+    await logout();
   }, [logout]);
 
   // Listen for new-device warning (shown on the NEW device after login replaces old one)
