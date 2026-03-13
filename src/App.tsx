@@ -101,8 +101,6 @@ const MainContent: React.FC = () => {
   const { user, role, isLoading, refreshAuth, needsActivation, logout } = useApp();
   const { isGuest } = useGuest();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [deviceRevoked, setDeviceRevoked] = useState(false);
-  const [revokedDeviceName, setRevokedDeviceName] = useState<string | undefined>();
   const [replacedWarning, setReplacedWarning] = useState<string | null>(null);
   
   // Initialize theme early so loading/auth screens also get dark mode
@@ -128,16 +126,15 @@ const MainContent: React.FC = () => {
     };
   }, []);
 
-  // Listen for device-revoked events — show WhatsApp-style full-screen modal
+  // Device revoked on another device: keep single-device policy, but logout مباشرة بدون شاشة قديمة
   useEffect(() => {
-    const handleDeviceRevoked = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      setRevokedDeviceName(detail?.deviceName);
-      setDeviceRevoked(true);
+    const handleDeviceRevoked = async () => {
+      await logout();
     };
+
     window.addEventListener('device-revoked', handleDeviceRevoked);
     return () => window.removeEventListener('device-revoked', handleDeviceRevoked);
-  }, []);
+  }, [logout]);
 
   // Listen for new-device warning (shown on the NEW device after login replaces old one)
   const warningShownRef = useRef(false);
@@ -154,22 +151,6 @@ const MainContent: React.FC = () => {
     window.addEventListener('device-replaced-warning', handleDeviceReplaced);
     return () => window.removeEventListener('device-replaced-warning', handleDeviceReplaced);
   }, []);
-
-  // Auto force-logout when device is revoked (no user action needed)
-  useEffect(() => {
-    if (!deviceRevoked) return;
-    const timer = setTimeout(async () => {
-      await logout();
-      setDeviceRevoked(false);
-    }, 3000); // Show screen for 3s then force logout
-    return () => clearTimeout(timer);
-  }, [deviceRevoked, logout]);
-
-  // Manual acknowledge as fallback
-  const handleRevokedAcknowledge = useCallback(async () => {
-    setDeviceRevoked(false);
-    await logout();
-  }, [logout]);
 
   // Global unhandled rejection safety net
   useEffect(() => {
