@@ -1,60 +1,108 @@
 
 
-# Fix: Google OAuth لا يعود للتطبيق بعد تسجيل الدخول
+# خطة تكامل Smart System مع برنامج الأمين للمحاسبة
 
-## المشكلة
-بعد إتمام تسجيل الدخول عبر Google في Chrome Custom Tab، صفحة الجسر (bridge page) تحاول فتح التطبيق عبر `window.location.href = 'smartsystem://...'` لكن Chrome على Android يحظر هذا النوع من الروابط المخصصة. النتيجة: المستخدم يبقى في المتصفح ولا يعود للتطبيق.
-
-## الحل (تغييران رئيسيان)
-
-### 1. تحديث صفحة الجسر لاستخدام Android Intent URL
-**الملف:** `public/auth/callback/index.html`
-
-بدلا من:
-```
-window.location.href = 'smartsystem://oauth-callback#...'
-```
-
-نستخدم صيغة Intent URL التي يدعمها Chrome على Android:
-```
-intent://oauth-callback#Intent;scheme=smartsystem;package=app.lovable.bac2f6ed2db54e828d262c37cac1581f;end
-```
-
-هذه الصيغة تجبر Chrome على فتح التطبيق المثبت مباشرة. كذلك نبقي الرابط المخصص كـ fallback للمتصفحات الأخرى.
-
-### 2. إضافة مستمع إغلاق المتصفح في capacitorOAuth
-**الملف:** `src/lib/capacitorOAuth.ts`
-
-نضيف `Browser.addListener('browserFinished')` للتعامل مع الحالة التي يغلق فيها المستخدم المتصفح يدويا - نتحقق من الجلسة عند الإغلاق.
-
-### 3. إصلاح مستمع Auth State في AppContext
-**الملف:** `src/store/AppContext.tsx`
-
-الشرط الحالي يمنع معالجة `SIGNED_IN` أثناء التهيئة:
-```typescript
-if (session?.user && event === 'SIGNED_IN' && !initializingAuth.current)
-```
-
-نضيف معالجة حدث `TOKEN_REFRESHED` أيضا، ونزيل شرط `!initializingAuth.current` لحدث `SIGNED_IN` القادم من deep link callback.
-
----
-
-## التفاصيل التقنية
-
-### تدفق OAuth المصحح:
+## ملخص المعمارية
 
 ```text
-1. التطبيق يفتح Browser.open() --> Chrome Custom Tab
-2. المستخدم يسجل دخول Google
-3. Google يعيد التوجيه لصفحة الجسر (/auth/callback)
-4. صفحة الجسر تستخدم Intent URL لفتح التطبيق
-5. Android يفتح التطبيق مباشرة + يغلق Chrome Tab
-6. Deep link listener يستقبل التوكنات ويضبط الجلسة
-7. onAuthStateChange يكشف SIGNED_IN ويحمل الملف الشخصي
+┌─────────────────────┐     ┌──────────────────────┐     ┌─────────────────┐
+│   Smart System      │     │   Desktop Bridge     │     │  برنامج الأمين  │
+│   (Web/Capacitor)   │     │   (Windows App)      │     │  (Windows)      │
+│                     │     │                      │     │                 │
+│ توليد القيود ──────────→ تنزيل Excel/CSV ──────────→ Import رسمي    │
+│ من الفواتير         │     │ فحص + تحقق           │     │ Entry Vouchers  │
+│ المرتجعات           │     │ Retry عند الفشل      │     │                 │
+│ التحصيلات           │     │ سجل الاستيراد        │     │                 │
+│ المخزون             │     │                      │     │                 │
+└─────────────────────┘     └──────────────────────┘     └─────────────────┘
+        ↕ Supabase                    ↕ File System
+┌─────────────────────┐     ┌──────────────────────┐
+│ journal_entries      │     │ مجلد محلي مراقب     │
+│ journal_entry_items  │     │ (File Watcher)       │
+│ al_ameen_exports     │     │                      │
+└─────────────────────┘     └──────────────────────┘
 ```
 
-### الملفات المتأثرة:
-- `public/auth/callback/index.html` - استخدام Intent URL بدل custom scheme
-- `src/lib/capacitorOAuth.ts` - إضافة browserFinished listener
-- `src/store/AppContext.tsx` - إصلاح شرط SIGNED_IN listener
+## القيود التقنية المهمة
+
+- **Lovable.dev = Web/Capacitor فقط** — لا يمكنه بناء Desktop Bridge مباشرة
+- برنامج الأمين يعمل على Windows فقط ويستخدم قاعدة بيانات محلية (Firebird/SQL Server)
+- التكامل الآمن يتم عبر **ملفات Excel/CSV** بصيغة Import الرسمية للأمين — بدون تعديل مباشر على قاعدة بياناته
+
+## ما يمكن بناؤه داخل Lovable (Smart System)
+
+### المرحلة 1: نظام القيود المحاسبية (Journal Entries)
+
+**جداول جديدة في Supabase:**
+
+- `journal_entries`: id, organization_id, entry_number, entry_date, description, source_type (sale/return/collection/inventory), source_id, total_debit, total_credit, status (draft/confirmed/exported), exported_at, created_at
+- `journal_entry_lines`: id, entry_id, account_code, account_name, debit, credit, description, cost_center
+- `al_ameen_exports`: id, organization_id, file_name, file_url, entries_count, status (pending/downloaded/imported/failed), error_message, created_at, downloaded_at, imported_at
+- `al_ameen_account_map`: id, organization_id, smart_account_type (sales_revenue/cost_of_goods/customer_receivable/cash/inventory/returns), al_ameen_code, al_ameen_name — لربط حسابات Smart System بأكواد الأمين
+
+**منطق توليد القيود التلقائي:**
+
+| العملية | مدين | دائن |
+|---------|------|------|
+| بيع نقدي | الصندوق | إيراد المبيعات |
+| بيع آجل | ذمم العملاء | إيراد المبيعات |
+| تحصيل | الصندوق | ذمم العملاء |
+| مرتجع مبيعات | مردودات المبيعات | ذمم العملاء / الصندوق |
+| مرتجع مشتريات | المورد | مردودات المشتريات |
+| تسليم مخزون لمندوب | مخزون المندوب | المستودع الرئيسي |
+
+- يتم توليد القيود تلقائياً عند إنشاء فاتورة/تحصيل/مرتجع عبر Database Triggers أو Edge Function
+- القيد لا يُنشر حتى يؤكده المحاسب (status = confirmed)
+
+### المرحلة 2: تصدير بصيغة الأمين
+
+**Edge Function `export-journal`:**
+- يجمع القيود المؤكدة غير المصدّرة
+- يولد ملف Excel (xlsx) بالأعمدة المطلوبة للأمين:
+  - رقم القيد، التاريخ، رقم الحساب، اسم الحساب، مدين، دائن، البيان، مركز التكلفة
+- يرفع الملف إلى Supabase Storage
+- يسجل في `al_ameen_exports`
+
+**واجهة التصدير (تبويب جديد في لوحة المحاسب):**
+- عرض القيود الجاهزة للتصدير
+- زر "تصدير إلى الأمين" → يولد الملف ويتيح تنزيله
+- سجل التصديرات السابقة مع حالة كل عملية
+- إعدادات ربط الحسابات (Account Mapping)
+
+### المرحلة 3: دعم Offline
+
+- القيود تُخزن محلياً عبر `useOfflineQuery` الموجود
+- عند عودة الاتصال تُزامن تلقائياً عبر `useOfflineMutationQueue`
+- ملفات Excel المولّدة تُحفظ محلياً على Capacitor عبر `@capacitor/filesystem`
+
+## ما يُبنى خارج Lovable (Desktop Bridge)
+
+> هذا الجزء يحتاج تطوير منفصل — خارج نطاق Lovable
+
+**تطبيق Windows صغير (Electron أو .NET):**
+1. File Watcher يراقب مجلد محدد للملفات الجديدة
+2. يفحص الملف: تطابق الأعمدة، صحة أكواد الحسابات، توازن المدين/الدائن
+3. يستدعي وظيفة Import في الأمين (عبر COM Automation أو API إن وُجد)
+4. يُبلغ Smart System بالنتيجة عبر Edge Function callback
+5. Retry تلقائي عند الفشل (3 محاولات بفاصل تصاعدي)
+
+## ملخص التنفيذ داخل Lovable
+
+| العنصر | النوع | التفاصيل |
+|--------|-------|---------|
+| `journal_entries` + `journal_entry_lines` | Migration | جداول القيود مع RLS |
+| `al_ameen_exports` + `al_ameen_account_map` | Migration | سجل التصدير وربط الحسابات |
+| Database Triggers | Migration | توليد قيود تلقائي عند INSERT في sales/collections/returns |
+| `export-journal` | Edge Function | توليد Excel وحفظه في Storage |
+| تبويب "القيود والأمين" | React Component | في AccountantDashboard + OwnerDashboard |
+| إعدادات ربط الحسابات | React Component | ضمن تبويب المحاسب |
+
+## ترتيب التنفيذ
+
+1. إنشاء جداول القيود وربط الحسابات
+2. بناء منطق توليد القيود التلقائي (triggers)
+3. واجهة عرض وتأكيد القيود
+4. Edge Function لتوليد Excel
+5. واجهة التصدير وسجل العمليات
+6. دعم Offline للقيود
 
