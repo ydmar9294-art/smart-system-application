@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.expire-licenses]
 verify_jwt = false
+
+[functions.classify-customers]
+verify_jwt = false
+
+[functions.check-alerts]
+verify_jwt = false
