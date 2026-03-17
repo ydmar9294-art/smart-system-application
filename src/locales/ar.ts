@@ -1384,6 +1384,55 @@ const ar = {
     message: 'الصفحة غير موجودة',
     backHome: 'العودة للرئيسية',
   },
+
+  // ==========================================
+  // VISITS & CLASSIFICATION
+  // ==========================================
+  visits: {
+    todayPlan: 'خطة زيارات اليوم',
+    pending: 'مخطط',
+    completed: 'مكتمل',
+    skipped: 'تم تخطيه',
+    noVisitsToday: 'لا توجد زيارات مخططة لليوم',
+    markDone: 'تم الزيارة',
+    skip: 'تخطي',
+    skipReason: 'سبب التخطي (اختياري)',
+    status_planned: 'مخطط',
+    status_completed: 'مكتمل',
+    status_skipped: 'تم تخطيه',
+    status_missed: 'فائت',
+    tab: 'الزيارات',
+  },
+  classification: {
+    runClassification: 'تصنيف العملاء وتوليد خطة الزيارات',
+    classified: 'تم تصنيف العملاء',
+    visitsCreated: 'زيارات تم إنشاؤها',
+    classA: 'فئة A — VIP',
+    classB: 'فئة B — متوسط',
+    classC: 'فئة C — عادي',
+    tab: 'التصنيف',
+  },
+  routes: {
+    tab: 'المسارات',
+    filters: 'تصفية',
+    allDistributors: 'جميع المندوبين',
+    totalPoints: 'إجمالي النقاط',
+    customerVisits: 'زيارات عملاء',
+    noLocations: 'لا توجد مواقع مسجلة',
+    customerVisit: 'زيارة عميل',
+    checkIn: 'تسجيل حضور',
+    routePoint: 'نقطة مسار',
+    checkInButton: 'تسجيل زيارة',
+    capturing: 'جاري التقاط الموقع...',
+  },
+  print: {
+    chooseFormat: 'اختر تنسيق الطباعة',
+    a4Format: 'طباعة A4',
+    a4Description: 'طباعة كاملة الصفحة للأرشفة',
+    posFormat: 'طباعة POS',
+    posDescription: 'طباعة حرارية (58/80mm)',
+    posUnavailable: 'يحتاج ربط طابعة Bluetooth',
+  },
 };
 
 export default ar;
