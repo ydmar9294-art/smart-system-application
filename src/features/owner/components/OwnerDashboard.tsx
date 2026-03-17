@@ -27,8 +27,10 @@ import OrgDeletionRequest from './OrgDeletionRequest';
 import SubscriptionTab from './SubscriptionTab';
 import { PerformanceTab } from './PerformanceTab';
 import BackupTab from './BackupTab';
+import CustomerClassificationTab from './CustomerClassificationTab';
+import RouteTrackingTab from './RouteTrackingTab';
 
-type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup';
+type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup' | 'classification' | 'routes';
 
 const OwnerDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
