@@ -24,7 +24,9 @@ import {
   UserX,
   UserCheck,
   Loader2,
-  Trash2
+  Trash2,
+  Crown,
+  Navigation
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
