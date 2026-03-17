@@ -32,8 +32,10 @@ import { UserRole, EmployeeType } from '@/types';
 import AIAssistant from '@/features/ai/components/AIAssistant';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
 import DistributorWarehouseKPIs from '@/features/analytics/components/DistributorWarehouseKPIs';
+import CustomerClassificationTab from '@/features/owner/components/CustomerClassificationTab';
+import RouteTrackingTab from '@/features/owner/components/RouteTrackingTab';
 
-type SalesManagerTabType = 'dashboard' | 'team' | 'sales' | 'kpi';
+type SalesManagerTabType = 'dashboard' | 'team' | 'sales' | 'kpi' | 'classification' | 'routes';
 
 const SalesManagerDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
