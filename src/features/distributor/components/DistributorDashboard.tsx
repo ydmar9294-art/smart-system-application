@@ -36,11 +36,13 @@ import CustomerDebtsTab from './CustomerDebtsTab';
 import DistributorInventoryTab from './DistributorInventoryTab';
 import InvoiceHistoryTab from './InvoiceHistoryTab';
 import OfflineSyncBanner from './OfflineSyncBanner';
+import VisitPlanTab from './VisitPlanTab';
 import { useDistributorOffline } from '../hooks/useDistributorOffline';
+import { useGpsTracker } from '@/platform/hooks/useGpsTracker';
 import { Customer } from '@/types';
 import { CURRENCY } from '@/constants';
 
-type DistributorTabType = 'inventory' | 'new-sale' | 'returns' | 'collections' | 'debts' | 'history';
+type DistributorTabType = 'inventory' | 'new-sale' | 'returns' | 'collections' | 'debts' | 'history' | 'visits';
 
 const DistributorDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
