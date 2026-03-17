@@ -388,6 +388,14 @@ const SalesManagerDashboard: React.FC = () => {
               </div>
             </div>
           )}
+
+          {activeTab === 'classification' && (
+            <CustomerClassificationTab />
+          )}
+
+          {activeTab === 'routes' && (
+            <RouteTrackingTab />
+          )}
           </AnimatedTabContent>
         </div>
 
