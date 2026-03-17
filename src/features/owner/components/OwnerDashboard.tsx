@@ -9,7 +9,7 @@ import {
   Receipt, Wallet, UserPlus, X, Copy, CheckCircle2, Clock,
   ShieldCheck, MessageCircle, AlertTriangle, Phone, MapPin,
   CircleDollarSign, Shield, UserX, UserCheck, Loader2,
-  BarChart3, CreditCard, Banknote, Database
+  BarChart3, CreditCard, Banknote, Database, Crown, Navigation
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { useAuth } from '@/store/AuthContext';
@@ -27,8 +27,10 @@ import OrgDeletionRequest from './OrgDeletionRequest';
 import SubscriptionTab from './SubscriptionTab';
 import { PerformanceTab } from './PerformanceTab';
 import BackupTab from './BackupTab';
+import CustomerClassificationTab from './CustomerClassificationTab';
+import RouteTrackingTab from './RouteTrackingTab';
 
-type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup';
+type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup' | 'classification' | 'routes';
 
 const OwnerDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -133,6 +135,8 @@ const OwnerDashboard: React.FC = () => {
   ];
 
   const secondaryTabs: { id: OwnerTabType; label: string; icon: React.ReactNode }[] = [
+    { id: 'classification', label: t('classification.tab'), icon: <Crown className="w-4 h-4" /> },
+    { id: 'routes', label: t('routes.tab'), icon: <Navigation className="w-4 h-4" /> },
     { id: 'backup', label: t('owner.tabs.backup'), icon: <Database className="w-4 h-4" /> },
     { id: 'subscription', label: t('owner.tabs.subscription'), icon: <Shield className="w-4 h-4" /> },
     { id: 'legal', label: t('owner.tabs.legal'), icon: <ShieldCheck className="w-4 h-4" /> },
@@ -155,6 +159,8 @@ const OwnerDashboard: React.FC = () => {
       case 'subscription': return <SubscriptionTab />;
       case 'legal': return <><LegalInfoTab /><OrgDeletionRequest /></>;
       case 'backup': return <BackupTab />;
+      case 'classification': return <CustomerClassificationTab />;
+      case 'routes': return <RouteTrackingTab />;
       default: return null;
     }
   };

@@ -168,6 +168,7 @@ export const NotificationCenter: React.FC = () => {
       case 'low_stock': case 'warning': return <AlertTriangle className="h-4 w-4 text-amber-500" />;
       case 'due_invoice': return <Receipt className="h-4 w-4 text-blue-500" />;
       case 'success': return <Check className="h-4 w-4 text-emerald-500" />;
+      case 'missed_visit': return <AlertTriangle className="h-4 w-4 text-red-500" />;
       default: return <Bell className="h-4 w-4 text-muted-foreground" />;
     }
   };

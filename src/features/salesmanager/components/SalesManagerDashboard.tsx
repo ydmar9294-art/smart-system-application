@@ -24,7 +24,9 @@ import {
   UserX,
   UserCheck,
   Loader2,
-  Trash2
+  Trash2,
+  Crown,
+  Navigation
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
@@ -32,8 +34,10 @@ import { UserRole, EmployeeType } from '@/types';
 import AIAssistant from '@/features/ai/components/AIAssistant';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
 import DistributorWarehouseKPIs from '@/features/analytics/components/DistributorWarehouseKPIs';
+import CustomerClassificationTab from '@/features/owner/components/CustomerClassificationTab';
+import RouteTrackingTab from '@/features/owner/components/RouteTrackingTab';
 
-type SalesManagerTabType = 'dashboard' | 'team' | 'sales' | 'kpi';
+type SalesManagerTabType = 'dashboard' | 'team' | 'sales' | 'kpi' | 'classification' | 'routes';
 
 const SalesManagerDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -186,6 +190,26 @@ const SalesManagerDashboard: React.FC = () => {
                 }`}>
                 <div className={`${activeTab === tab.id ? 'scale-110' : ''} transition-transform duration-300`}>{tab.icon}</div>
                 <span className="text-[10px] font-bold">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Secondary Tabs */}
+        <div className="px-4 pb-4">
+          <div className="flex gap-2" data-guest-nav>
+            {[
+              { id: 'classification' as SalesManagerTabType, label: t('classification.tab'), icon: <Crown className="w-4 h-4" /> },
+              { id: 'routes' as SalesManagerTabType, label: t('routes.tab'), icon: <Navigation className="w-4 h-4" /> },
+            ].map((tab) => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-warning text-white shadow-md'
+                    : 'bg-card text-muted-foreground hover:bg-muted shadow-sm'
+                }`}>
+                {tab.icon}
+                {tab.label}
               </button>
             ))}
           </div>
@@ -363,6 +387,14 @@ const SalesManagerDashboard: React.FC = () => {
                 </div>
               </div>
             </div>
+          )}
+
+          {activeTab === 'classification' && (
+            <CustomerClassificationTab />
+          )}
+
+          {activeTab === 'routes' && (
+            <RouteTrackingTab />
           )}
           </AnimatedTabContent>
         </div>
