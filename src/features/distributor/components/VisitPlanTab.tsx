@@ -49,7 +49,23 @@ const VisitPlanTab: React.FC = () => {
       const { error } = await supabase.from('visit_plans').update(update).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['visit-plans'] }),
+    onMutate: async ({ id, status, notes }) => {
+      await queryClient.cancelQueries({ queryKey: ['visit-plans', user?.id, today] });
+      const prev = queryClient.getQueryData<VisitPlan[]>(['visit-plans', user?.id, today]);
+      queryClient.setQueryData<VisitPlan[]>(['visit-plans', user?.id, today], (old) =>
+        (old || []).map(v => v.id === id ? {
+          ...v,
+          status,
+          completed_at: status === 'completed' ? new Date().toISOString() : v.completed_at,
+          notes: notes !== undefined ? (notes || v.notes) : v.notes,
+        } : v)
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['visit-plans', user?.id, today], ctx.prev);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['visit-plans'] }),
   });
 
   const planned = visits.filter(v => v.status === 'planned');

@@ -93,21 +93,29 @@ Deno.serve(async (req) => {
     const aThreshold = Math.max(1, Math.ceil(totalCount * 0.2));
     const bThreshold = Math.max(aThreshold + 1, Math.ceil(totalCount * 0.5));
 
-    const updates: { id: string; classification: string }[] = [];
+    const classMap: Record<string, string[]> = { A: [], B: [], C: [] };
     for (let i = 0; i < sorted.length; i++) {
       let cls = 'C';
       if (i < aThreshold) cls = 'A';
       else if (i < bThreshold) cls = 'B';
-      updates.push({ id: sorted[i].id, classification: cls });
+      classMap[cls].push(sorted[i].id);
     }
 
-    // 2. Update classifications in batch
-    for (const u of updates) {
-      await supabase
-        .from('customers')
-        .update({ classification: u.classification })
-        .eq('id', u.id);
+    // 2. Batch UPDATE classifications (3 queries instead of N)
+    for (const [cls, ids] of Object.entries(classMap)) {
+      if (ids.length > 0) {
+        await supabase
+          .from('customers')
+          .update({ classification: cls })
+          .in('id', ids);
+      }
     }
+
+    const updates = sorted.map((s, i) => ({
+      id: s.id,
+      name: s.name,
+      classification: i < aThreshold ? 'A' : i < bThreshold ? 'B' : 'C',
+    }));
 
     // 3. Generate visit plans if requested
     let visitsCreated = 0;
@@ -133,23 +141,15 @@ Deno.serve(async (req) => {
         // Frequency map
         const freqMap: Record<string, number> = { A: 3, B: 2, C: 1 };
 
-        // Distribute customers evenly among distributors
-        const classifiedCustomers = updates.map(u => ({
-          ...u,
-          name: sorted.find(s => s.id === u.id)?.name || '',
-        }));
-
         const plans: any[] = [];
         const weekDays = getWeekDays(weekStartDate);
 
         for (let dIdx = 0; dIdx < distributors.length; dIdx++) {
           const distId = distributors[dIdx].id;
-          // Each distributor gets a roughly equal share of customers
-          const myCustomers = classifiedCustomers.filter((_, i) => i % distributors.length === dIdx);
+          const myCustomers = updates.filter((_, i) => i % distributors.length === dIdx);
 
           for (const customer of myCustomers) {
             const visits = freqMap[customer.classification] || 1;
-            // Spread visits across the week
             for (let v = 0; v < visits && v < weekDays.length; v++) {
               const dayIndex = Math.floor((v * weekDays.length) / visits);
               plans.push({
@@ -165,7 +165,6 @@ Deno.serve(async (req) => {
         }
 
         if (plans.length > 0) {
-          // Insert in batches of 100
           for (let i = 0; i < plans.length; i += 100) {
             const batch = plans.slice(i, i + 100);
             const { error: insertErr } = await supabase.from('visit_plans').insert(batch);
@@ -177,9 +176,9 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({
       classified: updates.length,
-      a_count: updates.filter(u => u.classification === 'A').length,
-      b_count: updates.filter(u => u.classification === 'B').length,
-      c_count: updates.filter(u => u.classification === 'C').length,
+      a_count: classMap.A.length,
+      b_count: classMap.B.length,
+      c_count: classMap.C.length,
       visits_created: visitsCreated,
     }), { headers });
 
@@ -199,7 +198,7 @@ function getNextMonday(): string {
 function getWeekDays(mondayStr: string): string[] {
   const monday = new Date(mondayStr);
   const days: string[] = [];
-  for (let i = 0; i < 6; i++) { // Sat-Thu (6 working days)
+  for (let i = 0; i < 6; i++) {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
     days.push(d.toISOString().split('T')[0]);
