@@ -8,6 +8,7 @@
  * 4. Low distributor inventory (quantity < 5)
  * 
  * Deduplication: won't create same alert type for same entity within 24h.
+ * Optimized: batch dedup check instead of N+1 queries.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -44,17 +45,31 @@ Deno.serve(async (req) => {
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
     let totalAlerts = 0;
 
-    // Helper: check if notification already sent recently
-    async function wasRecentlySent(userId: string, type: string, entityId: string): Promise<boolean> {
+    /**
+     * Batch dedup: fetch all recent notifications for a set of users in one query,
+     * then check in-memory instead of N+1 queries.
+     */
+    async function getRecentNotifications(userIds: string[]): Promise<Set<string>> {
+      if (userIds.length === 0) return new Set();
       const { data } = await supabase
         .from('user_notifications')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('type', type)
-        .gte('created_at', twentyFourHoursAgo)
-        .like('description', `%${entityId.substring(0, 8)}%`)
-        .limit(1);
-      return (data?.length || 0) > 0;
+        .select('user_id, type, description')
+        .in('user_id', userIds)
+        .gte('created_at', twentyFourHoursAgo);
+      
+      const keys = new Set<string>();
+      for (const n of (data || [])) {
+        // Extract entity ID snippet from description (last 8 chars in brackets)
+        const match = n.description?.match(/\[([a-f0-9]{8})\]/);
+        if (match) {
+          keys.add(`${n.user_id}:${n.type}:${match[1]}`);
+        }
+      }
+      return keys;
+    }
+
+    function wasSent(sentKeys: Set<string>, userId: string, type: string, entityId: string): boolean {
+      return sentKeys.has(`${userId}:${type}:${entityId.substring(0, 8)}`);
     }
 
     // Helper: send notification
@@ -93,6 +108,10 @@ Deno.serve(async (req) => {
       const salesManagers = profiles.filter(p => p.employee_type === 'SALES_MANAGER');
       const fieldAgents = profiles.filter(p => p.employee_type === 'FIELD_AGENT');
 
+      // Batch fetch recent notifications for all org members (ONE query)
+      const allUserIds = profiles.map(p => p.id);
+      const sentKeys = await getRecentNotifications(allUserIds);
+
       // ── 1. Low Stock Alerts ──
       const { data: lowStockProducts } = await supabase
         .from('products')
@@ -110,8 +129,9 @@ Deno.serve(async (req) => {
           const type = isOut ? 'error' : 'warning';
 
           for (const recipient of [...owners, ...warehouseKeepers]) {
-            if (!(await wasRecentlySent(recipient.id, type, p.id))) {
+            if (!wasSent(sentKeys, recipient.id, type, p.id)) {
               await sendNotification(recipient.id, title, desc, type);
+              sentKeys.add(`${recipient.id}:${type}:${p.id.substring(0, 8)}`);
             }
           }
         }
@@ -131,8 +151,9 @@ Deno.serve(async (req) => {
       for (const sale of (dueSales || [])) {
         const desc = `${sale.customer_name} — ${Number(sale.remaining).toLocaleString()} ل.س متأخرة [${sale.id.substring(0, 8)}]`;
         for (const recipient of [...owners, ...accountants]) {
-          if (!(await wasRecentlySent(recipient.id, 'due_invoice', sale.id))) {
+          if (!wasSent(sentKeys, recipient.id, 'due_invoice', sale.id)) {
             await sendNotification(recipient.id, 'تأخر تحصيل', desc, 'due_invoice');
+            sentKeys.add(`${recipient.id}:due_invoice:${sale.id.substring(0, 8)}`);
           }
         }
       }
@@ -146,17 +167,21 @@ Deno.serve(async (req) => {
         .eq('status', 'planned')
         .lt('planned_date', today);
 
-      for (const visit of (missedVisits || [])) {
-        // Update status to missed
+      // Batch update missed visits
+      if (missedVisits && missedVisits.length > 0) {
+        const missedIds = missedVisits.map(v => v.id);
         await supabase
           .from('visit_plans')
           .update({ status: 'missed' })
-          .eq('id', visit.id);
+          .in('id', missedIds);
 
-        const desc = `${visit.customer_name} — ${visit.planned_date} [${visit.id.substring(0, 8)}]`;
-        for (const recipient of salesManagers) {
-          if (!(await wasRecentlySent(recipient.id, 'missed_visit', visit.id))) {
-            await sendNotification(recipient.id, 'زيارة مفقودة', desc, 'missed_visit');
+        for (const visit of missedVisits) {
+          const desc = `${visit.customer_name} — ${visit.planned_date} [${visit.id.substring(0, 8)}]`;
+          for (const recipient of salesManagers) {
+            if (!wasSent(sentKeys, recipient.id, 'missed_visit', visit.id)) {
+              await sendNotification(recipient.id, 'زيارة مفقودة', desc, 'missed_visit');
+              sentKeys.add(`${recipient.id}:missed_visit:${visit.id.substring(0, 8)}`);
+            }
           }
         }
       }
@@ -172,8 +197,9 @@ Deno.serve(async (req) => {
         if (item.quantity > 0) {
           const desc = `${item.product_name} — متبقي ${item.quantity} فقط [${item.id.substring(0, 8)}]`;
           const agent = fieldAgents.find(f => f.id === item.distributor_id);
-          if (agent && !(await wasRecentlySent(agent.id, 'warning', item.id))) {
+          if (agent && !wasSent(sentKeys, agent.id, 'warning', item.id)) {
             await sendNotification(agent.id, 'مخزون مندوب منخفض', desc, 'warning');
+            sentKeys.add(`${agent.id}:warning:${item.id.substring(0, 8)}`);
           }
         }
       }
