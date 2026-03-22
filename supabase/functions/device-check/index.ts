@@ -164,6 +164,14 @@ async function handleRegister(
   appVersion: string,
   ipAddress: string
 ) {
+  // 0. Fetch user's organization_id for audit logs
+  const { data: userProfile } = await serviceClient
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', userId)
+    .maybeSingle()
+  const orgId = userProfile?.organization_id || null
+
   // 1. Find all currently active devices for this user (excluding this device)
   const { data: activeDevices } = await serviceClient
     .from('devices')
@@ -239,10 +247,11 @@ async function handleRegister(
     replaced_count: replacedDevices.length,
   })
 
-  // 5. Audit log if device was replaced
+  // 5. Audit log with organization_id
   if (hadOtherDevice) {
     await serviceClient.from('audit_logs').insert({
       user_id: userId,
+      organization_id: orgId,
       action: 'DEVICE_REPLACED',
       entity_type: 'device',
       entity_id: null,
