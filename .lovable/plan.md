@@ -1,23 +1,59 @@
 
 
-# Fix Owner Dashboard — Secondary Tabs Overflow on Mobile
+# خطة إصلاح المشاكل من تقرير التحليل الشامل
 
-## Problem
-The secondary tabs row has 5 tabs (`flex-1` each) crammed into a single row. On mobile screens (especially Arabic with longer labels like "النسخ الاحتياطي" and "الاشتراك"), they overflow, text gets truncated, and buttons become too small to tap.
+## المشاكل المطلوب حلها (مرتبة حسب الأولوية)
 
-## Solution
-Make the secondary tabs row horizontally scrollable instead of forcing all 5 into one row.
+### 1. إضافة UNIQUE constraint على `devices(user_id, device_id)` 🔴
+**المشكلة**: الـ upsert في `device-check` يعتمد على `onConflict: 'user_id,device_id'` بدون constraint فعلي في الـ schema — يمكن إنشاء صفوف مكررة عند race condition.
 
-### Changes
+**الحل**: Migration تضيف `UNIQUE(user_id, device_id)` على جدول `devices`.
 
-**File: `src/features/owner/components/OwnerDashboard.tsx`** (lines 220-235)
+---
 
-Replace the secondary tabs container:
-- Change from `flex gap-2` (forces all in one row) to a horizontal scroll container with `overflow-x-auto` and `flex-nowrap`
-- Remove `flex-1` from individual buttons so they size naturally based on content
-- Add `min-w-fit` / `whitespace-nowrap` to prevent text wrapping
-- Add `scrollbar-hide` styling and `pb-1` for touch scrolling comfort
-- Keep the same visual style (rounded pills, active highlight)
+### 2. زيادة Heartbeat interval من 30s إلى 90s 🔴
+**المشكلة**: 30s لكل مستخدم = 833 req/s عند 25K مستخدم. حمل غير مقبول.
 
-This is a single-file, targeted fix. No database or logic changes needed.
+**الحل**: تغيير `HEARTBEAT_INTERVAL_MS` في `useSessionHeartbeat.ts` من `30_000` إلى `90_000`.
+
+---
+
+### 3. إصلاح `useOfflineSync` — التحقق من FIELD_AGENT بدل EMPLOYEE 🟡
+**المشكلة**: السطر 17 يتحقق من `userRole === 'EMPLOYEE'` وهذا يشمل كل الموظفين (محاسب، مدير مبيعات، أمين مستودع) بينما فقط FIELD_AGENT يحتاج الـ offline engine.
+
+**الحل**: تغيير `useOfflineSync` ليقبل `employeeType` كـ parameter ويتحقق من `employeeType === 'FIELD_AGENT'` فقط.
+
+---
+
+### 4. تحسين `auth-status` — تخطي developer check لغير المطورين 🟡
+**المشكلة**: `check_and_assign_developer_role` يُستدعى في **كل** طلب auth-status لكل المستخدمين، بينما هو مطلوب فقط لفحص المطورين الجدد.
+
+**الحل**: استدعاء الـ RPC فقط إذا لم يكن الـ profile موجوداً أو إذا كان الـ email في allowlist. نعكس الترتيب: نجلب الـ profile أولاً، ثم نفحص developer فقط إذا لم يكن لديه role بعد.
+
+---
+
+### 5. إضافة `organization_id` لـ audit_logs في device-check 🟢
+**المشكلة**: `device-check` يكتب audit_logs بدون `organization_id`.
+
+**الحل**: جلب `organization_id` من `profiles` عند الـ register واستخدامه في audit_logs.
+
+---
+
+## ملخص الملفات المتأثرة
+
+| الملف | التغيير |
+|-------|---------|
+| Migration جديدة | `UNIQUE(user_id, device_id)` على `devices` |
+| `src/hooks/useSessionHeartbeat.ts` | interval: 30s → 90s |
+| `src/hooks/useOfflineSync.ts` | parameter جديد `employeeType`, فحص `FIELD_AGENT` فقط |
+| `supabase/functions/auth-status/index.ts` | إعادة ترتيب: profile أولاً ثم developer check مشروط |
+| `supabase/functions/device-check/index.ts` | إضافة `organization_id` في audit_logs |
+| الملفات التي تستدعي `useOfflineSync` | تمرير `employeeType` |
+
+## ترتيب التنفيذ
+1. Migration (UNIQUE constraint)
+2. `useSessionHeartbeat.ts` (سطر واحد)
+3. `useOfflineSync.ts` + callers
+4. `auth-status` Edge Function
+5. `device-check` Edge Function
 
