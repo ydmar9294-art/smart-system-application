@@ -1384,55 +1384,6 @@ const en = {
     message: 'Page not found',
     backHome: 'Back to Home',
   },
-
-  // ==========================================
-  // VISITS & CLASSIFICATION
-  // ==========================================
-  visits: {
-    todayPlan: "Today's Visit Plan",
-    pending: 'Planned',
-    completed: 'Completed',
-    skipped: 'Skipped',
-    noVisitsToday: 'No visits planned for today',
-    markDone: 'Mark Done',
-    skip: 'Skip',
-    skipReason: 'Skip reason (optional)',
-    status_planned: 'Planned',
-    status_completed: 'Completed',
-    status_skipped: 'Skipped',
-    status_missed: 'Missed',
-    tab: 'Visits',
-  },
-  classification: {
-    runClassification: 'Classify Customers & Generate Visit Plan',
-    classified: 'Customers classified',
-    visitsCreated: 'Visits created',
-    classA: 'Class A — VIP',
-    classB: 'Class B — Medium',
-    classC: 'Class C — Standard',
-    tab: 'Classification',
-  },
-  routes: {
-    tab: 'Routes',
-    filters: 'Filters',
-    allDistributors: 'All Distributors',
-    totalPoints: 'Total Points',
-    customerVisits: 'Customer Visits',
-    noLocations: 'No locations recorded',
-    customerVisit: 'Customer Visit',
-    checkIn: 'Check In',
-    routePoint: 'Route Point',
-    checkInButton: 'Check In',
-    capturing: 'Capturing location...',
-  },
-  print: {
-    chooseFormat: 'Choose Print Format',
-    a4Format: 'A4 Print',
-    a4Description: 'Full page print for archiving',
-    posFormat: 'POS Print',
-    posDescription: 'Thermal print (58/80mm)',
-    posUnavailable: 'Requires Bluetooth printer',
-  },
 };
 
 export default en;

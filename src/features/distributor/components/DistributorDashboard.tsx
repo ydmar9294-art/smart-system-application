@@ -36,13 +36,11 @@ import CustomerDebtsTab from './CustomerDebtsTab';
 import DistributorInventoryTab from './DistributorInventoryTab';
 import InvoiceHistoryTab from './InvoiceHistoryTab';
 import OfflineSyncBanner from './OfflineSyncBanner';
-import VisitPlanTab from './VisitPlanTab';
 import { useDistributorOffline } from '../hooks/useDistributorOffline';
-import { useGpsTracker } from '@/platform/hooks/useGpsTracker';
 import { Customer } from '@/types';
 import { CURRENCY } from '@/constants';
 
-type DistributorTabType = 'inventory' | 'new-sale' | 'returns' | 'collections' | 'debts' | 'history' | 'visits';
+type DistributorTabType = 'inventory' | 'new-sale' | 'returns' | 'collections' | 'debts' | 'history';
 
 const DistributorDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -136,7 +134,6 @@ const DistributorDashboard: React.FC = () => {
 
   const secondaryTabs: { id: DistributorTabType; label: string; icon: React.ReactNode }[] = [
     { id: 'returns', label: t('distributor.tabs.returns'), icon: <RotateCcw className="w-4 h-4" /> },
-    { id: 'visits', label: t('visits.tab'), icon: <MapPin className="w-4 h-4" /> },
   ];
 
   const renderTabContent = () => {
@@ -147,7 +144,6 @@ const DistributorDashboard: React.FC = () => {
       case 'collections': return <CollectionTab selectedCustomer={selectedCustomer} onQueueAction={offline.queueAction} isOnline={offline.isOnline} localSales={offline.localSales} />;
       case 'debts': return <CustomerDebtsTab selectedCustomer={selectedCustomer} myCustomers={myCustomers} localSales={offline.localSales} />;
       case 'history': return <InvoiceHistoryTab isOnline={offline.isOnline} />;
-      case 'visits': return <VisitPlanTab />;
       default: return null;
     }
   };

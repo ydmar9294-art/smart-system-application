@@ -8,13 +8,13 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-export function useOfflineSync(userRole?: string, employeeType?: string) {
+export function useOfflineSync(userRole?: string) {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [pendingCount, setPendingCount] = useState(0);
   const hasEverHadPending = useRef(false);
 
-  // Only FIELD_AGENT employees need the distributor offline engine
-  const isDistributor = userRole === 'EMPLOYEE' && employeeType === 'FIELD_AGENT';
+  // Only distributors (FIELD_AGENT employees) need the offline engine
+  const isDistributor = userRole === 'EMPLOYEE' || userRole === 'FIELD_AGENT';
 
   const refreshPendingCount = useCallback(async () => {
     if (!isDistributor) {

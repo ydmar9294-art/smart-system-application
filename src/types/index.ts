@@ -73,7 +73,6 @@ export interface Customer {
   created_at?: string;
   created_by?: string;
   location?: string;
-  classification?: string;
 }
 
 export interface Sale {

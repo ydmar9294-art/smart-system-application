@@ -70,44 +70,6 @@ export type Database = {
           },
         ]
       }
-      alert_settings: {
-        Row: {
-          alert_type: string
-          created_at: string
-          id: string
-          is_enabled: boolean
-          organization_id: string
-          threshold: number
-          updated_at: string
-        }
-        Insert: {
-          alert_type: string
-          created_at?: string
-          id?: string
-          is_enabled?: boolean
-          organization_id: string
-          threshold?: number
-          updated_at?: string
-        }
-        Update: {
-          alert_type?: string
-          created_at?: string
-          id?: string
-          is_enabled?: boolean
-          organization_id?: string
-          threshold?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "alert_settings_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       app_versions: {
         Row: {
           created_at: string
@@ -248,7 +210,6 @@ export type Database = {
       customers: {
         Row: {
           balance: number
-          classification: string | null
           created_at: string
           created_by: string | null
           id: string
@@ -259,7 +220,6 @@ export type Database = {
         }
         Insert: {
           balance?: number
-          classification?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -270,7 +230,6 @@ export type Database = {
         }
         Update: {
           balance?: number
-          classification?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -600,66 +559,6 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      distributor_locations: {
-        Row: {
-          accuracy: number | null
-          customer_id: string | null
-          id: string
-          is_synced: boolean
-          latitude: number
-          longitude: number
-          notes: string | null
-          organization_id: string
-          recorded_at: string
-          synced_at: string | null
-          user_id: string
-          visit_type: string
-        }
-        Insert: {
-          accuracy?: number | null
-          customer_id?: string | null
-          id?: string
-          is_synced?: boolean
-          latitude: number
-          longitude: number
-          notes?: string | null
-          organization_id: string
-          recorded_at?: string
-          synced_at?: string | null
-          user_id: string
-          visit_type?: string
-        }
-        Update: {
-          accuracy?: number | null
-          customer_id?: string | null
-          id?: string
-          is_synced?: boolean
-          latitude?: number
-          longitude?: number
-          notes?: string | null
-          organization_id?: string
-          recorded_at?: string
-          synced_at?: string | null
-          user_id?: string
-          visit_type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "distributor_locations_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "distributor_locations_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1629,63 +1528,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      visit_plans: {
-        Row: {
-          completed_at: string | null
-          created_at: string
-          customer_id: string
-          customer_name: string
-          distributor_id: string
-          id: string
-          location_id: string | null
-          notes: string | null
-          organization_id: string
-          planned_date: string
-          status: string
-        }
-        Insert: {
-          completed_at?: string | null
-          created_at?: string
-          customer_id: string
-          customer_name: string
-          distributor_id: string
-          id?: string
-          location_id?: string | null
-          notes?: string | null
-          organization_id: string
-          planned_date: string
-          status?: string
-        }
-        Update: {
-          completed_at?: string | null
-          created_at?: string
-          customer_id?: string
-          customer_name?: string
-          distributor_id?: string
-          id?: string
-          location_id?: string | null
-          notes?: string | null
-          organization_id?: string
-          planned_date?: string
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "visit_plans_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "visit_plans_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
       }
     }
     Views: {
