@@ -112,7 +112,7 @@ const MainContent: React.FC = () => {
   useStatusBar();
   
   usePushNotifications();
-  const { isOnline, pendingCount } = useOfflineSync(role);
+  const { isOnline, pendingCount } = useOfflineSync(role, user?.employeeType);
   const { showUpdateModal, isForceUpdate, checkResult, dismiss } = useVersionCheck();
   
   // Real-time device session monitoring
