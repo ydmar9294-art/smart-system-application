@@ -78,15 +78,7 @@ Deno.serve(async (req) => {
     const userEmail = validatedUser.email || ''
     const userFullName = validatedUser.user_metadata?.full_name || ''
 
-    // Auto-assign developer role if email is in allowlist (server-side only, idempotent)
-    // This runs BEFORE profile lookup so the profile will have the correct role
-    await serviceClient.rpc('check_and_assign_developer_role', {
-      p_user_id: userId,
-      p_email: userEmail,
-      p_full_name: userFullName
-    })
-
-    // Single query: profile + org join
+    // Single query: profile + org join (BEFORE developer check for optimization)
     const { data: profile, error: profileError } = await serviceClient
       .from('profiles')
       .select(`
@@ -96,7 +88,15 @@ Deno.serve(async (req) => {
       .eq('id', userId)
       .maybeSingle()
 
+    // If no profile exists, check developer allowlist then return needs_activation
     if (profileError || !profile) {
+      // Try developer auto-assignment for new users
+      await serviceClient.rpc('check_and_assign_developer_role', {
+        p_user_id: userId,
+        p_email: userEmail,
+        p_full_name: userFullName
+      })
+
       return new Response(
         JSON.stringify({ 
           authenticated: true,
@@ -114,6 +114,28 @@ Deno.serve(async (req) => {
           } 
         }
       )
+    }
+
+    // Only run developer check if profile has no role yet (default 'EMPLOYEE')
+    // This avoids calling the RPC on every single auth-status request
+    if (profile.role === 'EMPLOYEE' && !profile.organization_id) {
+      await serviceClient.rpc('check_and_assign_developer_role', {
+        p_user_id: userId,
+        p_email: userEmail,
+        p_full_name: userFullName
+      })
+      // Re-fetch profile if role may have changed
+      const { data: updatedProfile } = await serviceClient
+        .from('profiles')
+        .select(`
+          id, full_name, email, role, employee_type, organization_id, license_key, is_active,
+          organizations!profiles_organization_id_fkey(id, name)
+        `)
+        .eq('id', userId)
+        .maybeSingle()
+      if (updatedProfile) {
+        Object.assign(profile, updatedProfile)
+      }
     }
 
     const org = (profile as any).organizations
