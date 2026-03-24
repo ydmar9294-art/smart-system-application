@@ -95,8 +95,22 @@ const AgentMapView: React.FC = () => {
         });
       }
     }
-    return Array.from(map.values());
+    return map;
   }, [locations, agents, t]);
+
+  // All agents list (with or without GPS data)
+  const allAgents = useMemo(() => {
+    return agents.map(agent => ({
+      id: agent.id,
+      name: agent.full_name || t('tracking.unknownAgent'),
+      hasLocation: latestLocations.has(agent.id),
+      location: latestLocations.get(agent.id) || null,
+    }));
+  }, [agents, latestLocations, t]);
+
+  const agentsWithLocation = useMemo(() => 
+    Array.from(latestLocations.values()), 
+  [latestLocations]);
 
   const center: [number, number] = latestLocations.length > 0
     ? [latestLocations[0].latitude, latestLocations[0].longitude]
