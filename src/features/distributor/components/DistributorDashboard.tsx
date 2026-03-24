@@ -51,11 +51,11 @@ const DistributorDashboard: React.FC = () => {
   const offline = useDistributorOffline();
   const { role: authRole, organization: authOrg } = useAuth();
 
-  // Activate GPS tracking for field agents
+  // Activate GPS tracking for field agents (works offline - logs queue locally)
   useGpsTracker({
-    enabled: offline.isOnline || true, // track even offline (queued locally)
+    enabled: !!authOrg?.id,
     organizationId: authOrg?.id,
-    intervalMs: 3 * 60 * 1000, // every 3 minutes
+    intervalMs: 3 * 60 * 1000,
   });
   const [activeTab, setActiveTab] = useState<DistributorTabType>('inventory');
   useTabPrefetch(activeTab, authOrg?.id, authRole);
