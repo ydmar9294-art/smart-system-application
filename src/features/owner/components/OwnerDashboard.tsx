@@ -28,6 +28,9 @@ import OrgDeletionRequest from './OrgDeletionRequest';
 import SubscriptionTab from './SubscriptionTab';
 import { PerformanceTab } from './PerformanceTab';
 import BackupTab from './BackupTab';
+import React from 'react';
+
+const AgentMapView = React.lazy(() => import('@/features/tracking/components/AgentMapView'));
 
 type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup';
 
