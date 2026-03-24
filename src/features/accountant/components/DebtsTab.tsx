@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Users, Search, Phone, TrendingDown } from 'lucide-react';
+import { Users, Search, Phone, TrendingDown, FileText } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
+import CustomerStatement from './CustomerStatement';
 
 const DebtsTab: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -10,6 +11,7 @@ const DebtsTab: React.FC = () => {
   const { customers } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'balance' | 'name'>('balance');
+  const [selectedCustomer, setSelectedCustomer] = useState<{ id: string; name: string } | null>(null);
 
   const debtCustomers = customers
     .filter(c => Number(c.balance) > 0)
@@ -49,27 +51,46 @@ const DebtsTab: React.FC = () => {
       ) : (
         <div className="space-y-2">
           {debtCustomers.map((customer) => (
-            <div key={customer.id} className="bg-card p-4 rounded-2xl shadow-sm flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center">
-                  <span className="font-black text-red-500">{customer.name.charAt(0)}</span>
+            <div key={customer.id} className="bg-card p-4 rounded-2xl shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center">
+                    <span className="font-black text-red-500">{customer.name.charAt(0)}</span>
+                  </div>
+                  <div>
+                    <p className="font-bold text-foreground">{customer.name}</p>
+                    {customer.phone && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Phone className="w-3 h-3" /> {customer.phone}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="font-bold text-foreground">{customer.name}</p>
-                  {customer.phone && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Phone className="w-3 h-3" /> {customer.phone}
-                    </p>
-                  )}
+                <div className="text-left">
+                  <p className="font-black text-lg text-red-500">{Number(customer.balance).toLocaleString(locale)}</p>
+                  <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
                 </div>
               </div>
-              <div className="text-left">
-                <p className="font-black text-lg text-red-500">{Number(customer.balance).toLocaleString(locale)}</p>
-                <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
-              </div>
+              {/* View Statement Button */}
+              <button
+                onClick={() => setSelectedCustomer({ id: customer.id, name: customer.name })}
+                className="w-full mt-2 flex items-center justify-center gap-2 py-2 bg-muted rounded-xl text-xs font-bold text-primary hover:bg-primary/10 transition-colors"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                {t('accountant.viewStatement')}
+              </button>
             </div>
           ))}
         </div>
+      )}
+
+      {/* Customer Statement Modal */}
+      {selectedCustomer && (
+        <CustomerStatement
+          customerId={selectedCustomer.id}
+          customerName={selectedCustomer.name}
+          onClose={() => setSelectedCustomer(null)}
+        />
       )}
     </div>
   );

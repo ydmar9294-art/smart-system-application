@@ -9,7 +9,9 @@ import {
   Users,
   BarChart3,
   LogOut,
-  MessageCircle
+  MessageCircle,
+  LayoutDashboard,
+  AlertTriangle
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { useAuth } from '@/store/AuthContext';
@@ -17,6 +19,7 @@ import { useTabPrefetch } from '@/hooks/useTabPrefetch';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
 import AIAssistant from '@/features/ai/components/AIAssistant';
 import { NotificationCenter } from '@/features/notifications/components/NotificationCenter';
+import AccountantOverviewTab from './AccountantOverviewTab';
 import SalesInvoicesTab from './SalesInvoicesTab';
 import PurchasesTab from './PurchasesTab';
 import SalesReturnsTab from './SalesReturnsTab';
@@ -24,15 +27,16 @@ import PurchaseReturnsTab from './PurchaseReturnsTab';
 import CollectionsTab from './CollectionsTab';
 import DebtsTab from './DebtsTab';
 import ReportsTab from './ReportsTab';
+import AccountantAlerts from './AccountantAlerts';
 
-type AccountantTabType = 'sales' | 'purchases' | 'sales-returns' | 'purchase-returns' | 'collections' | 'debts' | 'reports';
+type AccountantTabType = 'overview' | 'sales' | 'purchases' | 'sales-returns' | 'purchase-returns' | 'collections' | 'debts' | 'reports' | 'alerts';
 
 const AccountantDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
   const { logout } = useApp();
   const { organization, role } = useAuth();
-  const [activeTab, setActiveTab] = useState<AccountantTabType>('sales');
+  const [activeTab, setActiveTab] = useState<AccountantTabType>('overview');
   const [loggingOut, setLoggingOut] = useState(false);
 
   useTabPrefetch(activeTab, organization?.id, role);
@@ -43,6 +47,7 @@ const AccountantDashboard: React.FC = () => {
   };
 
   const tabs: { id: AccountantTabType; label: string; icon: React.ReactNode; color: string; bgColor: string }[] = [
+    { id: 'overview', label: t('accountant.tabs.overview'), icon: <LayoutDashboard className="w-5 h-5" />, color: 'text-primary', bgColor: 'bg-primary' },
     { id: 'sales', label: t('accountant.tabs.sales'), icon: <FileText className="w-5 h-5" />, color: 'text-emerald-600', bgColor: 'bg-emerald-600' },
     { id: 'purchases', label: t('accountant.tabs.purchases'), icon: <ShoppingCart className="w-5 h-5" />, color: 'text-blue-600', bgColor: 'bg-blue-600' },
     { id: 'collections', label: t('accountant.tabs.collections'), icon: <Wallet className="w-5 h-5" />, color: 'text-purple-600', bgColor: 'bg-purple-600' },
@@ -53,10 +58,12 @@ const AccountantDashboard: React.FC = () => {
   const secondaryTabs: { id: AccountantTabType; label: string; icon: React.ReactNode }[] = [
     { id: 'sales-returns', label: t('accountant.tabs.salesReturns'), icon: <RotateCcw className="w-4 h-4" /> },
     { id: 'purchase-returns', label: t('accountant.tabs.purchaseReturns'), icon: <RotateCcw className="w-4 h-4" /> },
+    { id: 'alerts', label: t('accountant.tabs.alerts'), icon: <AlertTriangle className="w-4 h-4" /> },
   ];
 
   const renderTabContent = () => {
     switch (activeTab) {
+      case 'overview': return <AccountantOverviewTab />;
       case 'sales': return <SalesInvoicesTab />;
       case 'purchases': return <PurchasesTab />;
       case 'sales-returns': return <SalesReturnsTab />;
@@ -64,6 +71,7 @@ const AccountantDashboard: React.FC = () => {
       case 'collections': return <CollectionsTab />;
       case 'debts': return <DebtsTab />;
       case 'reports': return <ReportsTab />;
+      case 'alerts': return <AccountantAlerts />;
       default: return null;
     }
   };
@@ -120,7 +128,7 @@ const AccountantDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Secondary Tabs (Returns) */}
+        {/* Secondary Tabs */}
         <div className="px-4 pb-4">
           <div className="flex gap-2" data-guest-nav>
             {secondaryTabs.map((tab) => (
