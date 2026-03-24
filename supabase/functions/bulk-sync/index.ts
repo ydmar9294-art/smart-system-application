@@ -303,6 +303,32 @@ async function processOperation(
       return { id: op.id, status: 'synced' };
     }
 
+    case 'GPS_LOG': {
+      const { error } = await supabase.from('distributor_locations').insert({
+        user_id: userId,
+        latitude: op.payload.latitude as number,
+        longitude: op.payload.longitude as number,
+        accuracy: (op.payload.accuracy as number) || null,
+        organization_id: op.payload.organizationId as string,
+        visit_type: (op.payload.visitType as string) || 'route_point',
+        recorded_at: (op.payload.recordedAt as string) || new Date().toISOString(),
+        is_synced: true,
+        synced_at: new Date().toISOString(),
+      });
+      if (error) return { id: op.id, status: 'failed', error: error.message };
+      return { id: op.id, status: 'synced' };
+    }
+
+    case 'ROUTE_VISIT': {
+      const { error } = await supabase.from('route_stops').update({
+        status: op.payload.status as string,
+        notes: (op.payload.notes as string) || null,
+        visited_at: (op.payload.visitedAt as string) || new Date().toISOString(),
+      }).eq('id', op.payload.stopId as string);
+      if (error) return { id: op.id, status: 'failed', error: error.message };
+      return { id: op.id, status: 'synced' };
+    }
+
     default:
       return { id: op.id, status: 'failed', error: `Unknown operation type: ${op.type}` };
   }
