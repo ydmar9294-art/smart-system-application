@@ -41,7 +41,7 @@ import { useDistributorOffline } from '../hooks/useDistributorOffline';
 import { Customer } from '@/types';
 import { CURRENCY } from '@/constants';
 
-type DistributorTabType = 'inventory' | 'new-sale' | 'returns' | 'collections' | 'debts' | 'history';
+type DistributorTabType = 'inventory' | 'new-sale' | 'returns' | 'collections' | 'debts' | 'history' | 'route';
 
 const DistributorDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
