@@ -38,25 +38,24 @@ const MyRouteTab: React.FC<MyRouteTabProps> = ({ isOnline, onQueueAction }) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return [];
 
+      // Server-side filter: only this distributor's routes
       const { data } = await supabase
         .from('route_stops')
         .select('id, customer_name, customer_id, sequence_order, planned_date, status, notes, visited_at, route_id, routes!inner(distributor_id)')
         .eq('planned_date', today)
+        .eq('routes.distributor_id', session.user.id)
         .order('sequence_order');
 
-      // Filter to this distributor's stops
-      return ((data || []) as any[])
-        .filter((s: any) => s.routes?.distributor_id === session.user.id)
-        .map((s: any) => ({
-          id: s.id,
-          customer_name: s.customer_name,
-          customer_id: s.customer_id,
-          sequence_order: s.sequence_order,
-          planned_date: s.planned_date,
-          status: s.status,
-          notes: s.notes,
-          visited_at: s.visited_at,
-        })) as RouteStop[];
+      return ((data || []) as any[]).map((s: any) => ({
+        id: s.id,
+        customer_name: s.customer_name,
+        customer_id: s.customer_id,
+        sequence_order: s.sequence_order,
+        planned_date: s.planned_date,
+        status: s.status,
+        notes: s.notes,
+        visited_at: s.visited_at,
+      })) as RouteStop[];
     },
     staleTime: 30_000,
   });
@@ -130,6 +129,7 @@ const MyRouteTab: React.FC<MyRouteTabProps> = ({ isOnline, onQueueAction }) => {
         <Navigation className="w-12 h-12 mx-auto text-muted-foreground mb-4 opacity-40" />
         <p className="font-bold text-foreground mb-1">{t('tracking.noRouteToday')}</p>
         <p className="text-sm text-muted-foreground">{t('tracking.noRouteDescription')}</p>
+        <p className="text-xs text-muted-foreground/60 mt-2">{t('tracking.routeAssignedByManager', 'يتم تعيين المسارات من قبل مدير المبيعات')}</p>
       </div>
     );
   }

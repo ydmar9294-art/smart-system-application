@@ -1461,6 +1461,8 @@ const en = {
     routeProgress: 'Route Progress',
     noRouteToday: 'No Route Today',
     noRouteDescription: 'No route has been assigned to you today',
+    routeAssignedByManager: 'Routes are assigned by the Sales Manager',
+    offline: 'Offline',
     visitedAndSold: 'Visited & Sold',
     visitedNoSale: 'Visited, No Sale',
     skip: 'Skip',
