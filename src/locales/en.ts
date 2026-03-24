@@ -1447,6 +1447,47 @@ const en = {
     message: 'Page not found',
     backHome: 'Back to Home',
   },
+
+  // ==========================================
+  // TRACKING & ROUTES
+  // ==========================================
+  tracking: {
+    tab: 'Tracking',
+    routesTab: 'Routes',
+    agentMap: 'Agent Map',
+    noActiveAgents: 'No active agents today',
+    unknownAgent: 'Unknown Agent',
+    myRoute: 'My Route',
+    routeProgress: 'Route Progress',
+    noRouteToday: 'No Route Today',
+    noRouteDescription: 'No route has been assigned to you today',
+    visitedAndSold: 'Visited & Sold',
+    visitedNoSale: 'Visited, No Sale',
+    skip: 'Skip',
+    skipReason: 'Skip reason...',
+    statusPending: 'Pending',
+    statusVisited: 'Visited',
+    statusSold: 'Sold',
+    statusSkipped: 'Skipped',
+    routePlanner: 'Route Planner',
+    selectDistributor: 'Select Distributor',
+    chooseDistributor: 'Choose distributor...',
+    weekStart: 'Week Start',
+    routeNameOptional: 'Route name (optional)',
+    addCustomerToRoute: 'Add Customer to Route',
+    chooseCustomer: 'Choose customer...',
+    routeStops: 'Route Stops',
+    saveRoute: 'Save Route',
+    routeSaved: 'Saved',
+    routeKPIs: 'Route KPIs',
+    visitRate: 'Visit Rate',
+    conversionRate: 'Conversion Rate',
+    missedVisits: 'Missed Visits',
+    pendingStops: 'Pending Stops',
+    stops: 'stops',
+    soldStops: 'sold',
+    agentRanking: 'Agent Ranking',
+  },
 };
 
 export default en;

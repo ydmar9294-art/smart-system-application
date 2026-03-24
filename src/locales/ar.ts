@@ -1459,6 +1459,47 @@ const ar = {
     message: 'الصفحة غير موجودة',
     backHome: 'العودة للرئيسية',
   },
+
+  // ==========================================
+  // TRACKING & ROUTES
+  // ==========================================
+  tracking: {
+    tab: 'التتبع',
+    routesTab: 'المسارات',
+    agentMap: 'خريطة الموزعين',
+    noActiveAgents: 'لا يوجد موزعين نشطين اليوم',
+    unknownAgent: 'موزع غير معروف',
+    myRoute: 'مساري',
+    routeProgress: 'تقدم المسار',
+    noRouteToday: 'لا يوجد مسار اليوم',
+    noRouteDescription: 'لم يتم تعيين مسار لك اليوم',
+    visitedAndSold: 'زيارة وبيع',
+    visitedNoSale: 'زيارة بدون بيع',
+    skip: 'تخطي',
+    skipReason: 'سبب التخطي...',
+    statusPending: 'معلق',
+    statusVisited: 'تمت الزيارة',
+    statusSold: 'تم البيع',
+    statusSkipped: 'تم التخطي',
+    routePlanner: 'تخطيط المسارات',
+    selectDistributor: 'اختر الموزع',
+    chooseDistributor: 'اختر موزعاً...',
+    weekStart: 'بداية الأسبوع',
+    routeNameOptional: 'اسم المسار (اختياري)',
+    addCustomerToRoute: 'إضافة زبون للمسار',
+    chooseCustomer: 'اختر زبوناً...',
+    routeStops: 'محطات المسار',
+    saveRoute: 'حفظ المسار',
+    routeSaved: 'تم الحفظ',
+    routeKPIs: 'مؤشرات المسارات',
+    visitRate: 'معدل الزيارات',
+    conversionRate: 'معدل التحويل',
+    missedVisits: 'زيارات فائتة',
+    pendingStops: 'محطات معلقة',
+    stops: 'محطات',
+    soldStops: 'بيع',
+    agentRanking: 'ترتيب الموزعين',
+  },
 };
 
 export default ar;

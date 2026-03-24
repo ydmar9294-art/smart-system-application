@@ -24,7 +24,9 @@ import {
   UserX,
   UserCheck,
   Loader2,
-  Trash2
+  Trash2,
+  MapPin,
+  Route
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
@@ -33,7 +35,11 @@ import AIAssistant from '@/features/ai/components/AIAssistant';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
 import DistributorWarehouseKPIs from '@/features/analytics/components/DistributorWarehouseKPIs';
 
-type SalesManagerTabType = 'dashboard' | 'team' | 'sales' | 'kpi';
+const AgentMapView = React.lazy(() => import('@/features/tracking/components/AgentMapView'));
+const RoutePlanner = React.lazy(() => import('@/features/tracking/components/RoutePlanner'));
+const RouteKPIs = React.lazy(() => import('@/features/tracking/components/RouteKPIs'));
+
+type SalesManagerTabType = 'dashboard' | 'team' | 'sales' | 'kpi' | 'tracking' | 'routes';
 
 const SalesManagerDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -137,8 +143,9 @@ const SalesManagerDashboard: React.FC = () => {
   const tabs: { id: SalesManagerTabType; label: string; icon: React.ReactNode; color: string; bgColor: string }[] = [
     { id: 'dashboard', label: t('salesManager.tabs.home'), icon: <LayoutDashboard className="w-5 h-5" />, color: 'text-blue-600', bgColor: 'bg-blue-600' },
     { id: 'team', label: t('salesManager.tabs.team'), icon: <Users className="w-5 h-5" />, color: 'text-orange-500', bgColor: 'bg-orange-500' },
+    { id: 'tracking', label: t('tracking.tab'), icon: <MapPin className="w-5 h-5" />, color: 'text-teal-600', bgColor: 'bg-teal-600' },
+    { id: 'routes', label: t('tracking.routesTab'), icon: <Route className="w-5 h-5" />, color: 'text-amber-600', bgColor: 'bg-amber-600' },
     { id: 'kpi', label: t('salesManager.tabs.kpi'), icon: <BarChart3 className="w-5 h-5" />, color: 'text-emerald-600', bgColor: 'bg-emerald-600' },
-    { id: 'sales', label: t('salesManager.tabs.sales'), icon: <TrendingUp className="w-5 h-5" />, color: 'text-purple-600', bgColor: 'bg-purple-600' },
   ];
 
   return (
@@ -314,6 +321,21 @@ const SalesManagerDashboard: React.FC = () => {
                 <DeletionRequestsManager />
               </div>
             </div>
+          )}
+
+          {activeTab === 'tracking' && (
+            <React.Suspense fallback={<div className="animate-pulse bg-card h-96 rounded-2xl" />}>
+              <AgentMapView />
+            </React.Suspense>
+          )}
+
+          {activeTab === 'routes' && (
+            <React.Suspense fallback={<div className="animate-pulse bg-card h-96 rounded-2xl" />}>
+              <div className="space-y-6">
+                <RoutePlanner />
+                <RouteKPIs />
+              </div>
+            </React.Suspense>
           )}
 
           {activeTab === 'kpi' && (

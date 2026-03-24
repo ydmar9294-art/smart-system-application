@@ -36,11 +36,12 @@ import CustomerDebtsTab from './CustomerDebtsTab';
 import DistributorInventoryTab from './DistributorInventoryTab';
 import InvoiceHistoryTab from './InvoiceHistoryTab';
 import OfflineSyncBanner from './OfflineSyncBanner';
+import MyRouteTab from './MyRouteTab';
 import { useDistributorOffline } from '../hooks/useDistributorOffline';
 import { Customer } from '@/types';
 import { CURRENCY } from '@/constants';
 
-type DistributorTabType = 'inventory' | 'new-sale' | 'returns' | 'collections' | 'debts' | 'history';
+type DistributorTabType = 'inventory' | 'new-sale' | 'returns' | 'collections' | 'debts' | 'history' | 'route';
 
 const DistributorDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -128,11 +129,12 @@ const DistributorDashboard: React.FC = () => {
     { id: 'inventory', label: t('distributor.tabs.inventory'), icon: <Warehouse className="w-5 h-5" />, bgColor: 'bg-purple-600' },
     { id: 'new-sale', label: t('distributor.tabs.newSale'), icon: <FileText className="w-5 h-5" />, bgColor: 'bg-blue-600' },
     { id: 'collections', label: t('distributor.tabs.collections'), icon: <Wallet className="w-5 h-5" />, bgColor: 'bg-emerald-600' },
+    { id: 'route', label: t('tracking.myRoute'), icon: <MapPin className="w-5 h-5" />, bgColor: 'bg-orange-500' },
     { id: 'debts', label: t('distributor.tabs.customers'), icon: <Users className="w-5 h-5" />, bgColor: 'bg-red-500' },
-    { id: 'history', label: t('distributor.tabs.history'), icon: <History className="w-5 h-5" />, bgColor: 'bg-indigo-600' },
   ];
 
   const secondaryTabs: { id: DistributorTabType; label: string; icon: React.ReactNode }[] = [
+    { id: 'history', label: t('distributor.tabs.history'), icon: <History className="w-4 h-4" /> },
     { id: 'returns', label: t('distributor.tabs.returns'), icon: <RotateCcw className="w-4 h-4" /> },
   ];
 
@@ -144,6 +146,7 @@ const DistributorDashboard: React.FC = () => {
       case 'collections': return <CollectionTab selectedCustomer={selectedCustomer} onQueueAction={offline.queueAction} isOnline={offline.isOnline} localSales={offline.localSales} />;
       case 'debts': return <CustomerDebtsTab selectedCustomer={selectedCustomer} myCustomers={myCustomers} localSales={offline.localSales} />;
       case 'history': return <InvoiceHistoryTab isOnline={offline.isOnline} />;
+      case 'route': return <MyRouteTab isOnline={offline.isOnline} onQueueAction={offline.queueAction} />;
       default: return null;
     }
   };

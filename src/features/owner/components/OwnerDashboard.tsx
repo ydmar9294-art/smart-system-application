@@ -28,7 +28,9 @@ import SubscriptionTab from './SubscriptionTab';
 import { PerformanceTab } from './PerformanceTab';
 import BackupTab from './BackupTab';
 
-type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup';
+const AgentMapView = React.lazy(() => import('@/features/tracking/components/AgentMapView'));
+
+type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup' | 'tracking';
 
 const OwnerDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -133,6 +135,7 @@ const OwnerDashboard: React.FC = () => {
   ];
 
   const secondaryTabs: { id: OwnerTabType; label: string; icon: React.ReactNode }[] = [
+    { id: 'tracking', label: t('tracking.tab'), icon: <MapPin className="w-4 h-4" /> },
     { id: 'backup', label: t('owner.tabs.backup'), icon: <Database className="w-4 h-4" /> },
     { id: 'subscription', label: t('owner.tabs.subscription'), icon: <Shield className="w-4 h-4" /> },
     { id: 'legal', label: t('owner.tabs.legal'), icon: <ShieldCheck className="w-4 h-4" /> },
@@ -155,6 +158,7 @@ const OwnerDashboard: React.FC = () => {
       case 'subscription': return <SubscriptionTab />;
       case 'legal': return <><LegalInfoTab /><OrgDeletionRequest /></>;
       case 'backup': return <BackupTab />;
+      case 'tracking': return <React.Suspense fallback={<div className="animate-pulse bg-card h-96 rounded-2xl" />}><AgentMapView /></React.Suspense>;
       default: return null;
     }
   };
