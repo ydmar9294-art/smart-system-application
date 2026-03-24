@@ -287,8 +287,9 @@ const en = {
   // ==========================================
   accountant: {
     dashboard: 'Accountant Dashboard',
-    subtitle: 'Financial Operations Management',
+    subtitle: 'Financial Intelligence Center',
     tabs: {
+      overview: 'Overview',
       sales: 'Sales',
       purchases: 'Purchases',
       collections: 'Collections',
@@ -296,8 +297,8 @@ const en = {
       reports: 'Reports',
       salesReturns: 'Sales Returns',
       purchaseReturns: 'Purchase Returns',
+      alerts: 'Alerts',
     },
-    // Sales Invoices Tab
     searchByCustomer: 'Search by customer...',
     statusAll: 'All',
     statusPaid: 'Paid',
@@ -316,35 +317,72 @@ const en = {
     discountLabel: 'Discount',
     voidedInvoice: 'Voided Invoice',
     noInvoices: 'No invoices',
-    // Purchases Tab
     searchByProductOrSupplier: 'Search by product or supplier...',
     totalPurchases: 'Total Purchases',
     noPurchases: 'No purchases',
-    // Collections Tab
     totalCollections: 'Total Collections',
     noCollections: 'No collections',
     cancelled: 'Cancelled',
     done: 'Done',
-    // Sales Returns Tab
     searchByCustomerReturns: 'Search by customer...',
     totalSalesReturns: 'Total Sales Returns',
     noSalesReturns: 'No sales returns',
-    // Purchase Returns Tab
     searchBySupplier: 'Search by supplier...',
     totalPurchaseReturns: 'Total Purchase Returns',
     noPurchaseReturns: 'No purchase returns',
-    // Debts Tab
     totalCustomerDebts: 'Total Customer Debts',
     customersWithDebts: 'customers with outstanding debts',
     searchCustomer: 'Search customer...',
     sortByDebt: 'Highest Debt',
     sortByName: 'Name',
     noDebts: 'No customers with outstanding debts',
+    viewStatement: 'Account Statement',
   },
 
-  // ==========================================
-  // REPORTS TAB
-  // ==========================================
+  overview: {
+    totalSales: 'Total Sales',
+    collections: 'Collections',
+    debts: 'Debts',
+    collectionRate: 'Collection Rate',
+    grossProfit: 'Gross Profit',
+    profitMargin: 'Profit Margin',
+    salesVsCollections: 'Sales vs Collections',
+    sales: 'Sales',
+    topDebtors: 'Top 5 Debtors',
+    debt: 'Debt',
+    smartInsights: 'Smart Insights',
+    lowCollectionRate: 'Low collection rate ({{rate}}%) — needs attention',
+    highDebtRatio: 'High debt ratio compared to sales',
+    highDiscountImpact: 'Discounts are significantly affecting profitability',
+    healthyMargin: 'Healthy profit margin ({{margin}}%)',
+    noAlerts: 'No alerts — financial performance is stable',
+  },
+
+  statement: {
+    title: 'Account Statement',
+    sale: 'Sale Invoice',
+    collection: 'Collection',
+    return: 'Return',
+    totalSales: 'Sales',
+    totalCollections: 'Collections',
+    totalReturns: 'Returns',
+    runningBalance: 'Current Balance',
+    balance: 'Balance',
+    noTransactions: 'No transactions for this customer',
+  },
+
+  alerts: {
+    overdueInvoices: '{{count}} overdue invoices (>30 days)',
+    overdueAmount: 'Overdue amount: {{amount}} {{currency}}',
+    highRiskCustomers: '{{count}} high-risk customers',
+    lowRecentCollections: 'Collections dropped this week',
+    collectionRateWeek: 'Collection rate: only {{rate}}%',
+    salesDrop: 'Sales decline detected',
+    salesDropDetail: '{{recent}} invoices (last 3 days) vs {{previous}} (previous period)',
+    allGood: 'All good',
+    noIssues: 'No financial issues need attention',
+  },
+
   reports: {
     netSales: 'Net Sales',
     netPurchases: 'Net Purchases',
@@ -365,6 +403,11 @@ const en = {
     salesReturns: 'Sales Returns',
     totalPurchases: 'Total Purchases',
     purchaseReturns: 'Purchase Returns',
+    grossProfit: 'Gross Profit',
+    profitMarginLabel: 'Profit Margin',
+    thisWeek: 'This Week',
+    thisMonth: 'This Month',
+    custom: 'Custom',
   },
 
   // ==========================================

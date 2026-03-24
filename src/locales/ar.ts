@@ -287,8 +287,9 @@ const ar = {
   // ==========================================
   accountant: {
     dashboard: 'لوحة المحاسب',
-    subtitle: 'إدارة العمليات المالية',
+    subtitle: 'مركز الذكاء المالي',
     tabs: {
+      overview: 'نظرة عامة',
       sales: 'المبيعات',
       purchases: 'المشتريات',
       collections: 'التحصيلات',
@@ -296,8 +297,8 @@ const ar = {
       reports: 'التقارير',
       salesReturns: 'مرتجع بيع',
       purchaseReturns: 'مرتجع شراء',
+      alerts: 'التنبيهات',
     },
-    // Sales Invoices Tab
     searchByCustomer: 'بحث بالعميل...',
     statusAll: 'الكل',
     statusPaid: 'مدفوعة',
@@ -316,30 +317,79 @@ const ar = {
     discountLabel: 'الخصم',
     voidedInvoice: 'فاتورة ملغاة',
     noInvoices: 'لا توجد فواتير',
-    // Purchases Tab
     searchByProductOrSupplier: 'بحث بالمنتج أو المورد...',
     totalPurchases: 'إجمالي المشتريات',
     noPurchases: 'لا توجد مشتريات',
-    // Collections Tab
     totalCollections: 'إجمالي التحصيلات',
     noCollections: 'لا توجد تحصيلات',
     cancelled: 'ملغى',
     done: 'تم',
-    // Sales Returns Tab
     searchByCustomerReturns: 'بحث بالعميل...',
     totalSalesReturns: 'إجمالي مرتجعات المبيعات',
     noSalesReturns: 'لا توجد مرتجعات مبيعات',
-    // Purchase Returns Tab
     searchBySupplier: 'بحث بالمورد...',
     totalPurchaseReturns: 'إجمالي مرتجعات المشتريات',
     noPurchaseReturns: 'لا توجد مرتجعات مشتريات',
-    // Debts Tab
     totalCustomerDebts: 'إجمالي ديون العملاء',
     customersWithDebts: 'عميل لديهم ديون مستحقة',
     searchCustomer: 'بحث عن عميل...',
     sortByDebt: 'الأعلى ديناً',
     sortByName: 'الاسم',
     noDebts: 'لا يوجد عملاء بديون مستحقة',
+    viewStatement: 'كشف حساب',
+  },
+
+  // ==========================================
+  // OVERVIEW TAB
+  // ==========================================
+  overview: {
+    totalSales: 'إجمالي المبيعات',
+    collections: 'التحصيلات',
+    debts: 'الديون',
+    collectionRate: 'معدل التحصيل',
+    grossProfit: 'الربح الإجمالي',
+    profitMargin: 'هامش الربح',
+    salesVsCollections: 'المبيعات مقابل التحصيلات',
+    sales: 'المبيعات',
+    topDebtors: 'أعلى 5 عملاء مديونية',
+    debt: 'الدين',
+    smartInsights: 'تحليلات ذكية',
+    lowCollectionRate: 'معدل التحصيل منخفض ({{rate}}%) — يحتاج متابعة',
+    highDebtRatio: 'نسبة الديون مرتفعة مقارنة بالمبيعات',
+    highDiscountImpact: 'الخصومات تؤثر على الربحية بشكل ملحوظ',
+    healthyMargin: 'هامش ربح صحي ({{margin}}%)',
+    noAlerts: 'لا توجد تنبيهات حالياً — الأداء المالي مستقر',
+  },
+
+  // ==========================================
+  // CUSTOMER STATEMENT
+  // ==========================================
+  statement: {
+    title: 'كشف حساب',
+    sale: 'فاتورة بيع',
+    collection: 'تحصيل',
+    return: 'مرتجع',
+    totalSales: 'المبيعات',
+    totalCollections: 'التحصيلات',
+    totalReturns: 'المرتجعات',
+    runningBalance: 'الرصيد الحالي',
+    balance: 'الرصيد',
+    noTransactions: 'لا توجد عمليات لهذا العميل',
+  },
+
+  // ==========================================
+  // SMART ALERTS
+  // ==========================================
+  alerts: {
+    overdueInvoices: '{{count}} فاتورة متأخرة (أكثر من 30 يوم)',
+    overdueAmount: 'المبلغ المتأخر: {{amount}} {{currency}}',
+    highRiskCustomers: '{{count}} عملاء بمخاطر عالية',
+    lowRecentCollections: 'انخفاض التحصيلات هذا الأسبوع',
+    collectionRateWeek: 'معدل التحصيل: {{rate}}% فقط',
+    salesDrop: 'انخفاض في المبيعات',
+    salesDropDetail: '{{recent}} فواتير (آخر 3 أيام) مقابل {{previous}} (الفترة السابقة)',
+    allGood: 'كل شيء على ما يرام',
+    noIssues: 'لا توجد مشاكل مالية تحتاج انتباه',
   },
 
   // ==========================================
@@ -365,6 +415,11 @@ const ar = {
     salesReturns: 'مرتجعات المبيعات',
     totalPurchases: 'إجمالي المشتريات',
     purchaseReturns: 'مرتجعات المشتريات',
+    grossProfit: 'الربح الإجمالي',
+    profitMarginLabel: 'هامش الربح',
+    thisWeek: 'هذا الأسبوع',
+    thisMonth: 'هذا الشهر',
+    custom: 'مخصص',
   },
 
   // ==========================================

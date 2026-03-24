@@ -1,48 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { logger } from '@/lib/logger';
+import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RotateCcw, Search, ChevronDown } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { CURRENCY } from '@/constants';
-
-interface PurchaseReturn {
-  id: string;
-  supplier_name: string | null;
-  total_amount: number;
-  reason: string | null;
-  created_at: string;
-}
+import { usePurchaseReturnsQuery } from '../hooks/useAccountantData';
+import { Skeleton } from '@/components/ui/skeleton';
+import { VirtualList } from '@/components/ui/VirtualList';
 
 const PurchaseReturnsTab: React.FC = () => {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
-  const [returns, setReturns] = useState<PurchaseReturn[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: returns = [], isLoading } = usePurchaseReturnsQuery();
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
-  useEffect(() => { loadReturns(); }, []);
-
-  const loadReturns = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.from('purchase_returns').select('*').order('created_at', { ascending: false });
-      if (error) throw error;
-      setReturns(data || []);
-    } catch (error) { logger.error('Error loading purchase returns', 'PurchaseReturnsTab'); }
-    finally { setLoading(false); }
-  };
-
-  const filteredReturns = returns.filter(r => {
+  const filteredReturns = useMemo(() => returns.filter(r => {
     if (searchTerm && r.supplier_name && !r.supplier_name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     if (dateFrom && new Date(r.created_at) < new Date(dateFrom)) return false;
-    if (dateTo) { const to = new Date(dateTo); to.setHours(23,59,59); if (new Date(r.created_at) > to) return false; }
+    if (dateTo) { const to = new Date(dateTo); to.setHours(23, 59, 59); if (new Date(r.created_at) > to) return false; }
     return true;
-  });
+  }), [returns, searchTerm, dateFrom, dateTo]);
 
-  const totalAmount = filteredReturns.reduce((sum, r) => sum + Number(r.total_amount), 0);
+  const totalAmount = useMemo(() => 
+    filteredReturns.reduce((sum, r) => sum + Number(r.total_amount), 0),
+    [filteredReturns]
+  );
 
   return (
     <div className="space-y-3">
@@ -73,33 +56,52 @@ const PurchaseReturnsTab: React.FC = () => {
         <p className="text-xs text-muted-foreground mt-1">{filteredReturns.length} {t('common.returnOperation')}</p>
       </div>
 
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
+      {isLoading ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 rounded-2xl" />)}
         </div>
       ) : filteredReturns.length === 0 ? (
         <div className="text-center py-12">
           <RotateCcw className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
           <p className="text-muted-foreground font-bold">{t('accountant.noPurchaseReturns')}</p>
         </div>
+      ) : filteredReturns.length > 30 ? (
+        <VirtualList
+          items={filteredReturns}
+          itemHeight={80}
+          overscan={5}
+          containerHeight={480}
+          className="rounded-2xl"
+          renderItem={(ret) => (
+            <div className="px-1 pb-2">
+              <PurchaseReturnCard ret={ret} locale={locale} t={t} />
+            </div>
+          )}
+        />
       ) : (
         <div className="space-y-2">
           {filteredReturns.map((ret) => (
-            <div key={ret.id} className="bg-card p-4 rounded-2xl shadow-sm">
-              <div className="flex items-start justify-between mb-1">
-                <div>
-                  <p className="font-bold text-foreground">{ret.supplier_name || t('common.noSupplier')}</p>
-                  <p className="text-xs text-muted-foreground">{new Date(ret.created_at).toLocaleDateString(locale)}</p>
-                </div>
-                <p className="font-black text-destructive">{Number(ret.total_amount).toLocaleString(locale)} {CURRENCY}</p>
-              </div>
-              {ret.reason && <p className="text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-lg mt-2">{ret.reason}</p>}
-            </div>
+            <PurchaseReturnCard key={ret.id} ret={ret} locale={locale} t={t} />
           ))}
         </div>
       )}
     </div>
   );
 };
+
+const PurchaseReturnCard = React.memo(({ ret, locale, t }: { ret: any; locale: string; t: any }) => (
+  <div className="bg-card p-4 rounded-2xl shadow-sm">
+    <div className="flex items-start justify-between mb-1">
+      <div>
+        <p className="font-bold text-foreground">{ret.supplier_name || t('common.noSupplier')}</p>
+        <p className="text-xs text-muted-foreground">{new Date(ret.created_at).toLocaleDateString(locale)}</p>
+      </div>
+      <p className="font-black text-destructive">{Number(ret.total_amount).toLocaleString(locale)} {CURRENCY}</p>
+    </div>
+    {ret.reason && <p className="text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-lg mt-2">{ret.reason}</p>}
+  </div>
+));
+
+PurchaseReturnCard.displayName = 'PurchaseReturnCard';
 
 export default PurchaseReturnsTab;
