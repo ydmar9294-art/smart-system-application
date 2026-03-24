@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
       }
 
       try {
-        const result = await processOperation(supabase, op, customerIdMap, saleIdMap);
+        const result = await processOperation(supabase, op, customerIdMap, saleIdMap, userId);
         results.push(result);
 
         if (result.status === 'synced' && op.idempotencyKey) {
