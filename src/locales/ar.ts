@@ -1473,6 +1473,8 @@ const ar = {
     routeProgress: 'تقدم المسار',
     noRouteToday: 'لا يوجد مسار اليوم',
     noRouteDescription: 'لم يتم تعيين مسار لك اليوم',
+    routeAssignedByManager: 'يتم تعيين المسارات من قبل مدير المبيعات',
+    offline: 'غير متصل',
     visitedAndSold: 'زيارة وبيع',
     visitedNoSale: 'زيارة بدون بيع',
     skip: 'تخطي',
