@@ -32,7 +32,7 @@ import React from 'react';
 
 const AgentMapView = React.lazy(() => import('@/features/tracking/components/AgentMapView'));
 
-type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup';
+type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup' | 'tracking';
 
 const OwnerDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
