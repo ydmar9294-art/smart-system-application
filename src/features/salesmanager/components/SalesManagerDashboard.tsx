@@ -323,6 +323,21 @@ const SalesManagerDashboard: React.FC = () => {
             </div>
           )}
 
+          {activeTab === 'tracking' && (
+            <React.Suspense fallback={<div className="animate-pulse bg-card h-96 rounded-2xl" />}>
+              <AgentMapView />
+            </React.Suspense>
+          )}
+
+          {activeTab === 'routes' && (
+            <React.Suspense fallback={<div className="animate-pulse bg-card h-96 rounded-2xl" />}>
+              <div className="space-y-6">
+                <RoutePlanner />
+                <RouteKPIs />
+              </div>
+            </React.Suspense>
+          )}
+
           {activeTab === 'kpi' && (
             <DistributorWarehouseKPIs />
           )}
