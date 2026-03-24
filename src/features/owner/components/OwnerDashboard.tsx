@@ -160,6 +160,7 @@ const OwnerDashboard: React.FC = () => {
       case 'subscription': return <SubscriptionTab />;
       case 'legal': return <><LegalInfoTab /><OrgDeletionRequest /></>;
       case 'backup': return <BackupTab />;
+      case 'tracking': return <React.Suspense fallback={<div className="animate-pulse bg-card h-96 rounded-2xl" />}><AgentMapView /></React.Suspense>;
       default: return null;
     }
   };

@@ -143,8 +143,9 @@ const SalesManagerDashboard: React.FC = () => {
   const tabs: { id: SalesManagerTabType; label: string; icon: React.ReactNode; color: string; bgColor: string }[] = [
     { id: 'dashboard', label: t('salesManager.tabs.home'), icon: <LayoutDashboard className="w-5 h-5" />, color: 'text-blue-600', bgColor: 'bg-blue-600' },
     { id: 'team', label: t('salesManager.tabs.team'), icon: <Users className="w-5 h-5" />, color: 'text-orange-500', bgColor: 'bg-orange-500' },
+    { id: 'tracking', label: t('tracking.tab'), icon: <MapPin className="w-5 h-5" />, color: 'text-teal-600', bgColor: 'bg-teal-600' },
+    { id: 'routes', label: t('tracking.routesTab'), icon: <Route className="w-5 h-5" />, color: 'text-amber-600', bgColor: 'bg-amber-600' },
     { id: 'kpi', label: t('salesManager.tabs.kpi'), icon: <BarChart3 className="w-5 h-5" />, color: 'text-emerald-600', bgColor: 'bg-emerald-600' },
-    { id: 'sales', label: t('salesManager.tabs.sales'), icon: <TrendingUp className="w-5 h-5" />, color: 'text-purple-600', bgColor: 'bg-purple-600' },
   ];
 
   return (
