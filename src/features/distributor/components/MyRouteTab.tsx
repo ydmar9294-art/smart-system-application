@@ -19,7 +19,7 @@ interface RouteStop {
 
 interface MyRouteTabProps {
   isOnline: boolean;
-  onQueueAction: (type: string, payload: any) => Promise<void>;
+  onQueueAction: (type: any, payload: any, ...args: any[]) => Promise<any>;
 }
 
 const MyRouteTab: React.FC<MyRouteTabProps> = ({ isOnline, onQueueAction }) => {
