@@ -36,6 +36,7 @@ import CustomerDebtsTab from './CustomerDebtsTab';
 import DistributorInventoryTab from './DistributorInventoryTab';
 import InvoiceHistoryTab from './InvoiceHistoryTab';
 import OfflineSyncBanner from './OfflineSyncBanner';
+import MyRouteTab from './MyRouteTab';
 import { useDistributorOffline } from '../hooks/useDistributorOffline';
 import { Customer } from '@/types';
 import { CURRENCY } from '@/constants';
