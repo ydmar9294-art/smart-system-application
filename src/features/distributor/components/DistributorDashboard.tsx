@@ -129,8 +129,8 @@ const DistributorDashboard: React.FC = () => {
     { id: 'inventory', label: t('distributor.tabs.inventory'), icon: <Warehouse className="w-5 h-5" />, bgColor: 'bg-purple-600' },
     { id: 'new-sale', label: t('distributor.tabs.newSale'), icon: <FileText className="w-5 h-5" />, bgColor: 'bg-blue-600' },
     { id: 'collections', label: t('distributor.tabs.collections'), icon: <Wallet className="w-5 h-5" />, bgColor: 'bg-emerald-600' },
+    { id: 'route', label: t('tracking.myRoute'), icon: <MapPin className="w-5 h-5" />, bgColor: 'bg-orange-500' },
     { id: 'debts', label: t('distributor.tabs.customers'), icon: <Users className="w-5 h-5" />, bgColor: 'bg-red-500' },
-    { id: 'history', label: t('distributor.tabs.history'), icon: <History className="w-5 h-5" />, bgColor: 'bg-indigo-600' },
   ];
 
   const secondaryTabs: { id: DistributorTabType; label: string; icon: React.ReactNode }[] = [
