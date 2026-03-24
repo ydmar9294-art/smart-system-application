@@ -134,6 +134,7 @@ const DistributorDashboard: React.FC = () => {
   ];
 
   const secondaryTabs: { id: DistributorTabType; label: string; icon: React.ReactNode }[] = [
+    { id: 'history', label: t('distributor.tabs.history'), icon: <History className="w-4 h-4" /> },
     { id: 'returns', label: t('distributor.tabs.returns'), icon: <RotateCcw className="w-4 h-4" /> },
   ];
 
