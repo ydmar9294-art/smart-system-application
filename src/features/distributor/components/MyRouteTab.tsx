@@ -129,6 +129,7 @@ const MyRouteTab: React.FC<MyRouteTabProps> = ({ isOnline, onQueueAction }) => {
         <Navigation className="w-12 h-12 mx-auto text-muted-foreground mb-4 opacity-40" />
         <p className="font-bold text-foreground mb-1">{t('tracking.noRouteToday')}</p>
         <p className="text-sm text-muted-foreground">{t('tracking.noRouteDescription')}</p>
+        <p className="text-xs text-muted-foreground/60 mt-2">{t('tracking.routeAssignedByManager', 'يتم تعيين المسارات من قبل مدير المبيعات')}</p>
       </div>
     );
   }

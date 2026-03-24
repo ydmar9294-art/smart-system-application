@@ -179,7 +179,7 @@ const AgentMapView: React.FC = () => {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          {latestLocations
+          {agentsWithLocation
             .filter(loc => !selectedAgent || loc.user_id === selectedAgent)
             .map(loc => (
               <Marker key={loc.user_id} position={[loc.latitude, loc.longitude]}>
