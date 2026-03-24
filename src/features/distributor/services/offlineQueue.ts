@@ -19,7 +19,9 @@ export type OfflineActionType =
   | 'ADD_COLLECTION'
   | 'CREATE_RETURN'
   | 'TRANSFER_TO_WAREHOUSE'
-  | 'ADD_CUSTOMER';
+  | 'ADD_CUSTOMER'
+  | 'GPS_LOG'
+  | 'ROUTE_VISIT';
 
 export type OfflineActionStatus = 'pending' | 'syncing' | 'synced' | 'failed';
 

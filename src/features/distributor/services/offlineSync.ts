@@ -239,6 +239,32 @@ async function executeActionInner(action: OfflineAction): Promise<ExecuteResult>
       return 'synced';
     }
 
+    case 'GPS_LOG': {
+      const { error } = await supabase.from('distributor_locations').insert({
+        user_id: (await supabase.auth.getSession()).data.session?.user?.id,
+        latitude: action.payload.latitude,
+        longitude: action.payload.longitude,
+        accuracy: action.payload.accuracy || null,
+        organization_id: action.payload.organizationId,
+        visit_type: action.payload.visitType || 'route_point',
+        recorded_at: action.payload.recordedAt || new Date().toISOString(),
+        is_synced: true,
+        synced_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+      return 'synced';
+    }
+
+    case 'ROUTE_VISIT': {
+      const { error } = await supabase.from('route_stops').update({
+        status: action.payload.status,
+        notes: action.payload.notes || null,
+        visited_at: action.payload.visitedAt || new Date().toISOString(),
+      }).eq('id', action.payload.stopId);
+      if (error) throw error;
+      return 'synced';
+    }
+
     default:
       logger.warn(`[Sync] Unknown action type: ${action.type}`, 'DistributorOffline');
       return 'failed';
