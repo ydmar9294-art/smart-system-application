@@ -35,6 +35,10 @@ import AIAssistant from '@/features/ai/components/AIAssistant';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
 import DistributorWarehouseKPIs from '@/features/analytics/components/DistributorWarehouseKPIs';
 
+const AgentMapView = React.lazy(() => import('@/features/tracking/components/AgentMapView'));
+const RoutePlanner = React.lazy(() => import('@/features/tracking/components/RoutePlanner'));
+const RouteKPIs = React.lazy(() => import('@/features/tracking/components/RouteKPIs'));
+
 type SalesManagerTabType = 'dashboard' | 'team' | 'sales' | 'kpi';
 
 const SalesManagerDashboard: React.FC = () => {
