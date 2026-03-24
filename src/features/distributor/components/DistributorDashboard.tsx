@@ -38,6 +38,7 @@ import InvoiceHistoryTab from './InvoiceHistoryTab';
 import OfflineSyncBanner from './OfflineSyncBanner';
 import MyRouteTab from './MyRouteTab';
 import { useDistributorOffline } from '../hooks/useDistributorOffline';
+import { useGpsTracker } from '@/platform/hooks/useGpsTracker';
 import { Customer } from '@/types';
 import { CURRENCY } from '@/constants';
 
@@ -49,6 +50,13 @@ const DistributorDashboard: React.FC = () => {
   const { logout, addNotification, refreshAllData, organization, user: appUser } = useApp();
   const offline = useDistributorOffline();
   const { role: authRole, organization: authOrg } = useAuth();
+
+  // Activate GPS tracking for field agents
+  useGpsTracker({
+    enabled: offline.isOnline || true, // track even offline (queued locally)
+    organizationId: authOrg?.id,
+    intervalMs: 3 * 60 * 1000, // every 3 minutes
+  });
   const [activeTab, setActiveTab] = useState<DistributorTabType>('inventory');
   useTabPrefetch(activeTab, authOrg?.id, authRole);
   const [loggingOut, setLoggingOut] = useState(false);

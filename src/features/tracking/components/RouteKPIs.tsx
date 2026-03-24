@@ -21,6 +21,7 @@ const RouteKPIs: React.FC = () => {
       const { data } = await supabase
         .from('route_stops')
         .select('id, status, route_id, routes!inner(organization_id, distributor_id)')
+        .eq('routes.organization_id', organization.id)
         .gte('planned_date', weekStart.toISOString().split('T')[0]);
 
       // Filter by org (RLS handles this but double-check)
