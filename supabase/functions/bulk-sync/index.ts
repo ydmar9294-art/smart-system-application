@@ -214,6 +214,7 @@ async function processOperation(
   op: SyncOperation,
   customerIdMap: Map<string, string>,
   saleIdMap: Map<string, string>,
+  userId: string,
 ): Promise<SyncResult> {
   switch (op.type) {
     case 'ADD_CUSTOMER': {
