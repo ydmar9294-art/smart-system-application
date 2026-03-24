@@ -90,7 +90,9 @@ function syncPriority(type: OfflineActionType): number {
     case 'ADD_COLLECTION': return 2;
     case 'CREATE_RETURN': return 3;
     case 'TRANSFER_TO_WAREHOUSE': return 4;
-    default: return 5;
+    case 'ROUTE_VISIT': return 5;
+    case 'GPS_LOG': return 6;
+    default: return 7;
   }
 }
 
