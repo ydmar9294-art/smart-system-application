@@ -7,11 +7,11 @@ import { useState, useEffect, useCallback } from 'react';
  */
 export function usePageTheme() {
   const [isDark, setIsDark] = useState(() => {
-    if (typeof window === 'undefined') return true;
+    if (typeof window === 'undefined') return false;
     const stored = localStorage.getItem('app-theme');
     if (stored) return stored === 'dark';
-    // Default to dark mode when no preference is stored
-    return true;
+    // Default to light mode for new users
+    return false;
   });
 
   useEffect(() => {
