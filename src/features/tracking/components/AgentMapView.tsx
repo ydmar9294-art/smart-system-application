@@ -112,8 +112,8 @@ const AgentMapView: React.FC = () => {
     Array.from(latestLocations.values()), 
   [latestLocations]);
 
-  const center: [number, number] = latestLocations.length > 0
-    ? [latestLocations[0].latitude, latestLocations[0].longitude]
+  const center: [number, number] = agentsWithLocation.length > 0
+    ? [agentsWithLocation[0].latitude, agentsWithLocation[0].longitude]
     : [33.5138, 36.2765]; // Damascus default
 
   const formatTime = (dateStr: string) => {
