@@ -11,7 +11,7 @@ import { getCorsHeaders, handleCorsPreflightIfNeeded } from '../_shared/cors.ts'
 
 interface SyncOperation {
   id: string;
-  type: 'ADD_CUSTOMER' | 'CREATE_SALE' | 'ADD_COLLECTION' | 'CREATE_RETURN' | 'TRANSFER_TO_WAREHOUSE';
+  type: 'ADD_CUSTOMER' | 'CREATE_SALE' | 'ADD_COLLECTION' | 'CREATE_RETURN' | 'TRANSFER_TO_WAREHOUSE' | 'GPS_LOG' | 'ROUTE_VISIT';
   payload: Record<string, unknown>;
   idempotencyKey: string;
   /** Client-side HMAC signature for integrity verification */
