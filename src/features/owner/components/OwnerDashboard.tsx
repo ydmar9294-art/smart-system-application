@@ -137,6 +137,7 @@ const OwnerDashboard: React.FC = () => {
   ];
 
   const secondaryTabs: { id: OwnerTabType; label: string; icon: React.ReactNode }[] = [
+    { id: 'tracking', label: t('tracking.tab'), icon: <MapPin className="w-4 h-4" /> },
     { id: 'backup', label: t('owner.tabs.backup'), icon: <Database className="w-4 h-4" /> },
     { id: 'subscription', label: t('owner.tabs.subscription'), icon: <Shield className="w-4 h-4" /> },
     { id: 'legal', label: t('owner.tabs.legal'), icon: <ShieldCheck className="w-4 h-4" /> },
