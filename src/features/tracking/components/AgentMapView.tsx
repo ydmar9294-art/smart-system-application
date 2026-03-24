@@ -8,6 +8,17 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
+// Ensure leaflet CSS is loaded for proper rendering
+if (typeof window !== 'undefined') {
+  const link = document.querySelector('link[href*="leaflet.css"]');
+  if (!link) {
+    const cssLink = document.createElement('link');
+    cssLink.rel = 'stylesheet';
+    cssLink.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(cssLink);
+  }
+}
+
 // Fix default marker icon
 const defaultIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
