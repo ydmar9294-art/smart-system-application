@@ -136,26 +136,30 @@ const AgentMapView: React.FC = () => {
 
       {/* Agent List */}
       <div className="flex gap-2 overflow-x-auto pb-2">
-        {latestLocations.map(loc => (
+        {allAgents.map(agent => (
           <button
-            key={loc.user_id}
-            onClick={() => setSelectedAgent(loc.user_id === selectedAgent ? null : loc.user_id)}
+            key={agent.id}
+            onClick={() => setSelectedAgent(agent.id === selectedAgent ? null : agent.id)}
             className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-              selectedAgent === loc.user_id
+              selectedAgent === agent.id
                 ? 'bg-blue-600 text-white shadow-lg'
                 : 'bg-card text-foreground shadow-sm hover:bg-muted'
             }`}
           >
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-              <span>{loc.agent_name}</span>
+              <div className={`w-2 h-2 rounded-full ${agent.hasLocation ? 'bg-emerald-400 animate-pulse' : 'bg-muted-foreground/40'}`} />
+              <span>{agent.name}</span>
             </div>
-            <p className="text-[10px] opacity-70 mt-0.5">
-              <Clock className="w-3 h-3 inline" /> {formatTime(loc.recorded_at)}
-            </p>
+            {agent.location ? (
+              <p className="text-[10px] opacity-70 mt-0.5">
+                <Clock className="w-3 h-3 inline" /> {formatTime(agent.location.recorded_at)}
+              </p>
+            ) : (
+              <p className="text-[10px] opacity-50 mt-0.5">{t('tracking.offline')}</p>
+            )}
           </button>
         ))}
-        {latestLocations.length === 0 && !isLoading && (
+        {allAgents.length === 0 && !isLoading && (
           <div className="text-center py-4 text-muted-foreground text-sm w-full">
             <Users className="w-8 h-8 mx-auto mb-2 opacity-40" />
             {t('tracking.noActiveAgents')}
