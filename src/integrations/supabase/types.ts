@@ -1183,6 +1183,111 @@ export type Database = {
         }
         Relationships: []
       }
+      route_stops: {
+        Row: {
+          created_at: string
+          customer_id: string
+          customer_name: string
+          id: string
+          location_lat: number | null
+          location_lng: number | null
+          notes: string | null
+          planned_date: string
+          route_id: string
+          sequence_order: number
+          status: string
+          visited_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          customer_name: string
+          id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          notes?: string | null
+          planned_date: string
+          route_id: string
+          sequence_order: number
+          status?: string
+          visited_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          customer_name?: string
+          id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          notes?: string | null
+          planned_date?: string
+          route_id?: string
+          sequence_order?: number
+          status?: string
+          visited_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_stops_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "route_stops_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routes: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          distributor_id: string
+          id: string
+          name: string | null
+          organization_id: string
+          week_start: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          distributor_id: string
+          id?: string
+          name?: string | null
+          organization_id: string
+          week_start: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          distributor_id?: string
+          id?: string
+          name?: string | null
+          organization_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routes_distributor_id_fkey"
+            columns: ["distributor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sale_items: {
         Row: {
           created_at: string
