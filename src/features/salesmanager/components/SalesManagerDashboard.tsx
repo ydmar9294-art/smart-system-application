@@ -39,7 +39,7 @@ const AgentMapView = React.lazy(() => import('@/features/tracking/components/Age
 const RoutePlanner = React.lazy(() => import('@/features/tracking/components/RoutePlanner'));
 const RouteKPIs = React.lazy(() => import('@/features/tracking/components/RouteKPIs'));
 
-type SalesManagerTabType = 'dashboard' | 'team' | 'sales' | 'kpi';
+type SalesManagerTabType = 'dashboard' | 'team' | 'sales' | 'kpi' | 'tracking' | 'routes';
 
 const SalesManagerDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
