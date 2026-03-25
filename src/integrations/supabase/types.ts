@@ -1947,6 +1947,16 @@ export type Database = {
       expire_overdue_licenses: { Args: never; Returns: number }
       get_customer_debts_summary_rpc: { Args: never; Returns: Json }
       get_financial_summary_rpc: { Args: never; Returns: Json }
+      get_latest_agent_locations: {
+        Args: { p_organization_id: string }
+        Returns: {
+          accuracy: number
+          latitude: number
+          longitude: number
+          recorded_at: string
+          user_id: string
+        }[]
+      }
       get_my_license_info: {
         Args: never
         Returns: {
@@ -1987,6 +1997,10 @@ export type Database = {
           total_sales: number
           total_users: number
         }[]
+      }
+      get_route_kpis: {
+        Args: { p_organization_id: string; p_since: string }
+        Returns: Json
       }
       is_developer: { Args: never; Returns: boolean }
       issue_license_rpc: {

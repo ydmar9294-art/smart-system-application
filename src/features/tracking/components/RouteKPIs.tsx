@@ -5,60 +5,59 @@ import { BarChart3, CheckCircle2, XCircle, TrendingUp, Users } from 'lucide-reac
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/store/AuthContext';
 
+interface KpiData {
+  total: number;
+  visited: number;
+  sold: number;
+  skipped: number;
+  pending: number;
+  per_agent: Array<{
+    distributor_id: string;
+    total: number;
+    visited: number;
+    sold: number;
+  }>;
+}
+
 const RouteKPIs: React.FC = () => {
   const { t } = useTranslation();
   const { organization } = useAuth();
 
-  const { data: stops = [], isLoading } = useQuery({
-    queryKey: ['route-kpis', organization?.id],
+  const weekStart = React.useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - d.getDay());
+    d.setHours(0, 0, 0, 0);
+    return d.toISOString().split('T')[0];
+  }, []);
+
+  // Use server-side RPC for aggregated KPIs (no row fetching)
+  const { data: kpis, isLoading } = useQuery({
+    queryKey: ['route-kpis-rpc', organization?.id, weekStart],
     queryFn: async () => {
-      if (!organization?.id) return [];
-      // Get this week's stops
-      const weekStart = new Date();
-      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-      weekStart.setHours(0, 0, 0, 0);
-
-      const { data } = await supabase
-        .from('route_stops')
-        .select('id, status, route_id, routes!inner(organization_id, distributor_id)')
-        .eq('routes.organization_id', organization.id)
-        .gte('planned_date', weekStart.toISOString().split('T')[0]);
-
-      // Filter by org (RLS handles this but double-check)
-      return (data || []) as Array<{
-        id: string;
-        status: string;
-        route_id: string;
-        routes: { organization_id: string; distributor_id: string };
-      }>;
+      if (!organization?.id) return null;
+      const { data, error } = await supabase.rpc('get_route_kpis', {
+        p_organization_id: organization.id,
+        p_since: weekStart,
+      });
+      if (error) {
+        console.error('get_route_kpis error:', error);
+        return null;
+      }
+      return data as unknown as KpiData;
     },
     enabled: !!organization?.id,
     staleTime: 60_000,
   });
 
-  const total = stops.length;
-  const visited = stops.filter(s => s.status === 'visited' || s.status === 'sold').length;
-  const sold = stops.filter(s => s.status === 'sold').length;
-  const skipped = stops.filter(s => s.status === 'skipped').length;
-  const pending = stops.filter(s => s.status === 'pending').length;
+  const total = kpis?.total ?? 0;
+  const visited = kpis?.visited ?? 0;
+  const sold = kpis?.sold ?? 0;
+  const skipped = kpis?.skipped ?? 0;
+  const pending = kpis?.pending ?? 0;
+  const agentStats = kpis?.per_agent ?? [];
 
   const visitRate = total > 0 ? Math.round((visited / total) * 100) : 0;
   const conversionRate = visited > 0 ? Math.round((sold / visited) * 100) : 0;
-
-  // Per-agent breakdown
-  const agentStats = React.useMemo(() => {
-    const map = new Map<string, { total: number; visited: number; sold: number }>();
-    for (const stop of stops) {
-      const agentId = stop.routes?.distributor_id;
-      if (!agentId) continue;
-      const entry = map.get(agentId) || { total: 0, visited: 0, sold: 0 };
-      entry.total++;
-      if (stop.status === 'visited' || stop.status === 'sold') entry.visited++;
-      if (stop.status === 'sold') entry.sold++;
-      map.set(agentId, entry);
-    }
-    return Array.from(map.entries()).sort((a, b) => b[1].visited - a[1].visited);
-  }, [stops]);
 
   if (isLoading) {
     return (
@@ -77,7 +76,6 @@ const RouteKPIs: React.FC = () => {
         {t('tracking.routeKPIs')}
       </h2>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-card p-4 rounded-2xl shadow-sm">
           <div className="flex items-center gap-2 mb-2">
@@ -114,15 +112,14 @@ const RouteKPIs: React.FC = () => {
         </div>
       </div>
 
-      {/* Agent Ranking */}
       {agentStats.length > 0 && (
         <div className="bg-card p-4 rounded-2xl shadow-sm">
           <h3 className="text-xs font-bold text-muted-foreground mb-3">{t('tracking.agentRanking')}</h3>
           <div className="space-y-2">
-            {agentStats.slice(0, 5).map(([agentId, stats], idx) => {
-              const rate = stats.total > 0 ? Math.round((stats.visited / stats.total) * 100) : 0;
+            {agentStats.slice(0, 10).map((agent, idx) => {
+              const rate = agent.total > 0 ? Math.round((agent.visited / agent.total) * 100) : 0;
               return (
-                <div key={agentId} className="flex items-center gap-3">
+                <div key={agent.distributor_id} className="flex items-center gap-3">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                     idx === 0 ? 'bg-yellow-500/20 text-yellow-600' : 'bg-muted text-muted-foreground'
                   }`}>
@@ -134,6 +131,7 @@ const RouteKPIs: React.FC = () => {
                     </div>
                   </div>
                   <span className="text-xs font-bold text-foreground">{rate}%</span>
+                  <span className="text-[10px] text-muted-foreground">{agent.visited}/{agent.total}</span>
                 </div>
               );
             })}
