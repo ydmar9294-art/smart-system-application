@@ -38,6 +38,7 @@ import DistributorWarehouseKPIs from '@/features/analytics/components/Distributo
 const AgentMapView = React.lazy(() => import('@/features/tracking/components/AgentMapView'));
 const RoutePlanner = React.lazy(() => import('@/features/tracking/components/RoutePlanner'));
 const RouteKPIs = React.lazy(() => import('@/features/tracking/components/RouteKPIs'));
+const RouteHistory = React.lazy(() => import('@/features/tracking/components/RouteHistory'));
 
 type SalesManagerTabType = 'dashboard' | 'team' | 'sales' | 'kpi' | 'tracking' | 'routes';
 
@@ -333,6 +334,7 @@ const SalesManagerDashboard: React.FC = () => {
             <React.Suspense fallback={<div className="animate-pulse bg-card h-96 rounded-2xl" />}>
               <div className="space-y-6">
                 <RoutePlanner />
+                <RouteHistory />
                 <RouteKPIs />
               </div>
             </React.Suspense>
