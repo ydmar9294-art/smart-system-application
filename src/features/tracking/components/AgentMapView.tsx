@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { MapPin, Users, Clock, RefreshCw } from 'lucide-react';
+import { MapPin, Users, Clock, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/store/AuthContext';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -45,6 +45,7 @@ const AgentMapView: React.FC = () => {
   const { organization } = useAuth();
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
 
+  // Fetch GPS locations for today
   const { data: locations = [], isLoading, refetch } = useQuery({
     queryKey: ['agent-locations', organization?.id],
     queryFn: async () => {
@@ -83,6 +84,39 @@ const AgentMapView: React.FC = () => {
     staleTime: 5 * 60_000,
   });
 
+  // Fetch device online status - check last_seen within 10 minutes
+  const { data: onlineDevices = [] } = useQuery({
+    queryKey: ['agent-devices-online', organization?.id],
+    queryFn: async () => {
+      if (!organization?.id || agents.length === 0) return [];
+      const agentIds = agents.map(a => a.id);
+      const { data } = await supabase
+        .from('devices')
+        .select('user_id, last_seen, is_active')
+        .in('user_id', agentIds)
+        .eq('is_active', true)
+        .order('last_seen', { ascending: false });
+      return data || [];
+    },
+    enabled: !!organization?.id && agents.length > 0,
+    refetchInterval: 60_000,
+  });
+
+  // Build online status map (online if last_seen within 10 minutes)
+  const onlineStatusMap = useMemo(() => {
+    const map = new Map<string, { isOnline: boolean; lastSeen: string }>();
+    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    for (const device of onlineDevices) {
+      if (!map.has(device.user_id)) {
+        map.set(device.user_id, {
+          isOnline: device.last_seen >= tenMinAgo,
+          lastSeen: device.last_seen,
+        });
+      }
+    }
+    return map;
+  }, [onlineDevices]);
+
   // Latest location per agent
   const latestLocations = useMemo(() => {
     const map = new Map<string, AgentLocation>();
@@ -98,15 +132,20 @@ const AgentMapView: React.FC = () => {
     return map;
   }, [locations, agents, t]);
 
-  // All agents list (with or without GPS data)
+  // All agents list
   const allAgents = useMemo(() => {
-    return agents.map(agent => ({
-      id: agent.id,
-      name: agent.full_name || t('tracking.unknownAgent'),
-      hasLocation: latestLocations.has(agent.id),
-      location: latestLocations.get(agent.id) || null,
-    }));
-  }, [agents, latestLocations, t]);
+    return agents.map(agent => {
+      const deviceStatus = onlineStatusMap.get(agent.id);
+      return {
+        id: agent.id,
+        name: agent.full_name || t('tracking.unknownAgent'),
+        hasLocation: latestLocations.has(agent.id),
+        location: latestLocations.get(agent.id) || null,
+        isOnline: deviceStatus?.isOnline ?? false,
+        lastSeen: deviceStatus?.lastSeen || null,
+      };
+    });
+  }, [agents, latestLocations, onlineStatusMap, t]);
 
   const agentsWithLocation = useMemo(() => 
     Array.from(latestLocations.values()), 
@@ -147,15 +186,22 @@ const AgentMapView: React.FC = () => {
             }`}
           >
             <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${agent.hasLocation ? 'bg-emerald-400 animate-pulse' : 'bg-muted-foreground/40'}`} />
+              <div className={`w-2 h-2 rounded-full ${agent.isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-muted-foreground/40'}`} />
               <span>{agent.name}</span>
+              {agent.isOnline ? (
+                <Wifi className="w-3 h-3 text-emerald-500" />
+              ) : (
+                <WifiOff className="w-3 h-3 text-muted-foreground/40" />
+              )}
             </div>
-            {agent.location ? (
-              <p className="text-[10px] opacity-70 mt-0.5">
-                <Clock className="w-3 h-3 inline" /> {formatTime(agent.location.recorded_at)}
+            {agent.isOnline ? (
+              <p className="text-[10px] opacity-70 mt-0.5">{t('tracking.online')}</p>
+            ) : agent.lastSeen ? (
+              <p className="text-[10px] opacity-50 mt-0.5">
+                <Clock className="w-3 h-3 inline" /> {formatTime(agent.lastSeen)}
               </p>
             ) : (
-              <p className="text-[10px] opacity-50 mt-0.5">{t('tracking.offline')}</p>
+              <p className="text-[10px] opacity-50 mt-0.5">{t('tracking.neverConnected')}</p>
             )}
           </button>
         ))}
