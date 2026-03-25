@@ -156,6 +156,13 @@ const AgentMapView: React.FC = () => {
     ? [agentsWithLocation[0].latitude, agentsWithLocation[0].longitude]
     : [33.5138, 36.2765];
 
+  const flyToPosition: [number, number] | null = useMemo(() => {
+    if (!selectedAgent) return null;
+    const loc = latestLocations.get(selectedAgent);
+    if (loc) return [loc.latitude, loc.longitude];
+    return null;
+  }, [selectedAgent, latestLocations]);
+
   const formatTime = (dateStr: string) => {
     const d = new Date(dateStr);
     return d.toLocaleTimeString(isRtl ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' });
