@@ -4,9 +4,20 @@ import { useTranslation } from 'react-i18next';
 import { MapPin, Users, Clock, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/store/AuthContext';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+
+// Helper component to fly map to a position
+const FlyToAgent: React.FC<{ position: [number, number] | null }> = ({ position }) => {
+  const map = useMap();
+  React.useEffect(() => {
+    if (position) {
+      map.flyTo(position, 15, { duration: 1 });
+    }
+  }, [map, position]);
+  return null;
+};
 
 if (typeof window !== 'undefined') {
   const link = document.querySelector('link[href*="leaflet.css"]');
@@ -145,6 +156,13 @@ const AgentMapView: React.FC = () => {
     ? [agentsWithLocation[0].latitude, agentsWithLocation[0].longitude]
     : [33.5138, 36.2765];
 
+  const flyToPosition: [number, number] | null = useMemo(() => {
+    if (!selectedAgent) return null;
+    const loc = latestLocations.get(selectedAgent);
+    if (loc) return [loc.latitude, loc.longitude];
+    return null;
+  }, [selectedAgent, latestLocations]);
+
   const formatTime = (dateStr: string) => {
     const d = new Date(dateStr);
     return d.toLocaleTimeString(isRtl ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' });
@@ -207,6 +225,7 @@ const AgentMapView: React.FC = () => {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
+          <FlyToAgent position={flyToPosition} />
           {agentsWithLocation
             .filter(loc => !selectedAgent || loc.user_id === selectedAgent)
             .map(loc => (
