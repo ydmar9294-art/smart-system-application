@@ -150,17 +150,58 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Track ID mappings within this batch (local → server)
-    const customerIdMap = new Map<string, string>();
-    const saleIdMap = new Map<string, string>();
-    const results: SyncResult[] = [...rejectedResults];
-
+    // --- Batch GPS_LOG operations for efficiency ---
+    const gpsOps: SyncOperation[] = [];
+    const nonGpsOps: SyncOperation[] = [];
     for (const op of validOperations) {
       if (op.idempotencyKey && processedKeys.has(op.idempotencyKey)) {
         results.push({ id: op.id, status: 'duplicate' });
         continue;
       }
+      if (op.type === 'GPS_LOG') {
+        gpsOps.push(op);
+      } else {
+        nonGpsOps.push(op);
+      }
+    }
 
+    // Batch insert all GPS logs in one query
+    if (gpsOps.length > 0) {
+      const gpsRows = gpsOps.map(op => ({
+        user_id: userId,
+        latitude: op.payload.latitude as number,
+        longitude: op.payload.longitude as number,
+        accuracy: (op.payload.accuracy as number) || null,
+        organization_id: op.payload.organizationId as string,
+        visit_type: (op.payload.visitType as string) || 'route_point',
+        recorded_at: (op.payload.recordedAt as string) || new Date().toISOString(),
+        is_synced: true,
+        synced_at: new Date().toISOString(),
+      }));
+
+      const { error: gpsErr } = await supabase.from('distributor_locations').insert(gpsRows);
+      
+      for (const op of gpsOps) {
+        if (gpsErr) {
+          results.push({ id: op.id, status: 'failed', error: gpsErr.message });
+        } else {
+          results.push({ id: op.id, status: 'synced' });
+          if (op.idempotencyKey) {
+            // Batch audit logs for GPS
+            await serviceClient.from('audit_logs').insert({
+              action: 'BULK_SYNC_OP',
+              entity_type: 'GPS_LOG',
+              entity_id: op.idempotencyKey,
+              user_id: userId,
+              details: {},
+            });
+          }
+        }
+      }
+    }
+
+    // Process remaining operations sequentially
+    for (const op of nonGpsOps) {
       try {
         const result = await processOperation(supabase, op, customerIdMap, saleIdMap, userId);
         results.push(result);
