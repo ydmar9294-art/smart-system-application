@@ -4,9 +4,20 @@ import { useTranslation } from 'react-i18next';
 import { MapPin, Users, Clock, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/store/AuthContext';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+
+// Helper component to fly map to a position
+const FlyToAgent: React.FC<{ position: [number, number] | null }> = ({ position }) => {
+  const map = useMap();
+  React.useEffect(() => {
+    if (position) {
+      map.flyTo(position, 15, { duration: 1 });
+    }
+  }, [map, position]);
+  return null;
+};
 
 if (typeof window !== 'undefined') {
   const link = document.querySelector('link[href*="leaflet.css"]');
