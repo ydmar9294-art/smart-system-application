@@ -8,7 +8,6 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Ensure leaflet CSS is loaded for proper rendering
 if (typeof window !== 'undefined') {
   const link = document.querySelector('link[href*="leaflet.css"]');
   if (!link) {
@@ -19,7 +18,6 @@ if (typeof window !== 'undefined') {
   }
 }
 
-// Fix default marker icon
 const defaultIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -45,23 +43,19 @@ const AgentMapView: React.FC = () => {
   const { organization } = useAuth();
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
 
-  // Fetch GPS locations for today
+  // Use server-side RPC for latest locations (DISTINCT ON, no full-day scan)
   const { data: locations = [], isLoading, refetch } = useQuery({
-    queryKey: ['agent-locations', organization?.id],
+    queryKey: ['agent-locations-rpc', organization?.id],
     queryFn: async () => {
       if (!organization?.id) return [];
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-
-      const { data, error } = await supabase
-        .from('distributor_locations')
-        .select('user_id, latitude, longitude, accuracy, recorded_at')
-        .eq('organization_id', organization.id)
-        .gte('recorded_at', todayStart.toISOString())
-        .order('recorded_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
+      const { data, error } = await supabase.rpc('get_latest_agent_locations', {
+        p_organization_id: organization.id,
+      });
+      if (error) {
+        console.error('get_latest_agent_locations error:', error);
+        return [];
+      }
+      return (data || []) as AgentLocation[];
     },
     enabled: !!organization?.id,
     refetchInterval: 60_000,
@@ -84,7 +78,7 @@ const AgentMapView: React.FC = () => {
     staleTime: 5 * 60_000,
   });
 
-  // Fetch device online status - check last_seen within 10 minutes
+  // Fetch device online status
   const { data: onlineDevices = [] } = useQuery({
     queryKey: ['agent-devices-online', organization?.id],
     queryFn: async () => {
@@ -102,7 +96,6 @@ const AgentMapView: React.FC = () => {
     refetchInterval: 60_000,
   });
 
-  // Build online status map (online if last_seen within 10 minutes)
   const onlineStatusMap = useMemo(() => {
     const map = new Map<string, { isOnline: boolean; lastSeen: string }>();
     const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
@@ -117,22 +110,19 @@ const AgentMapView: React.FC = () => {
     return map;
   }, [onlineDevices]);
 
-  // Latest location per agent
+  // Location map from RPC results (already 1 per agent)
   const latestLocations = useMemo(() => {
     const map = new Map<string, AgentLocation>();
     for (const loc of locations) {
-      if (!map.has(loc.user_id)) {
-        const agent = agents.find(a => a.id === loc.user_id);
-        map.set(loc.user_id, {
-          ...loc,
-          agent_name: agent?.full_name || t('tracking.unknownAgent'),
-        });
-      }
+      const agent = agents.find(a => a.id === loc.user_id);
+      map.set(loc.user_id, {
+        ...loc,
+        agent_name: agent?.full_name || t('tracking.unknownAgent'),
+      });
     }
     return map;
   }, [locations, agents, t]);
 
-  // All agents list
   const allAgents = useMemo(() => {
     return agents.map(agent => {
       const deviceStatus = onlineStatusMap.get(agent.id);
@@ -153,7 +143,7 @@ const AgentMapView: React.FC = () => {
 
   const center: [number, number] = agentsWithLocation.length > 0
     ? [agentsWithLocation[0].latitude, agentsWithLocation[0].longitude]
-    : [33.5138, 36.2765]; // Damascus default
+    : [33.5138, 36.2765];
 
   const formatTime = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -162,7 +152,6 @@ const AgentMapView: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="font-bold text-foreground flex items-center gap-2">
           <MapPin className="w-5 h-5 text-blue-600" />
@@ -173,7 +162,6 @@ const AgentMapView: React.FC = () => {
         </button>
       </div>
 
-      {/* Agent List */}
       <div className="flex gap-2 overflow-x-auto pb-2">
         {allAgents.map(agent => (
           <button
@@ -213,14 +201,8 @@ const AgentMapView: React.FC = () => {
         )}
       </div>
 
-      {/* Map */}
       <div className="rounded-2xl overflow-hidden shadow-sm border border-border" style={{ height: 400 }}>
-        <MapContainer
-          center={center}
-          zoom={12}
-          style={{ height: '100%', width: '100%' }}
-          scrollWheelZoom={true}
-        >
+        <MapContainer center={center} zoom={12} style={{ height: '100%', width: '100%' }} scrollWheelZoom={true}>
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
