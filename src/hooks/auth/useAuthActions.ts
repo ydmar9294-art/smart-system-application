@@ -69,7 +69,7 @@ export const useAuthActions = (deps: AuthActionsDeps) => {
         isInternalAuthOp.current = false;
       }
     });
-  }, [resetToLogin, isInternalAuthOp, bootedFromCache]);
+  }, [resetToLogin, isInternalAuthOp, bootedFromCache, lastResolvedUid, inflightResolve]);
 
   const refreshAuth = useCallback(async () => {
     // Only refresh if online — never invalidate offline
