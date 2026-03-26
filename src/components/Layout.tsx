@@ -163,11 +163,10 @@ const LicenseFrozenScreen: React.FC<{
     setChecking(true);
     try {
       await onRetry();
-      setTimeout(() => {
-        setReactivated(true);
-        setTimeout(() => setReactivated(false), 3000);
-        setChecking(false);
-      }, 1500);
+      // onRetry (refreshAuth) will update the license state.
+      // If the license is now active, Layout will stop rendering this screen.
+      // Only show "reactivated" feedback briefly if still mounted.
+      setChecking(false);
     } catch {
       setChecking(false);
     }
