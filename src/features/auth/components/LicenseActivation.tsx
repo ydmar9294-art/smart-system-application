@@ -148,7 +148,7 @@ const LicenseActivation: React.FC<LicenseActivationProps> = ({ userId, email, fu
             <div className="space-y-1">
               <p className="text-center text-xs text-gray-600 dark:text-gray-300 font-medium">{t('activation.paymentAddress')}</p>
               <div onClick={handleCopyPayment} className="bg-white dark:bg-gray-800 p-3 rounded-xl flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-green-200 dark:border-green-700">
-                <span className="font-mono text-sm text-gray-800 dark:text-gray-200 tracking-wide" dir="ltr">{SHAMCASH_ADDRESS}</span>
+                <span className="font-mono text-sm text-gray-800 dark:text-gray-200 tracking-wide" dir="ltr">{shamcashAddress}</span>
                 {copiedPayment ? <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" /> : <Copy className="w-5 h-5 text-gray-400 flex-shrink-0" />}
               </div>
             </div>
