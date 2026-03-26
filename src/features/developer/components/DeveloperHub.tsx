@@ -392,7 +392,7 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
 // Settings Tab — ShamCash Address Management
 // ============================================
 const SettingsTab: React.FC = () => {
-  const { shamcashAddress, loading, saving, updateShamcashAddress } = useAppSettingsAdmin();
+  const { shamcashAddress, loading, saving, errorMessage, updateShamcashAddress } = useAppSettingsAdmin();
   const [editMode, setEditMode] = useState(false);
   const [draft, setDraft] = useState('');
   const [copied, setCopied] = useState(false);
@@ -411,6 +411,8 @@ const SettingsTab: React.FC = () => {
       setEditMode(false);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
+    } else {
+      setSaveSuccess(false);
     }
   };
 
@@ -478,6 +480,9 @@ const SettingsTab: React.FC = () => {
                 <X size={14} /> إلغاء
               </button>
             </div>
+              {errorMessage && (
+                <p className="text-xs font-bold text-destructive">فشل الحفظ: {errorMessage}</p>
+              )}
           </div>
         ) : (
           <div className="space-y-2">
