@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { MapPin, Check, ShoppingBag, SkipForward, Clock, Navigation, Calendar } from 'lucide-react';
+import { Check, ShoppingBag, SkipForward, Clock, Navigation, Calendar, ChevronDown, FolderOpen } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/store/AuthContext';
 import { Progress } from '@/components/ui/progress';
@@ -22,6 +22,16 @@ interface MyRouteTabProps {
   onQueueAction: (type: any, payload: any, ...args: any[]) => Promise<any>;
 }
 
+interface DayGroup {
+  date: string;
+  label: string;
+  stops: RouteStop[];
+  isToday: boolean;
+  isPast: boolean;
+  completedCount: number;
+  totalCount: number;
+}
+
 const MyRouteTab: React.FC<MyRouteTabProps> = ({ isOnline, onQueueAction }) => {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
@@ -29,10 +39,10 @@ const MyRouteTab: React.FC<MyRouteTabProps> = ({ isOnline, onQueueAction }) => {
   const queryClient = useQueryClient();
   const [skipNotes, setSkipNotes] = useState<Record<string, string>>({});
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
 
   const today = new Date().toISOString().split('T')[0];
 
-  // Get the current week range (Sunday to Saturday)
   const weekRange = useMemo(() => {
     const now = new Date();
     const dayOfWeek = now.getDay();
@@ -53,7 +63,6 @@ const MyRouteTab: React.FC<MyRouteTabProps> = ({ isOnline, onQueueAction }) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return [];
 
-      // Fetch all stops for the current week for this distributor
       const { data, error } = await supabase
         .from('route_stops')
         .select('id, customer_name, customer_id, sequence_order, planned_date, status, notes, visited_at, route_id, routes!inner(distributor_id)')
@@ -82,10 +91,49 @@ const MyRouteTab: React.FC<MyRouteTabProps> = ({ isOnline, onQueueAction }) => {
     staleTime: 30_000,
   });
 
-  // Split stops by today vs other days
-  const todayStops = useMemo(() => stops.filter(s => s.planned_date === today), [stops, today]);
-  const upcomingStops = useMemo(() => stops.filter(s => s.planned_date > today && s.status === 'pending'), [stops, today]);
-  const pastStops = useMemo(() => stops.filter(s => s.planned_date < today), [stops, today]);
+  // Group stops by date into day folders
+  const dayGroups = useMemo(() => {
+    const groupMap = new Map<string, RouteStop[]>();
+    for (const stop of stops) {
+      const arr = groupMap.get(stop.planned_date) || [];
+      arr.push(stop);
+      groupMap.set(stop.planned_date, arr);
+    }
+
+    const groups: DayGroup[] = [];
+    for (const [date, dayStops] of groupMap) {
+      const isToday = date === today;
+      const isPast = date < today;
+      const completedCount = dayStops.filter(s => s.status !== 'pending').length;
+      const d = new Date(date + 'T00:00:00');
+      const dayName = d.toLocaleDateString(isRtl ? 'ar-SY' : 'en-US', { weekday: 'long' });
+      const dateStr = d.toLocaleDateString(isRtl ? 'ar-SY' : 'en-US', { month: 'short', day: 'numeric' });
+      const label = isToday
+        ? `${t('common.today')} — ${dayName} ${dateStr}`
+        : `${dayName} — ${dateStr}`;
+
+      groups.push({ date, label, stops: dayStops, isToday, isPast, completedCount, totalCount: dayStops.length });
+    }
+
+    return groups.sort((a, b) => a.date.localeCompare(b.date));
+  }, [stops, today, isRtl, t]);
+
+  // Auto-expand today
+  useMemo(() => {
+    const todayGroup = dayGroups.find(g => g.isToday);
+    if (todayGroup && !expandedDays.has(todayGroup.date)) {
+      setExpandedDays(prev => new Set(prev).add(todayGroup.date));
+    }
+  }, [dayGroups]);
+
+  const toggleDay = useCallback((date: string) => {
+    setExpandedDays(prev => {
+      const next = new Set(prev);
+      if (next.has(date)) next.delete(date);
+      else next.add(date);
+      return next;
+    });
+  }, []);
 
   const updateStop = useCallback(async (stopId: string, status: 'visited' | 'sold' | 'skipped', notes?: string) => {
     setUpdatingId(stopId);
@@ -93,21 +141,11 @@ const MyRouteTab: React.FC<MyRouteTabProps> = ({ isOnline, onQueueAction }) => {
       if (isOnline) {
         await supabase
           .from('route_stops')
-          .update({
-            status,
-            notes: notes || null,
-            visited_at: new Date().toISOString(),
-          })
+          .update({ status, notes: notes || null, visited_at: new Date().toISOString() })
           .eq('id', stopId);
       } else {
-        await onQueueAction('ROUTE_VISIT', {
-          stopId,
-          status,
-          notes: notes || null,
-          visitedAt: new Date().toISOString(),
-        });
+        await onQueueAction('ROUTE_VISIT', { stopId, status, notes: notes || null, visitedAt: new Date().toISOString() });
       }
-
       queryClient.setQueryData(['my-route-week', weekRange.start, weekRange.end], (prev: RouteStop[] | undefined) =>
         (prev || []).map(s => s.id === stopId ? { ...s, status, notes: notes || s.notes, visited_at: new Date().toISOString() } : s)
       );
@@ -117,9 +155,6 @@ const MyRouteTab: React.FC<MyRouteTabProps> = ({ isOnline, onQueueAction }) => {
       setUpdatingId(null);
     }
   }, [isOnline, onQueueAction, queryClient, weekRange]);
-
-  const completed = todayStops.filter(s => s.status !== 'pending').length;
-  const progress = todayStops.length > 0 ? (completed / todayStops.length) * 100 : 0;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -139,15 +174,18 @@ const MyRouteTab: React.FC<MyRouteTabProps> = ({ isOnline, onQueueAction }) => {
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr + 'T00:00:00').toLocaleDateString(isRtl ? 'ar-SY' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  const getDayStatusColor = (group: DayGroup) => {
+    if (group.completedCount === group.totalCount) return 'border-emerald-500/30 bg-emerald-500/5';
+    if (group.isToday) return 'border-blue-500/30 bg-blue-500/5';
+    if (group.isPast && group.completedCount < group.totalCount) return 'border-red-500/20 bg-red-500/5';
+    return 'border-border bg-card';
   };
 
   if (isLoading) {
     return (
       <div className="space-y-3">
         {[1, 2, 3].map(i => (
-          <div key={i} className="bg-card p-4 rounded-2xl shadow-sm animate-pulse h-28" />
+          <div key={i} className="bg-card p-4 rounded-2xl shadow-sm animate-pulse h-20" />
         ))}
       </div>
     );
@@ -164,126 +202,120 @@ const MyRouteTab: React.FC<MyRouteTabProps> = ({ isOnline, onQueueAction }) => {
     );
   }
 
-  const renderStopCard = (stop: RouteStop, idx: number, showActions: boolean) => (
-    <div key={stop.id} className={`bg-card rounded-2xl shadow-sm overflow-hidden border ${getStatusColor(stop.status)}`}>
-      <div className="p-4">
-        <div className="flex items-start gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
-            stop.status === 'pending' ? 'bg-blue-500/10 text-blue-600' : 'bg-emerald-500/10 text-emerald-600'
-          }`}>
-            {idx + 1}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-foreground text-sm">{stop.customer_name}</p>
-            <div className="flex items-center gap-2 mt-1">
-              <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${getStatusColor(stop.status)}`}>
-                {getStatusLabel(stop.status)}
-              </span>
-              {stop.visited_at && (
-                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {new Date(stop.visited_at).toLocaleTimeString(isRtl ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Actions (only for pending stops on today or past) */}
-        {showActions && stop.status === 'pending' && (
-          <div className="mt-3 space-y-2">
-            <div className="flex gap-2">
-              <button
-                onClick={() => updateStop(stop.id, 'sold')}
-                disabled={updatingId === stop.id}
-                className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-              >
-                <ShoppingBag className="w-3.5 h-3.5" /> {t('tracking.visitedAndSold')}
-              </button>
-              <button
-                onClick={() => updateStop(stop.id, 'visited')}
-                disabled={updatingId === stop.id}
-                className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-              >
-                <Check className="w-3.5 h-3.5" /> {t('tracking.visitedNoSale')}
-              </button>
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={skipNotes[stop.id] || ''}
-                onChange={e => setSkipNotes(prev => ({ ...prev, [stop.id]: e.target.value }))}
-                placeholder={t('tracking.skipReason')}
-                className="flex-1 px-3 py-2 bg-muted text-foreground rounded-xl text-xs border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
-              />
-              <button
-                onClick={() => updateStop(stop.id, 'skipped', skipNotes[stop.id])}
-                disabled={updatingId === stop.id}
-                className="px-4 py-2 bg-red-500/10 text-red-500 rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all"
-              >
-                <SkipForward className="w-3.5 h-3.5" /> {t('tracking.skip')}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
   return (
-    <div className="space-y-4">
-      {/* Today's Progress */}
-      {todayStops.length > 0 && (
-        <>
-          <div className="bg-card p-4 rounded-2xl shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-muted-foreground">{t('tracking.routeProgress')} — {t('common.today')}</span>
-              <span className="text-xs font-bold text-foreground">{completed}/{todayStops.length}</span>
-            </div>
-            <Progress value={progress} className="h-2" />
+    <div className="space-y-3">
+      {dayGroups.map(group => {
+        const isExpanded = expandedDays.has(group.date);
+        const progress = group.totalCount > 0 ? (group.completedCount / group.totalCount) * 100 : 0;
+        const showActions = group.isToday || group.isPast;
+        const pendingCount = group.totalCount - group.completedCount;
+
+        return (
+          <div key={group.date} className={`rounded-2xl border overflow-hidden shadow-sm ${getDayStatusColor(group)}`}>
+            {/* Day folder header */}
+            <button
+              onClick={() => toggleDay(group.date)}
+              className="w-full p-4 flex items-center gap-3 text-start active:scale-[0.99] transition-all"
+            >
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                group.isToday ? 'bg-blue-500/15 text-blue-600' :
+                group.completedCount === group.totalCount ? 'bg-emerald-500/15 text-emerald-600' :
+                group.isPast && pendingCount > 0 ? 'bg-red-500/15 text-red-500' :
+                'bg-muted text-muted-foreground'
+              }`}>
+                <FolderOpen className="w-5 h-5" />
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-foreground text-sm">{group.label}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[10px] text-muted-foreground">
+                    {group.completedCount}/{group.totalCount} {t('tracking.completed')}
+                  </span>
+                  {group.isPast && pendingCount > 0 && (
+                    <span className="text-[10px] text-red-500 font-bold">
+                      {pendingCount} {t('tracking.missedVisits')}
+                    </span>
+                  )}
+                </div>
+                <Progress value={progress} className="h-1.5 mt-1.5" />
+              </div>
+
+              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Expanded stops */}
+            {isExpanded && (
+              <div className="px-3 pb-3 space-y-2">
+                {group.stops.map((stop, idx) => (
+                  <div key={stop.id} className={`bg-card rounded-xl border overflow-hidden ${getStatusColor(stop.status)}`}>
+                    <div className="p-3">
+                      <div className="flex items-start gap-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${
+                          stop.status === 'pending' ? 'bg-blue-500/10 text-blue-600' : 'bg-emerald-500/10 text-emerald-600'
+                        }`}>
+                          {idx + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-foreground text-sm">{stop.customer_name}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${getStatusColor(stop.status)}`}>
+                              {getStatusLabel(stop.status)}
+                            </span>
+                            {stop.visited_at && (
+                              <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {new Date(stop.visited_at).toLocaleTimeString(isRtl ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {showActions && stop.status === 'pending' && (
+                        <div className="mt-3 space-y-2">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => updateStop(stop.id, 'sold')}
+                              disabled={updatingId === stop.id}
+                              className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                            >
+                              <ShoppingBag className="w-3.5 h-3.5" /> {t('tracking.visitedAndSold')}
+                            </button>
+                            <button
+                              onClick={() => updateStop(stop.id, 'visited')}
+                              disabled={updatingId === stop.id}
+                              className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                            >
+                              <Check className="w-3.5 h-3.5" /> {t('tracking.visitedNoSale')}
+                            </button>
+                          </div>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={skipNotes[stop.id] || ''}
+                              onChange={e => setSkipNotes(prev => ({ ...prev, [stop.id]: e.target.value }))}
+                              placeholder={t('tracking.skipReason')}
+                              className="flex-1 px-3 py-2 bg-muted text-foreground rounded-xl text-xs border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                            />
+                            <button
+                              onClick={() => updateStop(stop.id, 'skipped', skipNotes[stop.id])}
+                              disabled={updatingId === stop.id}
+                              className="px-4 py-2 bg-red-500/10 text-red-500 rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all"
+                            >
+                              <SkipForward className="w-3.5 h-3.5" /> {t('tracking.skip')}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          {todayStops.map((stop, idx) => renderStopCard(stop, idx, true))}
-        </>
-      )}
-
-      {/* Past pending stops (missed) */}
-      {pastStops.filter(s => s.status === 'pending').length > 0 && (
-        <>
-          <h3 className="text-xs font-bold text-destructive px-1 flex items-center gap-1.5 pt-2">
-            <Calendar className="w-3.5 h-3.5" /> {t('tracking.missedVisits')}
-          </h3>
-          {pastStops.filter(s => s.status === 'pending').map((stop, idx) => (
-            <div key={stop.id}>
-              <p className="text-[10px] text-muted-foreground px-1 mb-1">{formatDate(stop.planned_date)}</p>
-              {renderStopCard(stop, idx, true)}
-            </div>
-          ))}
-        </>
-      )}
-
-      {/* Upcoming stops */}
-      {upcomingStops.length > 0 && (
-        <>
-          <h3 className="text-xs font-bold text-muted-foreground px-1 flex items-center gap-1.5 pt-2">
-            <Calendar className="w-3.5 h-3.5" /> {t('tracking.upcomingStops')}
-          </h3>
-          {upcomingStops.map((stop, idx) => (
-            <div key={stop.id}>
-              <p className="text-[10px] text-muted-foreground px-1 mb-1">{formatDate(stop.planned_date)}</p>
-              {renderStopCard(stop, idx, false)}
-            </div>
-          ))}
-        </>
-      )}
-
-      {/* Today has no stops but week has */}
-      {todayStops.length === 0 && stops.length > 0 && (
-        <div className="bg-card p-6 rounded-2xl text-center">
-          <Navigation className="w-10 h-10 mx-auto text-muted-foreground mb-3 opacity-40" />
-          <p className="font-bold text-foreground text-sm mb-1">{t('tracking.noStopsToday')}</p>
-          <p className="text-xs text-muted-foreground">{t('tracking.hasWeekStops')}</p>
-        </div>
-      )}
+        );
+      })}
     </div>
   );
 };
