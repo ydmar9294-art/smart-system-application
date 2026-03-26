@@ -387,4 +387,139 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
   );
 };
 
+// ============================================
+// Settings Tab — ShamCash Address Management
+// ============================================
+const SettingsTab: React.FC = () => {
+  const { useAppSettingsAdmin } = require('@/hooks/useAppSettings');
+  const { shamcashAddress, loading, saving, updateShamcashAddress } = useAppSettingsAdmin();
+  const [editMode, setEditMode] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const handleEdit = () => {
+    setDraft(shamcashAddress);
+    setEditMode(true);
+    setSaveSuccess(false);
+  };
+
+  const handleSave = async () => {
+    if (!draft.trim()) return;
+    const ok = await updateShamcashAddress(draft);
+    if (ok) {
+      setEditMode(false);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    }
+  };
+
+  const handleCopy = async () => {
+    await copyToClipboard(shamcashAddress);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="h-8 w-40 bg-muted rounded animate-pulse" />
+        <div className="h-32 bg-muted rounded-2xl animate-pulse" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* ShamCash Address Card */}
+      <div className="card-elevated p-5 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+            <Wallet className="w-5 h-5 text-emerald-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-black text-foreground text-sm">عنوان محفظة شام كاش</h3>
+            <p className="text-[10px] text-muted-foreground">يظهر في جميع شاشات الدفع تلقائياً</p>
+          </div>
+          {!editMode && (
+            <button onClick={handleEdit} className="p-2 rounded-xl hover:bg-muted transition-colors">
+              <Edit2 size={16} className="text-muted-foreground" />
+            </button>
+          )}
+        </div>
+
+        {editMode ? (
+          <div className="space-y-3">
+            <input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="أدخل عنوان المحفظة الجديد"
+              className="input-field font-mono text-sm"
+              dir="ltr"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleSave}
+                disabled={saving || !draft.trim()}
+                className="btn-primary flex-1 py-2.5 text-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {saving ? (
+                  <span className="animate-spin">⏳</span>
+                ) : (
+                  <Save size={14} />
+                )}
+                {saving ? 'جارٍ الحفظ...' : 'حفظ'}
+              </button>
+              <button
+                onClick={() => setEditMode(false)}
+                className="btn-secondary px-4 py-2.5 text-xs flex items-center gap-1.5"
+              >
+                <X size={14} /> إلغاء
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <button
+              onClick={handleCopy}
+              className="w-full flex items-center justify-between bg-muted/50 p-3 rounded-xl border border-border hover:border-primary transition-all active:scale-[0.98]"
+            >
+              <span className="font-mono text-xs text-foreground tracking-wide select-all" dir="ltr">
+                {shamcashAddress}
+              </span>
+              {copied ? (
+                <CheckCircle2 size={16} className="text-primary flex-shrink-0" />
+              ) : (
+                <Copy size={16} className="text-muted-foreground flex-shrink-0" />
+              )}
+            </button>
+            {saveSuccess && (
+              <div className="flex items-center gap-2 text-emerald-600 text-xs font-bold animate-in fade-in">
+                <CheckCircle2 size={14} />
+                <span>تم تحديث العنوان بنجاح — سيظهر فوراً في جميع شاشات الدفع</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Info card */}
+      <div className="card-elevated p-4 bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800">
+        <div className="flex gap-3">
+          <AlertTriangle size={16} className="text-sky-600 flex-shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="text-xs font-bold text-sky-800 dark:text-sky-300">ملاحظات هامة</p>
+            <ul className="text-[11px] text-sky-700 dark:text-sky-400 space-y-1 list-disc list-inside">
+              <li>عند تغيير العنوان، سيتم تحديثه فوراً في جميع واجهات الدفع</li>
+              <li>يشمل ذلك: شاشة تفعيل الترخيص + شاشة تجديد الاشتراك</li>
+              <li>تأكد من صحة العنوان قبل الحفظ لتجنب خسارة الحوالات</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default DeveloperHub;
