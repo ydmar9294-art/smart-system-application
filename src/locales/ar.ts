@@ -1505,6 +1505,7 @@ const ar = {
     visitRate: 'معدل الزيارات',
     conversionRate: 'معدل التحويل',
     missedVisits: 'زيارات فائتة',
+    completed: 'مكتمل',
     pendingStops: 'محطات معلقة',
     stops: 'محطات',
     soldStops: 'بيع',
