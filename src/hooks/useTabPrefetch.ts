@@ -55,7 +55,7 @@ export function useTabPrefetch(
               const data = await safeQuery(
                 () => addOrgFilter(
                   supabase.from('collections')
-                    .select('id,sale_id,amount,notes,is_reversed,reverse_reason,created_at,organization_id,collected_by')
+                    .select('id,sale_id,amount,notes,is_reversed,reverse_reason,created_at,organization_id,collected_by,sales(customer_name)')
                     .order('created_at', { ascending: false })
                     .range(0, 999)
                 ),

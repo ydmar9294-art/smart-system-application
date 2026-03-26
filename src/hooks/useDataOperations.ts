@@ -123,6 +123,7 @@ export const transformPayment = (p: any): Payment => ({
   reverseReason: p.reverse_reason,
   timestamp: new Date(p.created_at).getTime(),
   collectedBy: p.collected_by || undefined,
+  customerName: p.sales?.customer_name || p.customer_name || undefined,
 });
 
 export const transformPurchase = (p: any): Purchase => ({
