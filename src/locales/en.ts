@@ -1493,6 +1493,7 @@ const en = {
     visitRate: 'Visit Rate',
     conversionRate: 'Conversion Rate',
     missedVisits: 'Missed Visits',
+    completed: 'completed',
     pendingStops: 'Pending Stops',
     stops: 'stops',
     soldStops: 'sold',
