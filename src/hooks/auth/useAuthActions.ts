@@ -20,6 +20,8 @@ interface AuthActionsDeps {
   resolveProfile: (uid: string, isBackground?: boolean) => Promise<boolean>;
   isInternalAuthOp: MutableRefObject<boolean>;
   bootedFromCache: MutableRefObject<boolean>;
+  lastResolvedUid: MutableRefObject<string | null>;
+  inflightResolve: MutableRefObject<Promise<boolean> | null>;
 }
 
 export const useAuthActions = (deps: AuthActionsDeps) => {

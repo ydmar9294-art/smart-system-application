@@ -99,6 +99,10 @@ export const useSession = (deps: SessionDeps) => {
 
       if (event === 'SIGNED_OUT') {
         clearAuthCache();
+        // Reset tracking state so re-login works correctly
+        hasResolved = false;
+        lastResolvedUid.current = null;
+        bootedFromCache.current = false;
         if (isMounted) resetToLogin();
         return;
       }
@@ -119,7 +123,10 @@ export const useSession = (deps: SessionDeps) => {
         if (hasResolved && lastResolvedUid.current === session.user.id) return;
 
         // If booted from cache for this same user, skip (background revalidation handles it below)
-        if (bootedFromCache.current && cached?.userId === session.user.id) return;
+        // Re-read cache fresh to avoid stale closure
+        const currentCache = getCachedAuth();
+        const currentCacheActivated = currentCache && isCacheFullyActivated(currentCache);
+        if (bootedFromCache.current && currentCacheActivated && currentCache?.userId === session.user.id) return;
 
         // For SIGNED_IN without cache: AuthFlow handles first-time login verification.
         // useSession only resolves if we have stale/partial cache or TOKEN_REFRESHED.
