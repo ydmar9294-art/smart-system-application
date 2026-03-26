@@ -32,6 +32,8 @@ export const useAuthActions = (deps: AuthActionsDeps) => {
     resolveProfile,
     isInternalAuthOp,
     bootedFromCache,
+    lastResolvedUid,
+    inflightResolve,
   } = deps;
 
   const logout = useCallback(async () => {
@@ -50,6 +52,9 @@ export const useAuthActions = (deps: AuthActionsDeps) => {
         clearAllCachedData().catch(() => {});
         clearDistributorOfflineData().catch(() => {});
         bootedFromCache.current = false;
+        // Reset tracking refs so re-login works correctly
+        lastResolvedUid.current = null;
+        inflightResolve.current = null;
 
         await supabase.auth.signOut().catch(() => {
           // Even if signOut fails, clear local state

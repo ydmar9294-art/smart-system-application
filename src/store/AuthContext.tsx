@@ -68,6 +68,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resolveProfile,
     isInternalAuthOp: state.isInternalAuthOp,
     bootedFromCache: state.bootedFromCache,
+    lastResolvedUid: state.lastResolvedUid,
+    inflightResolve: state.inflightResolve,
   });
 
   return (
