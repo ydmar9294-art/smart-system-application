@@ -38,25 +38,13 @@ const AccountStatusGate: React.FC<{ children: React.ReactNode }> = ({ children }
       const { data: profile, error: profileError } = await supabase.from('profiles').select('is_active, organization_id').eq('id', user.id).maybeSingle();
       if (profileError || !profile) { checkingRef.current = false; setChecking(false); return; }
 
-      let licenseActive = true;
-      let licenseMessage: string | null = null;
-
-      if (profile.organization_id) {
-        const { data: ownerProfile } = await supabase.from('profiles').select('license_key').eq('organization_id', profile.organization_id).eq('role', 'OWNER').maybeSingle();
-        if (ownerProfile?.license_key) {
-          const { data: licenseData } = await supabase.rpc('get_my_license_info');
-          const license = licenseData?.[0];
-          if (license) {
-            if (license.status === 'SUSPENDED') { licenseActive = false; licenseMessage = t('accountStatus.licenseSuspended'); }
-            else if (license.status === 'EXPIRED' || (license.expiry_date && new Date(license.expiry_date) < new Date())) { licenseActive = false; licenseMessage = t('accountStatus.licenseExpired'); }
-          }
-        }
-      }
+      // License-level suspension/expiry is handled by LicenseFrozenScreen in Layout.tsx
+      // This gate only checks profile-level deactivation (is_active = false)
 
       const newStatus: AccountStatus = {
-        isActive: profile.is_active !== false && licenseActive,
-        isSuspended: profile.is_active === false || !licenseActive,
-        suspensionReason: profile.is_active === false ? t('accountStatus.profileSuspended') : licenseMessage,
+        isActive: profile.is_active !== false,
+        isSuspended: profile.is_active === false,
+        suspensionReason: profile.is_active === false ? t('accountStatus.profileSuspended') : null,
       };
 
       setStatus(newStatus); setCachedStatus(newStatus);
