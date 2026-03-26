@@ -141,12 +141,12 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
         
         // Transient failures (NO_SESSION, ERROR, SERVER_ERROR) — retry on both platforms
         const retriableReasons = ['NO_SESSION', 'ERROR', 'SERVER_ERROR', 'CIRCUIT_OPEN'];
-        if (retriableReasons.includes(reason) && retryCount < 2) {
+      if (retriableReasons.includes(reason) && retryCount < 2) {
           const isNative = Capacitor.isNativePlatform();
           const delayMs = isNative ? 1500 : 1000;
           logger.warn(`[LICENSE_CHECK] Not authenticated (${reason}) — retry ${retryCount + 1}/2`, 'AuthFlow');
           await new Promise(r => setTimeout(r, delayMs));
-          processingRef.current = false;
+          // Keep processingRef true during retries to prevent duplicate processing
           return checkUserProfile(userId, user, retryCount + 1);
         }
         
@@ -244,7 +244,10 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
 
     const processUser = async (userId: string, user: any, source: string) => {
       logger.info(`[SESSION_DETECTED] from ${source}`, 'AuthFlow', { userId });
-      if (cacheIsFullyActivated && cached.userId === userId) return;
+      // Re-read cache fresh each time (avoid stale closure after logout/re-login)
+      const freshCache = getCachedAuth();
+      const freshCacheActivated = freshCache && freshCache.organizationId && freshCache.role;
+      if (freshCacheActivated && freshCache.userId === userId) return;
       if (processingRef.current) {
         logger.info(`[AUTH_SKIP] Already processing — skipping ${source}`, 'AuthFlow');
         return;
