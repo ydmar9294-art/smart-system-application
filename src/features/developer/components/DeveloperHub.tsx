@@ -6,6 +6,7 @@ import { copyToClipboard } from '@/lib/clipboard';
 import { useApp } from '@/store/AppContext';
 import { LicenseStatus, OrgStats } from '@/types';
 import { sanitizeText, sanitizePhone } from '@/lib/validation';
+import { useAppSettingsAdmin } from '@/hooks/useAppSettings';
 import VersionManagement from './VersionManagement';
 import OrgDeletionManager from './OrgDeletionManager';
 import SubscriptionsTab from './SubscriptionsTab';
@@ -391,7 +392,6 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
 // Settings Tab — ShamCash Address Management
 // ============================================
 const SettingsTab: React.FC = () => {
-  const { useAppSettingsAdmin } = require('@/hooks/useAppSettings');
   const { shamcashAddress, loading, saving, updateShamcashAddress } = useAppSettingsAdmin();
   const [editMode, setEditMode] = useState(false);
   const [draft, setDraft] = useState('');
