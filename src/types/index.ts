@@ -112,6 +112,7 @@ export interface Payment {
   reverseReason?: string;
   timestamp: number;
   collectedBy?: string;
+  customerName?: string;
 }
 
 export interface License {

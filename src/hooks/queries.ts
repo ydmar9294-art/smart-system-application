@@ -288,7 +288,7 @@ export function usePaymentsPaginatedQuery(orgId?: string | null, role?: UserRole
       requireOrgContext(orgId, role);
       let q = supabase
         .from('collections')
-        .select('id,sale_id,amount,notes,is_reversed,reverse_reason,created_at,organization_id,collected_by')
+        .select('id,sale_id,amount,notes,is_reversed,reverse_reason,created_at,organization_id,collected_by,sales(customer_name)')
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
         .limit(limit + 1);
