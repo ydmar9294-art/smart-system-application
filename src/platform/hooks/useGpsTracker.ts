@@ -44,8 +44,8 @@ export function useGpsTracker(options: GpsTrackerOptions = {}) {
       if (Capacitor.isNativePlatform()) {
         const { Geolocation } = await import('@capacitor/geolocation');
         const result = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: false,
-          timeout: 15000,
+          enableHighAccuracy: true,
+          timeout: 20000,
         });
         position = {
           latitude: result.coords.latitude,
@@ -68,7 +68,7 @@ export function useGpsTracker(options: GpsTrackerOptions = {}) {
               timestamp: pos.timestamp,
             }),
             (err) => reject(err),
-            { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+            { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 }
           );
         });
       }

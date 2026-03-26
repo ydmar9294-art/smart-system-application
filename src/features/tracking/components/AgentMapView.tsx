@@ -219,11 +219,12 @@ const AgentMapView: React.FC = () => {
         )}
       </div>
 
-      <div className="rounded-2xl overflow-hidden shadow-sm border border-border" style={{ height: 400 }}>
-        <MapContainer center={center} zoom={12} style={{ height: '100%', width: '100%' }} scrollWheelZoom={true}>
+      <div className="rounded-2xl overflow-hidden shadow-sm border border-border" style={{ height: 500 }}>
+        <MapContainer center={center} zoom={15} style={{ height: '100%', width: '100%' }} scrollWheelZoom={true} zoomControl={true}>
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; Google'
+            url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
+            maxZoom={21}
           />
           <FlyToAgent position={flyToPosition} />
           {agentsWithLocation
