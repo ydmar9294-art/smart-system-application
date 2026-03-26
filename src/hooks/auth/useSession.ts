@@ -224,7 +224,8 @@ export const useSession = (deps: SessionDeps) => {
 
     // ── Phase 4: Listen for online events to trigger FULL background revalidation ──
     const handleOnline = async () => {
-      if (!lastResolvedUid.current && !cached?.userId) return;
+      const onlineCache = getCachedAuth();
+      if (!lastResolvedUid.current && !onlineCache?.userId) return;
 
       logger.info('Network restored — running full background revalidation', 'Auth');
 
