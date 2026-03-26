@@ -122,8 +122,15 @@ const MainContent: React.FC = () => {
 
   // Logout screen lifecycle
   useEffect(() => {
-    const onStart = () => setIsLoggingOut(true);
-    const onFinish = () => setIsLoggingOut(false);
+    const onStart = () => {
+      setIsLoggingOut(true);
+      // Suppress device-revoked during voluntary logout
+      (window as any).__voluntaryLogout = true;
+    };
+    const onFinish = () => {
+      setIsLoggingOut(false);
+      (window as any).__voluntaryLogout = false;
+    };
     window.addEventListener('logout-started', onStart);
     window.addEventListener('logout-finished', onFinish);
     return () => {
@@ -135,6 +142,8 @@ const MainContent: React.FC = () => {
   // Device revoked: show 3-second countdown screen then auto-logout
   useEffect(() => {
     const handleDeviceRevoked = (e: Event) => {
+      // Ignore if this is a voluntary logout (user pressed logout)
+      if ((window as any).__voluntaryLogout || isLoggingOut) return;
       const detail = (e as CustomEvent).detail;
       setRevokedMessage(detail?.message);
       setDeviceRevoked(true);
@@ -142,7 +151,7 @@ const MainContent: React.FC = () => {
 
     window.addEventListener('device-revoked', handleDeviceRevoked);
     return () => window.removeEventListener('device-revoked', handleDeviceRevoked);
-  }, []);
+  }, [isLoggingOut]);
 
   const handleRevokedComplete = useCallback(async () => {
     setDeviceRevoked(false);
