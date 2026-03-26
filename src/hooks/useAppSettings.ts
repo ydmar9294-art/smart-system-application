@@ -63,6 +63,7 @@ export const useAppSettingsAdmin = () => {
   const [shamcashAddress, setShamcashAddress] = useState(SHAMCASH_FALLBACK);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -87,25 +88,57 @@ export const useAppSettingsAdmin = () => {
   }, [fetchSettings]);
 
   const updateShamcashAddress = useCallback(async (newAddress: string) => {
+    const nextAddress = newAddress.trim();
+    if (!nextAddress) {
+      setErrorMessage('عنوان شام كاش لا يمكن أن يكون فارغاً');
+      return false;
+    }
+
     setSaving(true);
+    setErrorMessage(null);
+
     try {
+      const nowIso = new Date().toISOString();
       const { data: { user } } = await supabase.auth.getUser();
-      // Use update (row already exists from migration seed)
-      const { error } = await (supabase as any)
+
+      const { data: updatedRows, error: updateError } = await (supabase as any)
         .from('app_settings')
         .update({
-          value: newAddress.trim(),
-          updated_at: new Date().toISOString(),
+          value: nextAddress,
+          updated_at: nowIso,
           updated_by: user?.id || null,
         })
-        .eq('key', 'shamcash_address');
-      if (error) {
-        console.error('Update failed:', error);
-        throw error;
+        .eq('key', 'shamcash_address')
+        .select('key');
+
+      if (updateError) {
+        throw updateError;
       }
-      setShamcashAddress(newAddress.trim());
+
+      if (!updatedRows || updatedRows.length === 0) {
+        const { error: insertError } = await (supabase as any)
+          .from('app_settings')
+          .insert({
+            key: 'shamcash_address',
+            value: nextAddress,
+            updated_at: nowIso,
+            updated_by: user?.id || null,
+          });
+
+        if (insertError) {
+          throw insertError;
+        }
+      }
+
+      setShamcashAddress(nextAddress);
+      setErrorMessage(null);
       return true;
     } catch (err) {
+      const details = err && typeof err === 'object' && 'message' in err
+        ? String((err as { message?: string }).message || '')
+        : String(err || '');
+
+      setErrorMessage(details || 'فشل حفظ عنوان شام كاش، تأكد من صلاحيات المطور ثم أعد المحاولة');
       logger.error('Failed to update ShamCash address', 'AppSettings', { error: String(err) });
       return false;
     } finally {
@@ -113,5 +146,5 @@ export const useAppSettingsAdmin = () => {
     }
   }, []);
 
-  return { shamcashAddress, loading, saving, updateShamcashAddress, refetch: fetchSettings };
+  return { shamcashAddress, loading, saving, errorMessage, updateShamcashAddress, refetch: fetchSettings };
 };
