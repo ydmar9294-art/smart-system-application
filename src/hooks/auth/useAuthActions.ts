@@ -20,6 +20,8 @@ interface AuthActionsDeps {
   resolveProfile: (uid: string, isBackground?: boolean) => Promise<boolean>;
   isInternalAuthOp: MutableRefObject<boolean>;
   bootedFromCache: MutableRefObject<boolean>;
+  lastResolvedUid: MutableRefObject<string | null>;
+  inflightResolve: MutableRefObject<Promise<boolean> | null>;
 }
 
 export const useAuthActions = (deps: AuthActionsDeps) => {
@@ -30,6 +32,8 @@ export const useAuthActions = (deps: AuthActionsDeps) => {
     resolveProfile,
     isInternalAuthOp,
     bootedFromCache,
+    lastResolvedUid,
+    inflightResolve,
   } = deps;
 
   const logout = useCallback(async () => {
@@ -48,6 +52,9 @@ export const useAuthActions = (deps: AuthActionsDeps) => {
         clearAllCachedData().catch(() => {});
         clearDistributorOfflineData().catch(() => {});
         bootedFromCache.current = false;
+        // Reset tracking refs so re-login works correctly
+        lastResolvedUid.current = null;
+        inflightResolve.current = null;
 
         await supabase.auth.signOut().catch(() => {
           // Even if signOut fails, clear local state
@@ -62,7 +69,7 @@ export const useAuthActions = (deps: AuthActionsDeps) => {
         isInternalAuthOp.current = false;
       }
     });
-  }, [resetToLogin, isInternalAuthOp, bootedFromCache]);
+  }, [resetToLogin, isInternalAuthOp, bootedFromCache, lastResolvedUid, inflightResolve]);
 
   const refreshAuth = useCallback(async () => {
     // Only refresh if online — never invalidate offline

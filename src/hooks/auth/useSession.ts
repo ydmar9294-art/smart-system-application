@@ -99,6 +99,10 @@ export const useSession = (deps: SessionDeps) => {
 
       if (event === 'SIGNED_OUT') {
         clearAuthCache();
+        // Reset tracking state so re-login works correctly
+        hasResolved = false;
+        lastResolvedUid.current = null;
+        bootedFromCache.current = false;
         if (isMounted) resetToLogin();
         return;
       }
@@ -119,7 +123,10 @@ export const useSession = (deps: SessionDeps) => {
         if (hasResolved && lastResolvedUid.current === session.user.id) return;
 
         // If booted from cache for this same user, skip (background revalidation handles it below)
-        if (bootedFromCache.current && cached?.userId === session.user.id) return;
+        // Re-read cache fresh to avoid stale closure
+        const currentCache = getCachedAuth();
+        const currentCacheActivated = currentCache && isCacheFullyActivated(currentCache);
+        if (bootedFromCache.current && currentCacheActivated && currentCache?.userId === session.user.id) return;
 
         // For SIGNED_IN without cache: AuthFlow handles first-time login verification.
         // useSession only resolves if we have stale/partial cache or TOKEN_REFRESHED.
@@ -153,7 +160,8 @@ export const useSession = (deps: SessionDeps) => {
         }
 
         // If we booted from cache and cache is fresh, skip immediate revalidation
-        if (bootedFromCache.current && isAuthCacheFresh(cached)) {
+        const freshCache = getCachedAuth();
+        if (bootedFromCache.current && freshCache && isAuthCacheFresh(freshCache)) {
           logger.info('Cache is fresh — skipping immediate revalidation', 'Auth');
           initializingAuth.current = false;
           return;
@@ -174,14 +182,13 @@ export const useSession = (deps: SessionDeps) => {
             return;
           }
           // No session, no cache — AuthFlow will show login screen
-          // Don't call resetToLogin here if AuthFlow is already showing
           if (isMounted) resetToLogin();
           initializingAuth.current = false;
           return;
         }
 
         // Has session + loaded from cache → silently revalidate in background
-        if (bootedFromCache.current && cached?.userId === data.session.user.id) {
+        if (bootedFromCache.current && freshCache?.userId === data.session.user.id) {
           hasResolved = true;
           resolveProfile(data.session.user.id, true).catch(() => {
             logger.warn('Background revalidation failed, keeping cache', 'Auth');
@@ -217,7 +224,8 @@ export const useSession = (deps: SessionDeps) => {
 
     // ── Phase 4: Listen for online events to trigger FULL background revalidation ──
     const handleOnline = async () => {
-      if (!lastResolvedUid.current && !cached?.userId) return;
+      const onlineCache = getCachedAuth();
+      if (!lastResolvedUid.current && !onlineCache?.userId) return;
 
       logger.info('Network restored — running full background revalidation', 'Auth');
 
