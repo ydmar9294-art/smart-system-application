@@ -20,9 +20,9 @@ const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ selectedCustomer, m
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'balance' | 'name'>('balance');
 
-  // Filter and sort customers with debt
+  // Filter and sort customers with debt or credit
   const debtCustomers = myCustomers
-    .filter(c => Number(c.balance) > 0)
+    .filter(c => Number(c.balance) !== 0)
     .filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort((a, b) => {
       if (sortBy === 'balance') {
@@ -31,7 +31,8 @@ const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ selectedCustomer, m
       return a.name.localeCompare(b.name, 'ar');
     });
 
-  const totalDebt = debtCustomers.reduce((sum, c) => sum + Number(c.balance), 0);
+  const totalDebt = debtCustomers.filter(c => Number(c.balance) > 0).reduce((sum, c) => sum + Number(c.balance), 0);
+  const totalCredit = debtCustomers.filter(c => Number(c.balance) < 0).reduce((sum, c) => sum + Math.abs(Number(c.balance)), 0);
   const customerSales = localSales.filter(s => s.customer_id === selectedCustomerId && !s.isVoided);
 
   return (
@@ -43,8 +44,16 @@ const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ selectedCustomer, m
           {totalDebt.toLocaleString('ar-SA')} ل.س
         </p>
         <p className="text-emerald-200 text-xs mt-2">
-          {debtCustomers.length} زبون لديهم ذمم
+          {debtCustomers.filter(c => Number(c.balance) > 0).length} زبون لديهم ذمم
         </p>
+        {totalCredit > 0 && (
+          <div className="mt-3 pt-3 border-t border-white/20">
+            <p className="text-emerald-100 text-xs">زبائن لهم رصيد دائن (يجب السداد لهم):</p>
+            <p className="text-lg font-black text-blue-200">
+              {totalCredit.toLocaleString('ar-SA')} ل.س — {debtCustomers.filter(c => Number(c.balance) < 0).length} زبون
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Search */}
@@ -63,7 +72,7 @@ const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ selectedCustomer, m
       {debtCustomers.length === 0 ? (
         <div className="bg-muted rounded-3xl p-8 text-center">
           <Users className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" />
-          <p className="text-muted-foreground font-bold">لا يوجد زبائن بذمم مستحقة</p>
+          <p className="text-muted-foreground font-bold">لا يوجد زبائن بذمم أو أرصدة دائنة</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -77,8 +86,8 @@ const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ selectedCustomer, m
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-card rounded-xl flex items-center justify-center shadow-sm">
-                    <span className="text-lg font-black text-destructive">
+                  <div className={`w-12 h-12 bg-card rounded-xl flex items-center justify-center shadow-sm`}>
+                    <span className={`text-lg font-black ${Number(customer.balance) < 0 ? 'text-blue-600' : 'text-destructive'}`}>
                       {customer.name.charAt(0)}
                     </span>
                   </div>
@@ -89,11 +98,16 @@ const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ selectedCustomer, m
                         {customer.phone}
                       </p>
                     )}
+                    {Number(customer.balance) < 0 && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600">
+                        يجب السداد لهذا الزبون
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="text-end">
-                  <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">
-                    {Number(customer.balance).toLocaleString('ar-SA')}
+                  <p className={`text-xl font-black ${Number(customer.balance) < 0 ? 'text-blue-600' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                    {Number(customer.balance) < 0 ? '-' : ''}{Math.abs(Number(customer.balance)).toLocaleString('ar-SA')}
                   </p>
                   <p className="text-xs text-muted-foreground">ل.س</p>
                   <p className="text-[10px] text-muted-foreground">انقر للتحديث</p>
