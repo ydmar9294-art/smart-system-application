@@ -149,25 +149,40 @@ interface CustomerListItemProps {
 
 export const CustomerListItem = React.memo<CustomerListItemProps>(({ customer: c, locale, t }) => {
   const hasDebt = c.balance > 0;
+  const hasCredit = c.balance < 0;
+  const borderClass = hasDebt ? 'border-r-4 border-destructive' : hasCredit ? 'border-r-4 border-blue-500' : '';
+  const iconBg = hasDebt ? 'bg-destructive/10' : hasCredit ? 'bg-blue-500/10' : 'bg-success/10';
+  const iconColor = hasDebt ? 'text-destructive' : hasCredit ? 'text-blue-600' : 'text-success';
+  const nameColor = hasDebt ? 'text-destructive' : hasCredit ? 'text-blue-600' : 'text-foreground';
+  const balanceColor = hasDebt ? 'text-destructive' : hasCredit ? 'text-blue-600' : 'text-success';
+  const badgeBg = hasDebt ? 'bg-destructive/10 text-destructive' : hasCredit ? 'bg-blue-500/10 text-blue-600' : 'bg-success/10 text-success';
+  const badgeText = hasDebt ? t('ownerCustomers.hasDebt') : hasCredit ? t('ownerCustomers.creditBalance') : t('ownerCustomers.noDebt');
+
   return (
-    <div className={`bg-card p-4 rounded-2xl shadow-sm ${hasDebt ? 'border-r-4 border-destructive' : ''}`}>
+    <div className={`bg-card p-4 rounded-2xl shadow-sm ${borderClass}`}>
       <div className="flex justify-between items-start mb-3">
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${hasDebt ? 'bg-destructive/10' : 'bg-success/10'}`}>
-            <CircleDollarSign className={`w-5 h-5 ${hasDebt ? 'text-destructive' : 'text-success'}`} />
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBg}`}>
+            <CircleDollarSign className={`w-5 h-5 ${iconColor}`} />
           </div>
           <div>
-            <p className={`font-bold ${hasDebt ? 'text-destructive' : 'text-foreground'}`}>{c.name}</p>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${hasDebt ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'}`}>
-              {hasDebt ? t('ownerCustomers.hasDebt') : t('ownerCustomers.noDebt')}
+            <p className={`font-bold ${nameColor}`}>{c.name}</p>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeBg}`}>
+              {badgeText}
             </span>
           </div>
         </div>
         <div className="text-end">
-          <p className={`font-black text-lg ${hasDebt ? 'text-destructive' : 'text-success'}`}>{c.balance.toLocaleString(locale)}</p>
+          <p className={`font-black text-lg ${balanceColor}`}>{Math.abs(c.balance).toLocaleString(locale)}</p>
           <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
         </div>
       </div>
+      {hasCredit && (
+        <div className="mb-3 px-3 py-2 bg-blue-500/10 rounded-xl flex items-center gap-2">
+          <Wallet className="w-4 h-4 text-blue-600" />
+          <p className="text-xs font-bold text-blue-600">{t('ownerCustomers.needsPayment')}</p>
+        </div>
+      )}
       <div className="flex flex-wrap gap-3 pt-3 border-t border-border">
         {c.phone && (
           <div className="flex items-center gap-1.5 text-muted-foreground">

@@ -20,7 +20,7 @@ const CustomersTab: React.FC = () => {
   const [sortBy, setSortBy] = useState<'name' | 'balance'>('balance');
 
   const safeCustomers = useMemo(() => {
-    return customers.map(c => ({ ...c, balance: Math.max(0, c.balance) }));
+    return customers.map(c => ({ ...c, balance: c.balance }));
   }, [customers]);
 
   const filtered = useMemo(() => {
@@ -40,13 +40,15 @@ const CustomersTab: React.FC = () => {
     return list;
   }, [safeCustomers, search, sortBy, i18n.language]);
 
-  const totalBalances = safeCustomers.reduce((s, c) => s + c.balance, 0);
+  const totalBalances = safeCustomers.reduce((s, c) => s + Math.max(0, c.balance), 0);
   const totalCollections = payments.filter(p => !p.isReversed).reduce((s, p) => s + p.amount, 0);
-  const netDebt = Math.max(0, totalBalances);
+  const netDebt = totalBalances;
   const debtorCount = safeCustomers.filter(c => c.balance > 0).length;
+  const creditCount = safeCustomers.filter(c => c.balance < 0).length;
 
   const getStatusLabel = (balance: number) => {
     if (balance > 0) return { text: t('ownerCustomers.hasDebt'), color: 'bg-destructive/10 text-destructive' };
+    if (balance < 0) return { text: t('ownerCustomers.creditBalance'), color: 'bg-blue-500/10 text-blue-600' };
     return { text: t('ownerCustomers.noDebt'), color: 'bg-success/10 text-success' };
   };
 
@@ -81,6 +83,12 @@ const CustomersTab: React.FC = () => {
           </div>
         </div>
         <div className="mt-4 pt-3 border-t border-destructive-foreground/20 space-y-1.5 text-xs">
+          {creditCount > 0 && (
+            <div className="flex justify-between">
+              <span className="opacity-80">{t('ownerCustomers.creditCustomers')}</span>
+              <span className="font-bold">{creditCount}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="opacity-80">{t('ownerCustomers.totalCollections')}</span>
             <span className="font-bold">{totalCollections.toLocaleString(locale)} {CURRENCY}</span>
