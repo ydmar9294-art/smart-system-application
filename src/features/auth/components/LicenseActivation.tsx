@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import { copyToClipboard } from '@/lib/clipboard';
 import { logger } from '@/lib/logger';
+import { useShamcashAddress } from '@/hooks/useAppSettings';
 
 interface LicenseActivationProps {
   userId: string;
@@ -13,11 +14,11 @@ interface LicenseActivationProps {
   onLogout: () => void;
 }
 
-const SHAMCASH_ADDRESS = 'efd5411a5f29e0cdb279363de2dd62b3';
 const WHATSAPP_NUMBER = '963947744162';
 
 const LicenseActivation: React.FC<LicenseActivationProps> = ({ userId, email, fullName, onSuccess, onLogout }) => {
   const { t } = useTranslation();
+  const { address: shamcashAddress } = useShamcashAddress();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -25,7 +26,7 @@ const LicenseActivation: React.FC<LicenseActivationProps> = ({ userId, email, fu
   const [showPayment, setShowPayment] = useState(false);
   const [copiedPayment, setCopiedPayment] = useState(false);
 
-  const handleCopyPayment = async () => { await copyToClipboard(SHAMCASH_ADDRESS); setCopiedPayment(true); setTimeout(() => setCopiedPayment(false), 2000); };
+  const handleCopyPayment = async () => { await copyToClipboard(shamcashAddress); setCopiedPayment(true); setTimeout(() => setCopiedPayment(false), 2000); };
 
   const handleContactSupport = () => {
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
@@ -147,7 +148,7 @@ const LicenseActivation: React.FC<LicenseActivationProps> = ({ userId, email, fu
             <div className="space-y-1">
               <p className="text-center text-xs text-gray-600 dark:text-gray-300 font-medium">{t('activation.paymentAddress')}</p>
               <div onClick={handleCopyPayment} className="bg-white dark:bg-gray-800 p-3 rounded-xl flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-green-200 dark:border-green-700">
-                <span className="font-mono text-sm text-gray-800 dark:text-gray-200 tracking-wide" dir="ltr">{SHAMCASH_ADDRESS}</span>
+                <span className="font-mono text-sm text-gray-800 dark:text-gray-200 tracking-wide" dir="ltr">{shamcashAddress}</span>
                 {copiedPayment ? <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" /> : <Copy className="w-5 h-5 text-gray-400 flex-shrink-0" />}
               </div>
             </div>
