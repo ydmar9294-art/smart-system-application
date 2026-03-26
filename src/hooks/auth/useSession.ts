@@ -160,7 +160,8 @@ export const useSession = (deps: SessionDeps) => {
         }
 
         // If we booted from cache and cache is fresh, skip immediate revalidation
-        if (bootedFromCache.current && isAuthCacheFresh(cached)) {
+        const freshCache = getCachedAuth();
+        if (bootedFromCache.current && freshCache && isAuthCacheFresh(freshCache)) {
           logger.info('Cache is fresh — skipping immediate revalidation', 'Auth');
           initializingAuth.current = false;
           return;
@@ -181,14 +182,13 @@ export const useSession = (deps: SessionDeps) => {
             return;
           }
           // No session, no cache — AuthFlow will show login screen
-          // Don't call resetToLogin here if AuthFlow is already showing
           if (isMounted) resetToLogin();
           initializingAuth.current = false;
           return;
         }
 
         // Has session + loaded from cache → silently revalidate in background
-        if (bootedFromCache.current && cached?.userId === data.session.user.id) {
+        if (bootedFromCache.current && freshCache?.userId === data.session.user.id) {
           hasResolved = true;
           resolveProfile(data.session.user.id, true).catch(() => {
             logger.warn('Background revalidation failed, keeping cache', 'Auth');
