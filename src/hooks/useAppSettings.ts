@@ -90,15 +90,19 @@ export const useAppSettingsAdmin = () => {
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      // Use update (row already exists from migration seed)
       const { error } = await (supabase as any)
         .from('app_settings')
-        .upsert({
-          key: 'shamcash_address',
+        .update({
           value: newAddress.trim(),
           updated_at: new Date().toISOString(),
           updated_by: user?.id || null,
-        }, { onConflict: 'key' });
-      if (error) throw error;
+        })
+        .eq('key', 'shamcash_address');
+      if (error) {
+        console.error('Update failed:', error);
+        throw error;
+      }
       setShamcashAddress(newAddress.trim());
       return true;
     } catch (err) {
