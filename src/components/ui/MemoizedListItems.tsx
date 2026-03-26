@@ -98,6 +98,7 @@ interface CollectionListItemProps {
     isReversed: boolean;
     reverseReason?: string;
     timestamp: number;
+    customerName?: string;
   };
   locale: string;
   t: (key: string) => string;
@@ -110,7 +111,7 @@ export const CollectionListItem = React.memo<CollectionListItemProps>(({ coll, l
         <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
           <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
         </div>
-        <p className="font-bold text-foreground text-sm">{coll.saleId?.slice(0, 8) || '—'}</p>
+        <p className="font-bold text-foreground text-sm">{coll.customerName || coll.saleId?.slice(0, 8) || '—'}</p>
       </div>
       {coll.isReversed ? (
         <span className="bg-destructive/10 text-destructive px-2 py-0.5 rounded-lg text-[10px] font-bold">{t('accountant.cancelled')}</span>

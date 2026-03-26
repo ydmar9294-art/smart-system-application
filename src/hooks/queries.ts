@@ -264,7 +264,7 @@ export function usePaymentsQuery(orgId?: string | null, role?: UserRole | null) 
       const buildQuery = (from: number, to: number) => {
         let q = supabase
           .from('collections')
-          .select('id,sale_id,amount,notes,is_reversed,reverse_reason,created_at,organization_id,collected_by')
+          .select('id,sale_id,amount,notes,is_reversed,reverse_reason,created_at,organization_id,collected_by,sales(customer_name)')
           .order('created_at', { ascending: false })
           .range(from, to);
         if (orgId && role !== UserRole.DEVELOPER) q = q.eq('organization_id', orgId);
