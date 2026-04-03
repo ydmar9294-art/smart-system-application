@@ -5,6 +5,8 @@
 import { logger } from '@/lib/logger';
 
 const SLOW_THRESHOLD_MS = 3000;
+const MAX_BUFFER = 200;
+const TRIM_SIZE = 50; // Remove 50 oldest entries when buffer is full
 
 interface MetricEntry {
   label: string;
@@ -13,7 +15,6 @@ interface MetricEntry {
 }
 
 const metricsBuffer: MetricEntry[] = [];
-const MAX_BUFFER = 200;
 
 export const performanceMonitor = {
   /** Start a timer, returns a function that stops it and logs if slow */
@@ -23,8 +24,11 @@ export const performanceMonitor = {
       const duration = Math.round(performance.now() - start);
       const entry: MetricEntry = { label, durationMs: duration, timestamp: Date.now() };
 
+      // Batch trim instead of shifting one-by-one
+      if (metricsBuffer.length >= MAX_BUFFER) {
+        metricsBuffer.splice(0, TRIM_SIZE);
+      }
       metricsBuffer.push(entry);
-      if (metricsBuffer.length > MAX_BUFFER) metricsBuffer.shift();
 
       if (duration > SLOW_THRESHOLD_MS) {
         logger.warn(`[Perf] Slow operation: ${label} took ${duration}ms`, 'Performance', { durationMs: duration } as any);

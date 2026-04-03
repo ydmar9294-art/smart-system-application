@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useLocation, Routes, Route } from 'react-router-dom';
 import { App as CapacitorApp } from '@capacitor/app';
-import { useApp } from '@/store/AppContext';
+import { useAuth } from '@/store/AuthContext';
 import { UserRole, EmployeeType } from '@/types';
 import { Layout } from '@/components/Layout';
 import { ToastManager } from '@/components/ToastManager';
@@ -60,7 +60,7 @@ const DashboardFallback: React.FC = () => (
 // VIEW MANAGER
 // ==========================================
 const ViewManager: React.FC = () => {
-  const { role, user } = useApp();
+  const { role, user } = useAuth();
   
   const dashboard = (() => {
     switch (role) {
@@ -100,7 +100,7 @@ const ViewManager: React.FC = () => {
 // MAIN CONTENT
 // ==========================================
 const MainContent: React.FC = () => {
-  const { user, role, isLoading, refreshAuth, needsActivation, logout } = useApp();
+  const { user, role, isLoading, refreshAuth, needsActivation, logout } = useAuth();
   const { isGuest } = useGuest();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [replacedWarning, setReplacedWarning] = useState<string | null>(null);

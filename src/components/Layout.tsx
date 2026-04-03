@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { WifiOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useApp } from '@/store/AppContext';
+import { useAuth } from '@/store/AuthContext';
+import { useData } from '@/store/DataContext';
 import { UserRole, LicenseStatus } from '@/types';
 import { ShieldAlert, Phone, LogOut, RefreshCw, Settings, Shield, FileText, Globe } from 'lucide-react';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
@@ -14,7 +15,8 @@ import { useNavigate } from 'react-router-dom';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, logout, organization, refreshAuth, refreshAllData } = useApp();
+  const { user, logout, organization, refreshAuth } = useAuth();
+  const { refreshAllData } = useData();
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showLangSwitcher, setShowLangSwitcher] = useState(false);
   const navigate = useNavigate();

@@ -9,7 +9,7 @@
  * 
  * This file only wires them together and provides the context.
  */
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
 import { UserRole, User, Organization } from '@/types';
 import { useAuthState } from '@/hooks/auth/useAuthState';
 import { useProfileResolver } from '@/hooks/auth/useProfileResolver';
@@ -72,19 +72,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     inflightResolve: state.inflightResolve,
   });
 
+  // Memoize context value to prevent re-renders when nothing changed
+  const value = useMemo(() => ({
+    user: state.user,
+    role: state.role,
+    organization: state.organization,
+    isLoading: state.isLoading,
+    isAuthenticated: state.isAuthenticated,
+    needsActivation: state.needsActivation,
+    logout,
+    refreshAuth,
+  }), [
+    state.user, state.role, state.organization,
+    state.isLoading, state.isAuthenticated, state.needsActivation,
+    logout, refreshAuth,
+  ]);
+
   return (
-    <AuthContext.Provider
-      value={{
-        user: state.user,
-        role: state.role,
-        organization: state.organization,
-        isLoading: state.isLoading,
-        isAuthenticated: state.isAuthenticated,
-        needsActivation: state.needsActivation,
-        logout,
-        refreshAuth,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

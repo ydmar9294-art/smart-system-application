@@ -5,7 +5,7 @@
  */
 import React, { useState } from 'react';
 import { Bell, Package, Receipt, AlertTriangle, X, Check, Loader2 } from 'lucide-react';
-import { useApp } from '@/store/AppContext';
+import { useData } from '@/store/DataContext';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/store/AuthContext';
@@ -29,8 +29,8 @@ interface DBNotification {
 }
 
 export const NotificationCenter: React.FC = () => {
-  const { products, sales, role } = useApp();
-  const { user } = useAuth();
+  const { products, sales } = useData();
+  const { user, role } = useAuth();
 
   const [isOpen, setIsOpen] = useState(false);
   const queryClient = useQueryClient();

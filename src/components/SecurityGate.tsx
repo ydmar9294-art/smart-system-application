@@ -1,7 +1,10 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
-import { runSecurityChecks, clearSecurityCache, SecurityCheckResult } from '@/lib/appSecurity';
+import { runSecurityChecks, SecurityCheckResult } from '@/lib/appSecurity';
+import { PERF_FLAGS } from '@/config/performance';
+
+const CHECK_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 
 interface SecurityGateProps {
   children: React.ReactNode;
@@ -16,20 +19,28 @@ const SecurityGate: React.FC<SecurityGateProps> = ({
 }) => {
   const [checkResult, setCheckResult] = useState<SecurityCheckResult | null>(null);
   const [dismissed, setDismissed] = useState(false);
+  const lastCheckTimeRef = useRef<number>(0);
 
-  const performCheck = useCallback(async () => {
-    clearSecurityCache();
+  const performCheck = useCallback(async (force = false) => {
+    // Throttle: skip if checked within cooldown period
+    if (PERF_FLAGS.DEFER_SECURITY_CHECK && !force) {
+      const elapsed = Date.now() - lastCheckTimeRef.current;
+      if (elapsed < CHECK_COOLDOWN_MS) return;
+    }
+
     const result = await runSecurityChecks();
+    lastCheckTimeRef.current = Date.now();
     setCheckResult(result);
   }, []);
 
   useEffect(() => {
-    performCheck();
+    // Initial check — always runs
+    performCheck(true);
 
     let listener: any;
     if (Capacitor.isNativePlatform()) {
       CapApp.addListener('resume', () => {
-        performCheck();
+        performCheck(false); // Throttled — respects cooldown
       }).then(l => { listener = l; }).catch(() => {});
     }
 
