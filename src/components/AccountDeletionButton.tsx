@@ -11,7 +11,7 @@ import { UserRole } from '@/types';
 import { Trash2, AlertTriangle, Loader2, Clock, CheckCircle2, XCircle } from 'lucide-react';
 
 const AccountDeletionButton: React.FC = () => {
-  const { user } = useApp();
+  const { user } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);

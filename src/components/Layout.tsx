@@ -15,7 +15,8 @@ import { useNavigate } from 'react-router-dom';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, logout, organization, refreshAuth, refreshAllData } = useApp();
+  const { user, logout, organization, refreshAuth } = useAuth();
+  const { refreshAllData } = useData();
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showLangSwitcher, setShowLangSwitcher] = useState(false);
   const navigate = useNavigate();

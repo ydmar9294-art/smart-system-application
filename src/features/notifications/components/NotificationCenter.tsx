@@ -28,8 +28,8 @@ interface DBNotification {
 }
 
 export const NotificationCenter: React.FC = () => {
-  const { products, sales, role } = useApp();
-  const { user } = useAuth();
+  const { products, sales } = useData();
+  const { user, role } = useAuth();
 
   const [isOpen, setIsOpen] = useState(false);
   const queryClient = useQueryClient();

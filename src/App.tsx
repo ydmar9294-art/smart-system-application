@@ -100,7 +100,7 @@ const ViewManager: React.FC = () => {
 // MAIN CONTENT
 // ==========================================
 const MainContent: React.FC = () => {
-  const { user, role, isLoading, refreshAuth, needsActivation, logout } = useApp();
+  const { user, role, isLoading, refreshAuth, needsActivation, logout } = useAuth();
   const { isGuest } = useGuest();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [replacedWarning, setReplacedWarning] = useState<string | null>(null);
