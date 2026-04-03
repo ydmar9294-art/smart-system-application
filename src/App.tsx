@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useLocation, Routes, Route } from 'react-router-dom';
 import { App as CapacitorApp } from '@capacitor/app';
-import { useApp } from '@/store/AppContext';
+import { useAuth } from '@/store/AuthContext';
 import { UserRole, EmployeeType } from '@/types';
 import { Layout } from '@/components/Layout';
 import { ToastManager } from '@/components/ToastManager';
