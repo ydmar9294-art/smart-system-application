@@ -231,50 +231,48 @@ interface InvoiceListItemProps {
 export const InvoiceListItem = React.memo<InvoiceListItemProps>(({
   invoice, locale, onPrint, getTypeColor, getTypeIcon, getTypeName, isRtl, t
 }) => (
-  <div className="bg-muted rounded-2xl p-4 space-y-3">
-    {/* Row 1: Customer name + date */}
-    <div className="flex items-start justify-between gap-2">
+  <div className="bg-muted rounded-2xl p-3 overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
+    {/* Top row: type badge + invoice number */}
+    <div className="flex items-center gap-2 mb-2">
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold whitespace-nowrap ${getTypeColor(invoice.invoice_type)}`}>
+        {getTypeIcon(invoice.invoice_type)}
+        {getTypeName(invoice.invoice_type)}
+      </span>
+      <span className="text-xs text-muted-foreground font-mono">{invoice.invoice_number}</span>
+      {invoice.invoice_type === 'sale' && invoice.payment_type && (
+        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap ${
+          invoice.payment_type === 'CASH'
+            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+            : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+        }`}>
+          {invoice.payment_type === 'CASH' ? t('invoice.cashPayment', 'نقدي') : t('invoice.creditPayment', 'آجل')}
+        </span>
+      )}
+      {invoice.isLocal && (
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+          <WifiOff className="w-3 h-3" />
+        </span>
+      )}
+    </div>
+
+    {/* Bottom row: customer + amount + print */}
+    <div className="flex items-center justify-between gap-2">
       <div className="min-w-0 flex-1">
-        <p className="font-bold text-foreground truncate">{invoice.customer_name}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">
+        <p className="font-bold text-foreground text-sm truncate">{invoice.customer_name}</p>
+        <p className="text-[11px] text-muted-foreground">
           {new Date(invoice.invoice_date).toLocaleDateString(locale)}
         </p>
       </div>
-      <div className="flex items-center gap-1.5 shrink-0">
-        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold whitespace-nowrap ${getTypeColor(invoice.invoice_type)}`}>
-          {getTypeIcon(invoice.invoice_type)}
-          {getTypeName(invoice.invoice_type)}
-        </span>
-        {invoice.isLocal && (
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 whitespace-nowrap">
-            <WifiOff className="w-3 h-3" />
-          </span>
-        )}
-      </div>
-    </div>
-
-    {/* Row 2: Amount + invoice number + payment type */}
-    <div className="flex items-center justify-between gap-2">
-      <div className="flex items-baseline gap-1.5">
-        <p className={`text-lg font-black ${invoice.invoice_type === 'return' ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-          {invoice.invoice_type === 'return' ? '-' : ''}{Number(invoice.grand_total).toLocaleString(locale)}
-        </p>
-        <p className="text-xs text-muted-foreground">{CURRENCY}</p>
-      </div>
       <div className="flex items-center gap-2 shrink-0">
-        <span className="text-xs text-muted-foreground font-mono">{invoice.invoice_number}</span>
-        {invoice.invoice_type === 'sale' && invoice.payment_type && (
-          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap ${
-            invoice.payment_type === 'CASH'
-              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-              : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-          }`}>
-            {invoice.payment_type === 'CASH' ? t('invoice.cashPayment', 'نقدي') : t('invoice.creditPayment', 'آجل')}
-          </span>
-        )}
+        <div className={isRtl ? 'text-left' : 'text-right'}>
+          <p className={`text-base font-black leading-tight ${invoice.invoice_type === 'return' ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            {invoice.invoice_type === 'return' ? '-' : ''}{Number(invoice.grand_total).toLocaleString(locale)}
+          </p>
+          <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
+        </div>
         <button
           onClick={() => onPrint(invoice)}
-          className="p-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+          className="p-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors shrink-0"
         >
           <Printer className="w-4 h-4" />
         </button>
