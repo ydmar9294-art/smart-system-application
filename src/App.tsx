@@ -60,7 +60,7 @@ const DashboardFallback: React.FC = () => (
 // VIEW MANAGER
 // ==========================================
 const ViewManager: React.FC = () => {
-  const { role, user } = useApp();
+  const { role, user } = useAuth();
   
   const dashboard = (() => {
     switch (role) {
