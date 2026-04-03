@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'favicon.png', 'placeholder.svg'],
       workbox: {
-        maximumFileSizeToCacheInBytes: 1.5 * 1024 * 1024, // 1.5 MiB — reduced for faster install on low-end devices
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MiB — reduced from 4 MiB
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
