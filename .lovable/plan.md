@@ -1,56 +1,119 @@
 
 
-# Plan: Fix Distributor Route & Agent Map Visibility Issues
+# خطة تحسين الأداء الشاملة — Smart System
 
-## Root Cause Analysis
+## الملخص
 
-### Issue 1: Owner sees "no distributors" in AgentMapView
-The `AgentMapView` component only shows agents who have **GPS location data for today** (`distributor_locations`). Since GPS tracking was just implemented and no location data has been recorded yet, the agent list appears empty. The component should **always show all field agents**, regardless of GPS data.
-
-### Issue 2: Distributor sees no route
-The `MyRouteTab` queries `route_stops` for `planned_date = today`. If no Sales Manager has created routes via RoutePlanner yet, nothing appears. This is expected behavior, BUT there's also a potential query issue — the join filter `s.routes?.distributor_id === session.user.id` happens client-side after fetching ALL org route_stops, which is inefficient and may fail if the nested join returns differently than expected.
+تطبيق 6 مراحل تحسين لتقليل TTI من 8-15s إلى 3-5s على أجهزة Android 2GB RAM، مع الحفاظ الكامل على التوافقية.
 
 ---
 
-## Changes
+## المرحلة 1: إلغاء تجميد المعالج الرئيسي (🔴 حرج)
 
-### 1. Fix `AgentMapView.tsx` — Show all field agents, not just those with GPS data
+### 1.1 — Web Worker للتشفير
+- إنشاء `src/workers/crypto.worker.ts` مع دوال `encrypt`/`decrypt`
+- تعديل `src/lib/indexedDbEncryption.ts`: تحويل `encryptData()` و `decryptData()` لإرسال العمليات إلى Worker عبر `postMessage` + Promise wrapper
+- Fallback تلقائي للسلوك الحالي إذا فشل Worker
+- لا تغيير في signatures أو خوارزمية التشفير
 
-**Current**: Only shows agents found in `distributor_locations` today.
-**Fix**: Always render the full list of field agents from `profiles`. GPS locations are optional overlay data.
-
-- Show all active FIELD_AGENT profiles in the agent list sidebar
-- Mark agents with recent GPS data as "active/online" (green dot)
-- Mark agents without GPS data as "offline" (gray dot)
-- Map markers only for agents with location data (unchanged)
-
-### 2. Fix `MyRouteTab.tsx` — Server-side filter for distributor's routes
-
-**Current**: Fetches all org route_stops, then filters client-side by `distributor_id`.
-**Fix**: Add server-side filter using `.eq('routes.distributor_id', session.user.id)` in the Supabase query to be more reliable. Also add a fallback to check `visit_plans` table if no `route_stops` exist (since the system already has visit_plans).
-
-### 3. Minor: Add empty state guidance
-
-For MyRouteTab, when no route exists, show a more helpful message telling the distributor that routes are assigned by the Sales Manager.
+### 1.2 — تعطيل التشفير للبيانات غير الحساسة
+- تعديل `src/lib/offlineCache.ts`: إضافة معامل `encrypt?: boolean` (افتراضي `true`)
+- تعديل `src/hooks/useOfflineQuery.ts` أو أماكن استدعاء الكاش: تمرير `encrypt: false` لمفاتيح products, categories, regions, warehouses
+- البيانات المالية (sales, payments, invoices) تبقى مشفرة
 
 ---
 
-## Files to Modify
+## المرحلة 2: تقليص الحزمة الأساسية (🔴 حرج)
 
-| File | Change |
-|------|--------|
-| `src/features/tracking/components/AgentMapView.tsx` | Show all field agents in list; GPS data as optional overlay |
-| `src/features/distributor/components/MyRouteTab.tsx` | Fix query to use server-side distributor filter; improve empty state |
+### 2.1 — تأجيل framer-motion
+**ملاحظة هامة**: بعد الفحص، `framer-motion` مستورد فقط في `AnimatedTabContent.tsx` وهو مستخدم داخل dashboards المحمّلة بـ `lazy()` أصلاً. أي أنه بالفعل في chunk منفصل (`vendor-motion`). التحسين هنا هو:
+- تعديل `AnimatedTabContent.tsx` لاستخدام CSS transitions بدل framer-motion
+- حذف `framer-motion` من dependencies بالكامل أو إبقاؤه كـ optional
+- هذا يوفر ~41KB من أي chunk + يلغي وقت parse على الموبايل
 
-## Technical Details
+### 2.2 — تقسيم ملفات الترجمة
+- تعديل `src/lib/i18n.ts`: تحويل من static imports إلى `dynamic import()` حسب اللغة المختارة
+- تحميل اللغة الحالية فقط عند الإقلاع
+- Fallback: تحميل الاثنتين إذا فشل dynamic import
 
-### AgentMapView changes:
-- The `agents` query already fetches all FIELD_AGENT profiles — use this as the primary data source for the agent list
-- Merge with `latestLocations` to show online/offline status
-- Agent without GPS → show in list with gray dot, no map marker
+---
 
-### MyRouteTab changes:
-- Replace client-side `.filter()` with proper Supabase inner join filter
-- Query: `.eq('routes.distributor_id', userId)` to push filter to server
-- Better empty state text
+## المرحلة 3: إصلاح سلسلة إعادة الرسم (🟠 عالي)
+
+### 3.1 — ترحيل المكونات من useApp() إلى hooks محددة
+**الوضع الحالي**: `useApp()` مستخدم في 35 ملف. الـ contexts الثلاثة (Auth, Data, Notification) مفصولة فعلاً مع `useMemo` على DataContext.
+- ترحيل أهم 10 مكونات لاستخدام `useAuth()` / `useData()` / `useNotifications()` بدل `useApp()`
+- الأولوية: `Layout.tsx`, `App.tsx (MainContent)`, `ViewManager`, `NotificationCenter`, `AccountDeletionButton`
+- `useApp()` يبقى يعمل بدون تغيير
+
+### 3.2 — useMemo لقيمة AuthContext
+- `DataContext` و `NotificationContext` بالفعل يستخدمان `useMemo`/`useCallback`
+- تعديل `src/store/AuthContext.tsx`: تغليف `value` بـ `useMemo` (حالياً ينشئ object جديد كل render)
+
+---
+
+## المرحلة 4: إصلاحات خاصة بالموبايل (🟠 عالي)
+
+### 4.1 — تقليل تكرار SecurityGate
+- تعديل `src/components/SecurityGate.tsx`: إضافة `useRef(lastCheckTime)` مع حد أدنى 5 دقائق بين الفحوصات
+- إزالة `clearSecurityCache()` عند كل resume
+
+### 4.2 — إخفاء SplashScreen أسرع
+- تعديل `src/main.tsx`: إخفاء SplashScreen فور mount بدل انتظار `window.load`
+- أو ربطه بـ auth state (فور تحديد هل المستخدم مسجل أم لا)
+
+---
+
+## المرحلة 5: تحسين الذاكرة و IndexedDB (🟡 متوسط)
+
+### 5.1 — إضافة Index في IndexedDB
+- تعديل `src/lib/offlineCache.ts`: رفع `DB_VERSION` إلى 2، إضافة index على `updatedAt` في `onupgradeneeded`
+- تحويل `cleanupExpiredCache()` لاستخدام `IDBKeyRange`
+
+### 5.2 — تحديد حجم performanceMonitor Buffer
+- تعديل `src/utils/monitoring/performanceMonitor.ts`: الحد الأقصى موجود فعلاً (200) مع `shift()`. تحسين بسيط: استخدام `splice(0, 50)` عند الوصول للحد بدل `shift()` لكل إضافة
+
+### 5.3 — تنظيف Event Listeners
+- مراجعة `App.tsx (MainContent)`: التأكد من cleanup لجميع listeners (الحالي يبدو صحيحاً — كل `useEffect` له return cleanup)
+
+---
+
+## المرحلة 6: تحسينات سريعة (🟢 منخفض)
+
+### 6.1 — تقليص PWA Precache
+- تعديل `vite.config.ts`: تقليل `maximumFileSizeToCacheInBytes` من 4MB إلى 1MB، تضييق `globPatterns`
+
+### 6.2 — Skeleton لتبديل التبويبات
+- تحسين `DashboardFallback` في `App.tsx` أو إضافة skeleton خفيف داخل `AnimatedTabContent`
+
+---
+
+## ملف Feature Flags
+- إنشاء `src/config/performance.ts` مع أعلام تحكم لكل تحسين
+
+## الملفات المتأثرة
+| الملف | التغيير |
+|-------|---------|
+| `src/workers/crypto.worker.ts` | جديد — Web Worker |
+| `src/lib/indexedDbEncryption.ts` | Worker delegation + fallback |
+| `src/lib/offlineCache.ts` | encrypt flag + IDB index |
+| `src/components/ui/AnimatedTabContent.tsx` | CSS transitions بدل framer-motion |
+| `src/lib/i18n.ts` | Dynamic import للغة |
+| `src/store/AuthContext.tsx` | useMemo للقيمة |
+| `src/components/SecurityGate.tsx` | throttle 5 دقائق |
+| `src/main.tsx` | SplashScreen سريع |
+| `src/utils/monitoring/performanceMonitor.ts` | buffer splice |
+| `vite.config.ts` | PWA precache limits |
+| `src/config/performance.ts` | جديد — feature flags |
+| `src/components/Layout.tsx` | useAuth() بدل useApp() |
+| 5-8 مكونات أخرى | ترحيل من useApp() إلى hooks محددة |
+
+## ترتيب التنفيذ
+1. Feature flags file + تعطيل تشفير غير الحساس (1.2)
+2. SplashScreen سريع (4.2) + SecurityGate throttle (4.1)
+3. CSS transitions بدل framer-motion (2.1)
+4. تقسيم i18n (2.2)
+5. useMemo لـ AuthContext (3.2) + ترحيل useApp() (3.1)
+6. Web Worker للتشفير (1.1)
+7. IndexedDB index + buffer + PWA (5.x, 6.x)
 
