@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useApp } from '@/store/AppContext';
+import { useAuth } from '@/store/AuthContext';
 import { UserRole } from '@/types';
 import { Trash2, AlertTriangle, Loader2, Clock, CheckCircle2, XCircle } from 'lucide-react';
 
