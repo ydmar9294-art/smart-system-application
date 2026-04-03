@@ -9,7 +9,7 @@
  * 
  * This file only wires them together and provides the context.
  */
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
 import { UserRole, User, Organization } from '@/types';
 import { useAuthState } from '@/hooks/auth/useAuthState';
 import { useProfileResolver } from '@/hooks/auth/useProfileResolver';
