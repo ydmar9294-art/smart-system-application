@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { WifiOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useApp } from '@/store/AppContext';
+import { useAuth } from '@/store/AuthContext';
+import { useData } from '@/store/DataContext';
 import { UserRole, LicenseStatus } from '@/types';
 import { ShieldAlert, Phone, LogOut, RefreshCw, Settings, Shield, FileText, Globe } from 'lucide-react';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
