@@ -1,9 +1,9 @@
 /**
- * AnimatedTabContent - Smooth tab transition wrapper using framer-motion
- * Provides native-like sliding/fading animations when switching tabs
+ * AnimatedTabContent - Smooth tab transition wrapper
+ * Uses lightweight CSS transitions instead of framer-motion
+ * to reduce bundle size and improve performance on low-end devices.
  */
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface AnimatedTabContentProps {
   tabKey: string;
@@ -12,40 +12,61 @@ interface AnimatedTabContentProps {
   className?: string;
 }
 
-const variants = {
-  fade: {
-    initial: { opacity: 0, y: 8 },
-    animate: { opacity: 1, y: 0 },
-    exit: { opacity: 0, y: -8 },
-  },
-  slide: {
-    initial: { opacity: 0, x: 30 },
-    animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: -30 },
-  },
-};
-
 const AnimatedTabContent: React.FC<AnimatedTabContentProps> = ({
   tabKey,
   children,
   direction = 'fade',
   className = '',
 }) => {
-  const v = variants[direction];
+  const [displayKey, setDisplayKey] = useState(tabKey);
+  const [phase, setPhase] = useState<'enter' | 'exit'>('enter');
+  const contentRef = useRef<HTMLDivElement>(null);
+  const prevKeyRef = useRef(tabKey);
+
+  useEffect(() => {
+    if (tabKey === prevKeyRef.current) return;
+    prevKeyRef.current = tabKey;
+
+    // Start exit
+    setPhase('exit');
+
+    const timer = setTimeout(() => {
+      setDisplayKey(tabKey);
+      setPhase('enter');
+    }, 150); // Match CSS transition duration
+
+    return () => clearTimeout(timer);
+  }, [tabKey]);
+
+  const baseStyle: React.CSSProperties = {
+    transition: 'opacity 150ms ease-out, transform 150ms ease-out',
+    willChange: 'opacity, transform',
+  };
+
+  const getTransformStyle = (): React.CSSProperties => {
+    if (phase === 'exit') {
+      return {
+        ...baseStyle,
+        opacity: 0,
+        transform: direction === 'slide' ? 'translateX(-16px)' : 'translateY(-4px)',
+      };
+    }
+    return {
+      ...baseStyle,
+      opacity: 1,
+      transform: 'translate(0)',
+    };
+  };
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={tabKey}
-        initial={v.initial}
-        animate={v.animate}
-        exit={v.exit}
-        transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className={className}
-      >
-        {children}
-      </motion.div>
-    </AnimatePresence>
+    <div
+      ref={contentRef}
+      key={displayKey}
+      style={getTransformStyle()}
+      className={className}
+    >
+      {children}
+    </div>
   );
 };
 

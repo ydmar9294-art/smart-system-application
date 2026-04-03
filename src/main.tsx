@@ -7,29 +7,33 @@ import "./index.css";
 import { AppProvider } from "@/store/AppContext";
 import { GuestProvider } from "@/store/GuestContext";
 import { queryClient } from "@/lib/queryClient";
-import { initSessionGuard } from "@/lib/sessionGuard";
-import { initCapacitorOAuth } from "@/lib/capacitorOAuth";
-import { resolveNativeDeviceName } from "@/lib/deviceId";
-import { SplashScreen } from "@capacitor/splash-screen";
 import { Capacitor } from "@capacitor/core";
 
-// Initialize proactive token refresh with jitter
-initSessionGuard();
+// Defer non-critical initialization to after first paint
+const deferInit = (fn: () => void) => {
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(fn, { timeout: 2000 });
+  } else {
+    setTimeout(fn, 100);
+  }
+};
 
-// Initialize Capacitor OAuth deep link listeners (native only)
-initCapacitorOAuth();
+// Session guard, OAuth, device name — deferred for faster TTI
+deferInit(() => {
+  import('@/lib/sessionGuard').then(m => m.initSessionGuard());
+});
+deferInit(() => {
+  import('@/lib/capacitorOAuth').then(m => m.initCapacitorOAuth());
+});
+deferInit(() => {
+  import('@/lib/deviceId').then(m => m.resolveNativeDeviceName());
+});
 
-// Resolve native device model name for device tracking (Capacitor only)
-resolveNativeDeviceName();
-
-// Hide splash screen after app loads
+// Hide splash screen ASAP — don't wait for full page load
 if (Capacitor.isNativePlatform()) {
-  window.addEventListener('load', async () => {
-    try {
-      await SplashScreen.hide();
-    } catch (error) {
-      console.error('Splash screen hide error:', error);
-    }
+  // Hide immediately after mount instead of waiting for window.load
+  import('@capacitor/splash-screen').then(({ SplashScreen }) => {
+    SplashScreen.hide({ fadeOutDuration: 300 }).catch(() => {});
   });
 }
 

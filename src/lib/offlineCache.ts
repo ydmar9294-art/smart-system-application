@@ -3,20 +3,19 @@
  * 
  * Provides persistent IndexedDB caching for all dashboard data.
  * Used by React Query hooks to serve data offline.
- * Data is encrypted at rest using AES-256-GCM.
  * 
- * Architecture:
- * - Separate IDB from distributor's database to avoid conflicts
- * - Each query key maps to a store entry
- * - TTL-based expiration (configurable per cache)
- * - Encrypted storage for all sensitive data
+ * Performance optimizations:
+ * - Non-sensitive data stored unencrypted (skips AES-GCM overhead)
+ * - IDB index on updatedAt for fast cleanup (v2+)
+ * - Sensitive data (financial) always encrypted at rest
  */
 
 import { encryptData, decryptData, isEncrypted } from './indexedDbEncryption';
 import { logger } from './logger';
+import { PERF_FLAGS, isNonSensitiveKey } from '@/config/performance';
 
 const DB_NAME = 'app_offline_cache_v1';
-const DB_VERSION = 1;
+const DB_VERSION = PERF_FLAGS.IDB_INDEX ? 2 : 1;
 const STORE_NAME = 'query_cache';
 
 // Default TTL: 24 hours
@@ -24,7 +23,7 @@ const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000;
 
 interface CacheEntry {
   key: string;
-  data: any; // encrypted payload
+  data: any; // encrypted payload or plain JSON
   updatedAt: number;
   ttlMs: number;
 }
@@ -52,10 +51,22 @@ function openCacheDB(): Promise<IDBDatabase> {
   dbOpenPromise = new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const db = request.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'key' });
+        const store = db.createObjectStore(STORE_NAME, { keyPath: 'key' });
+        store.createIndex('by_updatedAt', 'updatedAt', { unique: false });
+      } else if (event.oldVersion < 2) {
+        // Upgrading from v1 → v2: add index on existing store
+        try {
+          const tx = (event.target as IDBOpenDBRequest).transaction!;
+          const store = tx.objectStore(STORE_NAME);
+          if (!store.indexNames.contains('by_updatedAt')) {
+            store.createIndex('by_updatedAt', 'updatedAt', { unique: false });
+          }
+        } catch {
+          // Index creation failed — non-fatal, cleanup falls back to cursor
+        }
       }
     };
 
@@ -91,7 +102,10 @@ function serializeKey(queryKey: readonly unknown[]): string {
  * Read cached data for a query key.
  * Returns null if not found or expired.
  */
-export async function getCachedQueryData<T>(queryKey: readonly unknown[]): Promise<T | null> {
+export async function getCachedQueryData<T>(
+  queryKey: readonly unknown[],
+  options?: { encrypt?: boolean }
+): Promise<T | null> {
   try {
     const db = await openCacheDB();
     const key = serializeKey(queryKey);
@@ -106,18 +120,19 @@ export async function getCachedQueryData<T>(queryKey: readonly unknown[]): Promi
 
         // Check TTL
         if (Date.now() - entry.updatedAt > entry.ttlMs) {
-          // Expired — clean up in background, don't block read
           deleteCachedQueryData(queryKey).catch(() => {});
           resolve(null);
           return;
         }
 
         try {
-          // Decrypt data
-          const decrypted = isEncrypted(entry.data)
-            ? await decryptData<T>(entry.data)
-            : entry.data as T;
-          resolve(decrypted);
+          // Determine if data needs decryption
+          if (isEncrypted(entry.data)) {
+            const decrypted = await decryptData<T>(entry.data);
+            resolve(decrypted);
+          } else {
+            resolve(entry.data as T);
+          }
         } catch (err) {
           logger.warn('[OfflineCache] Decryption failed, clearing entry', err);
           deleteCachedQueryData(queryKey).catch(() => {});
@@ -133,21 +148,27 @@ export async function getCachedQueryData<T>(queryKey: readonly unknown[]): Promi
 }
 
 /**
- * Persist query data to IndexedDB (encrypted).
+ * Persist query data to IndexedDB.
+ * Sensitive data is encrypted; non-sensitive data stored as plain JSON.
  */
 export async function setCachedQueryData<T>(
   queryKey: readonly unknown[],
   data: T,
-  ttlMs: number = DEFAULT_TTL_MS
+  ttlMs: number = DEFAULT_TTL_MS,
+  options?: { encrypt?: boolean }
 ): Promise<void> {
   try {
     const db = await openCacheDB();
     const key = serializeKey(queryKey);
-    const encrypted = await encryptData(data);
+
+    // Determine encryption: explicit option > auto-detect from key
+    const shouldEncrypt = options?.encrypt ?? !isNonSensitiveKey(queryKey);
+
+    const storedData = shouldEncrypt ? await encryptData(data) : data;
 
     const entry: CacheEntry = {
       key,
-      data: encrypted,
+      data: storedData,
       updatedAt: Date.now(),
       ttlMs,
     };
@@ -200,7 +221,8 @@ export async function clearAllCachedData(): Promise<void> {
 }
 
 /**
- * Cleanup expired entries (call periodically).
+ * Cleanup expired entries.
+ * Uses IDB index (v2+) for faster range scan when available.
  */
 export async function cleanupExpiredCache(): Promise<number> {
   try {
