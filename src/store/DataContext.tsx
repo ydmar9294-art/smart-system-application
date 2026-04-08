@@ -287,8 +287,46 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
+const noop = async () => {};
+const noopReturn = async () => ({ code: '', employee: null });
+const noopBool = async () => false;
+const noopNull = async () => null;
+
 export const useData = () => {
   const ctx = useContext(DataContext);
-  if (!ctx) throw new Error('useData must be used within DataProvider');
+  const guest = useGuestOverride();
+  
+  if (!ctx) {
+    if (guest) {
+      // Return guest demo data with no-op mutations
+      return {
+        products: guest.products,
+        customers: guest.customers,
+        sales: guest.sales,
+        payments: guest.payments,
+        users: guest.users,
+        licenses: guest.licenses,
+        purchases: guest.purchases,
+        deliveries: guest.deliveries,
+        pendingEmployees: guest.pendingEmployees,
+        distributorInventory: guest.distributorInventory,
+        purchaseReturns: guest.purchaseReturns,
+        orgStats: guest.orgStats,
+        refreshProducts: noop, refreshCustomers: noop, refreshSales: noop,
+        refreshPayments: noop, refreshPurchases: noop, refreshDeliveries: noop,
+        refreshPendingEmployees: noop, refreshDistributorInventory: noop,
+        refreshPurchaseReturns: noop, refreshLicenses: noop, refreshAllData: noop,
+        refreshOrgStats: noop,
+        createSale: noop, submitInvoice: noop, submitPayment: noop, voidSale: noop,
+        addCollection: noop, reversePayment: noop, addCustomer: noop,
+        addDistributor: noopReturn as any, addProduct: noop, updateProduct: noop,
+        deleteProduct: noop, issueLicense: noop, updateLicenseStatus: noop,
+        makeLicensePermanent: noop, updateLicenseMaxEmployees: noopNull as any,
+        addPurchase: noop, createDelivery: noop, createPurchaseReturn: noop,
+        deactivateEmployee: noopBool as any, reactivateEmployee: noopBool as any,
+      } as any;
+    }
+    throw new Error('useData must be used within DataProvider');
+  }
   return ctx;
 };
