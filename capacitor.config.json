@@ -4,7 +4,7 @@
   "webDir": "dist",
   "server": {
     "cleartext": false,
-    "androidScheme": "myapp",
+    "androidScheme": "https",
     "allowNavigation": [
       "*.supabase.co",
       "*.supabase.in",
