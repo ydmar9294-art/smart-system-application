@@ -37,9 +37,9 @@ if (!Array.prototype.flat) {
   Array.prototype.flat = function (depth: number = 1): any[] {
     const flatten = (arr: any[], d: number): any[] =>
       d > 0
-        ? arr.reduce((acc, val) => acc.concat(Array.isArray(val) ? flatten(val, d - 1) : val), [])
+        ? arr.reduce((acc: any[], val: any) => acc.concat(Array.isArray(val) ? flatten(val, d - 1) : val), [] as any[])
         : arr.slice();
-    return flatten(this, depth);
+    return flatten(this as any[], depth);
   };
 }
 
