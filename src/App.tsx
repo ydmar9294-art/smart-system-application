@@ -304,6 +304,7 @@ const App: React.FC = () => {
 
   return (
     <SecurityGate blockRooted={true} blockSideloaded={true}>
+      <PostUpdateMessage />
       <Routes>
         <Route path="/reset-password" element={
           <Suspense fallback={<DashboardFallback />}>
