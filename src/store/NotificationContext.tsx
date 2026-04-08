@@ -65,6 +65,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
 export const useNotifications = () => {
   const ctx = useContext(NotificationContext);
-  if (!ctx) throw new Error('useNotifications must be used within NotificationProvider');
+  const guest = useGuestOverride();
+  if (!ctx) {
+    if (guest) return { notifications: [] as Notification[], addNotification: () => {} };
+    throw new Error('useNotifications must be used within NotificationProvider');
+  }
   return ctx;
 };
