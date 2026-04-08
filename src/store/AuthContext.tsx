@@ -15,6 +15,7 @@ import { useAuthState } from '@/hooks/auth/useAuthState';
 import { useProfileResolver } from '@/hooks/auth/useProfileResolver';
 import { useSession } from '@/hooks/auth/useSession';
 import { useAuthActions } from '@/hooks/auth/useAuthActions';
+import { useGuestOverride } from './GuestProviders';
 
 interface AuthContextType {
   user: User | null;
@@ -97,6 +98,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  const guest = useGuestOverride();
+
+  // In guest preview mode, AuthContext is null — return guest override
+  if (!ctx) {
+    if (guest) {
+      return {
+        user: guest.user,
+        role: guest.role,
+        organization: guest.organization,
+        isLoading: false,
+        isAuthenticated: false,
+        needsActivation: false,
+        logout: async () => {},
+        refreshAuth: async () => {},
+      };
+    }
+    throw new Error('useAuth must be used within AuthProvider');
+  }
   return ctx;
 };
