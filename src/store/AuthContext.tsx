@@ -15,6 +15,7 @@ import { useAuthState } from '@/hooks/auth/useAuthState';
 import { useProfileResolver } from '@/hooks/auth/useProfileResolver';
 import { useSession } from '@/hooks/auth/useSession';
 import { useAuthActions } from '@/hooks/auth/useAuthActions';
+import { useGuestOverride } from './GuestProviders';
 
 interface AuthContextType {
   user: User | null;
