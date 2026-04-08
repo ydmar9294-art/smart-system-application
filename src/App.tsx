@@ -24,6 +24,7 @@ import AppLoadingSkeleton from '@/components/ui/DashboardSkeleton';
 import ConsentGate from '@/components/ConsentGate';
 import { useGuest } from '@/store/GuestContext';
 import GuestDashboardShell from '@/features/auth/components/GuestDashboardShell';
+import PostUpdateMessage from '@/components/ui/PostUpdateMessage';
 
 // ==========================================
 // LAZY-LOADED DASHBOARD COMPONENTS
@@ -303,6 +304,7 @@ const App: React.FC = () => {
 
   return (
     <SecurityGate blockRooted={true} blockSideloaded={true}>
+      <PostUpdateMessage />
       <Routes>
         <Route path="/reset-password" element={
           <Suspense fallback={<DashboardFallback />}>

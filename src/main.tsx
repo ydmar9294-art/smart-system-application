@@ -1,3 +1,4 @@
+import './lib/polyfills'; // Must be first — Android 8 compatibility
 import { createRoot } from "react-dom/client";
 import { HashRouter } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";

@@ -76,7 +76,7 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     // Production optimizations
-    target: 'es2020',
+    target: 'es2017',
     minify: 'terser',
     terserOptions: {
       compress: {
