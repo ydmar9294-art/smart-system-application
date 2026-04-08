@@ -97,6 +97,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  // In guest preview mode, AuthContext is null — return guest override
+  if (!ctx) {
+    // Lazy import to avoid circular dependency
+    const { useGuestOverride } = require('./GuestProviders');
+    const guest = useGuestOverride();
+    if (guest) {
+      return {
+        user: guest.user,
+        role: guest.role,
+        organization: guest.organization,
+        isLoading: false,
+        isAuthenticated: false,
+        needsActivation: false,
+        logout: async () => {},
+        refreshAuth: async () => {},
+      };
+    }
+    throw new Error('useAuth must be used within AuthProvider');
+  }
   return ctx;
 };
