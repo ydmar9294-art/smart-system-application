@@ -9,6 +9,7 @@
  * - Memoized context value to prevent unnecessary re-renders
  */
 import React, { createContext, useContext, useCallback, useMemo } from 'react';
+import { useGuestOverride } from './GuestProviders';
 import { useQueryClient } from '@tanstack/react-query';
 import { UserRole, Product, Customer, Sale, Payment, License, EmployeeType, LicenseStatus, OrgStats } from '@/types';
 import { Purchase, Delivery, PendingEmployee, DistributorInventoryItem } from '@/hooks/useDataOperations';
