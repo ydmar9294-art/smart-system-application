@@ -24,6 +24,7 @@ import AppLoadingSkeleton from '@/components/ui/DashboardSkeleton';
 import ConsentGate from '@/components/ConsentGate';
 import { useGuest } from '@/store/GuestContext';
 import GuestDashboardShell from '@/features/auth/components/GuestDashboardShell';
+import PostUpdateMessage from '@/components/ui/PostUpdateMessage';
 
 // ==========================================
 // LAZY-LOADED DASHBOARD COMPONENTS
