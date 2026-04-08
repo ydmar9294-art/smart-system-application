@@ -98,11 +98,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
+  const guest = useGuestOverride();
+
   // In guest preview mode, AuthContext is null — return guest override
   if (!ctx) {
-    // Lazy import to avoid circular dependency
-    const { useGuestOverride } = require('./GuestProviders');
-    const guest = useGuestOverride();
     if (guest) {
       return {
         user: guest.user,
