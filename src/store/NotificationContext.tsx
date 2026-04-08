@@ -6,6 +6,7 @@
  */
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { Notification } from '@/types';
+import { useGuestOverride } from './GuestProviders';
 
 const MAX_NOTIFICATIONS = 50;
 const NOTIFICATION_TTL_MS = 10 * 60 * 1000; // 10 minutes
