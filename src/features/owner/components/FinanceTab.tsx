@@ -1,17 +1,19 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
+import { PaymentType } from '@/types';
 import { 
   TrendingUp, TrendingDown, DollarSign, CreditCard, AlertTriangle, 
   Package, ArrowUpRight, ArrowDownRight, BarChart3, PieChart,
-  FileText, Users, Wallet, Clock, Percent
+  FileText, Users, Wallet, Clock, Percent, Search, Receipt
 } from 'lucide-react';
 
 export const FinanceTab: React.FC = () => {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
   const { sales, payments, products, customers } = useApp();
+  const [invoiceSearch, setInvoiceSearch] = useState('');
 
   const discountAnalytics = useMemo(() => {
     const activeSales = sales.filter(s => !s.isVoided);
@@ -201,6 +203,95 @@ export const FinanceTab: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Top Debtors Summary */}
+      {(() => {
+        const topDebtors = [...customers].filter(c => c.balance > 0).sort((a, b) => b.balance - a.balance).slice(0, 5);
+        if (topDebtors.length === 0) return null;
+        return (
+          <div className="bg-card p-4 rounded-[2rem] border shadow-sm">
+            <h3 className="font-black text-foreground mb-3 flex items-center gap-2 text-sm">
+              <Users size={16} className="text-destructive" />
+              {t('overview.topDebtorsSummary')}
+            </h3>
+            <div className="space-y-1.5">
+              {topDebtors.map((c) => (
+                <div key={c.id} className="flex items-center justify-between bg-muted p-2.5 rounded-xl">
+                  <span className="font-bold text-xs truncate max-w-[140px]">{c.name}</span>
+                  <span className="font-black text-destructive text-xs">{c.balance.toLocaleString()} {CURRENCY}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Recent Invoices Log */}
+      <div className="bg-card p-4 rounded-[2rem] border shadow-sm">
+        <h3 className="font-black text-foreground mb-3 flex items-center gap-2 text-sm">
+          <Receipt size={16} className="text-primary" />
+          {t('overview.recentInvoicesLog')}
+        </h3>
+        <div className="relative mb-3">
+          <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={invoiceSearch}
+            onChange={(e) => setInvoiceSearch(e.target.value)}
+            placeholder={t('common.search')}
+            className="w-full px-3 pe-9 py-2 bg-muted text-foreground rounded-xl text-xs border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+          />
+        </div>
+        <div className="space-y-1.5 max-h-80 overflow-y-auto">
+          {(() => {
+            const filtered = [...sales]
+              .filter(s => !s.isVoided)
+              .filter(s => !invoiceSearch || s.customerName.includes(invoiceSearch))
+              .sort((a, b) => b.timestamp - a.timestamp)
+              .slice(0, 20);
+            if (filtered.length === 0) return <p className="text-xs text-muted-foreground text-center py-4">{t('common.noData')}</p>;
+            return filtered.map(s => (
+              <div key={s.id} className="flex items-center justify-between bg-muted p-2.5 rounded-xl">
+                <div>
+                  <span className="font-bold text-xs block truncate max-w-[130px]">{s.customerName}</span>
+                  <span className="text-[9px] text-muted-foreground">{new Date(s.timestamp).toLocaleDateString('ar-EG')}</span>
+                </div>
+                <div className="text-end">
+                  <span className="font-black text-primary text-xs block">{s.grandTotal.toLocaleString()} {CURRENCY}</span>
+                  <span className={`text-[9px] font-bold ${s.paymentType === PaymentType.CASH ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    {s.paymentType === PaymentType.CASH ? t('owner.cashLabel') : t('owner.creditLabel')}
+                  </span>
+                </div>
+              </div>
+            ));
+          })()}
+        </div>
+      </div>
+
+      {/* Recent Collections Log */}
+      <div className="bg-card p-4 rounded-[2rem] border shadow-sm">
+        <h3 className="font-black text-foreground mb-3 flex items-center gap-2 text-sm">
+          <Wallet size={16} className="text-emerald-600 dark:text-emerald-400" />
+          {t('overview.recentCollectionsLog')}
+        </h3>
+        <div className="space-y-1.5 max-h-60 overflow-y-auto">
+          {(() => {
+            const recentPayments = [...payments]
+              .filter(p => !p.isReversed)
+              .sort((a, b) => b.timestamp - a.timestamp)
+              .slice(0, 20);
+            if (recentPayments.length === 0) return <p className="text-xs text-muted-foreground text-center py-4">{t('common.noData')}</p>;
+            return recentPayments.map(p => (
+              <div key={p.id} className="flex items-center justify-between bg-muted p-2.5 rounded-xl">
+                <div>
+                  <span className="font-bold text-xs block truncate max-w-[130px]">{p.customerName || '—'}</span>
+                  <span className="text-[9px] text-muted-foreground">{new Date(p.timestamp).toLocaleDateString('ar-EG')}</span>
+                </div>
+                <span className="font-black text-emerald-600 dark:text-emerald-400 text-xs">{p.amount.toLocaleString()} {CURRENCY}</span>
+              </div>
+            ));
+          })()}
+        </div>
+      </div>
     </div>
   );
 };

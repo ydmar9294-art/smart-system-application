@@ -35,10 +35,23 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
   const { 
     products, users, purchases = [], deliveries = [], 
     addPurchase, createDelivery, addProduct, updateProduct, deleteProduct,
-    createPurchaseReturn, purchaseReturns = []
+    createPurchaseReturn, purchaseReturns = [], distributorInventory = []
   } = useApp();
   const [subTab, setSubTab] = useState<SubTab>(forceSubTab || 'products');
   const effectiveSubTab = forceSubTab || (productsOnly ? 'products' : subTab);
+
+  // Inventory Summary KPIs
+  const inventorySummary = React.useMemo(() => {
+    const activeProducts = products.filter(p => !p.isDeleted);
+    const warehouseValue = activeProducts.reduce((s, p) => s + (p.stock * p.costPrice), 0);
+    const distInv = distributorInventory as any[];
+    const distValue = distInv.reduce((s: number, di: any) => {
+      const prod = products.find(p => p.id === di.product_id);
+      return s + (di.quantity * (prod?.costPrice || 0));
+    }, 0);
+    const lowStock = activeProducts.filter(p => p.stock <= p.minStock).length;
+    return { warehouseValue, distValue, totalValue: warehouseValue + distValue, activeCount: activeProducts.length, lowStock };
+  }, [products, distributorInventory]);
 
   // Purchases Modal State
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
@@ -253,6 +266,34 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
 
   return (
     <div className="space-y-4 animate-fade-in">
+      {/* Inventory Summary KPIs */}
+      {!productsOnly && !forceSubTab && (
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-card p-3 rounded-2xl border shadow-sm text-center">
+            <Package size={16} className="mx-auto text-primary mb-1" />
+            <p className="text-lg font-black text-foreground">{inventorySummary.warehouseValue.toLocaleString()}</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('ownerInventory.warehouseValue') || 'قيمة المستودع'}</p>
+            <p className="text-[9px] text-muted-foreground">{CURRENCY}</p>
+          </div>
+          <div className="bg-card p-3 rounded-2xl border shadow-sm text-center">
+            <Truck size={16} className="mx-auto text-blue-600 dark:text-blue-400 mb-1" />
+            <p className="text-lg font-black text-foreground">{inventorySummary.distValue.toLocaleString()}</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('ownerInventory.distInventoryValue') || 'مخزون الموزعين'}</p>
+            <p className="text-[9px] text-muted-foreground">{CURRENCY}</p>
+          </div>
+          <div className="bg-card p-3 rounded-2xl border shadow-sm text-center">
+            <Box size={16} className="mx-auto text-emerald-600 dark:text-emerald-400 mb-1" />
+            <p className="text-lg font-black text-foreground">{inventorySummary.activeCount}</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('ownerInventory.activeProducts') || 'منتجات نشطة'}</p>
+          </div>
+          <div className="bg-card p-3 rounded-2xl border shadow-sm text-center">
+            <AlertTriangle size={16} className={`mx-auto mb-1 ${inventorySummary.lowStock > 0 ? 'text-destructive' : 'text-emerald-600'}`} />
+            <p className={`text-lg font-black ${inventorySummary.lowStock > 0 ? 'text-destructive' : 'text-foreground'}`}>{inventorySummary.lowStock}</p>
+            <p className="text-[8px] text-muted-foreground font-bold">{t('ownerInventory.lowStockCount') || 'منتجات منخفضة'}</p>
+          </div>
+        </div>
+      )}
+
       {/* Sub-tabs */}
       {!productsOnly && !forceSubTab && (
         <div className="grid grid-cols-4 gap-1 bg-muted p-1.5 rounded-2xl">

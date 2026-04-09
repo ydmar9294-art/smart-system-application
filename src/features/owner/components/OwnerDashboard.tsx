@@ -27,10 +27,11 @@ import OrgDeletionRequest from './OrgDeletionRequest';
 import SubscriptionTab from './SubscriptionTab';
 import { PerformanceTab } from './PerformanceTab';
 import BackupTab from './BackupTab';
+import { OwnerOverviewTab } from './OwnerOverviewTab';
 
 const AgentMapView = React.lazy(() => import('@/features/tracking/components/AgentMapView'));
 
-type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup' | 'tracking';
+type OwnerTabType = 'overview' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup' | 'tracking';
 
 const OwnerDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -42,7 +43,7 @@ const OwnerDashboard: React.FC = () => {
   } = useApp();
   
   const { role: authRole, organization: authOrg } = useAuth();
-  const [activeTab, setActiveTab] = useState<OwnerTabType>('daily');
+  const [activeTab, setActiveTab] = useState<OwnerTabType>('overview');
   useTabPrefetch(activeTab, authOrg?.id, authRole);
   const [loggingOut, setLoggingOut] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
@@ -127,7 +128,7 @@ const OwnerDashboard: React.FC = () => {
   const myActivatedEmployees = pendingEmployees.filter(pe => pe.is_used);
 
   const primaryTabs: { id: OwnerTabType; label: string; icon: React.ReactNode; color: string; bgColor: string }[] = [
-    { id: 'daily', label: t('owner.tabs.home'), icon: <LayoutDashboard className="w-5 h-5" />, color: 'text-emerald-600', bgColor: 'bg-emerald-600' },
+    { id: 'overview', label: t('owner.tabs.home'), icon: <LayoutDashboard className="w-5 h-5" />, color: 'text-emerald-600', bgColor: 'bg-emerald-600' },
     { id: 'team', label: t('owner.tabs.team'), icon: <Users className="w-5 h-5" />, color: 'text-blue-600', bgColor: 'bg-blue-600' },
     { id: 'customers', label: t('owner.tabs.customers'), icon: <CircleDollarSign className="w-5 h-5" />, color: 'text-purple-600', bgColor: 'bg-purple-600' },
     { id: 'finance', label: t('owner.tabs.finance'), icon: <TrendingUp className="w-5 h-5" />, color: 'text-red-500', bgColor: 'bg-red-500' },
@@ -143,7 +144,7 @@ const OwnerDashboard: React.FC = () => {
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'daily': return <DailyContent stats={stats} sales={sales} products={products} customers={customers} activeEmployeeCount={activeEmployeeCount} maxEmployees={maxEmployees} />;
+      case 'overview': return <OwnerOverviewTab />;
       case 'team': return <TeamContent
         teamMembers={teamMembers} organization={organization} activeEmployeeCount={activeEmployeeCount}
         maxEmployees={maxEmployees} remainingSlots={remainingSlots} usagePercent={usagePercent}
