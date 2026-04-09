@@ -1,11 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '@/store/AppContext';
 import { CURRENCY } from '@/constants';
+import { PaymentType } from '@/types';
 import { 
   TrendingUp, TrendingDown, DollarSign, CreditCard, AlertTriangle, 
   Package, ArrowUpRight, ArrowDownRight, BarChart3, PieChart,
-  FileText, Users, Wallet, Clock, Percent
+  FileText, Users, Wallet, Clock, Percent, Search, Receipt
 } from 'lucide-react';
 
 export const FinanceTab: React.FC = () => {
