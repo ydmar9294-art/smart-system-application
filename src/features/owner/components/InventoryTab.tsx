@@ -35,10 +35,23 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
   const { 
     products, users, purchases = [], deliveries = [], 
     addPurchase, createDelivery, addProduct, updateProduct, deleteProduct,
-    createPurchaseReturn, purchaseReturns = []
+    createPurchaseReturn, purchaseReturns = [], distributorInventory = []
   } = useApp();
   const [subTab, setSubTab] = useState<SubTab>(forceSubTab || 'products');
   const effectiveSubTab = forceSubTab || (productsOnly ? 'products' : subTab);
+
+  // Inventory Summary KPIs
+  const inventorySummary = React.useMemo(() => {
+    const activeProducts = products.filter(p => !p.isDeleted);
+    const warehouseValue = activeProducts.reduce((s, p) => s + (p.stock * p.costPrice), 0);
+    const distInv = distributorInventory as any[];
+    const distValue = distInv.reduce((s: number, di: any) => {
+      const prod = products.find(p => p.id === di.product_id);
+      return s + (di.quantity * (prod?.costPrice || 0));
+    }, 0);
+    const lowStock = activeProducts.filter(p => p.stock <= p.minStock).length;
+    return { warehouseValue, distValue, totalValue: warehouseValue + distValue, activeCount: activeProducts.length, lowStock };
+  }, [products, distributorInventory]);
 
   // Purchases Modal State
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
