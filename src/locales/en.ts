@@ -356,6 +356,18 @@ const en = {
     highDiscountImpact: 'Discounts are significantly affecting profitability',
     healthyMargin: 'Healthy profit margin ({{margin}}%)',
     noAlerts: 'No alerts — financial performance is stable',
+    inventoryValue: 'Inventory Value',
+    dailyMoneyFlow: 'Today\'s Money Flow',
+    smartAlerts: 'Smart Alerts',
+    outOfStockAlert: 'products out of stock',
+    lowStockAlert: 'products running low',
+    debtCustomersAlert: 'customers with debts',
+    recentInvoices: 'Recent Invoices',
+    recentCollections: 'Recent Collections',
+    systemSummary: 'System Summary',
+    recentInvoicesLog: 'Invoice Log',
+    recentCollectionsLog: 'Collection Log',
+    topDebtorsSummary: 'Receivables Summary',
   },
 
   statement: {

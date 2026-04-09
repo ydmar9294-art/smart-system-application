@@ -359,6 +359,18 @@ const ar = {
     highDiscountImpact: 'الخصومات تؤثر على الربحية بشكل ملحوظ',
     healthyMargin: 'هامش ربح صحي ({{margin}}%)',
     noAlerts: 'لا توجد تنبيهات حالياً — الأداء المالي مستقر',
+    inventoryValue: 'قيمة المخزون',
+    dailyMoneyFlow: 'حركة الأموال اليوم',
+    smartAlerts: 'تنبيهات ذكية',
+    outOfStockAlert: 'منتجات نفذت من المخزون',
+    lowStockAlert: 'منتجات على وشك النفاد',
+    debtCustomersAlert: 'زبون عليهم ذمم',
+    recentInvoices: 'أحدث الفواتير',
+    recentCollections: 'أحدث التحصيلات',
+    systemSummary: 'ملخص النظام',
+    recentInvoicesLog: 'سجل الفواتير',
+    recentCollectionsLog: 'سجل التحصيلات',
+    topDebtorsSummary: 'ملخص الذمم',
   },
 
   // ==========================================

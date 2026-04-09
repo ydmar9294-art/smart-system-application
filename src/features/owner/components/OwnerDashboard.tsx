@@ -27,10 +27,11 @@ import OrgDeletionRequest from './OrgDeletionRequest';
 import SubscriptionTab from './SubscriptionTab';
 import { PerformanceTab } from './PerformanceTab';
 import BackupTab from './BackupTab';
+import { OwnerOverviewTab } from './OwnerOverviewTab';
 
 const AgentMapView = React.lazy(() => import('@/features/tracking/components/AgentMapView'));
 
-type OwnerTabType = 'daily' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup' | 'tracking';
+type OwnerTabType = 'overview' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup' | 'tracking';
 
 const OwnerDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
