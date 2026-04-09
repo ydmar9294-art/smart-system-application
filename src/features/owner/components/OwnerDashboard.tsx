@@ -128,7 +128,7 @@ const OwnerDashboard: React.FC = () => {
   const myActivatedEmployees = pendingEmployees.filter(pe => pe.is_used);
 
   const primaryTabs: { id: OwnerTabType; label: string; icon: React.ReactNode; color: string; bgColor: string }[] = [
-    { id: 'daily', label: t('owner.tabs.home'), icon: <LayoutDashboard className="w-5 h-5" />, color: 'text-emerald-600', bgColor: 'bg-emerald-600' },
+    { id: 'overview', label: t('owner.tabs.home'), icon: <LayoutDashboard className="w-5 h-5" />, color: 'text-emerald-600', bgColor: 'bg-emerald-600' },
     { id: 'team', label: t('owner.tabs.team'), icon: <Users className="w-5 h-5" />, color: 'text-blue-600', bgColor: 'bg-blue-600' },
     { id: 'customers', label: t('owner.tabs.customers'), icon: <CircleDollarSign className="w-5 h-5" />, color: 'text-purple-600', bgColor: 'bg-purple-600' },
     { id: 'finance', label: t('owner.tabs.finance'), icon: <TrendingUp className="w-5 h-5" />, color: 'text-red-500', bgColor: 'bg-red-500' },
