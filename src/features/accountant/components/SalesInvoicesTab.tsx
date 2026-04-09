@@ -159,7 +159,7 @@ const SalesInvoicesTab: React.FC = () => {
           <p className="text-muted-foreground font-bold">{t('accountant.noInvoices')}</p>
         </div>
       ) : filteredSales.length > 30 ? (
-        <VirtualList
+        <VirtualList<typeof filteredSales[number]>
           items={filteredSales}
           itemHeight={88}
           overscan={5}
