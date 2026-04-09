@@ -144,7 +144,7 @@ const OwnerDashboard: React.FC = () => {
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'daily': return <DailyContent stats={stats} sales={sales} products={products} customers={customers} activeEmployeeCount={activeEmployeeCount} maxEmployees={maxEmployees} />;
+      case 'overview': return <OwnerOverviewTab />;
       case 'team': return <TeamContent
         teamMembers={teamMembers} organization={organization} activeEmployeeCount={activeEmployeeCount}
         maxEmployees={maxEmployees} remainingSlots={remainingSlots} usagePercent={usagePercent}
