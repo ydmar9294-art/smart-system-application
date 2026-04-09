@@ -13,6 +13,7 @@ export const FinanceTab: React.FC = () => {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
   const { sales, payments, products, customers } = useApp();
+  const [invoiceSearch, setInvoiceSearch] = useState('');
 
   const discountAnalytics = useMemo(() => {
     const activeSales = sales.filter(s => !s.isVoided);
