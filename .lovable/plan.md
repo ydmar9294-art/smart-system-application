@@ -1,78 +1,138 @@
 
 
-# خطة تحويل واجهة المالك إلى مركز رقابة شامل واحترافي
+# خطة التعديلات الأربعة — نظام عملات + إزالة الإنجليزية + جرد لحظي + تعادل صرف
 
-## الملخص
-تحويل لوحة المالك (OwnerDashboard) من واجهة إدارية بسيطة إلى **مركز رقابة تنفيذي شامل** يمنح المالك رؤية 360° على جميع موارد المنشأة: المبيعات، المخزون، الأموال، الموزعين، الزبائن، والتقارير — مع الحفاظ الكامل على التوافقية.
-
----
-
-## المرحلة 1: إصلاح خطأ البناء الحالي
-- إصلاح خطأ TypeScript في `SalesInvoicesTab.tsx` (سطر 170) — VirtualList يحتاج تحديد النوع Generic بدلاً من `unknown`.
-
-## المرحلة 2: إعادة هيكلة التبويبات (9 تبويبات رقابية)
-
-### التبويبات الرئيسية الجديدة (5):
-| التبويب | المحتوى | ملف |
-|---------|---------|-----|
-| 🏠 **نظرة عامة** | KPIs تنفيذية شاملة + مؤشرات الأداء اليومي والشهري + تنبيهات ذكية | `OwnerOverviewTab.tsx` (جديد) |
-| 💰 **المالية** | حركات الأموال: مبيعات نقد/آجل + تحصيلات + ذمم + خصومات + مقارنات أسبوعية | `FinanceTab.tsx` (موجود — تعزيز) |
-| 📦 **المخزون** | حركات المخزون: منتجات + مشتريات + تسليمات + مرتجعات شراء + مخزون الموزعين | `InventoryTab.tsx` (موجود — تعزيز) |
-| 👥 **الزبائن والديون** | قائمة الزبائن + أرصدة + كشف حساب + تصنيف ABC | `CustomersTab.tsx` (موجود) |
-| 📊 **الأداء** | أداء الموظفين + تصنيف + معايير التقييم | `PerformanceTab.tsx` (موجود) |
-
-### التبويبات الفرعية (4):
-| التبويب | المحتوى |
-|---------|---------|
-| 🗺️ **التتبع** | خريطة المواقع + حالة الموزعين |
-| 👨‍💼 **الفريق** | إدارة الموظفين + أكواد التفعيل |
-| 🔒 **الاشتراك والقانون** | الترخيص + المعلومات القانونية |
-| 💾 **النسخ الاحتياطي** | تصدير البيانات |
+## الملخص التنفيذي
+أربعة تعديلات جوهرية: (1) نظام عملات عربية متعدد، (2) إزالة كاملة للغة الإنجليزية، (3) جرد مواد لحظي في واجهة المالك، (4) نظام تعادل عملات مع الدولار يؤثر على الأسعار والتقارير.
 
 ---
 
-## المرحلة 3: تبويب "نظرة عامة" الجديد (OwnerOverviewTab.tsx)
+## المرحلة 1: إزالة اللغة الإنجليزية بالكامل
 
-سيكون التبويب الافتراضي ويحتوي على:
+**حذف/تعديل:**
+- حذف `src/locales/en.ts` بالكامل
+- حذف `src/components/LanguageSwitcher.tsx`
+- تعديل `src/lib/i18n.ts` — تبسيطه ليحمّل العربية فقط، إزالة `LanguageDetector`، تثبيت `lng: 'ar'` و `dir: 'rtl'`
+- تعديل `src/components/Layout.tsx` — إزالة زر تبديل اللغة وكل ما يتعلق بـ `showLangSwitcher` و `Globe`
+- إزالة `i18next-browser-languagedetector` من `package.json`
+- تعديل `index.html` — تثبيت `dir="rtl"` و `lang="ar"`
 
-1. **بطاقات KPI تنفيذية (6 بطاقات)**:
-   - إجمالي المبيعات اليوم + نسبة التغيير
-   - التحصيلات اليوم
-   - إجمالي الديون المستحقة
-   - قيمة المخزون الإجمالية (مستودع + موزعين)
-   - عدد الفواتير اليوم
-   - عدد المنتجات منخفضة المخزون
-
-2. **ملخص حركة الأموال اليومية** (نقد / آجل / تحصيلات)
-
-3. **حركة المخزون**: آخر المشتريات + آخر التسليمات
-
-4. **تنبيهات ذكية**:
-   - منتجات نفذت أو على وشك
-   - زبائن متأخرون بالسداد
-   - موزعين غير نشطين
-
-5. **أحدث العمليات**: آخر 5 فواتير + آخر 5 تحصيلات
+**ملاحظة أمان:** كل استدعاءات `t('key')` تبقى تعمل لأن الملف العربي يغطي جميع المفاتيح. `useTranslation` يبقى كما هو — فقط ملف الإنجليزية يُحذف.
 
 ---
 
-## المرحلة 4: تعزيز تبويب المالية
+## المرحلة 2: نظام العملات العربية
 
-- إضافة قسم **سجل الفواتير** (آخر 20 فاتورة مع البحث)
-- إضافة قسم **سجل التحصيلات** (آخر 20 تحصيل)
-- إضافة **ملخص الذمم** (أعلى 5 زبائن مديونية)
-- إبقاء التحليلات الموجودة (الخصومات، المقارنات الأسبوعية)
+**جدول جديد في قاعدة البيانات:**
+```sql
+CREATE TABLE currencies (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  code text NOT NULL UNIQUE,        -- 'SYP', 'USD', 'SAR', ...
+  name_ar text NOT NULL,             -- 'ليرة سورية'
+  symbol text NOT NULL,              -- 'ل.س'
+  country text NOT NULL,             -- 'سوريا'
+  is_default boolean DEFAULT false,
+  created_at timestamptz DEFAULT now()
+);
+```
+
+**بيانات أولية — جميع العملات العربية:**
+| الكود | الاسم | الرمز | الدولة |
+|-------|-------|-------|--------|
+| SYP | ليرة سورية | ل.س | سوريا |
+| USD | دولار أمريكي | $ | الولايات المتحدة |
+| SAR | ريال سعودي | ر.س | السعودية |
+| AED | درهم إماراتي | د.إ | الإمارات |
+| KWD | دينار كويتي | د.ك | الكويت |
+| BHD | دينار بحريني | د.ب | البحرين |
+| QAR | ريال قطري | ر.ق | قطر |
+| OMR | ريال عُماني | ر.ع | عُمان |
+| EGP | جنيه مصري | ج.م | مصر |
+| IQD | دينار عراقي | د.ع | العراق |
+| JOD | دينار أردني | د.أ | الأردن |
+| LBP | ليرة لبنانية | ل.ل | لبنان |
+| LYD | دينار ليبي | د.ل | ليبيا |
+| TND | دينار تونسي | د.ت | تونس |
+| DZD | دينار جزائري | د.ج | الجزائر |
+| MAD | درهم مغربي | د.م | المغرب |
+| SDG | جنيه سوداني | ج.س | السودان |
+| YER | ريال يمني | ر.ي | اليمن |
+| MRU | أوقية موريتانية | أ.م | موريتانيا |
+| SOS | شلن صومالي | ش.ص | الصومال |
+| KMF | فرنك قمري | ف.ق | جزر القمر |
+| DJF | فرنك جيبوتي | ف.ج | جيبوتي |
+
+**جدول ربط العملة بالمنشأة:**
+```sql
+ALTER TABLE organizations ADD COLUMN currency_code text DEFAULT 'SYP';
+```
+
+**تعديلات الكود:**
+- تعديل `src/constants/index.ts` — تحويل `CURRENCY` من ثابت إلى قيمة ديناميكية تُقرأ من المنشأة
+- إنشاء `src/hooks/useCurrency.ts` — hook يُرجع رمز العملة الحالي للمنشأة
+- إنشاء واجهة اختيار العملة في إعدادات المالك
 
 ---
 
-## المرحلة 5: تعزيز تبويب المخزون
+## المرحلة 3: نظام تعادل العملات مع الدولار
 
-- إضافة **ملخص حركات المخزون** في أعلى الصفحة:
-  - إجمالي قيمة المخزون الرئيسي
-  - إجمالي مخزون الموزعين
-  - عدد المنتجات النشطة
-  - عدد المنتجات المنخفضة
-- إضافة تبويب فرعي **مخزون الموزعين** لعرض ما لدى كل موزع
+**جدول أسعار الصرف:**
+```sql
+CREATE TABLE exchange_rates (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL,
+  currency_code text NOT NULL,         -- عملة المنشأة
+  rate_to_usd numeric NOT NULL,        -- سعر الصرف مقابل الدولار
+  previous_rate numeric,               -- السعر السابق (لحساب الفروقات)
+  effective_date timestamptz DEFAULT now(),
+  updated_by uuid,
+  created_at timestamptz DEFAULT now()
+);
+
+-- سجل تاريخي لتتبع تغيرات الصرف
+CREATE TABLE exchange_rate_history (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL,
+  currency_code text NOT NULL,
+  old_rate numeric NOT NULL,
+  new_rate numeric NOT NULL,
+  change_percentage numeric NOT NULL,
+  changed_by uuid,
+  created_at timestamptz DEFAULT now()
+);
+```
+
+**RLS:**
+- `exchange_rates`: قراءة/كتابة لأعضاء المنشأة، Owner فقط يعدّل
+- `exchange_rate_history`: قراءة لأعضاء المنشأة
+
+**التأثير على المنظومة:**
+- إنشاء `src/services/exchangeRateService.ts` — CRUD لأسعار الصرف
+- إنشاء `src/hooks/useExchangeRate.ts` — hook يوفر سعر الصرف الحالي + حساب الأرباح/الخسائر
+- تعديل `OwnerOverviewTab.tsx` — إضافة بطاقة KPI لسعر الصرف + ربح/خسارة فروقات
+- تعديل `FinanceTab.tsx` — إضافة قسم "فروقات أسعار الصرف" مع الأرباح والخسائر
+- تعديل واجهات المحاسب والموزع لعرض المكافئ بالدولار عند الحاجة
+- إنشاء مكوّن `ExchangeRateManager.tsx` في إعدادات المالك لتحديث السعر
+
+**منطق حساب الفروقات:**
+```text
+ربح/خسارة الصرف = (السعر الجديد - السعر القديم) × إجمالي القيمة بالدولار
+```
+يُحسب على: المخزون، الذمم المدينة، المبيعات
+
+---
+
+## المرحلة 4: جرد مواد المستودع اللحظي في واجهة المالك
+
+**تعديل `OwnerOverviewTab.tsx` أو إضافة قسم جديد في `InventoryTab.tsx`:**
+- عرض جدول كامل بكل المنتجات النشطة يشمل:
+  - اسم المنتج | الفئة | الكمية الحالية | سعر التكلفة | سعر البيع | القيمة الإجمالية
+- مجموع القيم في أسفل الجدول
+- بحث وفلترة
+- تحديث لحظي عبر Realtime subscription (إن كان مفعّلاً) أو عبر polling كل 30 ثانية
+
+**تعديل `InventoryTab.tsx`:**
+- إضافة عرض "جرد كامل" كـ sub-tab جديد `stock-audit` يعرض كل المنتجات مع أسعارها الحالية بشكل جدولي واضح
 
 ---
 
@@ -80,15 +140,28 @@
 
 | الملف | التغيير |
 |-------|---------|
-| `src/features/owner/components/OwnerOverviewTab.tsx` | **جديد** — تبويب النظرة العامة الرقابية |
-| `src/features/owner/components/OwnerDashboard.tsx` | تعديل — إعادة ترتيب التبويبات + استبدال DailyContent بـ OwnerOverviewTab |
-| `src/features/owner/components/FinanceTab.tsx` | تعديل — إضافة سجلات الفواتير والتحصيلات |
-| `src/features/owner/components/InventoryTab.tsx` | تعديل — إضافة ملخص المخزون ومخزون الموزعين |
-| `src/features/accountant/components/SalesInvoicesTab.tsx` | إصلاح — خطأ TypeScript |
+| `src/locales/en.ts` | **حذف** |
+| `src/components/LanguageSwitcher.tsx` | **حذف** |
+| `src/lib/i18n.ts` | تبسيط — عربي فقط |
+| `src/components/Layout.tsx` | إزالة زر اللغة |
+| `index.html` | تثبيت RTL + ar |
+| `src/constants/index.ts` | تحويل CURRENCY لديناميكي |
+| `src/hooks/useCurrency.ts` | **جديد** — hook العملة |
+| `src/hooks/useExchangeRate.ts` | **جديد** — hook سعر الصرف |
+| `src/services/exchangeRateService.ts` | **جديد** — خدمة الصرف |
+| `src/features/owner/components/ExchangeRateManager.tsx` | **جديد** — واجهة تحديث السعر |
+| `src/features/owner/components/CurrencySelector.tsx` | **جديد** — اختيار العملة |
+| `src/features/owner/components/OwnerOverviewTab.tsx` | تعزيز — KPI الصرف + جرد لحظي |
+| `src/features/owner/components/InventoryTab.tsx` | تعزيز — sub-tab جرد كامل |
+| `src/features/owner/components/FinanceTab.tsx` | تعزيز — فروقات الصرف |
+| `src/features/owner/components/OwnerDashboard.tsx` | إضافة تبويب إعدادات العملة |
+| `src/locales/ar.ts` | إضافة مفاتيح العملات والصرف |
+| `supabase/migrations/` | 3 migrations: currencies, exchange_rates, exchange_rate_history |
 
-## القيود والتوافقية
-- لا حذف لأي مكون موجود — فقط إضافة وإعادة ترتيب
-- جميع البيانات تُقرأ من `useApp()` الحالي (sales, payments, products, customers, users, deliveries, purchases, purchaseReturns)
-- لا تغييرات على قاعدة البيانات أو الـ API
-- نفس لغة التصميم Liquid-Glass المستخدمة حالياً
+## ملاحظات SaaS Production
+- جميع الجداول محمية بـ RLS
+- سعر الصرف يُخزَّن per-organization — كل منشأة لها سعرها
+- سجل تاريخي كامل لتغيرات الصرف (audit trail)
+- لا تعديل على الجداول الحالية (additive only) ما عدا إضافة عمود `currency_code` للمنشآت
+- `statement_timeout` 5 ثوانٍ على أي RPC جديد
 
