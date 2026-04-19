@@ -114,7 +114,22 @@ export const useAuth = () => {
         refreshAuth: async () => {},
       };
     }
-    throw new Error('useAuth must be used within AuthProvider');
+    // Defensive fallback: avoid crashing the entire app tree if the provider
+    // is briefly absent (HMR, error boundaries, transient renders). Returns a
+    // safe "logged-out / loading" state instead of throwing.
+    if (typeof console !== 'undefined') {
+      console.warn('[useAuth] AuthProvider not found — returning safe fallback state');
+    }
+    return {
+      user: null,
+      role: null,
+      organization: null,
+      isLoading: true,
+      isAuthenticated: false,
+      needsActivation: false,
+      logout: async () => {},
+      refreshAuth: async () => {},
+    };
   }
   return ctx;
 };
