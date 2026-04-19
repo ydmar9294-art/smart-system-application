@@ -254,8 +254,10 @@ const OwnerDashboard: React.FC = () => {
                   className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
                 <input name="phone" type="tel" inputMode="numeric" pattern="[0-9]*" required placeholder={t('owner.employeePhone')}
                   className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
-                <select name="type" className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-primary">
+                <select name="type" defaultValue={EmployeeType.ACCOUNTANT} className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-primary">
                   <option value={EmployeeType.ACCOUNTANT}>{t('owner.accountantType')}</option>
+                  <option value={EmployeeType.FIELD_AGENT}>{t('owner.fieldAgentType')}</option>
+                  <option value={EmployeeType.WAREHOUSE_KEEPER}>{t('owner.warehouseKeeperType')}</option>
                 </select>
                 <button type="submit" className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold">{t('owner.generateCode')}</button>
               </form>
