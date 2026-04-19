@@ -34,6 +34,10 @@ export interface ExchangeRate {
 
 export const MAX_CURRENCIES_PER_ORG = 5;
 
+const logErr = (ctx: string, error: unknown) => {
+  logger.error(ctx, 'currencyService', { error: String((error as Error)?.message || error) });
+};
+
 export const currencyService = {
   /** List all currencies for an org. */
   async list(orgId: string): Promise<OrgCurrency[]> {
@@ -43,10 +47,7 @@ export const currencyService = {
       .eq('organization_id', orgId)
       .order('is_base', { ascending: false })
       .order('created_at', { ascending: true });
-    if (error) {
-      logger.error('currencyService.list failed', error);
-      throw error;
-    }
+    if (error) { logErr('list failed', error); throw error; }
     return (data ?? []) as OrgCurrency[];
   },
 
@@ -75,10 +76,7 @@ export const currencyService = {
       })
       .select()
       .single();
-    if (error) {
-      logger.error('currencyService.add failed', error);
-      throw error;
-    }
+    if (error) { logErr('add failed', error); throw error; }
     return data as OrgCurrency;
   },
 
@@ -88,10 +86,7 @@ export const currencyService = {
       .from('org_currencies')
       .update({ is_active: isActive })
       .eq('id', currencyId);
-    if (error) {
-      logger.error('currencyService.toggleActive failed', error);
-      throw error;
-    }
+    if (error) { logErr('toggleActive failed', error); throw error; }
   },
 
   /** List exchange rates for an org (history, newest first). */
@@ -102,10 +97,7 @@ export const currencyService = {
       .eq('organization_id', orgId)
       .order('effective_at', { ascending: false })
       .limit(limit);
-    if (error) {
-      logger.error('currencyService.listRates failed', error);
-      throw error;
-    }
+    if (error) { logErr('listRates failed', error); throw error; }
     return (data ?? []) as ExchangeRate[];
   },
 
@@ -135,10 +127,7 @@ export const currencyService = {
       })
       .select()
       .single();
-    if (error) {
-      logger.error('currencyService.addRate failed', error);
-      throw error;
-    }
+    if (error) { logErr('addRate failed', error); throw error; }
     return data as ExchangeRate;
   },
 
