@@ -12,6 +12,8 @@ import { preCheckDevice, registerDevice } from '@/lib/deviceService';
 // EmailPasswordAuth intentionally not rendered — kept in codebase for legacy /reset-password flow
 import GoogleSignInButton from './GoogleSignInButton';
 import LicenseActivation from './LicenseActivation';
+import AccountTypeChoice from './AccountTypeChoice';
+import SelfServiceTrialModal from './SelfServiceTrialModal';
 import AuthOverlay from './AuthOverlay';
 import GuestRoleSelector from './GuestRoleSelector';
 import ActiveSessionWarningDialog from '@/components/ui/ActiveSessionWarningDialog';
@@ -42,6 +44,9 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
   const [oauthPending, setOauthPending] = useState(() => isOAuthPending());
   const [showGuestSelector, setShowGuestSelector] = useState(false);
   const [deviceRegLoading, setDeviceRegLoading] = useState(false);
+  // null = show choice screen | 'owner' = trial flow | 'employee' = license code flow
+  const [accountChoice, setAccountChoice] = useState<null | 'owner' | 'employee'>(null);
+  const [showTrialModal, setShowTrialModal] = useState(false);
   const { enterGuestMode } = useGuest();
 
   // Track whether we've already started processing to avoid double runs
@@ -341,7 +346,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
   }, [checkUserProfile, onAuthComplete, startVerification, clearTimers, yieldToRenderer, t]);
   
 
-  const handleLogout = async () => { clearAuthCache(); clearOAuthPending(); setOauthPending(false); await supabase.auth.signOut(); clearTimers(); setAuthState({ type: 'initial' }); setAuthError(''); processingRef.current = false; };
+  const handleLogout = async () => { clearAuthCache(); clearOAuthPending(); setOauthPending(false); await supabase.auth.signOut(); clearTimers(); setAuthState({ type: 'initial' }); setAuthError(''); setAccountChoice(null); setShowTrialModal(false); processingRef.current = false; };
   const handleRetry = async () => {
     setAuthState({ type: 'initial' });
     processingRef.current = false;
@@ -376,7 +381,50 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
           </div>);
 
       case 'needs_activation':
-        return <LicenseActivation userId={authState.userId} email={authState.email} fullName={authState.fullName} onSuccess={handleActivationSuccess} onLogout={handleLogout} />;
+        // Step 1: ask owner vs employee
+        if (accountChoice === null) {
+          return (
+            <AccountTypeChoice
+              fullName={authState.fullName}
+              email={authState.email}
+              onChooseOwner={() => { setAccountChoice('owner'); setShowTrialModal(true); }}
+              onChooseEmployee={() => setAccountChoice('employee')}
+              onLogout={handleLogout}
+            />
+          );
+        }
+        // Step 2a: employee → license activation (existing flow)
+        if (accountChoice === 'employee') {
+          return (
+            <div className="space-y-3">
+              <button
+                onClick={() => setAccountChoice(null)}
+                className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 rtl:rotate-180" />
+                رجوع لاختيار نوع الحساب
+              </button>
+              <LicenseActivation userId={authState.userId} email={authState.email} fullName={authState.fullName} onSuccess={handleActivationSuccess} onLogout={handleLogout} />
+            </div>
+          );
+        }
+        // Step 2b: owner → trial creation modal (rendered as overlay below)
+        return (
+          <div className="space-y-5">
+            <div className="text-center space-y-3 py-6">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              </div>
+              <p className="text-sm font-bold text-foreground">جاري تجهيز حسابك التجريبي...</p>
+              <button
+                onClick={() => { setAccountChoice(null); setShowTrialModal(false); }}
+                className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors"
+              >
+                إلغاء والعودة
+              </button>
+            </div>
+          </div>
+        );
 
       case 'device_warning':
         return (
@@ -483,6 +531,16 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
         onCancel={handleDeviceWarningCancel}
         loading={deviceRegLoading}
       />
+
+      {/* Self-service trial modal — Native fullscreen */}
+      {authState.type === 'needs_activation' && (
+        <SelfServiceTrialModal
+          isOpen={showTrialModal}
+          onClose={() => { setShowTrialModal(false); setAccountChoice(null); }}
+          onSuccess={() => { setShowTrialModal(false); onAuthComplete(); }}
+          defaultFullName={authState.fullName}
+        />
+      )}
       
       <div className="auth-edge-bar auth-edge-bar--top" />
       <div className="auth-edge-bar auth-edge-bar--bottom" />

@@ -480,53 +480,65 @@ export type Database = {
         Row: {
           created_at: string
           days_valid: number | null
+          distributors_count: number | null
           expiryDate: string | null
           id: string
+          is_self_service_trial: boolean
           issuedAt: string
           licenseKey: string
           max_employees: number
           monthly_price: number | null
           organization_id: string | null
           orgName: string
+          owner_full_name: string | null
           owner_phone: string | null
           ownerId: string | null
           renewal_alert_days: number | null
           status: string
           type: string
+          whatsapp_number: string | null
         }
         Insert: {
           created_at?: string
           days_valid?: number | null
+          distributors_count?: number | null
           expiryDate?: string | null
           id?: string
+          is_self_service_trial?: boolean
           issuedAt?: string
           licenseKey: string
           max_employees?: number
           monthly_price?: number | null
           organization_id?: string | null
           orgName: string
+          owner_full_name?: string | null
           owner_phone?: string | null
           ownerId?: string | null
           renewal_alert_days?: number | null
           status?: string
           type?: string
+          whatsapp_number?: string | null
         }
         Update: {
           created_at?: string
           days_valid?: number | null
+          distributors_count?: number | null
           expiryDate?: string | null
           id?: string
+          is_self_service_trial?: boolean
           issuedAt?: string
           licenseKey?: string
           max_employees?: number
           monthly_price?: number | null
           organization_id?: string | null
           orgName?: string
+          owner_full_name?: string | null
           owner_phone?: string | null
           ownerId?: string | null
           renewal_alert_days?: number | null
           status?: string
           type?: string
+          whatsapp_number?: string | null
         }
         Relationships: [
           {
@@ -2038,6 +2050,16 @@ export type Database = {
       create_sales_return_rpc: {
         Args: { p_items: Json; p_reason?: string; p_sale_id: string }
         Returns: string
+      }
+      create_self_service_trial: {
+        Args: {
+          p_distributors_count: number
+          p_full_name: string
+          p_org_name: string
+          p_phone: string
+          p_whatsapp: string
+        }
+        Returns: Json
       }
       deactivate_employee_rpc: {
         Args: { p_employee_id: string }
