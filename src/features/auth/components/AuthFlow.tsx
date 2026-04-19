@@ -9,7 +9,7 @@ import { checkAuthStatus } from '@/hooks/useAuthOperations';
 import { isOAuthPending, clearOAuthPending } from '@/lib/oauthState';
 import { Capacitor } from '@capacitor/core';
 import { preCheckDevice, registerDevice } from '@/lib/deviceService';
-import EmailPasswordAuth from './EmailPasswordAuth';
+// EmailPasswordAuth intentionally not rendered — kept in codebase for legacy /reset-password flow
 import GoogleSignInButton from './GoogleSignInButton';
 import LicenseActivation from './LicenseActivation';
 import AuthOverlay from './AuthOverlay';
