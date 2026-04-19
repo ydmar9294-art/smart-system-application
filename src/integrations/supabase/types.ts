@@ -685,6 +685,53 @@ export type Database = {
           },
         ]
       }
+      exchange_rates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          effective_at: string
+          from_currency: string
+          id: string
+          notes: string | null
+          organization_id: string
+          rate: number
+          to_currency: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          effective_at?: string
+          from_currency: string
+          id?: string
+          notes?: string | null
+          organization_id: string
+          rate: number
+          to_currency: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          effective_at?: string
+          from_currency?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          rate?: number
+          to_currency?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exchange_rates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_snapshots: {
         Row: {
           created_at: string
@@ -755,6 +802,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "invoice_snapshots_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_currencies: {
+        Row: {
+          created_at: string
+          currency_code: string
+          currency_name_ar: string
+          id: string
+          is_active: boolean
+          is_base: boolean
+          organization_id: string
+          symbol: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency_code: string
+          currency_name_ar: string
+          id?: string
+          is_active?: boolean
+          is_base?: boolean
+          organization_id: string
+          symbol?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency_code?: string
+          currency_name_ar?: string
+          id?: string
+          is_active?: boolean
+          is_base?: boolean
+          organization_id?: string
+          symbol?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_currencies_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -1995,7 +2086,9 @@ export type Database = {
         }[]
       }
       get_my_org_id: { Args: never; Returns: string }
+      get_my_org_id_cached: { Args: never; Returns: string }
       get_my_role: { Args: never; Returns: string }
+      get_my_role_cached: { Args: never; Returns: string }
       get_organization_stats_rpc: {
         Args: never
         Returns: {
