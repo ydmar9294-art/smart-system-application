@@ -20,6 +20,7 @@ import { FinanceTab } from './FinanceTab';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
 import LegalInfoTab from './LegalInfoTab';
 import CustomersTab from './CustomersTab';
+import { InventoryTab } from './InventoryTab';
 import OrgDeletionRequest from './OrgDeletionRequest';
 import SubscriptionTab from './SubscriptionTab';
 import BackupTab from './BackupTab';
@@ -129,6 +130,7 @@ const OwnerDashboard: React.FC = () => {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview': return <OwnerOverviewTab />;
+      case 'inventory': return <InventoryTab />;
       case 'team': return <TeamContent
         teamMembers={teamMembers} organization={organization} activeEmployeeCount={activeEmployeeCount}
         maxEmployees={maxEmployees} remainingSlots={remainingSlots} usagePercent={usagePercent}
@@ -137,7 +139,6 @@ const OwnerDashboard: React.FC = () => {
         copiedId={copiedId} setCopiedId={setCopiedId} togglingEmployee={togglingEmployee}
         handleToggleEmployee={handleToggleEmployee} getEmployeeTypeLabel={getEmployeeTypeLabel}
       />;
-      case 'customers': return <CustomersTab />;
       case 'finance': return <FinanceWithPerformance />;
       default: return null;
     }
@@ -369,7 +370,7 @@ const TeamContent: React.FC<any> = ({
       ) : (
         teamMembers.map((u: any) => {
           const isActive = u.isActive !== false;
-          const canManage = u.employeeType === 'SALES_MANAGER' || u.employeeType === 'ACCOUNTANT';
+          const canManage = u.employeeType === 'ACCOUNTANT' || u.employeeType === 'WAREHOUSE_KEEPER' || u.employeeType === 'FIELD_AGENT';
           return (
             <div key={u.id} className={`p-4 rounded-2xl bg-card shadow-sm ${!isActive ? 'opacity-60' : ''}`}>
               <div className="flex justify-between items-center mb-2">
