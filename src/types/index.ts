@@ -130,6 +130,10 @@ export interface License {
   monthlyPrice?: number;
   renewalAlertDays?: number;
   organizationId?: string;
+  ownerFullName?: string;
+  distributorsCount?: number;
+  whatsappNumber?: string;
+  isSelfServiceTrial?: boolean;
 }
 
 export interface SubscriptionPayment {

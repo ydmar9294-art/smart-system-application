@@ -183,7 +183,11 @@ export const transformLicense = (l: any): License => ({
   ownerPhone: l.owner_phone,
   monthlyPrice: l.monthly_price ?? 0,
   renewalAlertDays: l.renewal_alert_days ?? 3,
-  organizationId: l.organization_id
+  organizationId: l.organization_id,
+  ownerFullName: l.owner_full_name ?? undefined,
+  distributorsCount: l.distributors_count ?? undefined,
+  whatsappNumber: l.whatsapp_number ?? undefined,
+  isSelfServiceTrial: l.is_self_service_trial ?? false,
 });
 
 export const transformUser = (u: any) => ({
