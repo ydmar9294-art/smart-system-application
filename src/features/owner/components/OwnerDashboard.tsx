@@ -4,57 +4,56 @@ import DeletionRequestsManager from '@/features/shared/components/DeletionReques
 import { createPortal } from 'react-dom';
 import { copyToClipboard } from '@/lib/clipboard';
 import { useTranslation } from 'react-i18next';
-import { 
-  FileText, Package, Users, TrendingUp, LogOut, LayoutDashboard,
+import {
+  FileText, Package, Users, TrendingUp, LayoutDashboard,
   Receipt, Wallet, UserPlus, X, Copy, CheckCircle2, Clock,
-  ShieldCheck, MessageCircle, AlertTriangle, Phone, MapPin,
-  CircleDollarSign, Shield, UserX, UserCheck, Loader2,
-  BarChart3, CreditCard, Banknote, Database, Coins
+  ShieldCheck, AlertTriangle,
+  CircleDollarSign, UserX, UserCheck, Loader2,
+  CreditCard, Banknote,
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { useAuth } from '@/store/AuthContext';
 import { useTabPrefetch } from '@/hooks/useTabPrefetch';
 import { CURRENCY } from '@/constants';
 import { UserRole, EmployeeType, PaymentType } from '@/types';
-import { InventoryTab } from './InventoryTab';
 import { FinanceTab } from './FinanceTab';
-import { NotificationCenter } from '@/features/notifications/components/NotificationCenter';
-import AIAssistant from '@/features/ai/components/AIAssistant';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
 import LegalInfoTab from './LegalInfoTab';
 import CustomersTab from './CustomersTab';
 import OrgDeletionRequest from './OrgDeletionRequest';
 import SubscriptionTab from './SubscriptionTab';
-import { PerformanceTab } from './PerformanceTab';
 import BackupTab from './BackupTab';
 import { OwnerOverviewTab } from './OwnerOverviewTab';
 import CurrenciesTab from './CurrenciesTab';
+import OwnerCompactHeader from './OwnerCompactHeader';
+import OwnerBottomNav, { OwnerNavTab } from './OwnerBottomNav';
+import OwnerSettingsSheet, { SettingsSubPage } from './OwnerSettingsSheet';
+import OwnerSubPageSheet from './OwnerSubPageSheet';
+import FinanceWithPerformance from './FinanceWithPerformance';
 
 const AgentMapView = React.lazy(() => import('@/features/tracking/components/AgentMapView'));
-
-type OwnerTabType = 'overview' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup' | 'tracking' | 'currencies';
 
 const OwnerDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
-  const { 
+  const {
     user, sales = [], payments = [], customers = [], users = [],
     products = [], logout, addDistributor, pendingEmployees = [],
     deactivateEmployee, reactivateEmployee, organization
   } = useApp();
-  
+
   const { role: authRole, organization: authOrg } = useAuth();
-  const [activeTab, setActiveTab] = useState<OwnerTabType>('overview');
-  useTabPrefetch(activeTab, authOrg?.id, authRole);
+  const [activeTab, setActiveTab] = useState<OwnerNavTab>('overview');
+  useTabPrefetch(activeTab as any, authOrg?.id, authRole);
   const [loggingOut, setLoggingOut] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
   const [newEmployeeCode, setNewEmployeeCode] = useState<string | null>(null);
   const [newEmployeeData, setNewEmployeeData] = useState<any | null>(null);
   const [togglingEmployee, setTogglingEmployee] = useState<string | null>(null);
 
-  React.useEffect(() => { setIsMounted(true); }, []);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [subPage, setSubPage] = useState<SettingsSubPage>(null);
 
   const stats = useMemo(() => {
     const todayStart = new Date().setHours(0, 0, 0, 0);
@@ -63,7 +62,7 @@ const OwnerDashboard: React.FC = () => {
     const todayCash = todaySales.filter(s => s.paymentType === PaymentType.CASH).reduce((s, i) => s + i.grandTotal, 0);
     const todayCredit = todaySales.filter(s => s.paymentType === PaymentType.CREDIT).reduce((s, i) => s + i.grandTotal, 0);
     const totalCollections = payments.filter(c => c.timestamp >= todayStart && !c.isReversed).reduce((s, i) => s + i.amount, 0);
-    
+
     const allValidSales = sales.filter(s => !s.isVoided);
     const totalAllSales = allValidSales.reduce((s, i) => s + i.grandTotal, 0);
     const totalCashSales = allValidSales.filter(s => s.paymentType === PaymentType.CASH).reduce((s, i) => s + i.grandTotal, 0);
@@ -74,9 +73,9 @@ const OwnerDashboard: React.FC = () => {
 
   const teamMembers = users.filter(u => u.role === UserRole.EMPLOYEE);
   const activeEmployeeCount = teamMembers.filter(u => u.isActive !== false).length;
-  
+
   const [licenseInfo, setLicenseInfo] = React.useState<{ maxEmployees: number; type: string; status: string; expiryDate?: string } | null>(null);
-  
+
   React.useEffect(() => {
     const fetchLicense = async () => {
       try {
@@ -88,7 +87,7 @@ const OwnerDashboard: React.FC = () => {
     };
     fetchLicense();
   }, []);
-  
+
   const maxEmployees = licenseInfo?.maxEmployees ?? 10;
   const remainingSlots = Math.max(0, maxEmployees - activeEmployeeCount);
   const usagePercent = maxEmployees > 0 ? (activeEmployeeCount / maxEmployees) * 100 : 0;
@@ -127,22 +126,6 @@ const OwnerDashboard: React.FC = () => {
   const myPendingEmployees = pendingEmployees.filter(pe => !pe.is_used);
   const myActivatedEmployees = pendingEmployees.filter(pe => pe.is_used);
 
-  const primaryTabs: { id: OwnerTabType; label: string; icon: React.ReactNode; color: string; bgColor: string }[] = [
-    { id: 'overview', label: t('owner.tabs.home'), icon: <LayoutDashboard className="w-5 h-5" />, color: 'text-emerald-600', bgColor: 'bg-emerald-600' },
-    { id: 'team', label: t('owner.tabs.team'), icon: <Users className="w-5 h-5" />, color: 'text-blue-600', bgColor: 'bg-blue-600' },
-    { id: 'customers', label: t('owner.tabs.customers'), icon: <CircleDollarSign className="w-5 h-5" />, color: 'text-purple-600', bgColor: 'bg-purple-600' },
-    { id: 'finance', label: t('owner.tabs.finance'), icon: <TrendingUp className="w-5 h-5" />, color: 'text-red-500', bgColor: 'bg-red-500' },
-    { id: 'performance', label: t('owner.tabs.performance'), icon: <BarChart3 className="w-5 h-5" />, color: 'text-indigo-600', bgColor: 'bg-indigo-600' },
-  ];
-
-  const secondaryTabs: { id: OwnerTabType; label: string; icon: React.ReactNode }[] = [
-    { id: 'tracking', label: t('tracking.tab'), icon: <MapPin className="w-4 h-4" /> },
-    { id: 'currencies', label: 'العملات', icon: <Coins className="w-4 h-4" /> },
-    { id: 'backup', label: t('owner.tabs.backup'), icon: <Database className="w-4 h-4" /> },
-    { id: 'subscription', label: t('owner.tabs.subscription'), icon: <Shield className="w-4 h-4" /> },
-    { id: 'legal', label: t('owner.tabs.legal'), icon: <ShieldCheck className="w-4 h-4" /> },
-  ];
-
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview': return <OwnerOverviewTab />;
@@ -155,93 +138,80 @@ const OwnerDashboard: React.FC = () => {
         handleToggleEmployee={handleToggleEmployee} getEmployeeTypeLabel={getEmployeeTypeLabel}
       />;
       case 'customers': return <CustomersTab />;
-      case 'finance': return <FinanceTab />;
-      case 'performance': return <PerformanceTab />;
+      case 'finance': return <FinanceWithPerformance />;
+      default: return null;
+    }
+  };
+
+  const subPageTitle = (() => {
+    switch (subPage) {
+      case 'subscription': return t('owner.tabs.subscription');
+      case 'backup':       return t('owner.tabs.backup');
+      case 'currencies':   return 'العملات والصرف';
+      case 'tracking':     return t('tracking.tab');
+      case 'legal':        return t('owner.tabs.legal');
+      default: return '';
+    }
+  })();
+
+  const renderSubPage = () => {
+    switch (subPage) {
       case 'subscription': return <SubscriptionTab />;
-      case 'legal': return <><LegalInfoTab /><OrgDeletionRequest /></>;
-      case 'backup': return <BackupTab />;
-      case 'currencies': return <CurrenciesTab />;
-      case 'tracking': return <React.Suspense fallback={<div className="animate-pulse bg-card h-96 rounded-2xl" />}><AgentMapView /></React.Suspense>;
+      case 'backup':       return <BackupTab />;
+      case 'currencies':   return <CurrenciesTab />;
+      case 'legal':        return <><LegalInfoTab /><OrgDeletionRequest /></>;
+      case 'tracking':
+        return (
+          <React.Suspense fallback={<div className="animate-pulse bg-card h-96 rounded-2xl" />}>
+            <AgentMapView />
+          </React.Suspense>
+        );
       default: return null;
     }
   };
 
   return (
     <div className="min-h-screen bg-background" dir={isRtl ? 'rtl' : 'ltr'}>
+      <OwnerCompactHeader userName={user?.name} orgName={organization?.name} />
+
       <div className="max-w-lg mx-auto">
-        {/* Header */}
-        <div className="bg-background pt-4 px-4 relative">
-          <div className={`absolute -top-1 ${isRtl ? 'left-1' : 'right-1'} z-10`}><NotificationCenter /></div>
-
-          <div className="flex justify-center pt-4 mb-3">
-            <div className="flex items-center gap-3 bg-card px-4 py-2 rounded-full shadow-sm">
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                <ShieldCheck className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <div className={isRtl ? 'text-end' : 'text-start'}>
-                <p className="font-bold text-foreground text-sm">{user?.name || t('roles.owner')}</p>
-                <p className="text-[10px] text-muted-foreground">{t('owner.dashboard')}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-1.5 bg-card/80 backdrop-blur-sm px-2 py-1.5 rounded-xl shadow-sm">
-              <AIAssistant className="!p-1.5 !rounded-lg" />
-              <div className="w-px h-5 bg-border" />
-              <a href="https://wa.me/963947744162" target="_blank" rel="noopener noreferrer"
-                className="p-1.5 bg-gradient-to-br from-green-400 to-green-600 rounded-lg text-white hover:shadow-md transition-all active:scale-95" title={t('common.supportTeam')}>
-                <MessageCircle className="w-4 h-4" />
-              </a>
-            </div>
-            <button onClick={handleLogout} disabled={loggingOut}
-              className="p-2.5 bg-card/80 backdrop-blur-sm rounded-full shadow-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all" title={t('common.logout')}>
-              <LogOut className={`w-5 h-5 ${loggingOut ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-
         <WelcomeSplash />
 
-        {/* Primary Tab Navigation */}
-        <div className="px-4 pb-2">
-          <div className="bg-card rounded-3xl p-2 shadow-sm flex gap-1" data-guest-nav>
-            {primaryTabs.map((tab) => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl transition-all duration-300 ${
-                  activeTab === tab.id ? `${tab.bgColor} text-white shadow-lg` : 'text-muted-foreground hover:bg-muted'
-                }`}>
-                <div className={`${activeTab === tab.id ? 'scale-110' : ''} transition-transform duration-300`}>{tab.icon}</div>
-                <span className="text-[10px] font-bold">{tab.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Secondary Tabs */}
-        <div className="px-4 pb-4">
-          <div className="flex gap-2" data-guest-nav>
-            {secondaryTabs.map((tab) => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-warning text-white shadow-md'
-                    : 'bg-card text-muted-foreground hover:bg-muted shadow-sm'
-                }`}>
-                {tab.icon}
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Tab Content */}
-        <div className="px-4 pb-8">
+        {/* Content */}
+        <div
+          className="px-3 pt-3"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 96px)' }}
+        >
           <AnimatedTabContent tabKey={activeTab}>
             {renderTabContent()}
           </AnimatedTabContent>
         </div>
       </div>
+
+      {/* Bottom Nav */}
+      <OwnerBottomNav
+        active={activeTab}
+        onChange={setActiveTab}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
+
+      {/* Settings Sheet */}
+      <OwnerSettingsSheet
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onOpenSubPage={(page) => { setSettingsOpen(false); setSubPage(page); }}
+        onLogout={handleLogout}
+        loggingOut={loggingOut}
+      />
+
+      {/* Sub-page sheets */}
+      <OwnerSubPageSheet
+        open={subPage !== null}
+        onClose={() => setSubPage(null)}
+        title={subPageTitle}
+      >
+        {renderSubPage()}
+      </OwnerSubPageSheet>
 
       {/* Add Employee Modal */}
       {showAddUserModal && createPortal(
@@ -255,7 +225,7 @@ const OwnerDashboard: React.FC = () => {
                 <X className="w-5 h-5 text-muted-foreground" />
               </button>
             </div>
-            
+
             {newEmployeeCode ? (
               <div className="space-y-4">
                 <div className="bg-success/10 p-6 rounded-2xl border border-success/20 text-center">
@@ -263,7 +233,7 @@ const OwnerDashboard: React.FC = () => {
                   <p className="text-sm text-muted-foreground mb-2">{t('owner.employeeActivationCode')}</p>
                   <p className="text-2xl font-mono font-bold text-primary tracking-widest">{newEmployeeCode}</p>
                 </div>
-                
+
                 {newEmployeeData && (
                   <div className="bg-muted p-4 rounded-xl space-y-2 text-sm">
                     <p><span className="text-muted-foreground">{t('common.name')}:</span> <span className="font-bold text-foreground">{newEmployeeData.name}</span></p>
@@ -271,7 +241,7 @@ const OwnerDashboard: React.FC = () => {
                     <p><span className="text-muted-foreground">{t('owner.employeeType')}:</span> <span className="font-bold text-foreground">{getEmployeeTypeLabel(newEmployeeData.employee_type)}</span></p>
                   </div>
                 )}
-                
+
                 <button onClick={async () => { await copyToClipboard(newEmployeeCode); }}
                   className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold flex items-center justify-center gap-2">
                   <Copy className="w-5 h-5" /> {t('owner.copyCode')}
@@ -280,9 +250,9 @@ const OwnerDashboard: React.FC = () => {
               </div>
             ) : (
               <form onSubmit={handleAddEmployee} className="space-y-4">
-                <input name="name" required placeholder={t('owner.employeeName')} 
+                <input name="name" required placeholder={t('owner.employeeName')}
                   className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
-                <input name="phone" type="tel" inputMode="numeric" pattern="[0-9]*" required placeholder={t('owner.employeePhone')} 
+                <input name="phone" type="tel" inputMode="numeric" pattern="[0-9]*" required placeholder={t('owner.employeePhone')}
                   className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
                 <select name="type" className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-primary">
                   <option value={EmployeeType.ACCOUNTANT}>{t('owner.accountantType')}</option>
@@ -298,133 +268,10 @@ const OwnerDashboard: React.FC = () => {
   );
 };
 
-/* ========== Daily Content ========== */
-const DailyContent: React.FC<{
-  stats: any; sales: any[]; products: any[]; customers: any[];
-  activeEmployeeCount: number; maxEmployees: number;
-}> = ({ stats, sales, products, customers, activeEmployeeCount, maxEmployees }) => {
-  const { t } = useTranslation();
-  return (
-  <div className="space-y-3">
-    <div className="p-4 rounded-2xl bg-card shadow-sm">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-          <Receipt className="w-4 h-4 text-primary" />
-        </div>
-        <span className="text-xs font-bold text-foreground">{t('owner.todaySales')}</span>
-      </div>
-      <p className="text-2xl font-black text-foreground mb-2">{stats.todayRevenue.toLocaleString()} <span className="text-xs font-medium text-muted-foreground">{CURRENCY}</span></p>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="bg-emerald-500/10 p-2.5 rounded-xl flex items-center gap-2">
-          <Banknote className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          <div>
-            <p className="text-[8px] text-muted-foreground font-bold">{t('owner.cashLabel')}</p>
-            <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">{stats.todayCash.toLocaleString()}</p>
-          </div>
-        </div>
-        <div className="bg-amber-500/10 p-2.5 rounded-xl flex items-center gap-2">
-          <CreditCard className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-          <div>
-            <p className="text-[8px] text-muted-foreground font-bold">{t('owner.creditLabel')}</p>
-            <p className="text-sm font-black text-amber-600 dark:text-amber-400">{stats.todayCredit.toLocaleString()}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div className="p-4 rounded-2xl bg-card shadow-sm">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center">
-          <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-        </div>
-        <span className="text-xs font-bold text-foreground">{t('owner.totalSales')}</span>
-      </div>
-      <p className="text-2xl font-black text-foreground mb-2">{stats.totalAllSales.toLocaleString()} <span className="text-xs font-medium text-muted-foreground">{CURRENCY}</span></p>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="bg-emerald-500/10 p-2.5 rounded-xl flex items-center gap-2">
-          <Banknote className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          <div>
-            <p className="text-[8px] text-muted-foreground font-bold">{t('owner.cashLabel')}</p>
-            <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">{stats.totalCashSales.toLocaleString()}</p>
-          </div>
-        </div>
-        <div className="bg-amber-500/10 p-2.5 rounded-xl flex items-center gap-2">
-          <CreditCard className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-          <div>
-            <p className="text-[8px] text-muted-foreground font-bold">{t('owner.creditLabel')}</p>
-            <p className="text-sm font-black text-amber-600 dark:text-amber-400">{stats.totalCreditSales.toLocaleString()}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div className="grid grid-cols-2 gap-2">
-      <div className="p-3 rounded-2xl bg-card shadow-sm">
-        <Wallet className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mb-1" />
-        <p className="text-[9px] text-muted-foreground font-bold">{t('owner.todayCollections')}</p>
-        <p className="text-lg font-black text-foreground">{stats.totalCollections.toLocaleString()}</p>
-        <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
-      </div>
-      <div className="p-3 rounded-2xl bg-card shadow-sm">
-        <Users className="w-5 h-5 text-primary mb-1" />
-        <p className="text-[9px] text-muted-foreground font-bold">{t('owner.totalEmployees')}</p>
-        <p className="text-lg font-black text-foreground">{activeEmployeeCount}</p>
-        <p className="text-[10px] text-muted-foreground">{t('debts.from')} {maxEmployees}</p>
-      </div>
-    </div>
-
-    <div className="p-4 rounded-2xl bg-card shadow-sm">
-      <h3 className="font-bold text-foreground mb-3 text-sm">{t('owner.quickStats')}</h3>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="bg-primary/5 p-3 rounded-xl text-center">
-          <FileText className="w-5 h-5 mx-auto text-primary mb-1" />
-          <p className="text-lg font-black text-foreground">{sales.filter(s => s.timestamp >= new Date().setHours(0,0,0,0) && !s.isVoided).length}</p>
-          <p className="text-[8px] text-muted-foreground font-bold">{t('salesManager.invoiceCount')}</p>
-        </div>
-        <div className="bg-destructive/5 p-3 rounded-xl text-center">
-          <AlertTriangle className="w-5 h-5 mx-auto text-destructive mb-1" />
-          <p className="text-lg font-black text-foreground">{products.filter(p => p.stock <= p.minStock && !p.isDeleted).length}</p>
-          <p className="text-[8px] text-muted-foreground font-bold">{t('warehouse.lowStockProducts')}</p>
-        </div>
-        <div className="bg-purple-500/5 p-3 rounded-xl text-center">
-          <Users className="w-5 h-5 mx-auto text-purple-600 dark:text-purple-400 mb-1" />
-          <p className="text-lg font-black text-foreground">{customers.length}</p>
-          <p className="text-[8px] text-muted-foreground font-bold">{t('owner.totalCustomers')}</p>
-        </div>
-        <div className="bg-orange-500/5 p-3 rounded-xl text-center">
-          <Package className="w-5 h-5 mx-auto text-orange-600 dark:text-orange-400 mb-1" />
-          <p className="text-lg font-black text-foreground">{products.filter(p => !p.isDeleted).length}</p>
-          <p className="text-[8px] text-muted-foreground font-bold">{t('owner.totalProducts')}</p>
-        </div>
-      </div>
-    </div>
-
-    {products.filter(p => p.stock <= p.minStock && !p.isDeleted).length > 0 && (
-      <div className="p-4 rounded-2xl bg-card shadow-sm border-r-4 border-destructive">
-        <h3 className="font-bold text-foreground mb-3 text-sm flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-destructive" /> {t('warehouse.lowStockProducts')}
-        </h3>
-        <div className="space-y-2 max-h-32 overflow-y-auto">
-          {products.filter(p => p.stock <= p.minStock && !p.isDeleted).slice(0, 5).map(p => (
-            <div key={p.id} className="flex justify-between items-center bg-destructive/5 p-2 rounded-lg">
-              <span className="font-bold text-xs text-foreground">{p.name}</span>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-destructive font-black">{p.stock}</span>
-                <span className="text-[8px] text-muted-foreground">/ {p.minStock}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )}
-  </div>
-);
-};
-
 /* ========== Team Content ========== */
 const TeamContent: React.FC<any> = ({
   teamMembers, organization, activeEmployeeCount, maxEmployees, remainingSlots, usagePercent,
-  showAddUserModal, setShowAddUserModal, myPendingEmployees, myActivatedEmployees,
+  setShowAddUserModal, myPendingEmployees, myActivatedEmployees,
   copiedId, setCopiedId, togglingEmployee, handleToggleEmployee, getEmployeeTypeLabel
 }) => {
   const { t, i18n } = useTranslation();
@@ -457,7 +304,7 @@ const TeamContent: React.FC<any> = ({
       }`}>
       <UserPlus className="w-5 h-5" /> {t('owner.addEmployee')}
     </button>
-    
+
     {myPendingEmployees.length > 0 && (
       <div className="space-y-2">
         <h3 className="font-bold text-foreground text-sm flex items-center gap-2 px-2">
