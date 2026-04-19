@@ -92,12 +92,15 @@ const ar = {
   // ==========================================
   auth: {
     welcome: 'مرحباً بك',
-    loginSubtitle: 'سجل دخولك بالبريد الإلكتروني وكلمة المرور',
+    loginSubtitle: 'سجّل دخولك عبر Google للمتابعة',
     googleSignIn: 'تسجيل الدخول عبر Google',
     googleSigningIn: 'جارٍ تسجيل الدخول...',
     googleReturning: 'جارٍ العودة من Google...',
     googleSuccess: 'تم تسجيل الدخول ✓',
     guestLogin: 'دخول كزائر',
+    guestPromoTitle: 'جرّب التطبيق الآن مجاناً',
+    guestPromoBadge: 'بدون حساب • فوري',
+    guestPromoSubtitle: 'تجوّل في كل الميزات بحساب تجريبي قبل التسجيل',
     email: 'البريد الإلكتروني',
     password: 'كلمة المرور',
     confirmPassword: 'تأكيد كلمة المرور',

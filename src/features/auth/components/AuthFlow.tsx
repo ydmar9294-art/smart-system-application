@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { logger } from '@/lib/logger';
-import { Loader2, AlertCircle, XCircle, Zap, BarChart3, Lock, RefreshCw, ShieldCheck, Eye } from 'lucide-react';
+import { Loader2, AlertCircle, XCircle, Zap, BarChart3, Lock, RefreshCw, ShieldCheck, Sparkles, ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import AppLogo from '@/components/ui/AppLogo';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,7 +9,7 @@ import { checkAuthStatus } from '@/hooks/useAuthOperations';
 import { isOAuthPending, clearOAuthPending } from '@/lib/oauthState';
 import { Capacitor } from '@capacitor/core';
 import { preCheckDevice, registerDevice } from '@/lib/deviceService';
-import EmailPasswordAuth from './EmailPasswordAuth';
+// EmailPasswordAuth intentionally not rendered — kept in codebase for legacy /reset-password flow
 import GoogleSignInButton from './GoogleSignInButton';
 import LicenseActivation from './LicenseActivation';
 import AuthOverlay from './AuthOverlay';
@@ -416,22 +416,56 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       case 'initial':
       default:
         return (
-          <div className="space-y-6">
-            <div className="text-center space-y-2 pb-4">
+          <div className="space-y-5">
+            <div className="text-center space-y-2 pb-2">
               <h3 className="text-lg font-black text-foreground">{t('auth.welcome')}</h3>
               <p className="text-xs text-muted-foreground">{t('auth.loginSubtitle')}</p>
             </div>
+
+            {/* Google sign-in — primary */}
             <GoogleSignInButton onError={handleAuthError} oauthInProgress={oauthPending} loadingText={oauthPending ? t('auth.googleReturning') : undefined} />
-            <button type="button" onClick={() => setShowGuestSelector(true)}
-              className="w-full relative overflow-hidden flex items-center justify-center gap-2.5 py-3.5 rounded-2xl font-black text-sm transition-all duration-300 active:scale-[0.97] group"
-              style={{ background: 'var(--card-glass-bg, hsl(var(--muted) / 0.5))', backdropFilter: 'blur(20px) saturate(1.6)', WebkitBackdropFilter: 'blur(20px) saturate(1.6)', border: '1px solid hsl(var(--primary) / 0.15)', boxShadow: '0 2px 16px hsl(var(--primary) / 0.06), inset 0 1px 0 hsl(0 0% 100% / 0.08)' }}>
-              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(135deg, hsl(var(--primary) / 0.08), transparent 60%)' }} />
-              <Eye className="w-4.5 h-4.5 text-primary/70 group-hover:text-primary transition-colors duration-300" />
-              <span className="text-muted-foreground group-hover:text-foreground transition-colors duration-300">{t('auth.guestLogin')}</span>
-            </button>
-            <div className="flex items-center gap-3"><div className="flex-1 h-px bg-border" /><span className="text-xs text-muted-foreground font-bold">{t('common.or')}</span><div className="flex-1 h-px bg-border" /></div>
-            <EmailPasswordAuth onError={handleAuthError} />
-            <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground"><ShieldCheck className="w-4 h-4" /><span>{t('common.secureLogin')}</span></div>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-[10px] text-muted-foreground font-black tracking-wider">{t('common.or')}</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+
+            {/* Promotional Guest Preview button */}
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setShowGuestSelector(true)}
+                className="w-full relative overflow-hidden flex items-center justify-center gap-3 py-4 rounded-2xl font-black text-sm transition-all duration-300 active:scale-[0.97] group text-primary-foreground"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.85) 50%, hsl(var(--primary) / 0.95) 100%)',
+                  boxShadow: '0 8px 28px hsl(var(--primary) / 0.35), inset 0 1px 0 hsl(0 0% 100% / 0.25)',
+                }}
+              >
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: 'linear-gradient(135deg, hsl(0 0% 100% / 0.15), transparent 60%)' }} />
+                <Sparkles className="w-5 h-5 drop-shadow" />
+                <span className="drop-shadow-sm">{t('auth.guestPromoTitle')}</span>
+                <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1 rtl:rotate-180 rtl:group-hover:translate-x-1 rtl:group-hover:-translate-x-0" />
+              </button>
+
+              <div className="flex items-center justify-center gap-2">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                  {t('auth.guestPromoBadge')}
+                </span>
+              </div>
+
+              <p className="text-center text-[11px] text-muted-foreground font-bold leading-relaxed px-4">
+                {t('auth.guestPromoSubtitle')}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground pt-2">
+              <ShieldCheck className="w-4 h-4" />
+              <span>{t('common.secureLogin')}</span>
+            </div>
+
             <GuestRoleSelector open={showGuestSelector} onClose={() => setShowGuestSelector(false)} onSelect={handleGuestSelect} />
           </div>);
     }
