@@ -25,7 +25,7 @@ export function usePageTheme() {
     }
     localStorage.setItem('app-theme', isDark ? 'dark' : 'light');
     // Remove transition class after animation completes to avoid perf overhead
-    const timer = setTimeout(() => root.classList.remove('theme-transition'), 350);
+    const timer = setTimeout(() => root.classList.remove('theme-transition'), 200);
     return () => clearTimeout(timer);
   }, [isDark]);
 

@@ -4,20 +4,15 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/store/AuthContext';
 import { useData } from '@/store/DataContext';
 import { UserRole, LicenseStatus } from '@/types';
-import { ShieldAlert, Phone, LogOut, RefreshCw, Settings, Shield, FileText } from 'lucide-react';
+import { ShieldAlert, Phone, LogOut, RefreshCw } from 'lucide-react';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
-import ThemeToggle from '@/components/ui/ThemeToggle';
 import { usePageTheme } from '@/hooks/usePageTheme';
 import { SUPPORT_WHATSAPP_URL, SUPPORT_PHONE_URL } from '@/constants';
 import { PullToRefresh } from '@/components/ui/PullToRefresh';
-import AccountDeletionButton from '@/components/AccountDeletionButton';
-import { useNavigate } from 'react-router-dom';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout, organization, refreshAuth } = useAuth();
   const { refreshAllData } = useData();
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
-  const navigate = useNavigate();
   const { t } = useTranslation();
   const isRtl = true; // Arabic-only mode — always RTL
   
@@ -80,57 +75,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           dir={isRtl ? 'rtl' : 'ltr'}
         >
         <main className="flex-1 relative">
-          {/* Global Controls */}
-          <div className="sticky top-0 z-50 flex justify-start items-center gap-2 pt-16 px-3 pb-2 pointer-events-none fixed-top-safe">
-            <div className="pointer-events-auto">
-              <ThemeToggle />
-            </div>
-            <div className="pointer-events-auto relative">
-              <button
-                onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-                className="p-2 rounded-full bg-card/80 backdrop-blur-sm shadow-md text-muted-foreground hover:text-foreground transition-all"
-                title={t('settings.title')}
-              >
-                <Settings size={18} />
-              </button>
-              {showSettingsMenu && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowSettingsMenu(false)} />
-                  <div className={`absolute top-full mt-2 start-0 bg-card border border-border rounded-2xl shadow-xl z-50 w-56 animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden`} dir={isRtl ? 'rtl' : 'ltr'}>
-                    {/* Header */}
-                    <div className="px-4 py-3 bg-muted/50 border-b border-border">
-                      <p className="text-xs font-black text-foreground">{t('settings.title')}</p>
-                    </div>
-                    
-                    <div className="p-2 space-y-0.5 max-h-[60vh] overflow-y-auto">
-                      {/* Language switcher removed — Arabic-only mode */}
-                      <button
-                        onClick={() => { navigate('/privacy-policy'); setShowSettingsMenu(false); }}
-                        className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold text-foreground hover:bg-muted transition-colors"
-                      >
-                        <Shield size={16} className="text-primary flex-shrink-0" /> 
-                        <span>{t('settings.privacyPolicy')}</span>
-                      </button>
-                      <button
-                        onClick={() => { navigate('/terms'); setShowSettingsMenu(false); }}
-                        className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold text-foreground hover:bg-muted transition-colors"
-                      >
-                        <FileText size={16} className="text-primary flex-shrink-0" /> 
-                        <span>{t('settings.termsOfService')}</span>
-                      </button>
-                      
-                      <div className="h-px bg-border mx-2 my-1" />
-                      
-                      <div className="px-1 py-1">
-                        <AccountDeletionButton />
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-          <div className="p-4 md:p-8 -mt-4">{children}</div>
+          <div className="p-4 md:p-8">{children}</div>
         </main>
         </div>
       </PullToRefresh>
