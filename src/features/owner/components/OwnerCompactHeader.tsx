@@ -14,46 +14,79 @@ const OwnerCompactHeader: React.FC<Props> = ({ userName, orgName }) => {
   const isRtl = i18n.language === 'ar';
 
   return (
-    <header
-      className="sticky top-0 z-40 w-full"
-      style={{
-        paddingTop: 'env(safe-area-inset-top, 0px)',
-        background: 'var(--card-glass-bg)',
-        backdropFilter: 'blur(var(--glass-blur)) saturate(var(--glass-saturation))',
-        WebkitBackdropFilter: 'blur(var(--glass-blur)) saturate(var(--glass-saturation))',
-        borderBottom: '1px solid var(--card-glass-border)',
-      }}
-      dir={isRtl ? 'rtl' : 'ltr'}
-    >
-      <div className="max-w-lg mx-auto h-14 px-3 flex items-center justify-between gap-2">
-        {/* Notifications */}
-        <div className="flex-shrink-0">
-          <NotificationCenter />
-        </div>
+    <>
+      {/* Status-bar tint layer — paints behind the OS status bar / notch
+          using exactly the safe-area-inset-top height so the native bar
+          blends with the app header (true native feel). */}
+      <div
+        aria-hidden
+        className="fixed top-0 inset-x-0 z-50 pointer-events-none"
+        style={{
+          height: 'env(safe-area-inset-top, 0px)',
+          background: 'var(--card-glass-bg)',
+          backdropFilter: 'blur(28px) saturate(190%)',
+          WebkitBackdropFilter: 'blur(28px) saturate(190%)',
+        }}
+      />
 
-        {/* Identity */}
-        <div className="flex-1 flex items-center justify-center gap-2 min-w-0">
-          <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
-            <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+      <header
+        className="sticky top-0 z-40 w-full"
+        style={{
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          paddingLeft: 'env(safe-area-inset-left, 0px)',
+          paddingRight: 'env(safe-area-inset-right, 0px)',
+          background: 'var(--card-glass-bg)',
+          backdropFilter: 'blur(28px) saturate(190%)',
+          WebkitBackdropFilter: 'blur(28px) saturate(190%)',
+          borderBottom: '1px solid var(--card-glass-border)',
+          boxShadow: '0 1px 0 0 hsl(var(--foreground) / 0.02), 0 6px 24px -16px hsl(var(--foreground) / 0.18)',
+        }}
+        dir={isRtl ? 'rtl' : 'ltr'}
+      >
+        <div className="max-w-lg mx-auto h-[52px] px-3 flex items-center justify-between gap-2 relative">
+          {/* Notifications */}
+          <div className="flex-shrink-0 relative">
+            <NotificationCenter />
           </div>
-          <div className="min-w-0 text-center">
-            <p className="font-bold text-foreground text-[13px] leading-tight truncate">
-              {userName || t('roles.owner')}
-            </p>
-            {orgName && (
-              <p className="text-[10px] text-muted-foreground leading-tight truncate">
-                {orgName}
-              </p>
-            )}
-          </div>
-        </div>
 
-        {/* AI */}
-        <div className="flex-shrink-0">
-          <AIAssistant className="!p-2 !rounded-xl" />
+          {/* Identity (centered, absolute so it stays optically centered regardless of side widths) */}
+          <div className="absolute inset-x-0 mx-auto flex items-center justify-center pointer-events-none">
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full pointer-events-auto"
+              style={{
+                background: 'hsl(var(--primary) / 0.06)',
+                border: '1px solid hsl(var(--primary) / 0.10)',
+                maxWidth: '62vw',
+              }}
+            >
+              <div
+                className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))',
+                  boxShadow: '0 2px 8px -2px hsl(var(--primary) / 0.45)',
+                }}
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-primary-foreground" strokeWidth={2.5} />
+              </div>
+              <div className="min-w-0 leading-none">
+                <p className="font-bold text-foreground text-[12.5px] leading-[1.1] truncate">
+                  {userName || t('roles.owner')}
+                </p>
+                {orgName && (
+                  <p className="text-[9.5px] text-muted-foreground leading-[1.1] truncate mt-[1px]">
+                    {orgName}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* AI */}
+          <div className="flex-shrink-0 relative">
+            <AIAssistant className="!p-2 !rounded-xl" />
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+    </>
   );
 };
 
