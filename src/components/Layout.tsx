@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/store/AuthContext';
 import { useData } from '@/store/DataContext';
 import { UserRole, LicenseStatus } from '@/types';
-import { ShieldAlert, Phone, LogOut, RefreshCw, Settings, Shield, FileText, Globe } from 'lucide-react';
+import { ShieldAlert, Phone, LogOut, RefreshCw, Settings, Shield, FileText } from 'lucide-react';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import { usePageTheme } from '@/hooks/usePageTheme';
