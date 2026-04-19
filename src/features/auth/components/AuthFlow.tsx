@@ -346,7 +346,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
   }, [checkUserProfile, onAuthComplete, startVerification, clearTimers, yieldToRenderer, t]);
   
 
-  const handleLogout = async () => { clearAuthCache(); clearOAuthPending(); setOauthPending(false); await supabase.auth.signOut(); clearTimers(); setAuthState({ type: 'initial' }); setAuthError(''); processingRef.current = false; };
+  const handleLogout = async () => { clearAuthCache(); clearOAuthPending(); setOauthPending(false); await supabase.auth.signOut(); clearTimers(); setAuthState({ type: 'initial' }); setAuthError(''); setAccountChoice(null); setShowTrialModal(false); processingRef.current = false; };
   const handleRetry = async () => {
     setAuthState({ type: 'initial' });
     processingRef.current = false;
@@ -381,7 +381,50 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
           </div>);
 
       case 'needs_activation':
-        return <LicenseActivation userId={authState.userId} email={authState.email} fullName={authState.fullName} onSuccess={handleActivationSuccess} onLogout={handleLogout} />;
+        // Step 1: ask owner vs employee
+        if (accountChoice === null) {
+          return (
+            <AccountTypeChoice
+              fullName={authState.fullName}
+              email={authState.email}
+              onChooseOwner={() => { setAccountChoice('owner'); setShowTrialModal(true); }}
+              onChooseEmployee={() => setAccountChoice('employee')}
+              onLogout={handleLogout}
+            />
+          );
+        }
+        // Step 2a: employee → license activation (existing flow)
+        if (accountChoice === 'employee') {
+          return (
+            <div className="space-y-3">
+              <button
+                onClick={() => setAccountChoice(null)}
+                className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 rtl:rotate-180" />
+                رجوع لاختيار نوع الحساب
+              </button>
+              <LicenseActivation userId={authState.userId} email={authState.email} fullName={authState.fullName} onSuccess={handleActivationSuccess} onLogout={handleLogout} />
+            </div>
+          );
+        }
+        // Step 2b: owner → trial creation modal (rendered as overlay below)
+        return (
+          <div className="space-y-5">
+            <div className="text-center space-y-3 py-6">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              </div>
+              <p className="text-sm font-bold text-foreground">جاري تجهيز حسابك التجريبي...</p>
+              <button
+                onClick={() => { setAccountChoice(null); setShowTrialModal(false); }}
+                className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors"
+              >
+                إلغاء والعودة
+              </button>
+            </div>
+          </div>
+        );
 
       case 'device_warning':
         return (
