@@ -109,6 +109,38 @@ function AppSettingsSheet<T extends string>({
               </div>
             )}
 
+            {/* App preferences: theme + legal + delete account */}
+            <div className="mt-3 bg-card/60 rounded-3xl p-1.5 space-y-0.5 border border-border/40">
+              <Row
+                onClick={toggleTheme}
+                icon={isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                iconBg={isDark ? 'bg-amber-500/10' : 'bg-indigo-500/10'}
+                iconColor={isDark ? 'text-amber-500' : 'text-indigo-500'}
+                label={isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}
+              />
+              <div className="mx-14 h-px bg-border/40" />
+              <Row
+                onClick={() => { onClose(); navigate('/privacy-policy'); }}
+                icon={<Shield className="w-5 h-5" />}
+                iconBg="bg-primary/10"
+                iconColor="text-primary"
+                label={t('settings.privacyPolicy')}
+              />
+              <div className="mx-14 h-px bg-border/40" />
+              <Row
+                onClick={() => { onClose(); navigate('/terms'); }}
+                icon={<FileText className="w-5 h-5" />}
+                iconBg="bg-primary/10"
+                iconColor="text-primary"
+                label={t('settings.termsOfService')}
+              />
+            </div>
+
+            {/* Account deletion (hierarchical request) */}
+            <div className="mt-3 px-1">
+              <AccountDeletionButton />
+            </div>
+
             {/* Support */}
             <div className="mt-3 bg-card/60 rounded-3xl p-1.5 border border-border/40">
               <a
