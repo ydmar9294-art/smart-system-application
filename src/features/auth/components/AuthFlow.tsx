@@ -12,6 +12,8 @@ import { preCheckDevice, registerDevice } from '@/lib/deviceService';
 // EmailPasswordAuth intentionally not rendered — kept in codebase for legacy /reset-password flow
 import GoogleSignInButton from './GoogleSignInButton';
 import LicenseActivation from './LicenseActivation';
+import AccountTypeChoice from './AccountTypeChoice';
+import SelfServiceTrialModal from './SelfServiceTrialModal';
 import AuthOverlay from './AuthOverlay';
 import GuestRoleSelector from './GuestRoleSelector';
 import ActiveSessionWarningDialog from '@/components/ui/ActiveSessionWarningDialog';
@@ -42,6 +44,9 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
   const [oauthPending, setOauthPending] = useState(() => isOAuthPending());
   const [showGuestSelector, setShowGuestSelector] = useState(false);
   const [deviceRegLoading, setDeviceRegLoading] = useState(false);
+  // null = show choice screen | 'owner' = trial flow | 'employee' = license code flow
+  const [accountChoice, setAccountChoice] = useState<null | 'owner' | 'employee'>(null);
+  const [showTrialModal, setShowTrialModal] = useState(false);
   const { enterGuestMode } = useGuest();
 
   // Track whether we've already started processing to avoid double runs
