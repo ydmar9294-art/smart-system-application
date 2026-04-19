@@ -1,7 +1,10 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { Drawer, DrawerContent, DrawerOverlay, DrawerPortal } from '@/components/ui/drawer';
-import { ChevronLeft, ChevronRight, MessageCircle, LogOut, LucideIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MessageCircle, LogOut, LucideIcon, Sun, Moon, Shield, FileText } from 'lucide-react';
+import { usePageTheme } from '@/hooks/usePageTheme';
+import AccountDeletionButton from '@/components/AccountDeletionButton';
 
 export interface SettingsItem<T extends string = string> {
   id: T;
@@ -40,6 +43,8 @@ function AppSettingsSheet<T extends string>({
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
   const Chevron = isRtl ? ChevronLeft : ChevronRight;
+  const { isDark, toggleTheme } = usePageTheme();
+  const navigate = useNavigate();
 
   const Row: React.FC<{
     onClick: () => void;
