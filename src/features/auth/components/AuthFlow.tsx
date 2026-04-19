@@ -531,6 +531,16 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
         onCancel={handleDeviceWarningCancel}
         loading={deviceRegLoading}
       />
+
+      {/* Self-service trial modal — Native fullscreen */}
+      {authState.type === 'needs_activation' && (
+        <SelfServiceTrialModal
+          isOpen={showTrialModal}
+          onClose={() => { setShowTrialModal(false); setAccountChoice(null); }}
+          onSuccess={() => { setShowTrialModal(false); onAuthComplete(); }}
+          defaultFullName={authState.fullName}
+        />
+      )}
       
       <div className="auth-edge-bar auth-edge-bar--top" />
       <div className="auth-edge-bar auth-edge-bar--bottom" />
