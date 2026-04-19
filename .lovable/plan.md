@@ -1,135 +1,70 @@
+تحليل المشكلة
 
-## تحليل الواجهة الحالية للمالك (OwnerDashboard)
+**1. بطء/تعليق التبديل بين الدارك/لايت مود:**
 
-### البنية الحالية
-الواجهة الحالية مبنية كصفحة "ويب" تقليدية ضمن `max-w-lg mx-auto`، تتكون من:
+- في `src/index.css` (سطر 157-163): قاعدة CSS عامة جداً تطبّق `transition` على **كل عنصر** يحتوي على `bg-*`, `text-*`, `border-*` بمدة **350ms** — هذا يؤدي لانتقال آلاف العناصر دفعة واحدة عند تغيير `.dark`.
+- إضافة لذلك سطر 173-184: قاعدة `html.theme-transition *` تستخدم `!important` على **كل العناصر مع `::before` و `::after**` — تضاعف الحمل وتتسبب بـ jank ولاج خصوصاً على الأجهزة الضعيفة (2GB RAM).
+- النتيجة: تجميد UI لأكثر من ثانية أثناء التبديل.
 
-1. **الهيدر**: شارة المستخدم + AI + WhatsApp + خروج (مكدّسة عمودياً، تأخذ مساحة كبيرة).
-2. **شريط Tabs أساسي علوي** (5 أزرار): الرئيسية، الفريق، الزبائن، المالية، الأداء.
-3. **شريط Tabs ثانوي** (5 أزرار): التتبع، العملات، النسخ الاحتياطي، الاشتراك، القانوني.
-4. **محتوى التبويب** أسفله مباشرة.
-5. **نافذة إضافة موظف** (Modal مركزي).
+**2. زر الإعدادات + ThemeToggle في الأعلى (داخل `Layout.tsx`):**
 
-### المشاكل الحالية (UX/UI)
-| # | المشكلة | الأثر |
-|---|---|---|
-| 1 | شريطي تبويب علويين مكدّسين = 10 أزرار في الأعلى | ازدحام بصري، يبدو "ويب" |
-| 2 | الهيدر يأخذ ~30% من الشاشة | تقليل مساحة المحتوى |
-| 3 | لا يوجد Bottom Tab Bar | الإصبع يصل بصعوبة للأعلى في الهواتف الكبيرة |
-| 4 | الإعدادات (اشتراك/نسخ/قانوني/عملات) متناثرة كتبويبات منفصلة | تشتيت |
-| 5 | Tabs ثانوية بألوان "warning" غير منطقية | مربك بصرياً |
-| 6 | زر الخروج بارز جداً في الهيدر | خطر ضغط خاطئ |
+- `Layout.tsx` يضيف زر `ThemeToggle` و زر `Settings` (مع dropdown يحتوي: سياسة الخصوصية، الشروط، حذف الحساب) في **شريط ثابت أعلى الصفحة** (سطر 84-132).
+- هذا الشريط يظهر فوق الـ `AppHeader` الجديد لجميع الأدوار (Owner, Distributor, Accountant, Warehouse, Developer) — ويتسبب بازدواجية بصرية ومخالفة لتصميم الـ Native الجديد.
 
 ---
 
-## التصميم الجديد: "Native Mobile Experience"
+## خطة التنفيذ
 
-### المبدأ
-تحويل الواجهة إلى تجربة شبيهة بـ iOS/Android Native: هيدر مدمج علوي خفيف + **شريط سفلي عائم (Floating Bottom Tab Bar)** + شيتات منزلقة (Bottom Sheets) للإعدادات الفرعية.
+### 1) إصلاح أداء تبديل الثيم (`src/index.css` + `usePageTheme.ts`)
 
-### 1) الهيدر العلوي المدمج (Compact Header)
-سطر واحد فقط:
-```
-[الإشعارات]  ●●●  اسم المالك / اسم المنشأة  ●●●  [AI]
-```
-- ارتفاع ~56px فقط.
-- خلفية liquid-glass شفافة مع backdrop-blur.
-- `safe-area-top` للنوتش.
+- **حذف القاعدة العامة** التي تطبّق transition على `[class*="bg-"], [class*="text-"], [class*="border-"]` (سطر 157-163) — استبدالها بقاعدة محصورة على `body` فقط.
+- **حذف قاعدة `html.theme-transition ***` التي تستخدم `!important` على كل العناصر — استبدالها بقاعدة على `html, body` فقط (background + color)، مع مدة أقصر (150ms).
+- في `usePageTheme.ts`: تقليل `setTimeout` من 350ms إلى 200ms، والاحتفاظ بنفس آلية toggle الفورية.
+- النتيجة: التبديل يصبح فوري (<16ms) لأن المتصفح لن يحتاج لحساب transition لآلاف العناصر، فقط للـ root.
 
-### 2) الشريط السفلي الرئيسي (Bottom Tab Bar — 5 أزرار)
-```text
-┌─────────────────────────────────────────┐
-│  🏠      👥      💰      📊      ⚙️     │
-│ الرئيسية الفريق الزبائن  المالية الإعدادات│
-└─────────────────────────────────────────┘
-```
-- 5 تبويبات أساسية فقط:
-  1. **الرئيسية** (Overview)
-  2. **الفريق** (Team)
-  3. **الزبائن** (Customers)
-  4. **المالية** (Finance + Performance مدموجين بـ sub-tabs داخلية)
-  5. **الإعدادات** (يفتح Bottom Sheet)
-- floating bar مع `liquid-glass`، حواف منحنية `rounded-3xl`، ظل ناعم.
-- زر نشط: خلفية ملوّنة + scale + haptic feedback.
-- `safe-area-bottom` للأجهزة بـ home indicator.
+### 2) إزالة الأزرار العائمة من `Layout.tsx`
 
-### 3) شيت الإعدادات (Settings Bottom Sheet)
-عند الضغط على ⚙️ ينزلق من الأسفل sheet يحوي:
+- حذف كامل لـ `<div className="sticky top-0 z-50 ...">` الذي يحتوي على `ThemeToggle` و زر Settings و dropdown (سطر 84-132).
+- حذف import غير المستخدم: `ThemeToggle`, `Settings`, `Shield`, `FileText`, `AccountDeletionButton`, `useNavigate`, `showSettingsMenu` state.
+- الإبقاء على `usePageTheme()` كـ hook فقط لأنه يطبّق الـ class على `<html>`.
 
-```text
-─────  ━━━  (drag handle)  ─────
-الإعدادات
+### 3) دمج الخيارات داخل `AppSettingsSheet` (الشريط السفلي)
 
-  💳  الاشتراك              ›
-  💾  النسخ الاحتياطي         ›
-  💱  العملات والصرف          ›
-  📍  تتبع المندوبين          ›
-  🛡️  المعلومات القانونية     ›
-  ─────────────────────────
-  🔔  الإشعارات              ›
-  💬  دعم واتساب              ›
-  ─────────────────────────
-  🚪  تسجيل الخروج
-```
-- كل بند يفتح Full-Screen Sheet للمحتوى الكامل.
-- تصميم iOS-like: Cards مع separators، أيقونات ملوّنة، chevron.
+تعديل `src/components/shell/AppSettingsSheet.tsx` لإضافة قسم ثابت يظهر دائماً قبل قسم الدعم/الخروج، يحتوي:
 
-### 4) Full-Screen Sub-Sheets
-بدلاً من تبويبات منفصلة، كل قسم إعدادات يفتح كـ "صفحة فرعية" بهيدر يحوي:
-- زر `←` للرجوع (يغلق الـ sheet)
-- عنوان الصفحة
-- المحتوى نفسه (SubscriptionTab, BackupTab, CurrenciesTab, AgentMapView, LegalInfoTab)
+- **مفتاح Dark/Light Mode**: صف بأيقونة Sun/Moon + Switch (يستخدم `usePageTheme`).
+- **سياسة الخصوصية**: ينقل لـ `/privacy-policy`.
+- **شروط الاستخدام**: ينقل لـ `/terms`.
+- **حذف الحساب**: يستخدم `AccountDeletionButton` كما هو.
 
-### 5) لمسات Native إضافية
-- **Haptic feedback** عند تبديل التبويبات (Capacitor Haptics).
-- **Spring animations** للـ bottom sheets (vaul library الموجودة).
-- **Pull-to-refresh** متاح أصلاً عبر `PullToRefresh`.
-- **Safe areas** صارمة (top notch + bottom indicator).
-- **Active tab indicator**: نقطة صغيرة تحت الأيقونة النشطة + لون primary.
-- إخفاء الشريط السفلي عند فتح modal (smooth slide down).
+هذا يضمن ظهورها لكل الأدوار (Owner, Distributor, Accountant, Warehouse, Developer) دون تعديل كل لوحة على حدة، لأن كلها تستخدم نفس `AppSettingsSheet`.
+
+لا اريد Backward compatiblitiy , اريد تطبيق كل ما سبق على جميع الواجهات
+
+### 4) ضمان الاستقرار (Backward Compatibility)
+
+- لا تعديل على `OwnerSettingsSheet` المخصص (يبقى كما هو لأن Owner يستخدم نسخته الخاصة) — لكن سنضيف نفس الخيارات الجديدة (Theme/Privacy/Terms/AccountDeletion) إليه أيضاً ليتطابق السلوك.
+- `ThemeToggle.tsx` يبقى كمكون مستقل (لم يُحذف) — قد يستخدم لاحقاً.
+- لا تغيير على API أو DB أو أي منطق sync/offline.
 
 ---
 
-## الملفات المتأثرة (Additive — لا حذف)
+## الملفات المتأثرة
 
-```
-جديد:
-  src/features/owner/components/OwnerBottomNav.tsx       (الشريط السفلي)
-  src/features/owner/components/OwnerSettingsSheet.tsx   (شيت الإعدادات)
-  src/features/owner/components/OwnerCompactHeader.tsx   (الهيدر المدمج)
-  src/features/owner/components/OwnerSubPageSheet.tsx    (الصفحات الفرعية)
-  src/features/owner/components/FinanceWithPerformance.tsx (دمج المالية+الأداء)
 
-تعديل:
-  src/features/owner/components/OwnerDashboard.tsx       (إعادة هيكلة الـ layout فقط، نفس المنطق)
-  src/locales/ar.ts                                       (إضافة مفاتيح: settings.subscription, settings.backup, ...)
+| الملف                                                  | التغيير                                                          |
+| ------------------------------------------------------ | ---------------------------------------------------------------- |
+| `src/index.css`                                        | تقليص قاعدتي transition للثيم — حصرها على body فقط               |
+| `src/hooks/usePageTheme.ts`                            | تقليل مدة transition إلى 200ms                                   |
+| `src/components/Layout.tsx`                            | حذف الشريط العائم العلوي (ThemeToggle + Settings dropdown)       |
+| `src/components/shell/AppSettingsSheet.tsx`            | إضافة قسم: Dark Mode toggle + Privacy + Terms + Account Deletion |
+| `src/features/owner/components/OwnerSettingsSheet.tsx` | إضافة نفس القسم لتوحيد التجربة                                   |
 
-لا تغيير على:
-  - OwnerOverviewTab, TeamContent, CustomersTab, FinanceTab, PerformanceTab,
-    SubscriptionTab, BackupTab, CurrenciesTab, LegalInfoTab, AgentMapView (تبقى كما هي تماماً)
-  - أي backend / RLS / RPC / database
-  - GuestDashboardShell سيتلقى نفس البنية تلقائياً
-```
 
 ---
 
-## ضمانات الاستقرار
-- ✅ كل المنطق الموجود (stats, addEmployee, toggleEmployee, modals) يبقى كما هو.
-- ✅ كل التبويبات الفرعية (Subscription, Backup, ...) تُستدعى نفس المكونات بدون تعديل.
-- ✅ التوافق الكامل مع وضع الزائر (`data-guest-nav` يبقى موجوداً على أزرار الـ bottom nav).
-- ✅ التوافق مع Capacitor Android API 26+.
-- ✅ يحترم `safe-area-x`, `safe-area-bottom`, `safe-area-top`.
-- ✅ RTL محفوظ بالكامل.
+## الاختبار
 
----
-
-## خطة التنفيذ (مرحلة واحدة)
-1. إنشاء `OwnerCompactHeader` (هيدر سطر واحد).
-2. إنشاء `OwnerBottomNav` (5 أزرار + active state + haptics).
-3. إنشاء `OwnerSettingsSheet` باستخدام `vaul Drawer` (موجود مسبقاً).
-4. إنشاء `OwnerSubPageSheet` (full-screen drawer للصفحات الفرعية).
-5. إنشاء `FinanceWithPerformance` (تبويب يحوي Finance + Performance بـ inner toggle).
-6. إعادة هيكلة `OwnerDashboard.tsx` لاستخدام المكونات الجديدة (إزالة الـ tab bars القديمة).
-7. إضافة مفاتيح الترجمة الجديدة في `ar.ts`.
-8. اختبار: viewport 390x726 + 360x800 (شاشات صغيرة).
-
+- اختبار التبديل بين الدارك/لايت من داخل الإعدادات السفلية لجميع الأدوار (Owner, Distributor, Accountant, Warehouse, Developer) — يجب أن يكون فوري وسلس.
+- التحقق من اختفاء الزرين من أعلى كل واجهة.
+- التحقق من عمل روابط الخصوصية/الشروط/حذف الحساب من داخل الإعدادات.
