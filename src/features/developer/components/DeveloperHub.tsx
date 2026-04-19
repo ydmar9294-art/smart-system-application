@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { logger } from '@/lib/logger';
 import AnimatedTabContent from '@/components/ui/AnimatedTabContent';
 import { createPortal } from 'react-dom';
@@ -13,48 +13,51 @@ import SubscriptionsTab from './SubscriptionsTab';
 import MonitoringTab from './MonitoringTab';
 
 import {
-  ShieldCheck, Key, UserPlus, LogOut,
+  ShieldCheck, Key, UserPlus,
   Copy, CheckCircle2,
   Clock, Lock, Unlock, Activity,
-  Users, Package, ShoppingCart, Truck,
-  BarChart3, AlertTriangle, Phone, Edit2, Save, X, Smartphone, Trash2, Settings, Wallet
+  Users, BarChart3, AlertTriangle, Phone, Edit2, Save, X, Smartphone, Trash2, Settings as SettingsIcon, Wallet,
 } from 'lucide-react';
+import {
+  AppHeader,
+  AppBottomNav,
+  AppSettingsSheet,
+  AppSubPageSheet,
+  type BottomNavItem,
+  type SettingsItem,
+} from '@/components/shell';
 
-// ============================================
-// Tab definitions
-// ============================================
-type TabId = 'licenses' | 'subscriptions' | 'monitoring' | 'versions' | 'deletion' | 'settings';
-
-const TABS: { id: TabId; label: string; icon: React.ElementType; bgColor: string }[] = [
-  { id: 'licenses', label: 'التراخيص', icon: Key, bgColor: 'bg-primary' },
-  { id: 'subscriptions', label: 'الاشتراكات', icon: Activity, bgColor: 'bg-amber-600' },
-  { id: 'settings', label: 'الإعدادات', icon: Settings, bgColor: 'bg-sky-600' },
-  { id: 'monitoring', label: 'مراقبة', icon: BarChart3, bgColor: 'bg-emerald-600' },
-  { id: 'versions', label: 'الإصدارات', icon: Smartphone, bgColor: 'bg-purple-600' },
-  { id: 'deletion', label: 'الحذف', icon: Trash2, bgColor: 'bg-red-500' },
-];
+type DevPrimaryTab = 'licenses' | 'subscriptions' | 'monitoring' | 'versions';
+type DevSubPage = 'settings' | 'deletion';
+type DevTabType = DevPrimaryTab | DevSubPage;
 
 const DeveloperHub: React.FC = () => {
   const {
     licenses, issueLicense, updateLicenseStatus,
-    updateLicenseMaxEmployees, orgStats, refreshOrgStats, logout
+    updateLicenseMaxEmployees, orgStats, refreshOrgStats, logout,
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<TabId>('licenses');
+  const [activeTab, setActiveTab] = useState<DevTabType>('licenses');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [subPage, setSubPage] = useState<DevSubPage | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+
   const [showForm, setShowForm] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
-  const [licenseType] = useState<'TRIAL'>('TRIAL');
   const [editingLimit, setEditingLimit] = useState<string | null>(null);
   const [newLimit, setNewLimit] = useState<number>(10);
 
-  useEffect(() => {
-    refreshOrgStats();
-  }, [refreshOrgStats]);
+  useEffect(() => { refreshOrgStats(); }, [refreshOrgStats]);
 
   const copyKey = async (key: string) => {
     await copyToClipboard(key);
     setCopied(key);
     setTimeout(() => setCopied(null), 2000);
+  };
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try { await logout(); } finally { setLoggingOut(false); }
   };
 
   const handleIssueLicense = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -65,137 +68,124 @@ const DeveloperHub: React.FC = () => {
     const maxEmployees = Number(fd.get('maxEmployees') || 10);
     const ownerPhone = sanitizePhone(fd.get('ownerPhone') as string || '');
 
-    if (!orgName || orgName.length < 2) {
-      alert('اسم المنشأة يجب أن يكون حرفين على الأقل');
-      return;
-    }
-    if (maxEmployees < 1 || maxEmployees > 500) {
-      alert('عدد الموظفين يجب أن يكون بين 1 و 500');
-      return;
-    }
-    if (days < 1 || days > 365) {
-      alert('عدد أيام التجربة يجب أن يكون بين 1 و 365');
-      return;
-    }
+    if (!orgName || orgName.length < 2) { alert('اسم المنشأة يجب أن يكون حرفين على الأقل'); return; }
+    if (maxEmployees < 1 || maxEmployees > 500) { alert('عدد الموظفين يجب أن يكون بين 1 و 500'); return; }
+    if (days < 1 || days > 365) { alert('عدد أيام التجربة يجب أن يكون بين 1 و 365'); return; }
     try {
       await issueLicense(orgName, 'TRIAL', days, maxEmployees, ownerPhone || undefined);
       setShowForm(false);
       refreshOrgStats();
-    } catch (err) {
-      logger.error('License issue failed', 'DeveloperHub');
-    }
+    } catch { logger.error('License issue failed', 'DeveloperHub'); }
   };
 
   const handleUpdateLimit = async (licenseId: string) => {
-    if (newLimit < 1 || newLimit > 500) {
-      alert('عدد الموظفين يجب أن يكون بين 1 و 500');
-      return;
-    }
+    if (newLimit < 1 || newLimit > 500) { alert('عدد الموظفين يجب أن يكون بين 1 و 500'); return; }
     try {
       await updateLicenseMaxEmployees(licenseId, newLimit);
       setEditingLimit(null);
       refreshOrgStats();
-    } catch (err) {
-      logger.error('Update limit failed', 'DeveloperHub');
+    } catch { logger.error('Update limit failed', 'DeveloperHub'); }
+  };
+
+  const getStatsForLicense = (orgName: string): OrgStats | undefined =>
+    orgStats.find(s => s.org_name === orgName);
+
+  const navItems: BottomNavItem<DevPrimaryTab>[] = [
+    { id: 'licenses',      label: 'التراخيص',  icon: Key },
+    { id: 'subscriptions', label: 'الاشتراكات', icon: Activity },
+    { id: 'monitoring',    label: 'مراقبة',    icon: BarChart3 },
+    { id: 'versions',      label: 'الإصدارات', icon: Smartphone },
+  ];
+
+  const settingsItems: SettingsItem<DevSubPage>[] = [
+    { id: 'settings', label: 'إعدادات النظام', Icon: SettingsIcon, color: 'text-sky-600',  bg: 'bg-sky-500/10' },
+    { id: 'deletion', label: 'طلبات الحذف',    Icon: Trash2,       color: 'text-rose-600', bg: 'bg-rose-500/10' },
+  ];
+
+  const subPageTitle = settingsItems.find(i => i.id === subPage)?.label ?? '';
+
+  const renderPrimaryContent = () => {
+    switch (activeTab) {
+      case 'licenses':
+        return (
+          <div className="space-y-3">
+            <button
+              onClick={() => setShowForm(true)}
+              className="btn-primary w-full py-3 text-sm flex items-center justify-center gap-2"
+            >
+              <UserPlus size={16} /> إصدار ترخيص تجريبي
+            </button>
+            <LicensesTab
+              licenses={licenses}
+              editingLimit={editingLimit}
+              newLimit={newLimit}
+              copied={copied}
+              getStatsForLicense={getStatsForLicense}
+              setEditingLimit={setEditingLimit}
+              setNewLimit={setNewLimit}
+              handleUpdateLimit={handleUpdateLimit}
+              copyKey={copyKey}
+              updateLicenseStatus={updateLicenseStatus}
+            />
+          </div>
+        );
+      case 'subscriptions': return <SubscriptionsTab />;
+      case 'monitoring':    return <MonitoringTab />;
+      case 'versions':      return <VersionManagement />;
+      default: return null;
     }
   };
 
-  const getStatsForLicense = (orgName: string): OrgStats | undefined => {
-    return orgStats.find(s => s.org_name === orgName);
+  const renderSubPage = () => {
+    switch (subPage) {
+      case 'settings': return <SettingsTab />;
+      case 'deletion': return <OrgDeletionManager />;
+      default: return null;
+    }
   };
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
+      <AppHeader
+        title="مركز المطور"
+        subtitle="إدارة التراخيص السحابية"
+        Icon={ShieldCheck}
+      />
+
       <div className="max-w-2xl mx-auto">
-        {/* ===== Header ===== */}
-        <div className="bg-background pt-4 px-4 relative">
-          <div className="flex justify-center pt-4 mb-3">
-            <div className="flex items-center gap-3 card-elevated px-5 py-2.5 !rounded-full shadow-sm">
-              <div className="w-9 h-9 bg-primary rounded-full flex items-center justify-center">
-                <ShieldCheck className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <div className="text-end">
-                <p className="font-black text-foreground text-sm">مركز المطور</p>
-                <p className="text-[10px] text-muted-foreground">إدارة التراخيص السحابية</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between mb-4">
-            {activeTab === 'licenses' && (
-              <button
-                onClick={() => setShowForm(true)}
-                className="btn-primary px-4 py-2.5 text-xs flex items-center gap-1.5"
-              >
-                <UserPlus size={14} /> إصدار ترخيص
-              </button>
-            )}
-            {activeTab !== 'licenses' && <div />}
-            <button
-              onClick={logout}
-              className="btn-logout !px-3 !py-2.5 !rounded-2xl text-muted-foreground hover:text-destructive"
-            >
-              <LogOut size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* ===== Tab Bar — matches DistributorDashboard pattern ===== */}
-        <div className="px-4 pb-3">
-          <div className="card-elevated p-2 !rounded-3xl flex gap-1">
-            {TABS.map((tab) => {
-              const isActive = activeTab === tab.id;
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl transition-all duration-300 ${
-                    isActive
-                      ? `${tab.bgColor} text-white shadow-lg`
-                      : 'text-muted-foreground hover:bg-muted'
-                  }`}
-                >
-                  <div className={`${isActive ? 'scale-110' : ''} transition-transform duration-300`}>
-                    <Icon size={20} />
-                  </div>
-                  <span className="text-[10px] font-bold">{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ===== Tab Content ===== */}
         <div
-          className="px-4 pb-8"
-          style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 16px), 2rem)' }}
+          className="px-3 pt-3"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 96px)' }}
         >
-          <AnimatedTabContent tabKey={activeTab}>
-            {activeTab === 'licenses' && (
-              <LicensesTab
-                licenses={licenses}
-                editingLimit={editingLimit}
-                newLimit={newLimit}
-                copied={copied}
-                getStatsForLicense={getStatsForLicense}
-                setEditingLimit={setEditingLimit}
-                setNewLimit={setNewLimit}
-                handleUpdateLimit={handleUpdateLimit}
-                copyKey={copyKey}
-                updateLicenseStatus={updateLicenseStatus}
-              />
-            )}
-            {activeTab === 'subscriptions' && <SubscriptionsTab />}
-            {activeTab === 'monitoring' && <MonitoringTab />}
-            {activeTab === 'versions' && <VersionManagement />}
-            {activeTab === 'settings' && <SettingsTab />}
-            {activeTab === 'deletion' && <OrgDeletionManager />}
-          </AnimatedTabContent>
+          <AnimatedTabContent tabKey={activeTab}>{renderPrimaryContent()}</AnimatedTabContent>
         </div>
       </div>
 
-      {/* ===== Issue License Modal ===== */}
+      <AppBottomNav
+        items={navItems}
+        active={activeTab as any}
+        onChange={(id) => setActiveTab(id as DevPrimaryTab)}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
+
+      <AppSettingsSheet
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        items={settingsItems}
+        onOpenItem={(id) => { setSettingsOpen(false); setSubPage(id); }}
+        onLogout={handleLogout}
+        loggingOut={loggingOut}
+      />
+
+      <AppSubPageSheet
+        open={subPage !== null}
+        onClose={() => setSubPage(null)}
+        title={subPageTitle}
+      >
+        {renderSubPage()}
+      </AppSubPageSheet>
+
+      {/* Issue License Modal */}
       {showForm && createPortal(
         <div className="modal-overlay safe-area-x safe-area-bottom" dir="rtl">
           <div className="card-elevated w-full max-w-md p-5 space-y-5 animate-zoom-in max-h-[90vh] overflow-y-auto mx-4">
@@ -223,14 +213,14 @@ const DeveloperHub: React.FC = () => {
             </form>
           </div>
         </div>,
-        document.body
+        document.body,
       )}
     </div>
   );
 };
 
 // ============================================
-// Licenses Tab (extracted)
+// Licenses Tab (preserved as-is)
 // ============================================
 interface LicensesTabProps {
   licenses: any[];
@@ -248,7 +238,7 @@ interface LicensesTabProps {
 const LicensesTab: React.FC<LicensesTabProps> = ({
   licenses, editingLimit, newLimit, copied, getStatsForLicense,
   setEditingLimit, setNewLimit, handleUpdateLimit, copyKey,
-  updateLicenseStatus
+  updateLicenseStatus,
 }) => {
   const [editingOrgName, setEditingOrgName] = useState<string | null>(null);
   const [newOrgName, setNewOrgName] = useState('');
@@ -259,20 +249,14 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
     setSavingOrgName(true);
     try {
       const { supabase } = await import('@/integrations/supabase/client');
-      // Update organization name
       if (license.organizationId) {
         await supabase.from('organizations').update({ name: newOrgName.trim() }).eq('id', license.organizationId);
       }
-      // Update license orgName
       await supabase.from('developer_licenses').update({ orgName: newOrgName.trim() }).eq('id', license.id);
       setEditingOrgName(null);
-      // Force refresh
       window.location.reload();
-    } catch (err) {
-      logger.error('Failed to update org name', 'DeveloperHub');
-    } finally {
-      setSavingOrgName(false);
-    }
+    } catch { logger.error('Failed to update org name', 'DeveloperHub'); }
+    finally { setSavingOrgName(false); }
   };
 
   if (licenses.length === 0) {
@@ -291,7 +275,6 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
         const stats = getStatsForLicense(license.orgName);
         return (
           <div key={license.id} className={`card-elevated p-4 transition-all ${license.status === LicenseStatus.SUSPENDED ? 'ring-2 ring-destructive/20' : ''}`}>
-            {/* Status + Type */}
             <div className="flex justify-between items-start mb-3">
               <span className={`badge ${
                 license.status === LicenseStatus.ACTIVE ? 'badge-success' :
@@ -304,28 +287,21 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
                 {license.type === 'TRIAL' ? 'تجريبي' : 'اشتراك'}
               </span>
             </div>
-            
-            {/* Editable Org Name */}
             {editingOrgName === license.id ? (
               <div className="flex items-center gap-2 mb-2">
-                <input 
-                  type="text" value={newOrgName} onChange={(e) => setNewOrgName(e.target.value)}
+                <input type="text" value={newOrgName} onChange={(e) => setNewOrgName(e.target.value)}
                   className="flex-1 px-3 py-2 rounded-xl border border-border text-sm bg-background text-foreground font-bold"
-                  placeholder="اسم المنشأة الجديد" autoFocus
-                />
-                <button onClick={() => handleUpdateOrgName(license)} disabled={savingOrgName}
-                  className="text-primary"><Save size={16}/></button>
+                  placeholder="اسم المنشأة الجديد" autoFocus />
+                <button onClick={() => handleUpdateOrgName(license)} disabled={savingOrgName} className="text-primary"><Save size={16}/></button>
                 <button onClick={() => setEditingOrgName(null)} className="text-muted-foreground"><X size={16}/></button>
               </div>
             ) : (
               <div className="flex items-center gap-2 mb-2">
                 <h3 className="font-black text-foreground text-base">{license.orgName}</h3>
-                <button onClick={() => { setEditingOrgName(license.id); setNewOrgName(license.orgName); }} 
+                <button onClick={() => { setEditingOrgName(license.id); setNewOrgName(license.orgName); }}
                   className="text-muted-foreground hover:text-primary"><Edit2 size={14}/></button>
               </div>
             )}
-            
-            {/* Employee limit */}
             <div className="flex items-center gap-2 mb-2 text-xs">
               <Users size={12} className="text-muted-foreground" />
               {editingLimit === license.id ? (
@@ -346,21 +322,16 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
                 </div>
               )}
             </div>
-
             {license.ownerPhone && (
               <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
                 <Phone size={12} />
                 <span className="font-bold">{license.ownerPhone}</span>
               </div>
             )}
-            
-            {/* License Key */}
             <div onClick={() => copyKey(license.licenseKey)} className="glass-surface p-3 rounded-2xl flex justify-between items-center cursor-pointer hover:opacity-80 transition-all mb-3 group">
               <span className="font-mono font-black text-primary tracking-wider text-xs break-all">{license.licenseKey}</span>
               {copied === license.licenseKey ? <CheckCircle2 size={14} className="text-success shrink-0" /> : <Copy size={14} className="text-muted-foreground group-hover:text-primary shrink-0" />}
             </div>
-
-            {/* Action buttons */}
             {license.status !== LicenseStatus.READY && (
               <div className="flex gap-2 mb-3">
                 {license.status === LicenseStatus.ACTIVE ? (
@@ -370,13 +341,11 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
                 )}
               </div>
             )}
-
             {license.monthlyPrice > 0 && (
               <div className="text-[10px] text-primary font-bold mb-2">
                 💰 سعر الشهر: {license.monthlyPrice.toLocaleString()} | نوع: {license.type === 'SUBSCRIPTION' ? 'اشتراك' : license.type === 'TRIAL' ? 'تجريبي' : license.type}
               </div>
             )}
-
             <div className="text-[9px] text-muted-foreground font-bold border-t border-border pt-2 flex flex-wrap justify-between gap-1">
               <span>أنشئ: {new Date(license.issuedAt).toLocaleDateString('ar-EG')}</span>
               {license.expiryDate && <span>ينتهي: {new Date(license.expiryDate).toLocaleDateString('ar-EG')}</span>}
@@ -389,7 +358,7 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
 };
 
 // ============================================
-// Settings Tab — ShamCash Address Management
+// Settings Tab (ShamCash) — preserved as-is
 // ============================================
 const SettingsTab: React.FC = () => {
   const { shamcashAddress, loading, saving, errorMessage, updateShamcashAddress } = useAppSettingsAdmin();
@@ -398,29 +367,13 @@ const SettingsTab: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const handleEdit = () => {
-    setDraft(shamcashAddress);
-    setEditMode(true);
-    setSaveSuccess(false);
-  };
-
+  const handleEdit = () => { setDraft(shamcashAddress); setEditMode(true); setSaveSuccess(false); };
   const handleSave = async () => {
     if (!draft.trim()) return;
     const ok = await updateShamcashAddress(draft);
-    if (ok) {
-      setEditMode(false);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } else {
-      setSaveSuccess(false);
-    }
+    if (ok) { setEditMode(false); setSaveSuccess(true); setTimeout(() => setSaveSuccess(false), 3000); }
   };
-
-  const handleCopy = async () => {
-    await copyToClipboard(shamcashAddress);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const handleCopy = async () => { await copyToClipboard(shamcashAddress); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
   if (loading) {
     return (
@@ -433,7 +386,6 @@ const SettingsTab: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* ShamCash Address Card */}
       <div className="card-elevated p-5 space-y-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
@@ -449,55 +401,28 @@ const SettingsTab: React.FC = () => {
             </button>
           )}
         </div>
-
         {editMode ? (
           <div className="space-y-3">
-            <input
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder="أدخل عنوان المحفظة الجديد"
-              className="input-field font-mono text-sm"
-              dir="ltr"
-              autoFocus
-            />
+            <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="أدخل عنوان المحفظة الجديد"
+              className="input-field font-mono text-sm" dir="ltr" autoFocus />
             <div className="flex gap-2">
-              <button
-                onClick={handleSave}
-                disabled={saving || !draft.trim()}
-                className="btn-primary flex-1 py-2.5 text-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
-              >
-                {saving ? (
-                  <span className="animate-spin">⏳</span>
-                ) : (
-                  <Save size={14} />
-                )}
+              <button onClick={handleSave} disabled={saving || !draft.trim()}
+                className="btn-primary flex-1 py-2.5 text-xs flex items-center justify-center gap-1.5 disabled:opacity-50">
+                {saving ? <span className="animate-spin">⏳</span> : <Save size={14} />}
                 {saving ? 'جارٍ الحفظ...' : 'حفظ'}
               </button>
-              <button
-                onClick={() => setEditMode(false)}
-                className="btn-secondary px-4 py-2.5 text-xs flex items-center gap-1.5"
-              >
+              <button onClick={() => setEditMode(false)} className="btn-secondary px-4 py-2.5 text-xs flex items-center gap-1.5">
                 <X size={14} /> إلغاء
               </button>
             </div>
-              {errorMessage && (
-                <p className="text-xs font-bold text-destructive">فشل الحفظ: {errorMessage}</p>
-              )}
+            {errorMessage && <p className="text-xs font-bold text-destructive">فشل الحفظ: {errorMessage}</p>}
           </div>
         ) : (
           <div className="space-y-2">
-            <button
-              onClick={handleCopy}
-              className="w-full flex items-center justify-between bg-muted/50 p-3 rounded-xl border border-border hover:border-primary transition-all active:scale-[0.98]"
-            >
-              <span className="font-mono text-xs text-foreground tracking-wide select-all" dir="ltr">
-                {shamcashAddress}
-              </span>
-              {copied ? (
-                <CheckCircle2 size={16} className="text-primary flex-shrink-0" />
-              ) : (
-                <Copy size={16} className="text-muted-foreground flex-shrink-0" />
-              )}
+            <button onClick={handleCopy}
+              className="w-full flex items-center justify-between bg-muted/50 p-3 rounded-xl border border-border hover:border-primary transition-all active:scale-[0.98]">
+              <span className="font-mono text-xs text-foreground tracking-wide select-all" dir="ltr">{shamcashAddress}</span>
+              {copied ? <CheckCircle2 size={16} className="text-primary flex-shrink-0" /> : <Copy size={16} className="text-muted-foreground flex-shrink-0" />}
             </button>
             {saveSuccess && (
               <div className="flex items-center gap-2 text-emerald-600 text-xs font-bold animate-in fade-in">
@@ -508,8 +433,6 @@ const SettingsTab: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* Info card */}
       <div className="card-elevated p-4 bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800">
         <div className="flex gap-3">
           <AlertTriangle size={16} className="text-sky-600 flex-shrink-0 mt-0.5" />
