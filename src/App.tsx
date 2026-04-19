@@ -33,7 +33,7 @@ import PostUpdateMessage from '@/components/ui/PostUpdateMessage';
 const DeveloperHub = lazy(() => import('@/features/developer/components/DeveloperHub'));
 const OwnerDashboard = lazy(() => import('@/features/owner/components/OwnerDashboard'));
 const AccountantDashboard = lazy(() => import('@/features/accountant/components/AccountantDashboard'));
-const SalesManagerDashboard = lazy(() => import('@/features/salesmanager/components/SalesManagerDashboard'));
+// SALES_MANAGER role removed — fallback handled in ViewManager
 const WarehouseKeeperDashboard = lazy(() => import('@/features/warehouse/components/WarehouseKeeperDashboard'));
 const DistributorDashboard = lazy(() => import('@/features/distributor/components/DistributorDashboard'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
@@ -73,10 +73,12 @@ const ViewManager: React.FC = () => {
         switch (user?.employeeType) {
           case EmployeeType.ACCOUNTANT:
             return <AccountantDashboard />;
-          case EmployeeType.SALES_MANAGER:
-            return <SalesManagerDashboard />;
           case EmployeeType.WAREHOUSE_KEEPER:
             return <WarehouseKeeperDashboard />;
+          case EmployeeType.SALES_MANAGER:
+            // Legacy SALES_MANAGER accounts → routed to AccountantDashboard for safety
+            // (role removed; new accounts cannot be created with this type)
+            return <AccountantDashboard />;
           case EmployeeType.FIELD_AGENT:
           default:
             return <DistributorDashboard />;
