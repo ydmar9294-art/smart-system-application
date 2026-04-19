@@ -1,63 +1,135 @@
 
-## الخطة: إزالة تسجيل الدخول بالإيميل/كلمة المرور
+## تحليل الواجهة الحالية للمالك (OwnerDashboard)
 
-### الهدف
-- إزالة كامل لواجهة تسجيل الدخول/التسجيل بالإيميل وكلمة المرور.
-- الإبقاء فقط على: **زر Google** + **زر معاينة الزائر** (باسم ترويجي جذّاب).
-- الحفاظ على **التوافق الكامل** مع الباك إند (لا حذف لجداول، لا تعديل على RLS، لا تأثير على الحسابات الموجودة).
+### البنية الحالية
+الواجهة الحالية مبنية كصفحة "ويب" تقليدية ضمن `max-w-lg mx-auto`، تتكون من:
 
----
+1. **الهيدر**: شارة المستخدم + AI + WhatsApp + خروج (مكدّسة عمودياً، تأخذ مساحة كبيرة).
+2. **شريط Tabs أساسي علوي** (5 أزرار): الرئيسية، الفريق، الزبائن، المالية، الأداء.
+3. **شريط Tabs ثانوي** (5 أزرار): التتبع، العملات، النسخ الاحتياطي، الاشتراك، القانوني.
+4. **محتوى التبويب** أسفله مباشرة.
+5. **نافذة إضافة موظف** (Modal مركزي).
 
-### 1) تعديلات الواجهة (UI فقط — additive/safe)
-
-**ملف: `src/features/auth/components/AuthFlow.tsx`**
-- إخفاء عرض مكوّن `EmailPasswordAuth` من الشاشة الرئيسية.
-- إبقاء `GoogleSignInButton` كخيار أساسي بارز.
-- إبقاء زر الدخول كزائر مع تغيير التسمية والتصميم ليكون ترويجياً.
-- إزالة أي روابط: "نسيت كلمة المرور"، "إنشاء حساب جديد"، "لديك حساب؟".
-
-**ملف: `src/features/auth/components/AuthOverlay.tsx`** (إن وُجد عرض مماثل)
-- نفس المعالجة: إخفاء قسم الإيميل/كلمة المرور.
-
-### 2) التسمية الترويجية الجديدة لزر الزائر
-أقترح أحد الخيارات التالية (سأستخدم **الخيار 1** افتراضياً، يمكن تغييره):
-
-| الخيار | النص | الأيقونة |
+### المشاكل الحالية (UX/UI)
+| # | المشكلة | الأثر |
 |---|---|---|
-| 1 (مُقترح) | **جرّب التطبيق الآن مجاناً** ✨ | Sparkles + سهم |
-| 2 | **شاهد كيف يعمل النظام** 🎬 | Play |
-| 3 | **استكشف بدون تسجيل** 👀 | Eye |
-
-تصميم الزر:
-- خلفية متدرّجة (gradient) بألوان liquid-glass.
-- بادج صغيرة بجانبه: "بدون حساب • فوري".
-- نص ثانوي تحت الزر: "تجوّل في كل الميزات بحساب تجريبي".
-
-### 3) ما **لن** يُحذف (للحفاظ على التوافق)
-- ✅ ملف `EmailPasswordAuth.tsx` يبقى موجوداً (فقط لا يُستدعى من الواجهة).
-- ✅ صفحة `/reset-password` تبقى تعمل (روابط الإيميلات القديمة المرسلة سابقاً).
-- ✅ صفحة `/auth/callback` تبقى كما هي.
-- ✅ Supabase Auth providers (Email) تبقى مفعّلة في الـ backend.
-- ✅ كل المستخدمين الحاليين الذين سجّلوا بالإيميل يستطيعون متابعة استخدام حساباتهم عبر Google (إن كان نفس الإيميل) أو سيتم التواصل معهم.
-- ✅ لا تغيير على RLS، triggers، أو schema.
-
-### 4) ملاحظة مهمة للمستخدم
-المستخدمون الذين أنشأوا حساباتهم سابقاً بإيميل/كلمة مرور **سيظلّون موجودين في قاعدة البيانات**، لكن لن يستطيعوا الدخول من الواجهة الجديدة إلا عبر Google (بنفس عنوان البريد). إن أردت لاحقاً مساراً للهجرة، يمكن إضافته كـ migration منفصل.
-
-### 5) الملفات المتأثّرة
-```
-src/features/auth/components/AuthFlow.tsx          (تعديل — إخفاء قسم الإيميل)
-src/features/auth/components/AuthOverlay.tsx       (تعديل إن لزم)
-src/locales/ar.ts                                   (إضافة نصوص الزر الترويجي)
-```
-
-### 6) خطة التنفيذ
-1. قراءة `AuthFlow.tsx` و `AuthOverlay.tsx` لتحديد مكان الـ EmailPasswordAuth وروابط "نسيت كلمة المرور".
-2. تعليق/إزالة استدعاء `<EmailPasswordAuth />` والروابط المرتبطة.
-3. إعادة تصميم زر "الدخول كزائر" بالشكل الترويجي الجديد (gradient + badge + نص فرعي).
-4. إضافة المفاتيح النصية الجديدة في `src/locales/ar.ts`.
-5. اختبار: تأكد أن الشاشة تعرض فقط زر Google + زر "جرّب التطبيق الآن مجاناً".
+| 1 | شريطي تبويب علويين مكدّسين = 10 أزرار في الأعلى | ازدحام بصري، يبدو "ويب" |
+| 2 | الهيدر يأخذ ~30% من الشاشة | تقليل مساحة المحتوى |
+| 3 | لا يوجد Bottom Tab Bar | الإصبع يصل بصعوبة للأعلى في الهواتف الكبيرة |
+| 4 | الإعدادات (اشتراك/نسخ/قانوني/عملات) متناثرة كتبويبات منفصلة | تشتيت |
+| 5 | Tabs ثانوية بألوان "warning" غير منطقية | مربك بصرياً |
+| 6 | زر الخروج بارز جداً في الهيدر | خطر ضغط خاطئ |
 
 ---
 
-### سؤال واحد قبل التنفيذ
+## التصميم الجديد: "Native Mobile Experience"
+
+### المبدأ
+تحويل الواجهة إلى تجربة شبيهة بـ iOS/Android Native: هيدر مدمج علوي خفيف + **شريط سفلي عائم (Floating Bottom Tab Bar)** + شيتات منزلقة (Bottom Sheets) للإعدادات الفرعية.
+
+### 1) الهيدر العلوي المدمج (Compact Header)
+سطر واحد فقط:
+```
+[الإشعارات]  ●●●  اسم المالك / اسم المنشأة  ●●●  [AI]
+```
+- ارتفاع ~56px فقط.
+- خلفية liquid-glass شفافة مع backdrop-blur.
+- `safe-area-top` للنوتش.
+
+### 2) الشريط السفلي الرئيسي (Bottom Tab Bar — 5 أزرار)
+```text
+┌─────────────────────────────────────────┐
+│  🏠      👥      💰      📊      ⚙️     │
+│ الرئيسية الفريق الزبائن  المالية الإعدادات│
+└─────────────────────────────────────────┘
+```
+- 5 تبويبات أساسية فقط:
+  1. **الرئيسية** (Overview)
+  2. **الفريق** (Team)
+  3. **الزبائن** (Customers)
+  4. **المالية** (Finance + Performance مدموجين بـ sub-tabs داخلية)
+  5. **الإعدادات** (يفتح Bottom Sheet)
+- floating bar مع `liquid-glass`، حواف منحنية `rounded-3xl`، ظل ناعم.
+- زر نشط: خلفية ملوّنة + scale + haptic feedback.
+- `safe-area-bottom` للأجهزة بـ home indicator.
+
+### 3) شيت الإعدادات (Settings Bottom Sheet)
+عند الضغط على ⚙️ ينزلق من الأسفل sheet يحوي:
+
+```text
+─────  ━━━  (drag handle)  ─────
+الإعدادات
+
+  💳  الاشتراك              ›
+  💾  النسخ الاحتياطي         ›
+  💱  العملات والصرف          ›
+  📍  تتبع المندوبين          ›
+  🛡️  المعلومات القانونية     ›
+  ─────────────────────────
+  🔔  الإشعارات              ›
+  💬  دعم واتساب              ›
+  ─────────────────────────
+  🚪  تسجيل الخروج
+```
+- كل بند يفتح Full-Screen Sheet للمحتوى الكامل.
+- تصميم iOS-like: Cards مع separators، أيقونات ملوّنة، chevron.
+
+### 4) Full-Screen Sub-Sheets
+بدلاً من تبويبات منفصلة، كل قسم إعدادات يفتح كـ "صفحة فرعية" بهيدر يحوي:
+- زر `←` للرجوع (يغلق الـ sheet)
+- عنوان الصفحة
+- المحتوى نفسه (SubscriptionTab, BackupTab, CurrenciesTab, AgentMapView, LegalInfoTab)
+
+### 5) لمسات Native إضافية
+- **Haptic feedback** عند تبديل التبويبات (Capacitor Haptics).
+- **Spring animations** للـ bottom sheets (vaul library الموجودة).
+- **Pull-to-refresh** متاح أصلاً عبر `PullToRefresh`.
+- **Safe areas** صارمة (top notch + bottom indicator).
+- **Active tab indicator**: نقطة صغيرة تحت الأيقونة النشطة + لون primary.
+- إخفاء الشريط السفلي عند فتح modal (smooth slide down).
+
+---
+
+## الملفات المتأثرة (Additive — لا حذف)
+
+```
+جديد:
+  src/features/owner/components/OwnerBottomNav.tsx       (الشريط السفلي)
+  src/features/owner/components/OwnerSettingsSheet.tsx   (شيت الإعدادات)
+  src/features/owner/components/OwnerCompactHeader.tsx   (الهيدر المدمج)
+  src/features/owner/components/OwnerSubPageSheet.tsx    (الصفحات الفرعية)
+  src/features/owner/components/FinanceWithPerformance.tsx (دمج المالية+الأداء)
+
+تعديل:
+  src/features/owner/components/OwnerDashboard.tsx       (إعادة هيكلة الـ layout فقط، نفس المنطق)
+  src/locales/ar.ts                                       (إضافة مفاتيح: settings.subscription, settings.backup, ...)
+
+لا تغيير على:
+  - OwnerOverviewTab, TeamContent, CustomersTab, FinanceTab, PerformanceTab,
+    SubscriptionTab, BackupTab, CurrenciesTab, LegalInfoTab, AgentMapView (تبقى كما هي تماماً)
+  - أي backend / RLS / RPC / database
+  - GuestDashboardShell سيتلقى نفس البنية تلقائياً
+```
+
+---
+
+## ضمانات الاستقرار
+- ✅ كل المنطق الموجود (stats, addEmployee, toggleEmployee, modals) يبقى كما هو.
+- ✅ كل التبويبات الفرعية (Subscription, Backup, ...) تُستدعى نفس المكونات بدون تعديل.
+- ✅ التوافق الكامل مع وضع الزائر (`data-guest-nav` يبقى موجوداً على أزرار الـ bottom nav).
+- ✅ التوافق مع Capacitor Android API 26+.
+- ✅ يحترم `safe-area-x`, `safe-area-bottom`, `safe-area-top`.
+- ✅ RTL محفوظ بالكامل.
+
+---
+
+## خطة التنفيذ (مرحلة واحدة)
+1. إنشاء `OwnerCompactHeader` (هيدر سطر واحد).
+2. إنشاء `OwnerBottomNav` (5 أزرار + active state + haptics).
+3. إنشاء `OwnerSettingsSheet` باستخدام `vaul Drawer` (موجود مسبقاً).
+4. إنشاء `OwnerSubPageSheet` (full-screen drawer للصفحات الفرعية).
+5. إنشاء `FinanceWithPerformance` (تبويب يحوي Finance + Performance بـ inner toggle).
+6. إعادة هيكلة `OwnerDashboard.tsx` لاستخدام المكونات الجديدة (إزالة الـ tab bars القديمة).
+7. إضافة مفاتيح الترجمة الجديدة في `ar.ts`.
+8. اختبار: viewport 390x726 + 360x800 (شاشات صغيرة).
+
