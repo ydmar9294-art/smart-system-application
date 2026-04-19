@@ -17,6 +17,7 @@ import {
   Copy, CheckCircle2,
   Clock, Lock, Unlock, Activity,
   Users, BarChart3, AlertTriangle, Phone, Edit2, Save, X, Smartphone, Trash2, Settings as SettingsIcon, Wallet,
+  Sparkles, User, MessageCircle,
 } from 'lucide-react';
 import {
   AppHeader,
@@ -326,6 +327,38 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
               <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
                 <Phone size={12} />
                 <span className="font-bold">{license.ownerPhone}</span>
+              </div>
+            )}
+            {license.isSelfServiceTrial && (
+              <div className="mb-2 p-2.5 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 space-y-1.5">
+                <div className="flex items-center gap-1.5 text-[10px] font-black text-primary uppercase tracking-wider">
+                  <Sparkles size={11} />
+                  <span>تجريبي ذاتي (15 يوم)</span>
+                </div>
+                {license.ownerFullName && (
+                  <div className="text-[11px] text-foreground font-bold flex items-center gap-1.5">
+                    <User size={11} className="text-muted-foreground" />
+                    {license.ownerFullName}
+                  </div>
+                )}
+                {license.distributorsCount !== undefined && (
+                  <div className="text-[11px] text-foreground font-bold flex items-center gap-1.5">
+                    <Users size={11} className="text-muted-foreground" />
+                    عدد الموزعين المُصرَّح: <span className="text-primary">{license.distributorsCount}</span>
+                  </div>
+                )}
+                {license.whatsappNumber && (
+                  <a
+                    href={`https://wa.me/${license.whatsappNumber.replace(/[^0-9]/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-success font-bold flex items-center gap-1.5 hover:underline"
+                    dir="ltr"
+                  >
+                    <MessageCircle size={11} />
+                    {license.whatsappNumber}
+                  </a>
+                )}
               </div>
             )}
             <div onClick={() => copyKey(license.licenseKey)} className="glass-surface p-3 rounded-2xl flex justify-between items-center cursor-pointer hover:opacity-80 transition-all mb-3 group">
