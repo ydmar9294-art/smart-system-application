@@ -40,8 +40,20 @@ export const GuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 };
 
+// Safe fallback when provider is missing (e.g. during HMR or error boundaries)
+// — guest mode is opt-in so a missing provider simply means "not a guest".
+const NOOP_GUEST: GuestContextType = {
+  isGuest: false,
+  guestRole: null,
+  enterGuestMode: () => {
+    if (typeof console !== 'undefined') {
+      console.warn('[useGuest] enterGuestMode called without GuestProvider');
+    }
+  },
+  exitGuestMode: () => {},
+};
+
 export const useGuest = () => {
   const ctx = useContext(GuestContext);
-  if (!ctx) throw new Error('useGuest must be used within GuestProvider');
-  return ctx;
+  return ctx ?? NOOP_GUEST;
 };
