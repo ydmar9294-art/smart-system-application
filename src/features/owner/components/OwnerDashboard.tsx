@@ -9,7 +9,7 @@ import {
   Receipt, Wallet, UserPlus, X, Copy, CheckCircle2, Clock,
   ShieldCheck, MessageCircle, AlertTriangle, Phone, MapPin,
   CircleDollarSign, Shield, UserX, UserCheck, Loader2,
-  BarChart3, CreditCard, Banknote, Database
+  BarChart3, CreditCard, Banknote, Database, Coins
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { useAuth } from '@/store/AuthContext';
@@ -28,10 +28,11 @@ import SubscriptionTab from './SubscriptionTab';
 import { PerformanceTab } from './PerformanceTab';
 import BackupTab from './BackupTab';
 import { OwnerOverviewTab } from './OwnerOverviewTab';
+import CurrenciesTab from './CurrenciesTab';
 
 const AgentMapView = React.lazy(() => import('@/features/tracking/components/AgentMapView'));
 
-type OwnerTabType = 'overview' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup' | 'tracking';
+type OwnerTabType = 'overview' | 'team' | 'customers' | 'finance' | 'performance' | 'subscription' | 'legal' | 'backup' | 'tracking' | 'currencies';
 
 const OwnerDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -116,7 +117,6 @@ const OwnerDashboard: React.FC = () => {
 
   const getEmployeeTypeLabel = (type: EmployeeType) => {
     switch (type) {
-      case EmployeeType.SALES_MANAGER: return t('owner.salesManagerType');
       case EmployeeType.ACCOUNTANT: return t('owner.accountantType');
       case EmployeeType.FIELD_AGENT: return t('owner.fieldAgentType');
       case EmployeeType.WAREHOUSE_KEEPER: return t('owner.warehouseKeeperType');
@@ -137,6 +137,7 @@ const OwnerDashboard: React.FC = () => {
 
   const secondaryTabs: { id: OwnerTabType; label: string; icon: React.ReactNode }[] = [
     { id: 'tracking', label: t('tracking.tab'), icon: <MapPin className="w-4 h-4" /> },
+    { id: 'currencies', label: 'العملات', icon: <Coins className="w-4 h-4" /> },
     { id: 'backup', label: t('owner.tabs.backup'), icon: <Database className="w-4 h-4" /> },
     { id: 'subscription', label: t('owner.tabs.subscription'), icon: <Shield className="w-4 h-4" /> },
     { id: 'legal', label: t('owner.tabs.legal'), icon: <ShieldCheck className="w-4 h-4" /> },
@@ -159,6 +160,7 @@ const OwnerDashboard: React.FC = () => {
       case 'subscription': return <SubscriptionTab />;
       case 'legal': return <><LegalInfoTab /><OrgDeletionRequest /></>;
       case 'backup': return <BackupTab />;
+      case 'currencies': return <CurrenciesTab />;
       case 'tracking': return <React.Suspense fallback={<div className="animate-pulse bg-card h-96 rounded-2xl" />}><AgentMapView /></React.Suspense>;
       default: return null;
     }
@@ -283,7 +285,6 @@ const OwnerDashboard: React.FC = () => {
                 <input name="phone" type="tel" inputMode="numeric" pattern="[0-9]*" required placeholder={t('owner.employeePhone')} 
                   className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
                 <select name="type" className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-primary">
-                  <option value={EmployeeType.SALES_MANAGER}>{t('owner.salesManagerType')}</option>
                   <option value={EmployeeType.ACCOUNTANT}>{t('owner.accountantType')}</option>
                 </select>
                 <button type="submit" className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold">{t('owner.generateCode')}</button>

@@ -15,7 +15,7 @@ import { GuestDataProviders } from '@/store/GuestProviders';
 
 const OwnerDashboard = lazy(() => import('@/features/owner/components/OwnerDashboard'));
 const AccountantDashboard = lazy(() => import('@/features/accountant/components/AccountantDashboard'));
-const SalesManagerDashboard = lazy(() => import('@/features/salesmanager/components/SalesManagerDashboard'));
+// SalesManagerDashboard removed — legacy SALES_MANAGER guest preview falls back to AccountantDashboard
 const WarehouseKeeperDashboard = lazy(() => import('@/features/warehouse/components/WarehouseKeeperDashboard'));
 const DistributorDashboard = lazy(() => import('@/features/distributor/components/DistributorDashboard'));
 
@@ -39,7 +39,7 @@ const GuestDashboardShell: React.FC = () => {
     if (guestRole.role === UserRole.OWNER) return OwnerDashboard;
     switch (guestRole.employeeType) {
       case EmployeeType.ACCOUNTANT: return AccountantDashboard;
-      case EmployeeType.SALES_MANAGER: return SalesManagerDashboard;
+      case EmployeeType.SALES_MANAGER: return AccountantDashboard; // legacy fallback
       case EmployeeType.WAREHOUSE_KEEPER: return WarehouseKeeperDashboard;
       case EmployeeType.FIELD_AGENT:
       default: return DistributorDashboard;

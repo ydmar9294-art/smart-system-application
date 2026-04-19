@@ -9,6 +9,7 @@ import React from 'react';
 import { AuthProvider, useAuth } from './AuthContext';
 import { DataProvider, useData } from './DataContext';
 import { NotificationProvider, useNotifications } from './NotificationContext';
+import { CurrencyProvider } from './CurrencyContext';
 import { useGuestOverride } from './GuestProviders';
 
 // ============================================
@@ -20,7 +21,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <NotificationProvider>
       <AuthProvider>
         <DataProvider>
-          {children}
+          <CurrencyProvider>
+            {children}
+          </CurrencyProvider>
         </DataProvider>
       </AuthProvider>
     </NotificationProvider>
