@@ -34,14 +34,6 @@ export const DEMO_USERS: Record<string, User> = {
     phone: '0912345678',
     role: UserRole.OWNER,
   },
-  salesManager: {
-    id: 'demo-user-sm',
-    name: 'خالد عبدالله',
-    email: 'khaled@alnour.com',
-    phone: '0923456789',
-    role: UserRole.EMPLOYEE,
-    employeeType: EmployeeType.SALES_MANAGER,
-  },
   accountant: {
     id: 'demo-user-acc',
     name: 'فاطمة حسن',
@@ -57,6 +49,14 @@ export const DEMO_USERS: Record<string, User> = {
     phone: '0945678901',
     role: UserRole.EMPLOYEE,
     employeeType: EmployeeType.WAREHOUSE_KEEPER,
+  },
+  fieldAgent: {
+    id: 'demo-user-fa',
+    name: 'محمد ياسر',
+    email: 'mohamed@alnour.com',
+    phone: '0956789012',
+    role: UserRole.EMPLOYEE,
+    employeeType: EmployeeType.FIELD_AGENT,
   },
   fieldAgent: {
     id: 'demo-user-fa',
