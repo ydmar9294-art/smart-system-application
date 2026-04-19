@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/store/AuthContext';
 import { useData } from '@/store/DataContext';
 import { UserRole, LicenseStatus } from '@/types';
-import { ShieldAlert, Phone, LogOut, RefreshCw, Settings, Shield, FileText, Globe } from 'lucide-react';
+import { ShieldAlert, Phone, LogOut, RefreshCw, Settings, Shield, FileText } from 'lucide-react';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import { usePageTheme } from '@/hooks/usePageTheme';
@@ -12,16 +12,14 @@ import { SUPPORT_WHATSAPP_URL, SUPPORT_PHONE_URL } from '@/constants';
 import { PullToRefresh } from '@/components/ui/PullToRefresh';
 import AccountDeletionButton from '@/components/AccountDeletionButton';
 import { useNavigate } from 'react-router-dom';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout, organization, refreshAuth } = useAuth();
   const { refreshAllData } = useData();
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
-  const [showLangSwitcher, setShowLangSwitcher] = useState(false);
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
-  const isRtl = i18n.language === 'ar';
+  const { t } = useTranslation();
+  const isRtl = true; // Arabic-only mode — always RTL
   
   usePageTheme();
   useRealtimeNotifications();
@@ -105,15 +103,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                     </div>
                     
                     <div className="p-2 space-y-0.5 max-h-[60vh] overflow-y-auto">
-                      {/* Language Switcher */}
-                      <button
-                        onClick={() => { setShowLangSwitcher(true); setShowSettingsMenu(false); }}
-                        className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold text-foreground hover:bg-muted transition-colors"
-                      >
-                        <Globe size={16} className="text-primary flex-shrink-0" /> 
-                        <span>{t('settings.language')}</span>
-                        <span className="text-xs text-muted-foreground ms-auto">{i18n.language === 'ar' ? '🇸🇦' : '🇺🇸'}</span>
-                      </button>
+                      {/* Language switcher removed — Arabic-only mode */}
                       <button
                         onClick={() => { navigate('/privacy-policy'); setShowSettingsMenu(false); }}
                         className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold text-foreground hover:bg-muted transition-colors"
@@ -144,9 +134,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </main>
         </div>
       </PullToRefresh>
-
-      {/* Language Switcher Modal */}
-      <LanguageSwitcher open={showLangSwitcher} onClose={() => setShowLangSwitcher(false)} />
     </>
   );
 };

@@ -72,6 +72,12 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Arabic-only mode: redirect react-i18next imports to our lightweight shim.
+      // Keeps 200+ files using `import { useTranslation } from 'react-i18next'` working
+      // without any code changes, while removing the entire i18next runtime from the bundle.
+      "react-i18next": path.resolve(__dirname, "./src/lib/i18nShim.tsx"),
+      "i18next": path.resolve(__dirname, "./src/lib/i18nShim.tsx"),
+      "i18next-browser-languagedetector": path.resolve(__dirname, "./src/lib/i18nShim.tsx"),
     },
   },
   build: {
@@ -114,7 +120,7 @@ export default defineConfig(({ mode }) => ({
             '@capacitor/local-notifications',
           ],
           // PDF libs lazy-loaded via dynamic import — NOT in vendor chunk
-          'vendor-i18n': ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
+          // i18n removed (Arabic-only mode) — packages aliased to lightweight shim
           'vendor-radix': [
             '@radix-ui/react-dialog',
             '@radix-ui/react-dropdown-menu',
