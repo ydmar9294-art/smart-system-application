@@ -48,7 +48,7 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setCurrencies(c);
       setRates(r);
     } catch (e) {
-      logger.warn('CurrencyContext refresh failed (non-fatal)', e);
+      logger.warn('CurrencyContext refresh failed', 'currency', { error: String((e as Error)?.message || e) });
     } finally {
       setIsLoading(false);
     }
