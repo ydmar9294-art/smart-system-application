@@ -1,10 +1,13 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { Drawer, DrawerContent, DrawerOverlay, DrawerPortal } from '@/components/ui/drawer';
 import {
   CreditCard, Database, Coins, MapPin, ShieldCheck, MessageCircle, LogOut,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Sun, Moon, Shield, FileText,
 } from 'lucide-react';
+import { usePageTheme } from '@/hooks/usePageTheme';
+import AccountDeletionButton from '@/components/AccountDeletionButton';
 
 export type SettingsSubPage = 'subscription' | 'backup' | 'currencies' | 'tracking' | 'legal' | null;
 
@@ -20,6 +23,8 @@ const OwnerSettingsSheet: React.FC<Props> = ({ open, onClose, onOpenSubPage, onL
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
   const Chevron = isRtl ? ChevronLeft : ChevronRight;
+  const { isDark, toggleTheme } = usePageTheme();
+  const navigate = useNavigate();
 
   const items: {
     id: Exclude<SettingsSubPage, null>;
@@ -93,6 +98,38 @@ const OwnerSettingsSheet: React.FC<Props> = ({ open, onClose, onOpenSubPage, onL
                   )}
                 </React.Fragment>
               ))}
+            </div>
+
+            {/* App preferences: theme + legal */}
+            <div className="mt-3 bg-card/60 rounded-3xl p-1.5 space-y-0.5 border border-border/40">
+              <Row
+                onClick={toggleTheme}
+                icon={isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                iconBg={isDark ? 'bg-amber-500/10' : 'bg-indigo-500/10'}
+                iconColor={isDark ? 'text-amber-500' : 'text-indigo-500'}
+                label={isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}
+              />
+              <div className="mx-14 h-px bg-border/40" />
+              <Row
+                onClick={() => { onClose(); navigate('/privacy-policy'); }}
+                icon={<Shield className="w-5 h-5" />}
+                iconBg="bg-primary/10"
+                iconColor="text-primary"
+                label={t('settings.privacyPolicy')}
+              />
+              <div className="mx-14 h-px bg-border/40" />
+              <Row
+                onClick={() => { onClose(); navigate('/terms'); }}
+                icon={<FileText className="w-5 h-5" />}
+                iconBg="bg-primary/10"
+                iconColor="text-primary"
+                label={t('settings.termsOfService')}
+              />
+            </div>
+
+            {/* Account deletion */}
+            <div className="mt-3 px-1">
+              <AccountDeletionButton />
             </div>
 
             {/* Support */}
