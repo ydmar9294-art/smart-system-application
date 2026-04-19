@@ -1,13 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import AnimatedTabContent from '@/components/ui/AnimatedTabContent';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { 
-  FileText, 
-  RotateCcw, 
-  Wallet, 
+import {
+  RotateCcw,
+  Wallet,
   Users,
-  LogOut,
   UserPlus,
   X,
   User,
@@ -17,18 +15,16 @@ import {
   Loader2,
   ChevronDown,
   Search,
-  MessageCircle,
   Warehouse,
   History,
   ShoppingBag,
+  FileText,
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { useAuth } from '@/store/AuthContext';
 import { useTabPrefetch } from '@/hooks/useTabPrefetch';
 import { supabase } from '@/integrations/supabase/client';
-import AIAssistant from '@/features/ai/components/AIAssistant';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
-import { NotificationCenter } from '@/features/notifications/components/NotificationCenter';
 import NewSaleTab from './NewSaleTab';
 import SalesReturnTab from './SalesReturnTab';
 import CollectionTab from './CollectionTab';
@@ -41,25 +37,42 @@ import { useDistributorOffline } from '../hooks/useDistributorOffline';
 import { useGpsTracker } from '@/platform/hooks/useGpsTracker';
 import { Customer } from '@/types';
 import { CURRENCY } from '@/constants';
+import {
+  AppHeader,
+  AppBottomNav,
+  AppSettingsSheet,
+  AppSubPageSheet,
+  type BottomNavItem,
+  type SettingsItem,
+} from '@/components/shell';
 
-type DistributorTabType = 'inventory' | 'new-sale' | 'returns' | 'collections' | 'debts' | 'history' | 'route';
+// Primary tabs shown in the bottom nav
+type DistributorPrimaryTab = 'inventory' | 'new-sale' | 'collections' | 'route';
+// Secondary tabs accessed through Settings sheet
+type DistributorSubPage = 'debts' | 'history' | 'returns';
+type DistributorTabType = DistributorPrimaryTab | DistributorSubPage;
 
 const DistributorDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
-  const { logout, addNotification, refreshAllData, organization, user: appUser } = useApp();
+  const { logout, addNotification, organization, user: appUser } = useApp();
   const offline = useDistributorOffline();
   const { role: authRole, organization: authOrg } = useAuth();
 
-  // Activate GPS tracking for field agents (works offline - logs queue locally)
+  // Activate GPS tracking for field agents (works offline)
   useGpsTracker({
     enabled: !!authOrg?.id,
     organizationId: authOrg?.id,
     intervalMs: 3 * 60 * 1000,
   });
+
   const [activeTab, setActiveTab] = useState<DistributorTabType>('inventory');
-  useTabPrefetch(activeTab, authOrg?.id, authRole);
+  useTabPrefetch(activeTab as any, authOrg?.id, authRole);
+
   const [loggingOut, setLoggingOut] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [subPage, setSubPage] = useState<DistributorSubPage | null>(null);
+
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState('');
@@ -74,9 +87,7 @@ const DistributorDashboard: React.FC = () => {
     const getCurrentUser = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          setCurrentUserId(session.user.id);
-        }
+        if (session?.user) setCurrentUserId(session.user.id);
       } catch {}
     };
     getCurrentUser();
@@ -85,9 +96,9 @@ const DistributorDashboard: React.FC = () => {
   const myCustomers = currentUserId
     ? offline.localCustomers.filter(c => c.created_by === currentUserId)
     : offline.localCustomers;
-  const filteredCustomers = myCustomers.filter(c => c.name.toLowerCase().includes(searchCustomer.toLowerCase()));
-  const totalDebt = myCustomers.reduce((sum, c) => sum + Number(c.balance), 0);
-  const totalCustomers = myCustomers.length;
+  const filteredCustomers = myCustomers.filter(c =>
+    c.name.toLowerCase().includes(searchCustomer.toLowerCase()),
+  );
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -108,10 +119,8 @@ const DistributorDashboard: React.FC = () => {
         authOrg?.id,
         appUser?.id,
       );
-
       setNewCustomerName(''); setNewCustomerPhone(''); setNewCustomerLocation('');
       setShowAddCustomerModal(false);
-      
       setSelectedCustomer({
         id: newCustomer.id,
         name: newCustomer.name,
@@ -121,123 +130,151 @@ const DistributorDashboard: React.FC = () => {
         organization_id: newCustomer.organization_id,
         created_by: newCustomer.created_by || undefined,
       });
-
       addNotification(
         offline.isOnline ? t('distributor.customerAdded') : t('distributor.customerAddedOffline'),
-        'success'
+        'success',
       );
     } catch (error: any) {
-      console.error('Error adding customer:', error);
       addNotification(error?.message || t('distributor.customerAddFailed'), 'error');
+    } finally {
+      setAddingCustomer(false);
     }
-    finally { setAddingCustomer(false); }
   };
 
-  const primaryTabs: { id: DistributorTabType; label: string; icon: React.ReactNode; bgColor: string }[] = [
-    { id: 'inventory', label: t('distributor.tabs.inventory'), icon: <Warehouse className="w-5 h-5" />, bgColor: 'bg-purple-600' },
-    { id: 'new-sale', label: t('distributor.tabs.newSale'), icon: <FileText className="w-5 h-5" />, bgColor: 'bg-blue-600' },
-    { id: 'collections', label: t('distributor.tabs.collections'), icon: <Wallet className="w-5 h-5" />, bgColor: 'bg-emerald-600' },
-    { id: 'route', label: t('tracking.myRoute'), icon: <MapPin className="w-5 h-5" />, bgColor: 'bg-orange-500' },
-    { id: 'debts', label: t('distributor.tabs.customers'), icon: <Users className="w-5 h-5" />, bgColor: 'bg-red-500' },
+  // ===== Bottom nav (4 primary + Settings) =====
+  const navItems: BottomNavItem<DistributorPrimaryTab>[] = [
+    { id: 'inventory',   label: t('distributor.tabs.inventory'),   icon: Warehouse },
+    { id: 'new-sale',    label: t('distributor.tabs.newSale'),     icon: FileText },
+    { id: 'collections', label: t('distributor.tabs.collections'), icon: Wallet },
+    { id: 'route',       label: t('tracking.myRoute'),             icon: MapPin },
   ];
 
-  const secondaryTabs: { id: DistributorTabType; label: string; icon: React.ReactNode }[] = [
-    { id: 'history', label: t('distributor.tabs.history'), icon: <History className="w-4 h-4" /> },
-    { id: 'returns', label: t('distributor.tabs.returns'), icon: <RotateCcw className="w-4 h-4" /> },
+  // ===== Settings sheet items (secondary screens) =====
+  const settingsItems: SettingsItem<DistributorSubPage>[] = [
+    { id: 'debts',   label: t('distributor.tabs.customers'), Icon: Users,    color: 'text-rose-600',  bg: 'bg-rose-500/10' },
+    { id: 'history', label: t('distributor.tabs.history'),   Icon: History,  color: 'text-blue-600',  bg: 'bg-blue-500/10' },
+    { id: 'returns', label: t('distributor.tabs.returns'),   Icon: RotateCcw,color: 'text-amber-600', bg: 'bg-amber-500/10' },
   ];
 
-  const renderTabContent = () => {
+  const subPageTitle = (() => {
+    switch (subPage) {
+      case 'debts':   return t('distributor.tabs.customers');
+      case 'history': return t('distributor.tabs.history');
+      case 'returns': return t('distributor.tabs.returns');
+      default: return '';
+    }
+  })();
+
+  const renderPrimaryContent = () => {
     switch (activeTab) {
-      case 'inventory': return <DistributorInventoryTab localInventory={offline.localInventory} onQueueAction={offline.queueAction} isOnline={offline.isOnline} />;
-      case 'new-sale': return <NewSaleTab selectedCustomer={selectedCustomer} localInventory={offline.localInventory} onQueueAction={offline.queueAction} isOnline={offline.isOnline} />;
-      case 'returns': return <SalesReturnTab selectedCustomer={selectedCustomer} onQueueAction={offline.queueAction} isOnline={offline.isOnline} localSales={offline.localSales} />;
-      case 'collections': return <CollectionTab selectedCustomer={selectedCustomer} onQueueAction={offline.queueAction} isOnline={offline.isOnline} localSales={offline.localSales} />;
-      case 'debts': return <CustomerDebtsTab selectedCustomer={selectedCustomer} myCustomers={myCustomers} localSales={offline.localSales} />;
-      case 'history': return <InvoiceHistoryTab isOnline={offline.isOnline} />;
-      case 'route': return <MyRouteTab isOnline={offline.isOnline} onQueueAction={offline.queueAction} />;
-      default: return null;
+      case 'inventory':
+        return <DistributorInventoryTab localInventory={offline.localInventory} onQueueAction={offline.queueAction} isOnline={offline.isOnline} />;
+      case 'new-sale':
+        return <NewSaleTab selectedCustomer={selectedCustomer} localInventory={offline.localInventory} onQueueAction={offline.queueAction} isOnline={offline.isOnline} />;
+      case 'collections':
+        return <CollectionTab selectedCustomer={selectedCustomer} onQueueAction={offline.queueAction} isOnline={offline.isOnline} localSales={offline.localSales} />;
+      case 'route':
+        return <MyRouteTab isOnline={offline.isOnline} onQueueAction={offline.queueAction} />;
+      default:
+        return null;
+    }
+  };
+
+  const renderSubPage = () => {
+    switch (subPage) {
+      case 'debts':
+        return <CustomerDebtsTab selectedCustomer={selectedCustomer} myCustomers={myCustomers} localSales={offline.localSales} />;
+      case 'history':
+        return <InvoiceHistoryTab isOnline={offline.isOnline} />;
+      case 'returns':
+        return <SalesReturnTab selectedCustomer={selectedCustomer} onQueueAction={offline.queueAction} isOnline={offline.isOnline} localSales={offline.localSales} />;
+      default:
+        return null;
     }
   };
 
   return (
     <div className="min-h-screen bg-background" dir={isRtl ? 'rtl' : 'ltr'}>
+      <AppHeader
+        title={appUser?.name || t('roles.fieldAgent')}
+        subtitle={organization?.name || t('distributor.subtitle')}
+        Icon={ShoppingBag}
+      />
+
       <div className="max-w-lg mx-auto">
-        {/* Header */}
-        <div className="bg-background pt-4 px-4 relative">
-          <div className={`absolute -top-1 ${isRtl ? 'left-1' : 'right-1'} z-10`}>
-            <NotificationCenter />
-          </div>
+        <WelcomeSplash />
 
-          <div className="flex justify-center pt-4 mb-3">
-            <div className="flex items-center gap-3 bg-card px-4 py-2 rounded-full shadow-sm">
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                <ShoppingBag className="w-4 h-4 text-white" />
+        <div
+          className="px-3 pt-3 space-y-3"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 96px)' }}
+        >
+          {/* Customer Selector */}
+          <div
+            className="rounded-3xl p-3"
+            style={{
+              background: 'var(--card-glass-bg)',
+              backdropFilter: 'blur(var(--glass-blur)) saturate(var(--glass-saturation))',
+              WebkitBackdropFilter: 'blur(var(--glass-blur)) saturate(var(--glass-saturation))',
+              border: '1px solid var(--card-glass-border)',
+              boxShadow: 'var(--glass-shadow), var(--glass-highlight)',
+            }}
+          >
+            <div className="flex items-center justify-between mb-2 px-1">
+              <span className="text-muted-foreground text-[11px] font-bold">
+                {t('distributor.selectedCustomer')}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowAddCustomerModal(true)}
+                  className="text-[11px] text-primary font-bold flex items-center gap-1 active:scale-95 transition-transform"
+                >
+                  <UserPlus className="w-3.5 h-3.5" /> {t('distributor.addNewCustomer')}
+                </button>
+                {selectedCustomer && (
+                  <button
+                    onClick={() => setSelectedCustomer(null)}
+                    className="text-[11px] text-destructive font-bold"
+                  >
+                    {t('distributor.cancelSelection')}
+                  </button>
+                )}
               </div>
-              <div className={isRtl ? 'text-end' : 'text-start'}>
-                <p className="font-bold text-foreground text-sm">{t('distributor.dashboard')}</p>
-                <p className="text-[10px] text-muted-foreground">{t('distributor.subtitle')}</p>
-              </div>
             </div>
-          </div>
-
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-1.5 bg-card/80 backdrop-blur-sm px-2 py-1.5 rounded-xl shadow-sm">
-              <AIAssistant className="!p-1.5 !rounded-lg" />
-              <div className="w-px h-5 bg-border" />
-              <a href="https://wa.me/963947744162" target="_blank" rel="noopener noreferrer"
-                className="p-1.5 bg-gradient-to-br from-green-400 to-green-600 rounded-lg text-white hover:shadow-md transition-all active:scale-95" title={t('common.supportTeam')}>
-                <MessageCircle className="w-4 h-4" />
-              </a>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button onClick={() => setShowAddCustomerModal(true)}
-                className="p-2 bg-blue-600/10 text-blue-600 rounded-xl hover:bg-blue-600/20 transition-all" title={t('distributor.addNewCustomer')}>
-                <UserPlus className="w-5 h-5" />
-              </button>
-              <button onClick={handleLogout} disabled={loggingOut}
-                className="p-2.5 bg-card/80 backdrop-blur-sm rounded-full shadow-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all" title={t('common.logout')}>
-                <LogOut className={`w-5 h-5 ${loggingOut ? 'animate-spin' : ''}`} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Customer Selector Card */}
-        <div className="px-4 pb-3">
-          <div className="bg-card rounded-2xl p-3 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-muted-foreground text-xs font-bold">{t('distributor.selectedCustomer')}</span>
-              {selectedCustomer && (
-                <button onClick={() => setSelectedCustomer(null)} className="text-xs text-red-500 hover:text-red-600 font-bold">{t('distributor.cancelSelection')}</button>
-              )}
-            </div>
-            <button onClick={() => setShowCustomerPicker(true)}
-              className="w-full flex items-center justify-between bg-muted rounded-xl px-4 py-3 hover:bg-accent transition-colors">
+            <button
+              onClick={() => setShowCustomerPicker(true)}
+              className="w-full flex items-center justify-between bg-muted/60 rounded-2xl px-3 py-2.5 hover:bg-accent transition-colors"
+            >
               <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${selectedCustomer ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' : 'bg-border text-muted-foreground'}`}>
+                <div
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                    selectedCustomer
+                      ? 'bg-primary/10 text-primary'
+                      : 'bg-border text-muted-foreground'
+                  }`}
+                >
                   <User className="w-4 h-4" />
                 </div>
                 <div className="text-start">
                   {selectedCustomer ? (
                     <>
                       <p className="font-bold text-foreground text-sm">{selectedCustomer.name}</p>
-                      <p className="text-xs text-muted-foreground">{t('common.balance')}: {Number(selectedCustomer.balance).toLocaleString('ar-SA')} {CURRENCY}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {t('common.balance')}:{' '}
+                        {Number(selectedCustomer.balance).toLocaleString('ar-SA')} {CURRENCY}
+                      </p>
                     </>
                   ) : (
-                    <p className="text-muted-foreground font-medium text-sm">{t('distributor.selectCustomer')}</p>
+                    <p className="text-muted-foreground font-medium text-sm">
+                      {t('distributor.selectCustomer')}
+                    </p>
                   )}
                 </div>
               </div>
               <ChevronDown className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
-        </div>
 
-        <WelcomeSplash />
-
-        {/* Offline Sync Status Banner */}
-        <div className="px-4 pb-2">
+          {/* Offline Sync Banner */}
           <OfflineSyncBanner
             isOnline={offline.isOnline}
             pendingCount={offline.pendingCount}
@@ -249,52 +286,50 @@ const DistributorDashboard: React.FC = () => {
             onRetryAction={offline.retrySingleAction}
             onRetryAllFailed={offline.retryAllFailed}
           />
-        </div>
 
-        {/* Primary Tab Navigation */}
-        <div className="px-4 pb-2">
-          <div className="bg-card rounded-3xl p-2 shadow-sm flex gap-1" data-guest-nav>
-            {primaryTabs.map((tab) => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl transition-all duration-300 ${
-                  activeTab === tab.id ? `${tab.bgColor} text-white shadow-lg` : 'text-muted-foreground hover:bg-muted'
-                }`}>
-                <div className={`${activeTab === tab.id ? 'scale-110' : ''} transition-transform duration-300`}>{tab.icon}</div>
-                <span className="text-[10px] font-bold">{tab.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Secondary Tab (Returns) */}
-        <div className="px-4 pb-4">
-          <div className="flex gap-2" data-guest-nav>
-            {secondaryTabs.map((tab) => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-warning text-white shadow-md'
-                    : 'bg-card text-muted-foreground hover:bg-muted shadow-sm'
-                }`}>
-                {tab.icon}
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Tab Content */}
-        <div className="px-4 pb-8">
-          <AnimatedTabContent tabKey={activeTab}>
-            {renderTabContent()}
-          </AnimatedTabContent>
+          {/* Tab Content */}
+          <AnimatedTabContent tabKey={activeTab}>{renderPrimaryContent()}</AnimatedTabContent>
         </div>
       </div>
 
+      {/* Bottom Nav */}
+      <AppBottomNav
+        items={navItems}
+        active={activeTab as any}
+        onChange={(id) => setActiveTab(id as DistributorPrimaryTab)}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
+
+      {/* Settings Sheet (hosts secondary screens) */}
+      <AppSettingsSheet
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        items={settingsItems}
+        onOpenItem={(id) => { setSettingsOpen(false); setSubPage(id); }}
+        onLogout={handleLogout}
+        loggingOut={loggingOut}
+      />
+
+      {/* Sub-page sheet */}
+      <AppSubPageSheet
+        open={subPage !== null}
+        onClose={() => setSubPage(null)}
+        title={subPageTitle}
+      >
+        {renderSubPage()}
+      </AppSubPageSheet>
+
       {/* Customer Picker Modal */}
       {showCustomerPicker && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir={isRtl ? 'rtl' : 'ltr'} onClick={() => setShowCustomerPicker(false)}>
-          <div className="bg-card w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border border-border" onClick={e => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom"
+          dir={isRtl ? 'rtl' : 'ltr'}
+          onClick={() => setShowCustomerPicker(false)}
+        >
+          <div
+            className="bg-card w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border border-border"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="p-5 border-b border-border bg-muted/50">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-black text-lg text-foreground">{t('distributor.chooseCustomer')}</h3>
@@ -302,19 +337,23 @@ const DistributorDashboard: React.FC = () => {
                   <X className="w-5 h-5 text-muted-foreground" />
                 </button>
               </div>
-              
-              <button onClick={() => { setShowCustomerPicker(false); setShowAddCustomerModal(true); }}
-                className="w-full bg-blue-600 text-white py-3 rounded-xl flex items-center justify-center gap-2 font-bold mb-4 hover:bg-blue-700 transition-colors">
+              <button
+                onClick={() => { setShowCustomerPicker(false); setShowAddCustomerModal(true); }}
+                className="w-full bg-primary text-primary-foreground py-3 rounded-xl flex items-center justify-center gap-2 font-bold mb-4 hover:opacity-90 transition-opacity"
+              >
                 <UserPlus className="w-5 h-5" /> {t('distributor.addNewCustomer')}
               </button>
-              
               <div className="relative">
                 <Search className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground`} />
-                <input type="text" placeholder={t('distributor.searchCustomer')} value={searchCustomer} onChange={(e) => setSearchCustomer(e.target.value)}
-                  className={`w-full bg-card border border-border rounded-xl ${isRtl ? 'px-12' : 'px-12'} py-3 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20 placeholder:text-muted-foreground`} />
+                <input
+                  type="text"
+                  placeholder={t('distributor.searchCustomer')}
+                  value={searchCustomer}
+                  onChange={(e) => setSearchCustomer(e.target.value)}
+                  className="w-full bg-card border border-border rounded-xl px-12 py-3 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground"
+                />
               </div>
             </div>
-            
             <div className="max-h-[50vh] overflow-y-auto p-4 space-y-2">
               {filteredCustomers.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
@@ -324,23 +363,33 @@ const DistributorDashboard: React.FC = () => {
                 </div>
               ) : (
                 filteredCustomers.map((customer) => (
-                  <button key={customer.id}
+                  <button
+                    key={customer.id}
                     onClick={() => { setSelectedCustomer(customer); setShowCustomerPicker(false); setSearchCustomer(''); }}
                     className={`w-full text-start p-4 rounded-2xl transition-colors ${
-                      selectedCustomer?.id === customer.id ? 'bg-blue-500/10 border-2 border-blue-500' : 'bg-muted hover:bg-accent'
-                    }`}>
+                      selectedCustomer?.id === customer.id
+                        ? 'bg-primary/10 border-2 border-primary'
+                        : 'bg-muted hover:bg-accent'
+                    }`}
+                  >
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                        selectedCustomer?.id === customer.id ? 'bg-blue-600 text-white' : 'bg-border text-muted-foreground'
-                      }`}>
+                      <div
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                          selectedCustomer?.id === customer.id
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-border text-muted-foreground'
+                        }`}
+                      >
                         <User className="w-5 h-5" />
                       </div>
                       <div>
                         <p className="font-bold text-foreground">{customer.name}</p>
-                        <p className="text-sm text-muted-foreground">{t('common.balance')}: {Number(customer.balance).toLocaleString('ar-SA')} {CURRENCY}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {t('common.balance')}: {Number(customer.balance).toLocaleString('ar-SA')} {CURRENCY}
+                        </p>
                       </div>
                       {selectedCustomer?.id === customer.id && (
-                        <Check className={`w-5 h-5 text-blue-600 ${isRtl ? 'mr-auto' : 'ml-auto'}`} />
+                        <Check className={`w-5 h-5 text-primary ${isRtl ? 'mr-auto' : 'ml-auto'}`} />
                       )}
                     </div>
                   </button>
@@ -349,64 +398,102 @@ const DistributorDashboard: React.FC = () => {
             </div>
           </div>
         </div>,
-        document.body
+        document.body,
       )}
 
       {/* Add Customer Modal */}
       {showAddCustomerModal && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir={isRtl ? 'rtl' : 'ltr'} onClick={() => setShowAddCustomerModal(false)}>
-          <div className="bg-card w-full max-w-md rounded-2xl p-6 space-y-5 shadow-2xl border border-border" onClick={e => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom"
+          dir={isRtl ? 'rtl' : 'ltr'}
+          onClick={() => setShowAddCustomerModal(false)}
+        >
+          <div
+            className="bg-card w-full max-w-md rounded-2xl p-6 space-y-5 shadow-2xl border border-border"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between">
               <h3 className="font-black text-lg text-foreground flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-blue-600 dark:text-blue-400" /> {t('distributor.addNewCustomer')}
+                <UserPlus className="w-5 h-5 text-primary" /> {t('distributor.addNewCustomer')}
               </h3>
               <button onClick={() => setShowAddCustomerModal(false)} className="p-2 hover:bg-accent rounded-xl transition-colors">
                 <X className="w-5 h-5 text-muted-foreground" />
               </button>
             </div>
-            
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-bold text-muted-foreground mb-2 block">{t('distributor.customerName')} <span className="text-destructive">*</span></label>
+                <label className="text-sm font-bold text-muted-foreground mb-2 block">
+                  {t('distributor.customerName')} <span className="text-destructive">*</span>
+                </label>
                 <div className="relative">
                   <User className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground`} />
-                  <input type="text" placeholder={t('distributor.customerName')} value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)}
-                    className="w-full bg-muted border-none rounded-xl px-12 py-4 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20 placeholder:text-muted-foreground" disabled={addingCustomer} />
+                  <input
+                    type="text"
+                    placeholder={t('distributor.customerName')}
+                    value={newCustomerName}
+                    onChange={(e) => setNewCustomerName(e.target.value)}
+                    className="w-full bg-muted border-none rounded-xl px-12 py-4 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground"
+                    disabled={addingCustomer}
+                  />
                 </div>
               </div>
-              
               <div>
-                <label className="text-sm font-bold text-muted-foreground mb-2 block">{t('distributor.customerPhone')} <span className="text-destructive">*</span></label>
+                <label className="text-sm font-bold text-muted-foreground mb-2 block">
+                  {t('distributor.customerPhone')} <span className="text-destructive">*</span>
+                </label>
                 <div className="relative">
                   <Phone className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground`} />
-                  <input type="tel" inputMode="numeric" placeholder="09xxxxxxxx" value={newCustomerPhone}
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="09xxxxxxxx"
+                    value={newCustomerPhone}
                     onChange={(e) => setNewCustomerPhone(e.target.value.replace(/[^0-9+\-\s]/g, ''))}
-                    className="w-full bg-muted border-none rounded-xl px-12 py-4 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20 placeholder:text-muted-foreground" disabled={addingCustomer} />
+                    className="w-full bg-muted border-none rounded-xl px-12 py-4 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground"
+                    disabled={addingCustomer}
+                  />
                 </div>
               </div>
-
               <div>
-                <label className="text-sm font-bold text-muted-foreground mb-2 block">{t('distributor.customerLocation')} <span className="text-destructive">*</span></label>
+                <label className="text-sm font-bold text-muted-foreground mb-2 block">
+                  {t('distributor.customerLocation')} <span className="text-destructive">*</span>
+                </label>
                 <div className="relative">
                   <MapPin className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground`} />
-                  <input type="text" placeholder={t('distributor.customerLocation')} value={newCustomerLocation} onChange={(e) => setNewCustomerLocation(e.target.value)}
-                    className="w-full bg-muted border-none rounded-xl px-12 py-4 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20 placeholder:text-muted-foreground" disabled={addingCustomer} />
+                  <input
+                    type="text"
+                    placeholder={t('distributor.customerLocation')}
+                    value={newCustomerLocation}
+                    onChange={(e) => setNewCustomerLocation(e.target.value)}
+                    className="w-full bg-muted border-none rounded-xl px-12 py-4 font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground"
+                    disabled={addingCustomer}
+                  />
                 </div>
               </div>
             </div>
-            
             <div className="flex gap-3 pt-2">
-              <button onClick={handleAddCustomer}
+              <button
+                onClick={handleAddCustomer}
                 disabled={addingCustomer || !newCustomerName.trim() || !newCustomerPhone.trim() || !newCustomerLocation.trim()}
-                className="flex-1 bg-emerald-500 text-white py-4 rounded-xl flex items-center justify-center gap-2 font-bold disabled:opacity-50 hover:bg-emerald-600 transition-colors">
-                {addingCustomer ? (<><Loader2 className="w-5 h-5 animate-spin" /> {t('distributor.adding')}</>) : (<><Check className="w-5 h-5" /> {t('common.save')}</>)}
+                className="flex-1 bg-primary text-primary-foreground py-4 rounded-xl flex items-center justify-center gap-2 font-bold disabled:opacity-50 hover:opacity-90 transition-opacity"
+              >
+                {addingCustomer ? (
+                  <><Loader2 className="w-5 h-5 animate-spin" /> {t('distributor.adding')}</>
+                ) : (
+                  <><Check className="w-5 h-5" /> {t('common.save')}</>
+                )}
               </button>
-              <button onClick={() => setShowAddCustomerModal(false)} disabled={addingCustomer}
-                className="px-6 py-4 bg-muted rounded-xl font-bold text-muted-foreground hover:bg-accent disabled:opacity-50 transition-colors">{t('common.cancel')}</button>
+              <button
+                onClick={() => setShowAddCustomerModal(false)}
+                disabled={addingCustomer}
+                className="px-6 py-4 bg-muted rounded-xl font-bold text-muted-foreground hover:bg-accent disabled:opacity-50 transition-colors"
+              >
+                {t('common.cancel')}
+              </button>
             </div>
           </div>
         </div>,
-        document.body
+        document.body,
       )}
     </div>
   );
