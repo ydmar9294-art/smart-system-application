@@ -53,14 +53,6 @@ export const DEMO_USERS: Record<string, User> = {
   fieldAgent: {
     id: 'demo-user-fa',
     name: 'محمد ياسر',
-    email: 'mohamed@alnour.com',
-    phone: '0956789012',
-    role: UserRole.EMPLOYEE,
-    employeeType: EmployeeType.FIELD_AGENT,
-  },
-  fieldAgent: {
-    id: 'demo-user-fa',
-    name: 'محمد ياسر',
     email: 'yasr@alnour.com',
     phone: '0956789012',
     role: UserRole.EMPLOYEE,
