@@ -1,52 +1,58 @@
 import React, { useState, useMemo, lazy, Suspense } from 'react';
 import AnimatedTabContent from '@/components/ui/AnimatedTabContent';
 import { useTranslation } from 'react-i18next';
-import { 
-  Package, 
-  LogOut,
+import {
+  Package,
   LayoutDashboard,
   Truck,
   RotateCcw,
   ShoppingCart,
-  MessageCircle,
   AlertTriangle,
   ArrowDownCircle,
   ArrowUpCircle,
   ArrowUpDown,
   Loader2,
   DollarSign,
-  Save,
-  X,
-  Search
+  Search,
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
-import { CURRENCY, SUPPORT_WHATSAPP_URL } from '@/constants';
 import { InventoryTab } from '@/features/owner/components/InventoryTab';
 import { DeliveriesTab } from '@/features/owner/components/DeliveriesTab';
 import { PurchasesTab } from '@/features/owner/components/PurchasesTab';
-import AIAssistant from '@/features/ai/components/AIAssistant';
 import WelcomeSplash from '@/components/ui/WelcomeSplash';
 import { Product } from '@/types';
 import FullScreenModal from '@/components/ui/FullScreenModal';
+import {
+  AppHeader,
+  AppBottomNav,
+  AppSettingsSheet,
+  AppSubPageSheet,
+  type BottomNavItem,
+  type SettingsItem,
+} from '@/components/shell';
 
 const StockMovementsTab = lazy(() => import('./StockMovementsTab'));
 
-type WarehouseTabType = 'dashboard' | 'inventory' | 'deliveries' | 'purchases' | 'purchase-returns' | 'movements' | 'prices';
+type WarehousePrimaryTab = 'dashboard' | 'inventory' | 'deliveries' | 'movements';
+type WarehouseSubPage = 'prices' | 'purchases' | 'purchase-returns';
+type WarehouseTabType = WarehousePrimaryTab | WarehouseSubPage;
 
 const WarehouseKeeperDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
-  const { 
-    user, 
+  const {
+    user,
     products = [],
     deliveries = [],
     purchases = [],
     logout,
-    updateProduct
+    updateProduct,
   } = useApp();
-  
+
   const [activeTab, setActiveTab] = useState<WarehouseTabType>('dashboard');
   const [loggingOut, setLoggingOut] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [subPage, setSubPage] = useState<WarehouseSubPage | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [priceSearch, setPriceSearch] = useState('');
 
@@ -57,7 +63,6 @@ const WarehouseKeeperDashboard: React.FC = () => {
     const todayStart = new Date().setHours(0, 0, 0, 0);
     const todayDeliveries = deliveries.filter(d => new Date(d.created_at).getTime() >= todayStart).length;
     const todayPurchases = purchases.filter(p => new Date(p.created_at).getTime() >= todayStart).length;
-    
     return { totalProducts, lowStockProducts, totalStock, todayDeliveries, todayPurchases };
   }, [products, deliveries, purchases]);
 
@@ -81,244 +86,227 @@ const WarehouseKeeperDashboard: React.FC = () => {
 
   const filteredPriceProducts = products.filter(p => !p.isDeleted && p.name.includes(priceSearch));
 
-  const tabs: { id: WarehouseTabType; label: string; icon: React.ReactNode; color: string; bgColor: string }[] = [
-    { id: 'dashboard', label: t('warehouse.tabs.home'), icon: <LayoutDashboard className="w-5 h-5" />, color: 'text-purple-600', bgColor: 'bg-purple-600' },
-    { id: 'inventory', label: t('warehouse.tabs.inventory'), icon: <Package className="w-5 h-5" />, color: 'text-emerald-600', bgColor: 'bg-emerald-600' },
-    { id: 'prices', label: t('warehouse.tabs.prices'), icon: <DollarSign className="w-5 h-5" />, color: 'text-amber-500', bgColor: 'bg-amber-500' },
-    { id: 'deliveries', label: t('warehouse.tabs.deliveries'), icon: <Truck className="w-5 h-5" />, color: 'text-blue-600', bgColor: 'bg-blue-600' },
-    { id: 'movements', label: t('warehouse.tabs.movements'), icon: <ArrowUpDown className="w-5 h-5" />, color: 'text-orange-500', bgColor: 'bg-orange-500' },
+  const navItems: BottomNavItem<WarehousePrimaryTab>[] = [
+    { id: 'dashboard',  label: t('warehouse.tabs.home'),       icon: LayoutDashboard },
+    { id: 'inventory',  label: t('warehouse.tabs.inventory'),  icon: Package },
+    { id: 'deliveries', label: t('warehouse.tabs.deliveries'), icon: Truck },
+    { id: 'movements',  label: t('warehouse.tabs.movements'),  icon: ArrowUpDown },
   ];
 
-  const secondaryTabs: { id: WarehouseTabType; label: string; icon: React.ReactNode }[] = [
-    { id: 'purchases', label: t('warehouse.tabs.purchases'), icon: <ShoppingCart className="w-4 h-4" /> },
-    { id: 'purchase-returns', label: t('warehouse.tabs.returns'), icon: <RotateCcw className="w-4 h-4" /> },
+  const settingsItems: SettingsItem<WarehouseSubPage>[] = [
+    { id: 'prices',           label: t('warehouse.tabs.prices'),    Icon: DollarSign,  color: 'text-amber-600',  bg: 'bg-amber-500/10' },
+    { id: 'purchases',        label: t('warehouse.tabs.purchases'), Icon: ShoppingCart,color: 'text-blue-600',   bg: 'bg-blue-500/10' },
+    { id: 'purchase-returns', label: t('warehouse.tabs.returns'),   Icon: RotateCcw,   color: 'text-orange-600', bg: 'bg-orange-500/10' },
   ];
+
+  const subPageTitle = settingsItems.find(i => i.id === subPage)?.label ?? '';
+
+  const renderPrimaryContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return (
+          <div className="space-y-3 animate-fade-in">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-card p-4 rounded-2xl shadow-sm">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center">
+                    <Package className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                </div>
+                <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">{t('warehouse.totalProducts')}</p>
+                <p className="text-xl font-black text-foreground">{stats.totalProducts}</p>
+                <p className="text-[10px] text-muted-foreground">{t('common.product')}</p>
+              </div>
+              <div className="bg-card p-4 rounded-2xl shadow-sm">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
+                    <ArrowDownCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                </div>
+                <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">{t('warehouse.totalStock')}</p>
+                <p className="text-xl font-black text-foreground">{stats.totalStock.toLocaleString()}</p>
+                <p className="text-[10px] text-muted-foreground">{t('warehouse.unit')}</p>
+              </div>
+            </div>
+
+            <div className="bg-card p-4 rounded-2xl shadow-sm">
+              <h3 className="font-bold text-foreground mb-3 text-sm">{t('warehouse.todayActivity')}</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-blue-500/10 p-3 rounded-xl text-center">
+                  <Truck className="w-5 h-5 mx-auto text-blue-600 dark:text-blue-400 mb-1" />
+                  <p className="text-lg font-black text-foreground">{stats.todayDeliveries}</p>
+                  <p className="text-[8px] text-muted-foreground font-bold">{t('warehouse.todayDeliveries')}</p>
+                </div>
+                <div className="bg-orange-500/10 p-3 rounded-xl text-center">
+                  <ShoppingCart className="w-5 h-5 mx-auto text-orange-600 dark:text-orange-400 mb-1" />
+                  <p className="text-lg font-black text-foreground">{stats.todayPurchases}</p>
+                  <p className="text-[8px] text-muted-foreground font-bold">{t('warehouse.todayPurchases')}</p>
+                </div>
+              </div>
+            </div>
+
+            {stats.lowStockProducts > 0 && (
+              <div className="bg-card p-4 rounded-2xl shadow-sm border-r-4 border-destructive">
+                <h3 className="font-bold text-foreground mb-3 text-sm flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-destructive" />
+                  {t('warehouse.lowStockProducts')}
+                </h3>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {products.filter(p => p.stock <= p.minStock && !p.isDeleted).slice(0, 5).map(p => (
+                    <div key={p.id} className="flex justify-between items-center bg-destructive/10 p-2 rounded-lg">
+                      <span className="font-bold text-xs text-foreground">{p.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-destructive font-black">{p.stock}</span>
+                        <span className="text-[8px] text-muted-foreground">/ {p.minStock}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="bg-card p-4 rounded-2xl shadow-sm">
+              <h3 className="font-bold text-foreground mb-3 text-sm flex items-center gap-2">
+                <ArrowUpCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                {t('warehouse.recentDeliveries')}
+              </h3>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {deliveries.slice(0, 5).map(d => (
+                  <div key={d.id} className="flex justify-between items-center bg-muted p-3 rounded-lg">
+                    <div>
+                      <p className="font-bold text-foreground text-sm">{d.distributor_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(d.created_at).toLocaleDateString(isRtl ? 'ar-EG' : 'en-US')}
+                      </p>
+                    </div>
+                    <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
+                      d.status === 'completed'
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                    }`}>
+                      {d.status === 'completed' ? t('common.completed') : t('common.pending')}
+                    </span>
+                  </div>
+                ))}
+                {deliveries.length === 0 && (
+                  <p className="text-center text-muted-foreground py-4">{t('warehouse.noDeliveries')}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      case 'inventory':
+        return <div className="bg-card rounded-3xl shadow-sm p-4"><InventoryTab productsOnly /></div>;
+      case 'deliveries':
+        return <div className="bg-card rounded-3xl shadow-sm p-4"><DeliveriesTab /></div>;
+      case 'movements':
+        return (
+          <div className="bg-card rounded-3xl shadow-sm p-4">
+            <Suspense fallback={<div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
+              <StockMovementsTab />
+            </Suspense>
+          </div>
+        );
+      default: return null;
+    }
+  };
+
+  const renderSubPage = () => {
+    switch (subPage) {
+      case 'prices':
+        return (
+          <div className="space-y-3 animate-fade-in">
+            <div className="relative">
+              <Search size={16} className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 text-muted-foreground`} />
+              <input
+                value={priceSearch}
+                onChange={(e) => setPriceSearch(e.target.value)}
+                placeholder={t('warehouse.searchProduct')}
+                className={`w-full px-4 py-3 ${isRtl ? 'pr-10' : 'pl-10'} bg-card text-foreground rounded-2xl border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground shadow-sm`}
+              />
+            </div>
+            {filteredPriceProducts.map(p => (
+              <div key={p.id} className="bg-card p-4 rounded-2xl shadow-sm">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <p className="font-black text-foreground text-sm">{p.name}</p>
+                    <p className="text-[9px] text-muted-foreground">{p.category}</p>
+                  </div>
+                  <button
+                    onClick={() => setEditingProduct(p)}
+                    className="px-3 py-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl text-xs font-bold flex items-center gap-1"
+                  >
+                    <DollarSign size={12} /> {t('common.edit')}
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  <div className="bg-muted p-2 rounded-xl text-center">
+                    <p className="text-[8px] text-muted-foreground font-bold">{t('warehouse.cost')}</p>
+                    <p className="text-sm font-black text-foreground">{p.costPrice.toLocaleString()}</p>
+                  </div>
+                  <div className="bg-muted p-2 rounded-xl text-center">
+                    <p className="text-[8px] text-muted-foreground font-bold">{t('warehouse.sale')}</p>
+                    <p className="text-sm font-black text-foreground">{p.basePrice.toLocaleString()}</p>
+                  </div>
+                  <div className="bg-muted p-2 rounded-xl text-center">
+                    <p className="text-[8px] text-muted-foreground font-bold">{t('warehouse.consumer')}</p>
+                    <p className="text-sm font-black text-foreground">{(p.consumerPrice || 0).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      case 'purchases':
+        return <div className="bg-card rounded-3xl shadow-sm p-4"><PurchasesTab /></div>;
+      case 'purchase-returns':
+        return <div className="bg-card rounded-3xl shadow-sm p-4"><InventoryTab forceSubTab="purchase-returns" /></div>;
+      default: return null;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background" dir={isRtl ? 'rtl' : 'ltr'}>
+      <AppHeader
+        title={user?.name || t('roles.warehouseKeeper')}
+        subtitle={t('warehouse.dashboard')}
+        Icon={Package}
+      />
+
       <div className="max-w-lg mx-auto">
-        {/* Top Header */}
-        <div className="bg-background pt-4 px-4 relative">
-          <div className="flex justify-center pt-4 mb-3">
-            <div className="flex items-center gap-3 bg-card px-4 py-2 rounded-full shadow-sm">
-              <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
-                <Package className="w-4 h-4 text-white" />
-              </div>
-              <div className={isRtl ? 'text-end' : 'text-start'}>
-                <p className="font-bold text-foreground text-sm">{user?.name || t('roles.warehouseKeeper')}</p>
-                <p className="text-[10px] text-muted-foreground">{t('warehouse.dashboard')}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-1.5 bg-card/80 backdrop-blur-sm px-2 py-1.5 rounded-xl shadow-sm">
-              <AIAssistant className="!p-1.5 !rounded-lg" />
-              <div className="w-px h-5 bg-border" />
-              <a href={SUPPORT_WHATSAPP_URL} target="_blank" rel="noopener noreferrer"
-                className="p-1.5 bg-gradient-to-br from-green-400 to-green-600 rounded-lg text-white hover:shadow-md transition-all active:scale-95" title={t('common.supportTeam')}>
-                <MessageCircle className="w-4 h-4" />
-              </a>
-            </div>
-            <button onClick={handleLogout} disabled={loggingOut}
-              className="p-2.5 bg-card/80 backdrop-blur-sm rounded-full shadow-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all" title={t('common.logout')}>
-              <LogOut className={`w-5 h-5 ${loggingOut ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-
         <WelcomeSplash />
 
-        {/* Tab Navigation */}
-        <div className="px-4 pb-2">
-          <div className="bg-card rounded-3xl p-2 shadow-sm flex gap-1" data-guest-nav>
-            {tabs.map((tab) => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl transition-all duration-300 ${
-                  activeTab === tab.id ? `${tab.bgColor} text-white shadow-lg` : 'text-muted-foreground hover:bg-muted'
-                }`}>
-                <div className={`${activeTab === tab.id ? 'scale-110' : ''} transition-transform duration-300`}>{tab.icon}</div>
-                <span className="text-[10px] font-bold">{tab.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Secondary Tabs */}
-        <div className="px-4 pb-4">
-          <div className="flex gap-2" data-guest-nav>
-            {secondaryTabs.map((tab) => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-warning text-white shadow-md'
-                    : 'bg-card text-muted-foreground hover:bg-muted shadow-sm'
-                }`}>
-                {tab.icon}
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Tab Content */}
-        <div className="px-4 pb-8">
-          <AnimatedTabContent tabKey={activeTab}>
-          {activeTab === 'dashboard' && (
-            <div className="space-y-3 animate-fade-in">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-card p-4 rounded-2xl shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center">
-                      <Package className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                    </div>
-                  </div>
-                  <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">{t('warehouse.totalProducts')}</p>
-                  <p className="text-xl font-black text-foreground">{stats.totalProducts}</p>
-                  <p className="text-[10px] text-muted-foreground">{t('common.product')}</p>
-                </div>
-                
-                <div className="bg-card p-4 rounded-2xl shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
-                      <ArrowDownCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                  </div>
-                  <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">{t('warehouse.totalStock')}</p>
-                  <p className="text-xl font-black text-foreground">{stats.totalStock.toLocaleString()}</p>
-                  <p className="text-[10px] text-muted-foreground">{t('warehouse.unit')}</p>
-                </div>
-              </div>
-
-              <div className="bg-card p-4 rounded-2xl shadow-sm">
-                <h3 className="font-bold text-foreground mb-3 text-sm">{t('warehouse.todayActivity')}</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-blue-500/10 p-3 rounded-xl text-center">
-                    <Truck className="w-5 h-5 mx-auto text-blue-600 dark:text-blue-400 mb-1" />
-                    <p className="text-lg font-black text-foreground">{stats.todayDeliveries}</p>
-                    <p className="text-[8px] text-muted-foreground font-bold">{t('warehouse.todayDeliveries')}</p>
-                  </div>
-                  <div className="bg-orange-500/10 p-3 rounded-xl text-center">
-                    <ShoppingCart className="w-5 h-5 mx-auto text-orange-600 dark:text-orange-400 mb-1" />
-                    <p className="text-lg font-black text-foreground">{stats.todayPurchases}</p>
-                    <p className="text-[8px] text-muted-foreground font-bold">{t('warehouse.todayPurchases')}</p>
-                  </div>
-                </div>
-              </div>
-
-              {stats.lowStockProducts > 0 && (
-                <div className="bg-card p-4 rounded-2xl shadow-sm border-r-4 border-red-500">
-                  <h3 className="font-bold text-foreground mb-3 text-sm flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-red-500" />
-                    {t('warehouse.lowStockProducts')}
-                  </h3>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
-                    {products.filter(p => p.stock <= p.minStock && !p.isDeleted).slice(0, 5).map(p => (
-                      <div key={p.id} className="flex justify-between items-center bg-red-500/10 p-2 rounded-lg">
-                        <span className="font-bold text-xs text-foreground">{p.name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-red-600 dark:text-red-400 font-black">{p.stock}</span>
-                          <span className="text-[8px] text-muted-foreground">/ {p.minStock}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="bg-card p-4 rounded-2xl shadow-sm">
-                <h3 className="font-bold text-foreground mb-3 text-sm flex items-center gap-2">
-                  <ArrowUpCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  {t('warehouse.recentDeliveries')}
-                </h3>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {deliveries.slice(0, 5).map(d => (
-                    <div key={d.id} className="flex justify-between items-center bg-muted p-3 rounded-lg">
-                      <div>
-                        <p className="font-bold text-foreground text-sm">{d.distributor_name}</p>
-                        <p className="text-xs text-muted-foreground">{new Date(d.created_at).toLocaleDateString(isRtl ? 'ar-EG' : 'en-US')}</p>
-                      </div>
-                      <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
-                        d.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
-                      }`}>
-                        {d.status === 'completed' ? t('common.completed') : t('common.pending')}
-                      </span>
-                    </div>
-                  ))}
-                  {deliveries.length === 0 && (
-                    <p className="text-center text-muted-foreground py-4">{t('warehouse.noDeliveries')}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'inventory' && (
-            <div className="bg-card rounded-3xl shadow-sm p-4"><InventoryTab productsOnly /></div>
-          )}
-
-          {/* Price Control Tab */}
-          {activeTab === 'prices' && (
-            <div className="space-y-3 animate-fade-in">
-              <div className="relative">
-                <Search size={16} className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 text-muted-foreground`} />
-                <input 
-                  value={priceSearch} onChange={(e) => setPriceSearch(e.target.value)} 
-                  placeholder={t('warehouse.searchProduct')} 
-                  className={`w-full px-4 py-3 ${isRtl ? 'pr-10' : 'pl-10'} bg-card text-foreground rounded-2xl border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground shadow-sm`} 
-                />
-              </div>
-              
-              {filteredPriceProducts.map(p => (
-                <div key={p.id} className="bg-card p-4 rounded-2xl shadow-sm">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <p className="font-black text-foreground text-sm">{p.name}</p>
-                      <p className="text-[9px] text-muted-foreground">{p.category}</p>
-                    </div>
-                    <button onClick={() => setEditingProduct(p)}
-                      className="px-3 py-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl text-xs font-bold flex items-center gap-1">
-                      <DollarSign size={12} /> {t('common.edit')}
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 mt-2">
-                    <div className="bg-muted p-2 rounded-xl text-center">
-                      <p className="text-[8px] text-muted-foreground font-bold">{t('warehouse.cost')}</p>
-                      <p className="text-sm font-black text-foreground">{p.costPrice.toLocaleString()}</p>
-                    </div>
-                    <div className="bg-muted p-2 rounded-xl text-center">
-                      <p className="text-[8px] text-muted-foreground font-bold">{t('warehouse.sale')}</p>
-                      <p className="text-sm font-black text-foreground">{p.basePrice.toLocaleString()}</p>
-                    </div>
-                    <div className="bg-muted p-2 rounded-xl text-center">
-                      <p className="text-[8px] text-muted-foreground font-bold">{t('warehouse.consumer')}</p>
-                      <p className="text-sm font-black text-foreground">{(p.consumerPrice || 0).toLocaleString()}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {activeTab === 'deliveries' && (
-            <div className="bg-card rounded-3xl shadow-sm p-4"><DeliveriesTab /></div>
-          )}
-          {activeTab === 'movements' && (
-            <div className="bg-card rounded-3xl shadow-sm p-4">
-              <Suspense fallback={<div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
-                <StockMovementsTab />
-              </Suspense>
-            </div>
-          )}
-          {activeTab === 'purchases' && (
-            <div className="bg-card rounded-3xl shadow-sm p-4"><PurchasesTab /></div>
-          )}
-          {activeTab === 'purchase-returns' && (
-            <div className="bg-card rounded-3xl shadow-sm p-4"><InventoryTab forceSubTab="purchase-returns" /></div>
-          )}
-          </AnimatedTabContent>
+        <div
+          className="px-3 pt-3"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 96px)' }}
+        >
+          <AnimatedTabContent tabKey={activeTab}>{renderPrimaryContent()}</AnimatedTabContent>
         </div>
       </div>
+
+      <AppBottomNav
+        items={navItems}
+        active={activeTab as any}
+        onChange={(id) => setActiveTab(id as WarehousePrimaryTab)}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
+
+      <AppSettingsSheet
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        items={settingsItems}
+        onOpenItem={(id) => { setSettingsOpen(false); setSubPage(id); }}
+        onLogout={handleLogout}
+        loggingOut={loggingOut}
+      />
+
+      <AppSubPageSheet
+        open={subPage !== null}
+        onClose={() => setSubPage(null)}
+        title={subPageTitle}
+      >
+        {renderSubPage()}
+      </AppSubPageSheet>
 
       {/* Price Edit Modal */}
       <FullScreenModal
@@ -328,10 +316,14 @@ const WarehouseKeeperDashboard: React.FC = () => {
         icon={<DollarSign size={24} />}
         headerColor="warning"
         footer={
-          <button type="button" onClick={() => {
-            const form = document.getElementById('price-edit-form') as HTMLFormElement;
-            if (form) form.requestSubmit();
-          }} className="w-full bg-amber-500 text-white font-black py-5 rounded-2xl shadow-lg active:scale-[0.98] transition-all text-lg">
+          <button
+            type="button"
+            onClick={() => {
+              const form = document.getElementById('price-edit-form') as HTMLFormElement;
+              if (form) form.requestSubmit();
+            }}
+            className="w-full bg-amber-500 text-white font-black py-5 rounded-2xl shadow-lg active:scale-[0.98] transition-all text-lg"
+          >
             {t('warehouse.savePrices')}
           </button>
         }
