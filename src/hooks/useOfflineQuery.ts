@@ -13,6 +13,7 @@
 import { useQuery, UseQueryOptions, QueryKey } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { getCachedQueryData, setCachedQueryData } from '@/lib/offlineCache';
+import { queryClient } from '@/lib/queryClient';
 
 interface OfflineQueryOptions<T> extends Omit<UseQueryOptions<T, Error, T, QueryKey>, 'queryKey' | 'queryFn'> {
   queryKey: QueryKey;
@@ -43,13 +44,10 @@ export function useOfflineQuery<T>(options: OfflineQueryOptions<T>) {
     getCachedQueryData<T>(queryKey as readonly unknown[]).then((cached) => {
       if (cached != null) {
         // Pre-populate React Query cache so UI renders instantly
-        import('@/lib/queryClient').then(({ queryClient }) => {
-          // Only seed if there's no data already
-          const existing = queryClient.getQueryData(queryKey);
-          if (existing == null) {
-            queryClient.setQueryData(queryKey, cached);
-          }
-        });
+        const existing = queryClient.getQueryData(queryKey);
+        if (existing == null) {
+          queryClient.setQueryData(queryKey, cached);
+        }
       }
     }).catch(() => {
       // IndexedDB not available
