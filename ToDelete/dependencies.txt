@@ -1,0 +1,13 @@
+# Dependencies safe to remove AFTER ToDelete/ folder is deleted
+# Run: bun remove <package>
+#
+# Verify with grep before removing each one.
+
+embla-carousel-react   # used only by ToDelete/components/ui/carousel.tsx
+react-resizable-panels # used only by ToDelete/components/ui/resizable.tsx
+input-otp              # used only by ToDelete/components/ui/input-otp.tsx
+
+# DO NOT REMOVE these (verified in active use):
+# - recharts  → used in DeveloperHub MonitoringTab + KPIs
+# - vaul      → used by drawer.tsx (active)
+# - cmdk      → used by command.tsx (active)
