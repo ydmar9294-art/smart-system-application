@@ -32,7 +32,12 @@ import OwnerSettingsSheet, { SettingsSubPage } from './OwnerSettingsSheet';
 import OwnerSubPageSheet from './OwnerSubPageSheet';
 import FinanceWithPerformance from './FinanceWithPerformance';
 
-const AgentMapView = React.lazy(() => import('@/features/tracking/components/AgentMapView'));
+const AgentMapView      = React.lazy(() => import('@/features/tracking/components/AgentMapView'));
+const RoutePlanner      = React.lazy(() => import('@/features/tracking/components/RoutePlanner'));
+const RouteHistory      = React.lazy(() => import('@/features/tracking/components/RouteHistory'));
+const RouteKPIs         = React.lazy(() => import('@/features/tracking/components/RouteKPIs'));
+const StockMovementsTab = React.lazy(() => import('./StockMovementsTab'));
+const DeliveriesTab     = React.lazy(() => import('./DeliveriesTab').then(m => ({ default: m.DeliveriesTab })));
 
 const OwnerDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -146,14 +151,19 @@ const OwnerDashboard: React.FC = () => {
 
   const subPageTitle = (() => {
     switch (subPage) {
-      case 'subscription': return t('owner.tabs.subscription');
-      case 'backup':       return t('owner.tabs.backup');
-      case 'currencies':   return 'العملات والصرف';
-      case 'tracking':     return t('tracking.tab');
-      case 'legal':        return t('owner.tabs.legal');
+      case 'subscription':     return t('owner.tabs.subscription');
+      case 'backup':           return t('owner.tabs.backup');
+      case 'currencies':       return 'العملات والصرف';
+      case 'tracking':         return 'تتبع المسارات والخريطة';
+      case 'stock-movements':  return 'حركات المخزون';
+      case 'deliveries':       return 'التوريدات للموزعين';
+      case 'purchase-returns': return 'مرتجع المشتريات';
+      case 'legal':            return t('owner.tabs.legal');
       default: return '';
     }
   })();
+
+  const lazyFallback = <div className="animate-pulse bg-card h-96 rounded-2xl" />;
 
   const renderSubPage = () => {
     switch (subPage) {
@@ -163,10 +173,29 @@ const OwnerDashboard: React.FC = () => {
       case 'legal':        return <><LegalInfoTab /><OrgDeletionRequest /></>;
       case 'tracking':
         return (
-          <React.Suspense fallback={<div className="animate-pulse bg-card h-96 rounded-2xl" />}>
-            <AgentMapView />
+          <React.Suspense fallback={lazyFallback}>
+            <div className="space-y-4">
+              <RouteKPIs />
+              <RoutePlanner />
+              <RouteHistory />
+              <AgentMapView />
+            </div>
           </React.Suspense>
         );
+      case 'stock-movements':
+        return (
+          <React.Suspense fallback={lazyFallback}>
+            <StockMovementsTab />
+          </React.Suspense>
+        );
+      case 'deliveries':
+        return (
+          <React.Suspense fallback={lazyFallback}>
+            <DeliveriesTab />
+          </React.Suspense>
+        );
+      case 'purchase-returns':
+        return <InventoryTab forceSubTab="purchase-returns" />;
       default: return null;
     }
   };

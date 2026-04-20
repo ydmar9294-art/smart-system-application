@@ -126,14 +126,19 @@ Deno.serve(async (req) => {
 
 /**
  * Pre-check: Does this user have an active session on ANOTHER device?
+ * Only considers devices seen in the last 24h as "really active" — older rows
+ * are treated as abandoned (e.g. stale OAuth/test sessions on a fresh account)
+ * and ignored to avoid false "logged in elsewhere" warnings.
  */
 async function handlePreCheck(userId: string, deviceId: string) {
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   const { data: activeDevices } = await serviceClient
     .from('devices')
     .select('device_id, device_name, last_seen, platform')
     .eq('user_id', userId)
     .eq('is_active', true)
     .neq('device_id', deviceId)
+    .gte('last_seen', cutoff)
 
   const hasActiveSession = (activeDevices && activeDevices.length > 0) || false
 
@@ -172,25 +177,32 @@ async function handleRegister(
     .maybeSingle()
   const orgId = profileData?.organization_id || null
 
-  // 1. Find all currently active devices for this user (excluding this device)
-  const { data: activeDevices } = await serviceClient
+  // 1. Find all currently active devices for this user (excluding this device).
+  // Only count devices seen in the last 24h as truly active — older rows are
+  // abandoned (e.g. stale OAuth/test sessions) and we deactivate them silently
+  // without firing DEVICE_REPLACED notifications.
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const { data: trulyActiveDevices } = await serviceClient
     .from('devices')
     .select('id, device_id, device_name, platform')
     .eq('user_id', userId)
     .eq('is_active', true)
     .neq('device_id', deviceId)
+    .gte('last_seen', cutoff)
 
-  const replacedDevices = activeDevices || []
+  const replacedDevices = trulyActiveDevices || []
   const hadOtherDevice = replacedDevices.length > 0
 
-  // 2. Deactivate ALL other devices (triggers Realtime → old device gets notified)
-  if (hadOtherDevice) {
-    await serviceClient
-      .from('devices')
-      .update({ is_active: false })
-      .eq('user_id', userId)
-      .neq('device_id', deviceId)
+  // 2. Always deactivate ALL other devices on this user (including stale ones)
+  //    so we never accumulate dead rows. But only the truly active ones (above)
+  //    trigger user-visible notifications.
+  await serviceClient
+    .from('devices')
+    .update({ is_active: false })
+    .eq('user_id', userId)
+    .neq('device_id', deviceId)
 
+  if (hadOtherDevice) {
     // Log revocation events for each replaced device
     for (const d of replacedDevices) {
       logSecurityEvent(userId, 'session_revoked', d.device_id, d.device_name, d.platform, ipAddress, {
