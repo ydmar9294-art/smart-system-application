@@ -32,7 +32,12 @@ import OwnerSettingsSheet, { SettingsSubPage } from './OwnerSettingsSheet';
 import OwnerSubPageSheet from './OwnerSubPageSheet';
 import FinanceWithPerformance from './FinanceWithPerformance';
 
-const AgentMapView = React.lazy(() => import('@/features/tracking/components/AgentMapView'));
+const AgentMapView      = React.lazy(() => import('@/features/tracking/components/AgentMapView'));
+const RoutePlanner      = React.lazy(() => import('@/features/tracking/components/RoutePlanner'));
+const RouteHistory      = React.lazy(() => import('@/features/tracking/components/RouteHistory'));
+const RouteKPIs         = React.lazy(() => import('@/features/tracking/components/RouteKPIs'));
+const StockMovementsTab = React.lazy(() => import('./StockMovementsTab'));
+const DeliveriesTab     = React.lazy(() => import('./DeliveriesTab').then(m => ({ default: m.DeliveriesTab })));
 
 const OwnerDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
