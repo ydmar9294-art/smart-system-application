@@ -111,7 +111,14 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
 
       // No active session elsewhere — register and complete
       const regResult = await registerDevice();
-      if (regResult.status === 'DEVICE_REPLACED' && regResult.replaced_device_name) {
+      // Only show the "device replaced" banner when a real previous device name
+      // was returned. Empty/undefined replaced_device_name means there was no
+      // truly active prior device (e.g. fresh signup with abandoned stale rows).
+      if (
+        regResult.status === 'DEVICE_REPLACED' &&
+        regResult.replaced_device_name &&
+        String(regResult.replaced_device_name).trim().length > 0
+      ) {
         window.dispatchEvent(new CustomEvent('device-replaced-warning', {
           detail: { replacedDeviceName: regResult.replaced_device_name },
         }));
