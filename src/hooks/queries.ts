@@ -544,7 +544,7 @@ export interface PurchaseReturn {
 }
 
 export function usePurchaseReturnsQuery(orgId?: string | null, role?: UserRole | null, employeeType?: string | null) {
-  const canView = role === UserRole.OWNER || role === UserRole.DEVELOPER || employeeType === 'WAREHOUSE_KEEPER' || employeeType === 'ACCOUNTANT';
+  const canView = role === UserRole.OWNER || role === UserRole.DEVELOPER || employeeType === 'ACCOUNTANT';
   return useOfflineQuery({
     queryKey: queryKeys.purchaseReturns(orgId),
     offlineTtlMs: OFFLINE_TTL.normal,

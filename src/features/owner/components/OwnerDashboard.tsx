@@ -397,7 +397,7 @@ const TeamContent: React.FC<any> = ({
       ) : (
         teamMembers.map((u: any) => {
           const isActive = u.isActive !== false;
-          const canManage = u.employeeType === 'ACCOUNTANT' || u.employeeType === 'WAREHOUSE_KEEPER' || u.employeeType === 'FIELD_AGENT';
+          const canManage = u.employeeType === 'ACCOUNTANT' || u.employeeType === 'FIELD_AGENT';
           return (
             <div key={u.id} className={`p-4 rounded-2xl bg-card shadow-sm ${!isActive ? 'opacity-60' : ''}`}>
               <div className="flex justify-between items-center mb-2">
