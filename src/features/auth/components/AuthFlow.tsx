@@ -552,8 +552,26 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       <div className="auth-edge-bar auth-edge-bar--top" />
       <div className="auth-edge-bar auth-edge-bar--bottom" />
       <div className="bg-slate-900 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] pb-16 px-6 relative overflow-hidden flex flex-col items-center shrink-0">
+        {/* Premium aurora orbs */}
+        <div className="auth-aurora auth-aurora--cyan" aria-hidden="true" />
+        <div className="auth-aurora auth-aurora--violet" aria-hidden="true" />
+        <div className="auth-aurora auth-aurora--amber" aria-hidden="true" />
+
+        {/* Tiny twinkling sparkles */}
+        <div className="auth-spark" style={{ top: '20%', left: '15%', animationDelay: '0s' }} aria-hidden="true" />
+        <div className="auth-spark" style={{ top: '35%', right: '20%', animationDelay: '1.2s' }} aria-hidden="true" />
+        <div className="auth-spark" style={{ top: '70%', left: '25%', animationDelay: '2.4s' }} aria-hidden="true" />
+        <div className="auth-spark" style={{ top: '60%', right: '12%', animationDelay: '3.1s' }} aria-hidden="true" />
+
+        {/* Grain texture overlay */}
+        <div className="auth-grain" aria-hidden="true" />
+
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
-        <div className="mb-5 z-10 animate-float animate-logo-glow"><AppLogo size={80} /></div>
+
+        <div className="mb-5 z-10 animate-float animate-logo-glow relative">
+          <div className="auth-logo-ring" aria-hidden="true" />
+          <AppLogo size={80} />
+        </div>
         <h1 className="text-3xl font-black mb-2 tracking-tight z-10 animate-title-gradient">{t('common.appName')}</h1>
         <p className="text-white/40 text-[11px] font-bold z-10 text-center leading-relaxed max-w-[200px] my-[5px]">{t('common.appSubtitle')}</p>
         <div className="flex items-center justify-center gap-6 mt-6 z-10">
@@ -569,8 +587,10 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
           ))}
         </div>
       </div>
-      <div className="max-w-md w-full mx-auto px-6 -mt-8 z-20 flex-1 flex flex-col pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
-        <div className="glass-surface rounded-[2.5rem] shadow-xl overflow-hidden p-6">{renderContent()}</div>
+      <div className="max-w-md w-full mx-auto px-6 -mt-8 z-20 flex-1 flex flex-col pb-[calc(6rem+env(safe-area-inset-bottom,0px))] relative">
+        {/* Soft mesh glow behind the glass card */}
+        <div className="auth-card-mesh" aria-hidden="true" />
+        <div className="glass-surface rounded-[2.5rem] shadow-xl overflow-hidden p-6 relative z-20">{renderContent()}</div>
       </div>
     </div>);
 };
