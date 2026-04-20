@@ -215,18 +215,6 @@ export const PerformanceTab: React.FC = () => {
         />
       )}
 
-      {/* أداء مديري المبيعات */}
-      {salesManagers.length > 0 && (
-        <PerformanceSection title="مديرو المبيعات" icon={<Target size={16} />} employees={salesManagers} getRankIcon={getRankIcon}
-          criteria={[
-            { label: 'مبيعات الفريق 35%', icon: <DollarSign size={12} className="text-success" /> },
-            { label: 'نسبة التحصيل 35%', icon: <Wallet size={12} className="text-primary" /> },
-            { label: 'تنوع الزبائن 15%', icon: <Users size={12} className="text-blue-500" /> },
-            { label: 'عدد العمليات 15%', icon: <ClipboardCheck size={12} className="text-warning" /> },
-          ]}
-        />
-      )}
-
       {/* المحاسبين */}
       {accountants.length > 0 && (
         <PerformanceSection title="المحاسبون" icon={<Calculator size={16} />} employees={accountants} getRankIcon={getRankIcon}
@@ -234,17 +222,6 @@ export const PerformanceTab: React.FC = () => {
             { label: 'تحصيلات 50%', icon: <Wallet size={12} className="text-success" /> },
             { label: 'عمليات 30%', icon: <ClipboardCheck size={12} className="text-primary" /> },
             { label: 'دقة 20%', icon: <Target size={12} className="text-warning" /> },
-          ]}
-        />
-      )}
-
-      {/* أمناء المستودعات */}
-      {warehouseKeepers.length > 0 && (
-        <PerformanceSection title="أمناء المستودعات" icon={<Warehouse size={16} />} employees={warehouseKeepers} getRankIcon={getRankIcon}
-          criteria={[
-            { label: 'تسليمات 40%', icon: <Truck size={12} className="text-success" /> },
-            { label: 'صحة المخزون 35%', icon: <Package size={12} className="text-primary" /> },
-            { label: 'عمليات 25%', icon: <ClipboardCheck size={12} className="text-warning" /> },
           ]}
         />
       )}
