@@ -70,28 +70,7 @@ export const PerformanceTab: React.FC = () => {
             (collectionsPerEmployee * 0.5) + (empCollections.length * 150 * 0.3) + (accuracyScore * 0.2)
           );
           break;
-        case EmployeeType.SALES_MANAGER:
-          // مدير المبيعات: إجمالي مبيعات الفريق + نسبة التحصيل + تنوع الزبائن
-          const teamDistributors = users.filter(u => u.employeeType === EmployeeType.FIELD_AGENT);
-          const teamSales = monthSales.filter(s => teamDistributors.some(d => d.id === s.createdBy));
-          const teamRevenue = teamSales.reduce((s, v) => s + v.grandTotal, 0);
-          const teamCollections = monthPayments.filter(p => teamDistributors.some(d => d.id === p.collectedBy)).reduce((s, p) => s + p.amount, 0);
-          const collectionRate = teamRevenue > 0 ? (teamCollections / teamRevenue) : 0;
-          const teamCustomers = new Set(teamSales.map(s => s.customer_id)).size;
-          score = Math.round(
-            (teamRevenue * 0.35) + (collectionRate * 5000 * 0.35) + (teamCustomers * 200 * 0.15) + (teamSales.length * 100 * 0.15)
-          );
-          break;
-        case EmployeeType.WAREHOUSE_KEEPER:
-          // أمين المستودع: عمليات التسليم + دقة المخزون + سرعة الاستجابة
-          const warehouseDeliveries = empDeliveries.length;
-          const lowStockItems = products.filter(p => p.stock <= p.minStock && !p.isDeleted).length;
-          const totalProducts = products.filter(p => !p.isDeleted).length;
-          const stockHealthScore = totalProducts > 0 ? ((totalProducts - lowStockItems) / totalProducts) * 1000 : 0;
-          score = Math.round(
-            (warehouseDeliveries * 300 * 0.4) + (stockHealthScore * 0.35) + (empSales.length * 100 * 0.25)
-          );
-          break;
+        // SALES_MANAGER and WAREHOUSE_KEEPER roles removed — no scoring case needed
         default:
           score = Math.round((revenuePerEmployee * 0.4) + (collectionsPerEmployee * 0.4) + (empSales.length * 100 * 0.2));
       }
@@ -126,9 +105,7 @@ export const PerformanceTab: React.FC = () => {
   }, [sales, payments, products, distributorInventory]);
 
   const distributors = performance.filter(e => e.type === EmployeeType.FIELD_AGENT);
-  const salesManagers = performance.filter(e => e.type === EmployeeType.SALES_MANAGER);
   const accountants = performance.filter(e => e.type === EmployeeType.ACCOUNTANT);
-  const warehouseKeepers = performance.filter(e => e.type === EmployeeType.WAREHOUSE_KEEPER);
 
   const topPerformer = performance[0];
 

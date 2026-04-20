@@ -446,8 +446,7 @@ export function usePendingEmployeesQuery(
   role?: UserRole | null,
   employeeType?: EmployeeType
 ) {
-  const canView = role === UserRole.OWNER || 
-    (role === UserRole.EMPLOYEE && employeeType === EmployeeType.SALES_MANAGER);
+  const canView = role === UserRole.OWNER;
 
   return useOfflineQuery({
     queryKey: queryKeys.pendingEmployees(orgId),

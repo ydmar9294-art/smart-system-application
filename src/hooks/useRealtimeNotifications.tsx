@@ -62,12 +62,12 @@ export const useRealtimeNotifications = () => {
     if (!user || !role) return;
 
     const timer = setTimeout(() => {
-      // Owner & Warehouse Keeper: stock alerts
-      if (role === UserRole.OWNER || (role === UserRole.EMPLOYEE && user.employeeType === EmployeeType.WAREHOUSE_KEEPER)) {
+      // Owner only: stock alerts
+      if (role === UserRole.OWNER) {
         checkLowStock();
       }
-      // Owner & Accountant & Sales Manager: due invoice alerts
-      if (role === UserRole.OWNER || (role === UserRole.EMPLOYEE && (user.employeeType === EmployeeType.ACCOUNTANT || user.employeeType === EmployeeType.SALES_MANAGER))) {
+      // Owner & Accountant: due invoice alerts
+      if (role === UserRole.OWNER || (role === UserRole.EMPLOYEE && user.employeeType === EmployeeType.ACCOUNTANT)) {
         checkDueInvoices();
       }
     }, 3000);
@@ -113,8 +113,8 @@ export const useRealtimeNotifications = () => {
 
     const channels: ReturnType<typeof supabase.channel>[] = [];
 
-    // Owner & Warehouse Keeper: product stock changes
-    if (role === UserRole.OWNER || (role === UserRole.EMPLOYEE && user.employeeType === EmployeeType.WAREHOUSE_KEEPER)) {
+    // Owner only: product stock changes
+    if (role === UserRole.OWNER) {
       const productChannel = supabase
         .channel(`stock-notifications-${user.id}`)
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'products' }, (payload) => {
@@ -133,8 +133,8 @@ export const useRealtimeNotifications = () => {
       channels.push(productChannel);
     }
 
-    // Owner & Sales Manager: new sales notifications
-    if (role === UserRole.OWNER || (role === UserRole.EMPLOYEE && user.employeeType === EmployeeType.SALES_MANAGER)) {
+    // Owner only: new sales notifications
+    if (role === UserRole.OWNER) {
       const salesChannel = supabase
         .channel(`sales-notifications-${user.id}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sales' }, (payload) => {
@@ -189,13 +189,12 @@ export const useRealtimeNotifications = () => {
       channels.push(deliveryChannel);
     }
 
-    // Owner & Warehouse Keeper: delivery notifications (warehouse → distributor)
-    if (role === UserRole.OWNER || (role === UserRole.EMPLOYEE && user.employeeType === EmployeeType.WAREHOUSE_KEEPER)) {
+    // Owner: delivery notifications (warehouse → distributor)
+    if (role === UserRole.OWNER) {
       const deliveryOutChannel = supabase
         .channel(`delivery-out-notifications-${user.id}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'deliveries' }, (payload) => {
           const delivery = payload.new as any;
-          // Don't notify the person who created it
           if (delivery.created_by === user.id) return;
 
           const alertKey = `${user.id}_delivery_out_${delivery.id}`;
@@ -213,15 +212,13 @@ export const useRealtimeNotifications = () => {
       channels.push(deliveryOutChannel);
     }
 
-    // Owner & Warehouse Keeper: transfer notifications (distributor → warehouse)
-    if (role === UserRole.OWNER || (role === UserRole.EMPLOYEE && user.employeeType === EmployeeType.WAREHOUSE_KEEPER)) {
+    // Owner: transfer notifications (distributor → warehouse)
+    if (role === UserRole.OWNER) {
       const transferInChannel = supabase
         .channel(`transfer-in-notifications-${user.id}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'stock_movements' }, (payload) => {
           const movement = payload.new as any;
-          // Only care about distributor→warehouse transfers
           if (movement.source_type !== 'DISTRIBUTOR' || movement.destination_type !== 'WAREHOUSE') return;
-          // Don't notify the person who created it
           if (movement.created_by === user.id) return;
 
           const alertKey = `${user.id}_transfer_in_${movement.id}`;
