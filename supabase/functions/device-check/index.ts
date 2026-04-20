@@ -126,14 +126,19 @@ Deno.serve(async (req) => {
 
 /**
  * Pre-check: Does this user have an active session on ANOTHER device?
+ * Only considers devices seen in the last 24h as "really active" — older rows
+ * are treated as abandoned (e.g. stale OAuth/test sessions on a fresh account)
+ * and ignored to avoid false "logged in elsewhere" warnings.
  */
 async function handlePreCheck(userId: string, deviceId: string) {
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   const { data: activeDevices } = await serviceClient
     .from('devices')
     .select('device_id, device_name, last_seen, platform')
     .eq('user_id', userId)
     .eq('is_active', true)
     .neq('device_id', deviceId)
+    .gte('last_seen', cutoff)
 
   const hasActiveSession = (activeDevices && activeDevices.length > 0) || false
 
