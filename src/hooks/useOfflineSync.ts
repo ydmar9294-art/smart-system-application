@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { getActionStats } from '@/features/distributor/services/distributorOfflineService';
 
 export function useOfflineSync(userRole?: string, employeeType?: string) {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -22,9 +23,6 @@ export function useOfflineSync(userRole?: string, employeeType?: string) {
       return;
     }
     try {
-      const { getActionStats } = await import(
-        '@/features/distributor/services/distributorOfflineService'
-      );
       const stats = await getActionStats();
       const count = stats.pending + stats.failed;
       setPendingCount(count);

@@ -10,6 +10,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { logger } from '@/lib/logger';
+import { enqueueAction } from '@/features/distributor/services/distributorOfflineService';
 
 interface GpsTrackerOptions {
   /** Tracking interval in milliseconds (default: 3 min) */
@@ -79,9 +80,6 @@ export function useGpsTracker(options: GpsTrackerOptions = {}) {
 
       // Enqueue GPS log to offline queue
       try {
-        const { enqueueAction } = await import(
-          '@/features/distributor/services/distributorOfflineService'
-        );
         await enqueueAction('GPS_LOG', {
           latitude: position.latitude,
           longitude: position.longitude,

@@ -86,7 +86,7 @@ export {
 } from './offlineIdMap';
 
 // ── Clear (logout) ──────────────────────────────────────────────
-import { DB_NAME, resetDbConnection } from './offlineDb';
+import { DB_NAME, resetDbConnection, openDB } from './offlineDb';
 import { stopDistributorSync } from './offlineSync';
 import { clearIdMaps } from './offlineIdMap';
 import { logger } from '@/lib/logger';
@@ -101,22 +101,20 @@ export async function clearDistributorOfflineData(): Promise<void> {
       req.onerror = () => reject(req.error);
       req.onblocked = () => {
         logger.warn('[DistributorOffline] deleteDatabase blocked — clearing stores manually', 'DistributorOffline');
-        import('./offlineDb').then(({ openDB }) => {
-          openDB().then(db => {
-            const storeNames = Array.from(db.objectStoreNames);
-            if (storeNames.length === 0) { resolve(); return; }
-            const tx = db.transaction(storeNames, 'readwrite');
-            for (const name of storeNames) {
-              tx.objectStore(name).clear();
-            }
-            tx.oncomplete = () => {
-              db.close();
-              resetDbConnection();
-              resolve();
-            };
-            tx.onerror = () => reject(tx.error);
-          }).catch(() => resolve());
-        });
+        openDB().then(db => {
+          const storeNames = Array.from(db.objectStoreNames);
+          if (storeNames.length === 0) { resolve(); return; }
+          const tx = db.transaction(storeNames, 'readwrite');
+          for (const name of storeNames) {
+            tx.objectStore(name).clear();
+          }
+          tx.oncomplete = () => {
+            db.close();
+            resetDbConnection();
+            resolve();
+          };
+          tx.onerror = () => reject(tx.error);
+        }).catch(() => resolve());
       };
     });
     clearIdMaps();
