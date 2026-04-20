@@ -1592,3 +1592,151 @@ html.lang-transition * {
   opacity: 1 !important;
   cursor: pointer !important;
 }
+
+/* ==========================================
+   APP HEADER PRO — Apple Liquid Glass
+   Sticky · shrink-on-scroll · primary glow
+========================================== */
+.app-header-pro {
+  background: color-mix(in oklab, var(--card-glass-bg) 78%, transparent);
+  backdrop-filter: blur(24px) saturate(185%);
+  -webkit-backdrop-filter: blur(24px) saturate(185%);
+  border-bottom: 1px solid transparent;
+  box-shadow:
+    0 1px 0 0 hsl(var(--foreground) / 0.015),
+    0 4px 18px -16px hsl(var(--foreground) / 0.12);
+  transition:
+    background 320ms ease,
+    backdrop-filter 320ms ease,
+    box-shadow 320ms ease,
+    border-color 320ms ease;
+  contain: layout style;
+}
+
+.app-header-pro[data-shrunk='true'] {
+  background: var(--card-glass-bg);
+  backdrop-filter: blur(36px) saturate(210%);
+  -webkit-backdrop-filter: blur(36px) saturate(210%);
+  border-bottom-color: var(--card-glass-border);
+  box-shadow:
+    0 1px 0 0 hsl(var(--foreground) / 0.025),
+    0 10px 28px -18px hsl(var(--primary) / 0.28),
+    0 6px 20px -14px hsl(var(--foreground) / 0.18);
+}
+
+.app-header-pro__row {
+  height: 56px;
+  transition: height 280ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.app-header-pro[data-shrunk='true'] .app-header-pro__row {
+  height: 46px;
+}
+
+.app-header-pro__glow {
+  position: absolute;
+  inset: -40% -10% auto -10%;
+  height: 180%;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 80% at 50% 0%, hsl(var(--primary) / 0.10), transparent 65%),
+    radial-gradient(40% 60% at 15% 0%, hsl(var(--primary) / 0.08), transparent 70%),
+    radial-gradient(40% 60% at 85% 0%, hsl(var(--primary) / 0.08), transparent 70%);
+  opacity: 0.55;
+  transition: opacity 320ms ease;
+  filter: blur(8px);
+}
+.app-header-pro[data-shrunk='true'] .app-header-pro__glow {
+  opacity: 0.95;
+}
+
+/* Centered identity pill — premium frosted */
+.app-header-pro__pill {
+  padding: 5px 12px;
+  background:
+    linear-gradient(180deg,
+      hsl(var(--primary) / 0.10),
+      hsl(var(--primary) / 0.04));
+  border: 1px solid hsl(var(--primary) / 0.18);
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.35),
+    0 4px 14px -8px hsl(var(--primary) / 0.30);
+  transition:
+    transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
+    padding 280ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 280ms ease;
+  transform-origin: center;
+}
+.app-header-pro[data-shrunk='true'] .app-header-pro__pill {
+  padding: 3px 10px;
+  transform: scale(0.94);
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.40),
+    0 6px 18px -8px hsl(var(--primary) / 0.40);
+}
+
+.app-header-pro__icon {
+  width: 26px;
+  height: 26px;
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.72));
+  box-shadow:
+    0 2px 10px -2px hsl(var(--primary) / 0.55),
+    inset 0 1px 0 hsl(0 0% 100% / 0.30);
+  transition: width 280ms ease, height 280ms ease;
+}
+.app-header-pro__icon > svg {
+  width: 14px;
+  height: 14px;
+  transition: width 280ms ease, height 280ms ease;
+}
+.app-header-pro[data-shrunk='true'] .app-header-pro__icon {
+  width: 22px;
+  height: 22px;
+}
+.app-header-pro[data-shrunk='true'] .app-header-pro__icon > svg {
+  width: 12px;
+  height: 12px;
+}
+
+.app-header-pro__title {
+  font-size: 12.5px;
+  transition: font-size 280ms ease;
+}
+.app-header-pro__subtitle {
+  font-size: 9.5px;
+  max-height: 14px;
+  opacity: 1;
+  overflow: hidden;
+  transition: max-height 280ms ease, opacity 240ms ease, font-size 280ms ease;
+}
+.app-header-pro[data-shrunk='true'] .app-header-pro__title {
+  font-size: 12px;
+}
+.app-header-pro[data-shrunk='true'] .app-header-pro__subtitle {
+  max-height: 12px;
+  opacity: 0.85;
+  font-size: 9px;
+}
+
+/* Respect reduced-motion users */
+@media (prefers-reduced-motion: reduce) {
+  .app-header-pro,
+  .app-header-pro__row,
+  .app-header-pro__pill,
+  .app-header-pro__icon,
+  .app-header-pro__icon > svg,
+  .app-header-pro__title,
+  .app-header-pro__subtitle,
+  .app-header-pro__glow {
+    transition: none !important;
+  }
+}
+
+/* ==========================================
+   AUTH HERO — clamp decorations to viewport
+   Prevents Aurora orbs from causing scroll-x.
+========================================== */
+.auth-aurora {
+  max-width: 80vw;
+  max-height: 80vw;
+}
+
