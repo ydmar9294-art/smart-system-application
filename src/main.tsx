@@ -9,6 +9,7 @@ import { AppProvider } from "@/store/AppContext";
 import { GuestProvider } from "@/store/GuestContext";
 import { queryClient } from "@/lib/queryClient";
 import { Capacitor } from "@capacitor/core";
+import { resolveNativeDeviceName } from "@/lib/deviceId";
 
 // Defer non-critical initialization to after first paint
 const deferInit = (fn: () => void) => {
@@ -27,7 +28,7 @@ deferInit(() => {
   import('@/lib/capacitorOAuth').then(m => m.initCapacitorOAuth());
 });
 deferInit(() => {
-  import('@/lib/deviceId').then(m => m.resolveNativeDeviceName());
+  resolveNativeDeviceName();
 });
 
 // Hide splash screen ASAP — don't wait for full page load
