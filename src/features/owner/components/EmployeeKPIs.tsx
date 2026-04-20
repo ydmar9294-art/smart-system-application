@@ -161,10 +161,7 @@ const EmployeeCard: React.FC<{ employee: EmployeePerformance; rank: number }> = 
     return <span className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-black">{rank}</span>;
   };
 
-  const typeLabel = employee.type === EmployeeType.FIELD_AGENT ? 'موزع' 
-    : employee.type === EmployeeType.SALES_MANAGER ? 'مدير مبيعات'
-    : employee.type === EmployeeType.WAREHOUSE_KEEPER ? 'أمين مستودع'
-    : 'محاسب';
+  const typeLabel = employee.type === EmployeeType.FIELD_AGENT ? 'موزع' : 'محاسب';
 
   return (
     <div className={`p-3 rounded-xl border ${rank <= 3 ? 'bg-primary/5 border-primary/20' : 'bg-muted border-transparent'}`}>

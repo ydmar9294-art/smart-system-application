@@ -74,17 +74,17 @@ const ViewManager: React.FC = () => {
         switch (user?.employeeType) {
           case EmployeeType.ACCOUNTANT:
             return <AccountantDashboard />;
-          case EmployeeType.WAREHOUSE_KEEPER:
-            // WAREHOUSE_KEEPER UI was removed; operations moved to Owner settings.
-            // Legacy accounts fall back to AccountantDashboard (read-only safe view).
-            return <AccountantDashboard />;
-          case EmployeeType.SALES_MANAGER:
-            // Legacy SALES_MANAGER accounts → routed to AccountantDashboard for safety
-            // (role removed; new accounts cannot be created with this type)
-            return <AccountantDashboard />;
           case EmployeeType.FIELD_AGENT:
-          default:
             return <DistributorDashboard />;
+          default:
+            return (
+              <div className="flex items-center justify-center h-64 p-6">
+                <p className="text-muted-foreground text-center">
+                  هذا النوع من الحسابات تم إيقافه نهائياً.<br />
+                  يرجى التواصل مع المالك.
+                </p>
+              </div>
+            );
         }
       default:
         return (

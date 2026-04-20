@@ -67,21 +67,6 @@ export function getRoleQueryScope(
             purchases: true, purchaseReturns: true,
           };
 
-        case EmployeeType.SALES_MANAGER:
-          return {
-            ...none,
-            products: true, customers: true, sales: true, payments: true,
-            deliveries: true, pendingEmployees: true, distributorInventory: true,
-            users: true,
-          };
-
-        case EmployeeType.WAREHOUSE_KEEPER:
-          return {
-            ...none,
-            products: true, deliveries: true, distributorInventory: true,
-            purchases: true, purchaseReturns: true, users: true,
-          };
-
         case EmployeeType.FIELD_AGENT:
           // Distributors use their own offline-first system
           // They only need products, customers, sales, payments from server for initial seed

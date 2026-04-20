@@ -10,9 +10,7 @@ export enum UserRole {
 
 export enum EmployeeType {
   FIELD_AGENT = 'FIELD_AGENT',
-  ACCOUNTANT = 'ACCOUNTANT',
-  SALES_MANAGER = 'SALES_MANAGER',
-  WAREHOUSE_KEEPER = 'WAREHOUSE_KEEPER'
+  ACCOUNTANT = 'ACCOUNTANT'
 }
 
 export enum LicenseStatus {
