@@ -239,6 +239,124 @@ html.lang-transition * {
   background: linear-gradient(to top, hsl(var(--background) / 0.7), transparent);
 }
 
+/* ==========================================
+   AUTH PREMIUM BACKGROUND DECORATIONS
+   Liquid-Glass Pro touches — non-interactive
+========================================== */
+
+/* Aurora orbs floating inside the dark hero */
+.auth-aurora {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(60px);
+  opacity: 0.55;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.auth-aurora--cyan {
+  width: 280px;
+  height: 280px;
+  top: -60px;
+  right: -80px;
+  background: radial-gradient(circle, hsla(190, 95%, 60%, 0.7), hsla(217, 91%, 55%, 0.0) 70%);
+  animation: aurora-drift-1 14s ease-in-out infinite;
+}
+.auth-aurora--violet {
+  width: 240px;
+  height: 240px;
+  bottom: -40px;
+  left: -60px;
+  background: radial-gradient(circle, hsla(265, 85%, 65%, 0.65), hsla(220, 70%, 30%, 0.0) 70%);
+  animation: aurora-drift-2 18s ease-in-out infinite;
+}
+.auth-aurora--amber {
+  width: 180px;
+  height: 180px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, hsla(35, 95%, 60%, 0.35), transparent 70%);
+  animation: aurora-pulse 9s ease-in-out infinite;
+  opacity: 0.4;
+}
+
+@keyframes aurora-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-30px, 20px) scale(1.1); }
+}
+@keyframes aurora-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, -25px) scale(1.08); }
+}
+@keyframes aurora-pulse {
+  0%, 100% { opacity: 0.35; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 0.55; transform: translate(-50%, -50%) scale(1.15); }
+}
+
+/* Conic ring around the logo */
+.auth-logo-ring {
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    hsla(190, 95%, 60%, 0.0) 0%,
+    hsla(190, 95%, 60%, 0.55) 25%,
+    hsla(265, 85%, 65%, 0.45) 50%,
+    hsla(35, 95%, 60%, 0.4) 75%,
+    hsla(190, 95%, 60%, 0.0) 100%
+  );
+  filter: blur(8px);
+  animation: ring-spin 12s linear infinite;
+  opacity: 0.7;
+  pointer-events: none;
+}
+@keyframes ring-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Subtle grain noise overlay (premium feel) */
+.auth-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* Soft mesh gradient that sits behind the glass card to make it pop */
+.auth-card-mesh {
+  position: absolute;
+  inset: -40px -20px -20px -20px;
+  border-radius: 3rem;
+  pointer-events: none;
+  z-index: 15;
+  background:
+    radial-gradient(60% 50% at 20% 30%, hsla(190, 95%, 70%, 0.18), transparent 70%),
+    radial-gradient(50% 50% at 80% 60%, hsla(265, 85%, 70%, 0.16), transparent 70%),
+    radial-gradient(40% 40% at 50% 100%, hsla(217, 91%, 70%, 0.14), transparent 70%);
+  filter: blur(20px);
+}
+
+/* Tiny floating sparkles inside hero */
+.auth-spark {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: white;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 0 8px hsla(190, 95%, 70%, 0.8);
+  animation: spark-twinkle 4s ease-in-out infinite;
+}
+
+@keyframes spark-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.5); }
+  50% { opacity: 0.9; transform: scale(1); }
+}
+
 /* Android gesture navigation bar overlap fix */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .safe-area-bottom-nav {
