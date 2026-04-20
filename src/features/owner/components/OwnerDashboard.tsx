@@ -124,7 +124,6 @@ const OwnerDashboard: React.FC = () => {
     switch (type) {
       case EmployeeType.ACCOUNTANT: return t('owner.accountantType');
       case EmployeeType.FIELD_AGENT: return t('owner.fieldAgentType');
-      case EmployeeType.WAREHOUSE_KEEPER: return t('owner.warehouseKeeperType');
       default: return type;
     }
   };
@@ -287,7 +286,6 @@ const OwnerDashboard: React.FC = () => {
                 <select name="type" defaultValue={EmployeeType.ACCOUNTANT} className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-primary">
                   <option value={EmployeeType.ACCOUNTANT}>{t('owner.accountantType')}</option>
                   <option value={EmployeeType.FIELD_AGENT}>{t('owner.fieldAgentType')}</option>
-                  <option value={EmployeeType.WAREHOUSE_KEEPER}>{t('owner.warehouseKeeperType')}</option>
                 </select>
                 <button type="submit" className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold">{t('owner.generateCode')}</button>
               </form>
@@ -399,7 +397,7 @@ const TeamContent: React.FC<any> = ({
       ) : (
         teamMembers.map((u: any) => {
           const isActive = u.isActive !== false;
-          const canManage = u.employeeType === 'ACCOUNTANT' || u.employeeType === 'WAREHOUSE_KEEPER' || u.employeeType === 'FIELD_AGENT';
+          const canManage = u.employeeType === 'ACCOUNTANT' || u.employeeType === 'FIELD_AGENT';
           return (
             <div key={u.id} className={`p-4 rounded-2xl bg-card shadow-sm ${!isActive ? 'opacity-60' : ''}`}>
               <div className="flex justify-between items-center mb-2">

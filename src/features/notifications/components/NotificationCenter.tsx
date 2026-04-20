@@ -108,17 +108,13 @@ export const NotificationCenter: React.FC = () => {
   });
 
   // Role-based system alerts isolation:
-  // - Stock alerts: Owner + Warehouse Keeper only
-  // - Invoice due alerts: Owner + Accountant + Sales Manager only
+  // - Stock alerts: Owner only
+  // - Invoice due alerts: Owner + Accountant only
   // - Distributors (FIELD_AGENT): no system alerts
-  const canSeeStockAlerts = role === UserRole.OWNER ||
-    (role === UserRole.EMPLOYEE && user?.employeeType === EmployeeType.WAREHOUSE_KEEPER);
+  const canSeeStockAlerts = role === UserRole.OWNER;
 
   const canSeeInvoiceAlerts = role === UserRole.OWNER ||
-    (role === UserRole.EMPLOYEE && (
-      user?.employeeType === EmployeeType.ACCOUNTANT ||
-      user?.employeeType === EmployeeType.SALES_MANAGER
-    ));
+    (role === UserRole.EMPLOYEE && user?.employeeType === EmployeeType.ACCOUNTANT);
 
   // System alerts (memoized to reduce recalculation)
   const lowStockProducts = React.useMemo(

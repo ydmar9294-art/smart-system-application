@@ -39,8 +39,6 @@ const GuestDashboardShell: React.FC = () => {
     if (guestRole.role === UserRole.OWNER) return OwnerDashboard;
     switch (guestRole.employeeType) {
       case EmployeeType.ACCOUNTANT: return AccountantDashboard;
-      case EmployeeType.SALES_MANAGER: return AccountantDashboard; // legacy fallback
-      case EmployeeType.WAREHOUSE_KEEPER: return AccountantDashboard; // UI removed — fallback
       case EmployeeType.FIELD_AGENT:
       default: return DistributorDashboard;
     }

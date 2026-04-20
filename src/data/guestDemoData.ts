@@ -42,14 +42,8 @@ export const DEMO_USERS: Record<string, User> = {
     role: UserRole.EMPLOYEE,
     employeeType: EmployeeType.ACCOUNTANT,
   },
-  warehouseKeeper: {
-    id: 'demo-user-wh',
-    name: 'عمر سعيد',
-    email: 'omar@alnour.com',
-    phone: '0945678901',
-    role: UserRole.EMPLOYEE,
-    employeeType: EmployeeType.WAREHOUSE_KEEPER,
-  },
+  // warehouseKeeper role removed
+
   fieldAgent: {
     id: 'demo-user-fa',
     name: 'محمد ياسر',
@@ -180,7 +174,7 @@ export const DEMO_DELIVERIES: Delivery[] = [
 export const DEMO_PENDING_EMPLOYEES: PendingEmployee[] = [
   { id: id(601), name: 'سامر حسن', phone: '0912345000', role: UserRole.EMPLOYEE, employee_type: EmployeeType.FIELD_AGENT, activation_code: 'DEMO-1234', is_used: false, created_at: daysAgo(2) },
   { id: id(602), name: 'ليلى أحمد', phone: '0923456000', role: UserRole.EMPLOYEE, employee_type: EmployeeType.ACCOUNTANT, activation_code: 'DEMO-5678', is_used: true, created_at: daysAgo(10), activated_at: new Date(daysAgo(9)).toISOString(), activated_by: 'demo-user-owner' },
-  { id: id(603), name: 'علي كمال', phone: '0934567000', role: UserRole.EMPLOYEE, employee_type: EmployeeType.WAREHOUSE_KEEPER, activation_code: 'DEMO-9012', is_used: false, created_at: daysAgo(1) },
+  { id: id(603), name: 'علي كمال', phone: '0934567000', role: UserRole.EMPLOYEE, employee_type: EmployeeType.ACCOUNTANT, activation_code: 'DEMO-9012', is_used: false, created_at: daysAgo(1) },
   { id: id(604), name: 'نور الدين', phone: '0945678000', role: UserRole.EMPLOYEE, employee_type: EmployeeType.FIELD_AGENT, activation_code: 'DEMO-3456', is_used: true, created_at: daysAgo(20), activated_at: new Date(daysAgo(18)).toISOString(), activated_by: 'demo-user-sm' },
 ];
 

@@ -446,8 +446,7 @@ export function usePendingEmployeesQuery(
   role?: UserRole | null,
   employeeType?: EmployeeType
 ) {
-  const canView = role === UserRole.OWNER || 
-    (role === UserRole.EMPLOYEE && employeeType === EmployeeType.SALES_MANAGER);
+  const canView = role === UserRole.OWNER;
 
   return useOfflineQuery({
     queryKey: queryKeys.pendingEmployees(orgId),
@@ -545,7 +544,7 @@ export interface PurchaseReturn {
 }
 
 export function usePurchaseReturnsQuery(orgId?: string | null, role?: UserRole | null, employeeType?: string | null) {
-  const canView = role === UserRole.OWNER || role === UserRole.DEVELOPER || employeeType === 'WAREHOUSE_KEEPER' || employeeType === 'ACCOUNTANT';
+  const canView = role === UserRole.OWNER || role === UserRole.DEVELOPER || employeeType === 'ACCOUNTANT';
   return useOfflineQuery({
     queryKey: queryKeys.purchaseReturns(orgId),
     offlineTtlMs: OFFLINE_TTL.normal,

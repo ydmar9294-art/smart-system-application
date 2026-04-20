@@ -20,11 +20,10 @@ interface GuestContextType {
 
 const GuestContext = createContext<GuestContextType | null>(null);
 
-// SALES_MANAGER role removed from guest preview (role no longer offered to new accounts)
+// Only 3 active roles: Owner, Accountant, Field Agent
 export const GUEST_ROLES: GuestRole[] = [
   { role: UserRole.OWNER, label: 'المالك', key: 'owner' },
   { role: UserRole.EMPLOYEE, employeeType: EmployeeType.ACCOUNTANT, label: 'المحاسب', key: 'accountant' },
-  { role: UserRole.EMPLOYEE, employeeType: EmployeeType.WAREHOUSE_KEEPER, label: 'أمين المستودع', key: 'warehouseKeeper' },
   { role: UserRole.EMPLOYEE, employeeType: EmployeeType.FIELD_AGENT, label: 'الموزع الميداني', key: 'fieldAgent' },
 ];
 

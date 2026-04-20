@@ -70,28 +70,7 @@ export const PerformanceTab: React.FC = () => {
             (collectionsPerEmployee * 0.5) + (empCollections.length * 150 * 0.3) + (accuracyScore * 0.2)
           );
           break;
-        case EmployeeType.SALES_MANAGER:
-          // مدير المبيعات: إجمالي مبيعات الفريق + نسبة التحصيل + تنوع الزبائن
-          const teamDistributors = users.filter(u => u.employeeType === EmployeeType.FIELD_AGENT);
-          const teamSales = monthSales.filter(s => teamDistributors.some(d => d.id === s.createdBy));
-          const teamRevenue = teamSales.reduce((s, v) => s + v.grandTotal, 0);
-          const teamCollections = monthPayments.filter(p => teamDistributors.some(d => d.id === p.collectedBy)).reduce((s, p) => s + p.amount, 0);
-          const collectionRate = teamRevenue > 0 ? (teamCollections / teamRevenue) : 0;
-          const teamCustomers = new Set(teamSales.map(s => s.customer_id)).size;
-          score = Math.round(
-            (teamRevenue * 0.35) + (collectionRate * 5000 * 0.35) + (teamCustomers * 200 * 0.15) + (teamSales.length * 100 * 0.15)
-          );
-          break;
-        case EmployeeType.WAREHOUSE_KEEPER:
-          // أمين المستودع: عمليات التسليم + دقة المخزون + سرعة الاستجابة
-          const warehouseDeliveries = empDeliveries.length;
-          const lowStockItems = products.filter(p => p.stock <= p.minStock && !p.isDeleted).length;
-          const totalProducts = products.filter(p => !p.isDeleted).length;
-          const stockHealthScore = totalProducts > 0 ? ((totalProducts - lowStockItems) / totalProducts) * 1000 : 0;
-          score = Math.round(
-            (warehouseDeliveries * 300 * 0.4) + (stockHealthScore * 0.35) + (empSales.length * 100 * 0.25)
-          );
-          break;
+        // SALES_MANAGER and WAREHOUSE_KEEPER roles removed — no scoring case needed
         default:
           score = Math.round((revenuePerEmployee * 0.4) + (collectionsPerEmployee * 0.4) + (empSales.length * 100 * 0.2));
       }
@@ -126,9 +105,7 @@ export const PerformanceTab: React.FC = () => {
   }, [sales, payments, products, distributorInventory]);
 
   const distributors = performance.filter(e => e.type === EmployeeType.FIELD_AGENT);
-  const salesManagers = performance.filter(e => e.type === EmployeeType.SALES_MANAGER);
   const accountants = performance.filter(e => e.type === EmployeeType.ACCOUNTANT);
-  const warehouseKeepers = performance.filter(e => e.type === EmployeeType.WAREHOUSE_KEEPER);
 
   const topPerformer = performance[0];
 
@@ -238,18 +215,6 @@ export const PerformanceTab: React.FC = () => {
         />
       )}
 
-      {/* أداء مديري المبيعات */}
-      {salesManagers.length > 0 && (
-        <PerformanceSection title="مديرو المبيعات" icon={<Target size={16} />} employees={salesManagers} getRankIcon={getRankIcon}
-          criteria={[
-            { label: 'مبيعات الفريق 35%', icon: <DollarSign size={12} className="text-success" /> },
-            { label: 'نسبة التحصيل 35%', icon: <Wallet size={12} className="text-primary" /> },
-            { label: 'تنوع الزبائن 15%', icon: <Users size={12} className="text-blue-500" /> },
-            { label: 'عدد العمليات 15%', icon: <ClipboardCheck size={12} className="text-warning" /> },
-          ]}
-        />
-      )}
-
       {/* المحاسبين */}
       {accountants.length > 0 && (
         <PerformanceSection title="المحاسبون" icon={<Calculator size={16} />} employees={accountants} getRankIcon={getRankIcon}
@@ -257,17 +222,6 @@ export const PerformanceTab: React.FC = () => {
             { label: 'تحصيلات 50%', icon: <Wallet size={12} className="text-success" /> },
             { label: 'عمليات 30%', icon: <ClipboardCheck size={12} className="text-primary" /> },
             { label: 'دقة 20%', icon: <Target size={12} className="text-warning" /> },
-          ]}
-        />
-      )}
-
-      {/* أمناء المستودعات */}
-      {warehouseKeepers.length > 0 && (
-        <PerformanceSection title="أمناء المستودعات" icon={<Warehouse size={16} />} employees={warehouseKeepers} getRankIcon={getRankIcon}
-          criteria={[
-            { label: 'تسليمات 40%', icon: <Truck size={12} className="text-success" /> },
-            { label: 'صحة المخزون 35%', icon: <Package size={12} className="text-primary" /> },
-            { label: 'عمليات 25%', icon: <ClipboardCheck size={12} className="text-warning" /> },
           ]}
         />
       )}
