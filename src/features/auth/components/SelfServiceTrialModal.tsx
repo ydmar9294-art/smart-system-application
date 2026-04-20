@@ -1,18 +1,20 @@
 /**
  * SelfServiceTrialModal — نافذة Native لإنشاء حساب تجريبي ذاتي (15 يوم).
- * تُجمع: الاسم الكامل، اسم الشركة، عدد الموزعين، رقم الهاتف، رقم الواتساب.
+ * تُجمع: الاسم الكامل، اسم الشركة، عدد الموزعين، رقم الهاتف، رقم الواتساب،
+ * بالإضافة إلى العملة الأساسية للمنشأة + عملة ثانوية اختيارية وسعر صرفها.
  * تستدعي RPC: create_self_service_trial، ثم تُكمل تسجيل الدخول تلقائياً.
  */
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Sparkles, Building2, User, Users, Phone, MessageCircle,
-  Loader2, CheckCircle2, AlertCircle, ArrowRight,
+  Loader2, CheckCircle2, AlertCircle, ArrowRight, Coins, ArrowRightLeft,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { sanitizeText, sanitizePhone } from '@/lib/validation';
 import { clearAuthCache } from '@/lib/authCache';
 import FullScreenModal from '@/components/ui/FullScreenModal';
+import { COMMON_CURRENCIES } from '@/constants/currencies';
 
 interface SelfServiceTrialModalProps {
   isOpen: boolean;
@@ -28,11 +30,18 @@ interface FormState {
   phone: string;
   whatsapp: string;
   whatsappSameAsPhone: boolean;
+  baseCurrency: string;          // currency code, required
+  addSecondary: boolean;
+  secondaryCurrency: string;     // currency code (when addSecondary)
+  exchangeRate: string;          // 1 base = X secondary
 }
+
+type Step = 'intro' | 'company' | 'currency';
 
 const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
   isOpen, onClose, onSuccess, defaultFullName = '',
 }) => {
+  const [step, setStep] = useState<Step>('intro');
   const [form, setForm] = useState<FormState>({
     fullName: defaultFullName,
     orgName: '',
@@ -40,32 +49,71 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
     phone: '',
     whatsapp: '',
     whatsappSameAsPhone: false,
+    baseCurrency: '',
+    addSecondary: false,
+    secondaryCurrency: '',
+    exchangeRate: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [acknowledged, setAcknowledged] = useState(false);
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm(prev => ({ ...prev, [key]: value }));
 
+  const secondaryOptions = useMemo(
+    () => COMMON_CURRENCIES.filter(c => c.code !== form.baseCurrency),
+    [form.baseCurrency]
+  );
+
+  const validateCompanyStep = (): string | null => {
+    const fullName = sanitizeText(form.fullName);
+    const orgName = sanitizeText(form.orgName);
+    const distributorsCount = parseInt(form.distributorsCount, 10);
+    const phone = sanitizePhone(form.phone);
+    const whatsapp = form.whatsappSameAsPhone ? phone : sanitizePhone(form.whatsapp);
+    if (!fullName || fullName.length < 2) return 'الاسم الكامل مطلوب (حرفان على الأقل)';
+    if (!orgName || orgName.length < 2) return 'اسم الشركة مطلوب (حرفان على الأقل)';
+    if (!distributorsCount || distributorsCount < 1 || distributorsCount > 500) return 'عدد الموزعين يجب أن يكون بين 1 و 500';
+    if (!phone || phone.length < 6) return 'رقم الهاتف غير صحيح';
+    if (!whatsapp || whatsapp.length < 6) return 'رقم الواتساب غير صحيح';
+    return null;
+  };
+
+  const handleCompanyContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    const err = validateCompanyStep();
+    if (err) { setError(err); return; }
+    setStep('currency');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!form.baseCurrency) { setError('يرجى اختيار العملة الأساسية للمنشأة'); return; }
+    const basePreset = COMMON_CURRENCIES.find(c => c.code === form.baseCurrency);
+    if (!basePreset) { setError('عملة أساسية غير صحيحة'); return; }
+
+    let secondaryPreset: typeof basePreset | undefined;
+    let rateNum: number | null = null;
+    if (form.addSecondary) {
+      if (!form.secondaryCurrency || form.secondaryCurrency === form.baseCurrency) {
+        setError('اختر عملة ثانوية مختلفة عن العملة الأساسية'); return;
+      }
+      secondaryPreset = COMMON_CURRENCIES.find(c => c.code === form.secondaryCurrency);
+      if (!secondaryPreset) { setError('عملة ثانوية غير صحيحة'); return; }
+      rateNum = parseFloat(form.exchangeRate);
+      if (!isFinite(rateNum) || rateNum <= 0) {
+        setError(`سعر الصرف غير صحيح (1 ${basePreset.code} = ? ${secondaryPreset.code})`); return;
+      }
+    }
 
     const fullName = sanitizeText(form.fullName);
     const orgName = sanitizeText(form.orgName);
     const distributorsCount = parseInt(form.distributorsCount, 10);
     const phone = sanitizePhone(form.phone);
     const whatsapp = form.whatsappSameAsPhone ? phone : sanitizePhone(form.whatsapp);
-
-    // Client validation
-    if (!fullName || fullName.length < 2) { setError('الاسم الكامل مطلوب (حرفان على الأقل)'); return; }
-    if (!orgName || orgName.length < 2) { setError('اسم الشركة مطلوب (حرفان على الأقل)'); return; }
-    if (!distributorsCount || distributorsCount < 1 || distributorsCount > 500) {
-      setError('عدد الموزعين يجب أن يكون بين 1 و 500'); return;
-    }
-    if (!phone || phone.length < 6) { setError('رقم الهاتف غير صحيح'); return; }
-    if (!whatsapp || whatsapp.length < 6) { setError('رقم الواتساب غير صحيح'); return; }
 
     setLoading(true);
     try {
@@ -75,6 +123,13 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
         p_distributors_count: distributorsCount,
         p_phone: phone,
         p_whatsapp: whatsapp,
+        p_base_currency_code: basePreset.code,
+        p_base_currency_name: basePreset.name_ar,
+        p_base_currency_symbol: basePreset.symbol,
+        p_secondary_currency_code: secondaryPreset?.code ?? null,
+        p_secondary_currency_name: secondaryPreset?.name_ar ?? null,
+        p_secondary_currency_symbol: secondaryPreset?.symbol ?? null,
+        p_exchange_rate: rateNum,
       });
       if (rpcError) throw rpcError;
       const result = data as { success: boolean; message?: string; error?: string };
@@ -82,7 +137,6 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
         setError(result?.message || 'فشل إنشاء الحساب التجريبي');
         return;
       }
-      // Clear any cached auth so fresh profile is fetched
       clearAuthCache();
       logger.info('[SELF_TRIAL] Trial account created successfully', 'SelfServiceTrial');
       onSuccess();
@@ -94,8 +148,10 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
     }
   };
 
-  // Step 1: confirmation screen
-  if (!acknowledged) {
+  // ---------------------------------------------------------------
+  // Step 1: intro
+  // ---------------------------------------------------------------
+  if (step === 'intro') {
     return (
       <FullScreenModal
         isOpen={isOpen}
@@ -106,7 +162,7 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
         footer={
           <div className="space-y-2">
             <button
-              onClick={() => setAcknowledged(true)}
+              onClick={() => setStep('company')}
               className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-black text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-lg"
             >
               متابعة <ArrowRight className="w-5 h-5 rotate-180" />
@@ -153,151 +209,197 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
           </div>
 
           <p className="text-xs text-center text-muted-foreground px-4">
-            سنطلب منك بعض المعلومات الأساسية عن شركتك في الخطوة التالية.
+            سنطلب منك بعض المعلومات الأساسية عن شركتك ثم اختيار العملة في الخطوة التالية.
           </p>
         </div>
       </FullScreenModal>
     );
   }
 
-  // Step 2: form
+  // ---------------------------------------------------------------
+  // Step 2: company info
+  // ---------------------------------------------------------------
+  if (step === 'company') {
+    return (
+      <FullScreenModal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="بيانات الحساب التجريبي"
+        icon={<Building2 className="w-5 h-5" />}
+        headerColor="primary"
+        footer={
+          <button
+            type="submit"
+            form="self-trial-company-form"
+            className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-black text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-lg"
+          >
+            <ArrowRight className="w-5 h-5 rotate-180" /> متابعة لاختيار العملة
+          </button>
+        }
+      >
+        <form id="self-trial-company-form" onSubmit={handleCompanyContinue} className="space-y-4">
+          <Field icon={<User className="w-4 h-4 text-primary" />} label="الاسم الكامل" required>
+            <input type="text" value={form.fullName} onChange={(e) => update('fullName', e.target.value)}
+              placeholder="مثال: محمد أحمد" maxLength={100} autoComplete="name" className="input-field" />
+          </Field>
+
+          <Field icon={<Building2 className="w-4 h-4 text-primary" />} label="اسم الشركة" required>
+            <input type="text" value={form.orgName} onChange={(e) => update('orgName', e.target.value)}
+              placeholder="مثال: شركة النور للتوزيع" maxLength={100} autoComplete="organization" className="input-field" />
+          </Field>
+
+          <Field icon={<Users className="w-4 h-4 text-primary" />} label="عدد الموزعين" required
+            hint="كم عدد الموزعين/المندوبين العاملين لديك؟">
+            <input type="number" inputMode="numeric" min={1} max={500}
+              value={form.distributorsCount}
+              onChange={(e) => update('distributorsCount', e.target.value.replace(/[^0-9]/g, ''))}
+              placeholder="مثال: 5" className="input-field text-center" dir="ltr" />
+          </Field>
+
+          <Field icon={<Phone className="w-4 h-4 text-primary" />} label="رقم الهاتف" required>
+            <input type="tel" inputMode="tel" value={form.phone} onChange={(e) => update('phone', e.target.value)}
+              placeholder="+963 9XX XXX XXX" maxLength={20} autoComplete="tel" className="input-field" dir="ltr" />
+          </Field>
+
+          <Field icon={<MessageCircle className="w-4 h-4 text-success" />} label="رقم الواتساب" required>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer select-none px-1">
+                <input type="checkbox" checked={form.whatsappSameAsPhone}
+                  onChange={(e) => update('whatsappSameAsPhone', e.target.checked)}
+                  className="w-4 h-4 rounded accent-primary" />
+                <span className="text-xs font-bold text-muted-foreground">نفس رقم الهاتف</span>
+              </label>
+              {!form.whatsappSameAsPhone && (
+                <input type="tel" inputMode="tel" value={form.whatsapp}
+                  onChange={(e) => update('whatsapp', e.target.value)}
+                  placeholder="+963 9XX XXX XXX" maxLength={20} className="input-field" dir="ltr" />
+              )}
+            </div>
+          </Field>
+
+          {error && (
+            <div className="flex items-start gap-3 p-4 bg-destructive/10 text-destructive rounded-2xl border border-destructive/20">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <p className="text-sm font-bold">{error}</p>
+            </div>
+          )}
+        </form>
+      </FullScreenModal>
+    );
+  }
+
+  // ---------------------------------------------------------------
+  // Step 3: currency
+  // ---------------------------------------------------------------
   return (
     <FullScreenModal
       isOpen={isOpen}
       onClose={onClose}
-      title="بيانات الحساب التجريبي"
-      icon={<Building2 className="w-5 h-5" />}
+      title="إعدادات العملة"
+      icon={<Coins className="w-5 h-5" />}
       headerColor="primary"
       footer={
-        <button
-          type="submit"
-          form="self-trial-form"
-          disabled={loading}
-          className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-black text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50 shadow-lg"
-        >
-          {loading ? (
-            <><Loader2 className="w-5 h-5 animate-spin" /> جاري الإنشاء...</>
-          ) : (
-            <><Sparkles className="w-5 h-5" /> إنشاء الحساب التجريبي</>
-          )}
-        </button>
+        <div className="space-y-2">
+          <button
+            type="submit"
+            form="self-trial-currency-form"
+            disabled={loading}
+            className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-black text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50 shadow-lg"
+          >
+            {loading ? (
+              <><Loader2 className="w-5 h-5 animate-spin" /> جاري الإنشاء...</>
+            ) : (
+              <><Sparkles className="w-5 h-5" /> إنشاء الحساب التجريبي</>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setStep('company'); setError(''); }}
+            disabled={loading}
+            className="w-full py-3 bg-muted text-muted-foreground rounded-2xl font-bold text-sm hover:bg-muted/80 disabled:opacity-50"
+          >
+            رجوع
+          </button>
+        </div>
       }
     >
-      <form id="self-trial-form" onSubmit={handleSubmit} className="space-y-4">
-        {/* Full name */}
-        <Field
-          icon={<User className="w-4 h-4 text-primary" />}
-          label="الاسم الكامل"
-          required
-        >
-          <input
-            type="text"
-            value={form.fullName}
-            onChange={(e) => update('fullName', e.target.value)}
-            placeholder="مثال: محمد أحمد"
-            maxLength={100}
-            autoComplete="name"
-            disabled={loading}
+      <form id="self-trial-currency-form" onSubmit={handleSubmit} className="space-y-5">
+        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 space-y-2">
+          <p className="font-bold text-foreground text-sm flex items-center gap-2">
+            <Coins className="w-4 h-4 text-primary" /> العملة الأساسية للمنشأة
+          </p>
+          <p className="text-xs text-muted-foreground">
+            ستكون هي عملة التسعير والمحاسبة الافتراضية. يمكنك إضافة عملات أخرى لاحقاً من إعدادات العملات.
+          </p>
+        </div>
+
+        <Field icon={<Coins className="w-4 h-4 text-primary" />} label="العملة الأساسية" required>
+          <select
+            value={form.baseCurrency}
+            onChange={(e) => update('baseCurrency', e.target.value)}
             className="input-field"
-          />
+          >
+            <option value="">— اختر العملة الأساسية —</option>
+            {COMMON_CURRENCIES.map(c => (
+              <option key={c.code} value={c.code}>{c.name_ar} ({c.code})</option>
+            ))}
+          </select>
         </Field>
 
-        {/* Org name */}
-        <Field
-          icon={<Building2 className="w-4 h-4 text-primary" />}
-          label="اسم الشركة"
-          required
-        >
-          <input
-            type="text"
-            value={form.orgName}
-            onChange={(e) => update('orgName', e.target.value)}
-            placeholder="مثال: شركة النور للتوزيع"
-            maxLength={100}
-            autoComplete="organization"
-            disabled={loading}
-            className="input-field"
-          />
-        </Field>
+        <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={form.addSecondary}
+              onChange={(e) => update('addSecondary', e.target.checked)}
+              className="w-4 h-4 rounded accent-primary"
+            />
+            <span className="font-bold text-foreground text-sm flex items-center gap-2">
+              <ArrowRightLeft className="w-4 h-4 text-primary" />
+              إضافة عملة ثانوية وسعر صرفها (اختياري)
+            </span>
+          </label>
 
-        {/* Distributors count */}
-        <Field
-          icon={<Users className="w-4 h-4 text-primary" />}
-          label="عدد الموزعين"
-          required
-          hint="كم عدد الموزعين/المندوبين العاملين لديك؟"
-        >
-          <input
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={500}
-            value={form.distributorsCount}
-            onChange={(e) => update('distributorsCount', e.target.value.replace(/[^0-9]/g, ''))}
-            placeholder="مثال: 5"
-            disabled={loading}
-            className="input-field text-center"
-            dir="ltr"
-          />
-        </Field>
+          {form.addSecondary && (
+            <div className="space-y-3 pt-2">
+              <Field icon={<Coins className="w-4 h-4 text-amber-500" />} label="العملة الثانوية" required>
+                <select
+                  value={form.secondaryCurrency}
+                  onChange={(e) => update('secondaryCurrency', e.target.value)}
+                  disabled={!form.baseCurrency}
+                  className="input-field"
+                >
+                  <option value="">— اختر العملة الثانوية —</option>
+                  {secondaryOptions.map(c => (
+                    <option key={c.code} value={c.code}>{c.name_ar} ({c.code})</option>
+                  ))}
+                </select>
+              </Field>
 
-        {/* Phone */}
-        <Field
-          icon={<Phone className="w-4 h-4 text-primary" />}
-          label="رقم الهاتف"
-          required
-        >
-          <input
-            type="tel"
-            inputMode="tel"
-            value={form.phone}
-            onChange={(e) => update('phone', e.target.value)}
-            placeholder="+963 9XX XXX XXX"
-            maxLength={20}
-            autoComplete="tel"
-            disabled={loading}
-            className="input-field"
-            dir="ltr"
-          />
-        </Field>
-
-        {/* WhatsApp */}
-        <Field
-          icon={<MessageCircle className="w-4 h-4 text-success" />}
-          label="رقم الواتساب"
-          required
-        >
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 cursor-pointer select-none px-1">
-              <input
-                type="checkbox"
-                checked={form.whatsappSameAsPhone}
-                onChange={(e) => update('whatsappSameAsPhone', e.target.checked)}
-                disabled={loading}
-                className="w-4 h-4 rounded accent-primary"
-              />
-              <span className="text-xs font-bold text-muted-foreground">
-                نفس رقم الهاتف
-              </span>
-            </label>
-            {!form.whatsappSameAsPhone && (
-              <input
-                type="tel"
-                inputMode="tel"
-                value={form.whatsapp}
-                onChange={(e) => update('whatsapp', e.target.value)}
-                placeholder="+963 9XX XXX XXX"
-                maxLength={20}
-                disabled={loading}
-                className="input-field"
-                dir="ltr"
-              />
-            )}
-          </div>
-        </Field>
+              <Field
+                icon={<ArrowRightLeft className="w-4 h-4 text-amber-500" />}
+                label={`سعر الصرف (1 ${form.baseCurrency || '?'} = ? ${form.secondaryCurrency || '?'})`}
+                required
+                hint="مثال: إذا كانت العملة الأساسية SYP والعملة الثانوية USD وسعر الدولار 15000 ل.س، فالسعر هو 0.0000667"
+              >
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.000001"
+                  min="0"
+                  value={form.exchangeRate}
+                  onChange={(e) => update('exchangeRate', e.target.value)}
+                  placeholder="مثال: 0.0000667"
+                  className="input-field text-center"
+                  dir="ltr"
+                />
+              </Field>
+            </div>
+          )}
+        </div>
 
         {error && (
-          <div className="flex items-start gap-3 p-4 bg-destructive/10 text-destructive rounded-2xl border border-destructive/20 animate-in slide-in-from-top duration-300">
+          <div className="flex items-start gap-3 p-4 bg-destructive/10 text-destructive rounded-2xl border border-destructive/20">
             <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <p className="text-sm font-bold">{error}</p>
           </div>

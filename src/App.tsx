@@ -34,7 +34,8 @@ const DeveloperHub = lazy(() => import('@/features/developer/components/Develope
 const OwnerDashboard = lazy(() => import('@/features/owner/components/OwnerDashboard'));
 const AccountantDashboard = lazy(() => import('@/features/accountant/components/AccountantDashboard'));
 // SALES_MANAGER role removed — fallback handled in ViewManager
-const WarehouseKeeperDashboard = lazy(() => import('@/features/warehouse/components/WarehouseKeeperDashboard'));
+// WAREHOUSE_KEEPER UI removed — its functions moved to Owner settings.
+// Legacy warehouse-keeper accounts in DB are routed to AccountantDashboard for safety.
 const DistributorDashboard = lazy(() => import('@/features/distributor/components/DistributorDashboard'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 const EmailConfirmed = lazy(() => import('@/pages/EmailConfirmed'));
@@ -74,7 +75,9 @@ const ViewManager: React.FC = () => {
           case EmployeeType.ACCOUNTANT:
             return <AccountantDashboard />;
           case EmployeeType.WAREHOUSE_KEEPER:
-            return <WarehouseKeeperDashboard />;
+            // WAREHOUSE_KEEPER UI was removed; operations moved to Owner settings.
+            // Legacy accounts fall back to AccountantDashboard (read-only safe view).
+            return <AccountantDashboard />;
           case EmployeeType.SALES_MANAGER:
             // Legacy SALES_MANAGER accounts → routed to AccountantDashboard for safety
             // (role removed; new accounts cannot be created with this type)
