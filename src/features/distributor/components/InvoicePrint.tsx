@@ -261,6 +261,9 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
   remaining,
   notes,
   paymentType,
+  currency,
+  originalAmount,
+  exchangeRate,
   onClose
 }) => {
   const { t, i18n } = useTranslation();
