@@ -367,7 +367,8 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
       labels: getLabels(), locale, isRtl, orgName, legalInfo, invoiceId,
       date, customerName, invoiceType, paymentType,
       items, grandTotal, subtotal, discountType, discountPercentage, discountValue,
-      paidAmount, remaining, notes
+      paidAmount, remaining, notes,
+      currency, originalAmount, exchangeRate,
     });
 
     const { generateInvoicePdf } = await import('@/lib/invoicePdfService');
