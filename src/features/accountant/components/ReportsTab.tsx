@@ -222,17 +222,7 @@ const ReportsTab: React.FC = () => {
   const totalDiscounts = summary ? Number(summary.total_discounts) : 0;
   const distributorInventory = summary?.distributor_inventory || [];
 
-  // Calculations
-  const totalSalesCost = useMemo(() => {
-    return filteredSales.reduce((sum, sale) => {
-      return sum + sale.items.reduce((itemSum, item) => {
-        const product = products.find(p => p.id === item.productId);
-        const costPrice = product ? product.costPrice : 0;
-        return itemSum + (costPrice * item.quantity);
-      }, 0);
-    }, 0);
-  }, [filteredSales, products]);
-
+  // Calculations — cost/profit tracking removed; only sales/collections metrics remain
   const totalSales = useMemo(() =>
     filteredSales.reduce((sum, s) => sum + Number(s.grandTotal), 0),
     [filteredSales]
@@ -251,34 +241,8 @@ const ReportsTab: React.FC = () => {
   );
 
   const collectionRate = totalSales > 0 ? (collectionsTotal / totalSales) * 100 : 0;
-
-  const mainWarehouseValue = useMemo(() =>
-    products.filter(p => !p.isDeleted).reduce((s, p) => s + (p.costPrice * p.stock), 0),
-    [products]
-  );
-
-  const distWarehouseValue = useMemo(() =>
-    distributorInventory.reduce((s, item) => {
-      const product = products.find(p => p.id === item.product_id);
-      return s + (product ? product.costPrice * item.quantity : 0);
-    }, 0),
-    [distributorInventory, products]
-  );
-
-  const totalCurrentInventoryValue = mainWarehouseValue + distWarehouseValue;
-  // Business rule: (Sales Cost + Inventory Value) - Purchases
-  const profitOrLoss = totalSalesCost + totalCurrentInventoryValue - purchasesTotal;
-  const grossProfit = totalSales - totalSalesCost;
-  const profitMargin = totalSales > 0 ? (grossProfit / totalSales) * 100 : 0;
   const returnRate = totalSales > 0 ? (salesReturnsTotal / totalSales) * 100 : 0;
   const discountImpact = totalSales > 0 ? (totalDiscounts / (totalSales + totalDiscounts)) * 100 : 0;
-
-  // Chart: revenue breakdown for pie
-  const pieData = useMemo(() => [
-    { name: t('reports.salesCostLabel'), value: totalSalesCost, color: '#3b82f6' },
-    { name: t('reports.grossProfit'), value: Math.max(0, grossProfit), color: '#22c55e' },
-    { name: t('reports.totalDiscounts'), value: totalDiscounts, color: '#f59e0b' },
-  ].filter(d => d.value > 0), [totalSalesCost, grossProfit, totalDiscounts, t]);
 
   // Chart: daily trend
   const trendData = useMemo(() =>
