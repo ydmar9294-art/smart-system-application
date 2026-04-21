@@ -388,27 +388,7 @@ const ReportsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Gross Profit & Margin */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className={`p-4 rounded-2xl ${grossProfit >= 0 ? 'bg-emerald-500/10' : 'bg-destructive/10'}`}>
-          <div className="flex items-center gap-2 mb-1">
-            <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span className="text-[9px] text-muted-foreground font-bold">{t('reports.grossProfit')}</span>
-          </div>
-          <p className={`text-lg font-black ${grossProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
-            {fmt(grossProfit)}
-          </p>
-        </div>
-        <div className={`p-4 rounded-2xl ${profitMargin >= 15 ? 'bg-emerald-500/10' : 'bg-amber-500/10'}`}>
-          <div className="flex items-center gap-2 mb-1">
-            <Percent className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            <span className="text-[9px] text-muted-foreground font-bold">{t('reports.profitMarginLabel')}</span>
-          </div>
-          <p className={`text-lg font-black ${profitMargin >= 15 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-            {profitMargin.toFixed(1)}%
-          </p>
-        </div>
-      </div>
+      {/* Gross Profit & Margin removed — system no longer tracks cost */}
 
       {/* ====== Sales Trend Chart ====== */}
       {trendData.length > 2 && (
