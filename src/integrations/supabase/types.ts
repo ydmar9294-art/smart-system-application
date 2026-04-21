@@ -1959,16 +1959,39 @@ export type Database = {
         }
         Returns: Json
       }
-      add_collection_rpc: {
-        Args: { p_amount: number; p_notes?: string; p_sale_id: string }
-        Returns: string
-      }
+      add_collection_rpc:
+        | {
+            Args: { p_amount: number; p_notes?: string; p_sale_id: string }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_currency?: string
+              p_exchange_rate?: number
+              p_notes?: string
+              p_original_amount?: number
+              p_sale_id: string
+            }
+            Returns: string
+          }
       add_employee_rpc: {
         Args: {
           p_name: string
           p_phone: string
           p_role: string
           p_type: string
+        }
+        Returns: string
+      }
+      add_payment_out_rpc: {
+        Args: {
+          p_amount: number
+          p_currency?: string
+          p_customer_id: string
+          p_exchange_rate?: number
+          p_notes?: string
+          p_original_amount?: number
         }
         Returns: string
       }
