@@ -13,6 +13,7 @@ const SUB_CURRENCY = '$';
 import { getDeviceId } from '@/lib/deviceId';
 import { copyToClipboard } from '@/lib/clipboard';
 import { useShamcashAddress } from '@/hooks/useAppSettings';
+import { licenseStatusLabel } from '@/lib/enumLabels';
 import {
   CreditCard, Calendar, Clock, CheckCircle2, XCircle,
   Upload, Image as ImageIcon, Loader2, AlertTriangle,
@@ -247,7 +248,7 @@ const SubscriptionTab: React.FC = () => {
             isExpired ? 'badge-danger' :
             licenseInfo.status === 'ACTIVE' ? 'badge-success' : 'bg-warning/20 text-warning'
           }`}>
-            {isExpired ? 'منتهي' : licenseInfo.status === 'ACTIVE' ? 'نشط' : licenseInfo.status}
+            {isExpired ? 'منتهي' : licenseInfo.status === 'ACTIVE' ? 'نشط' : licenseStatusLabel(licenseInfo.status)}
           </span>
         </div>
 
