@@ -8,7 +8,7 @@ import React, { useCallback } from 'react';
 import {
   FileText, Eye, Printer, Ban, User, Wallet,
   Phone, MapPin, CircleDollarSign, RotateCcw,
-  Tag, WifiOff
+  Tag, WifiOff, ArrowDownCircle, ArrowUpCircle, DollarSign
 } from 'lucide-react';
 import { CURRENCY } from '@/constants';
 
@@ -99,38 +99,68 @@ interface CollectionListItemProps {
     reverseReason?: string;
     timestamp: number;
     customerName?: string;
+    direction?: 'IN' | 'OUT';
+    currency?: 'SYP' | 'USD';
+    originalAmount?: number;
+    exchangeRate?: number;
   };
   locale: string;
   t: (key: string) => string;
 }
 
-export const CollectionListItem = React.memo<CollectionListItemProps>(({ coll, locale, t }) => (
-  <div className={`bg-card p-4 rounded-2xl shadow-sm ${coll.isReversed ? 'opacity-50' : ''}`}>
-    <div className="flex items-center justify-between mb-2">
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-          <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+export const CollectionListItem = React.memo<CollectionListItemProps>(({ coll, locale, t }) => {
+  const isOut = coll.direction === 'OUT';
+  const isUsd = coll.currency === 'USD';
+  const dirIconBg = isOut ? 'bg-orange-500/10' : 'bg-emerald-500/10';
+  const dirIconColor = isOut ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400';
+  const amountColor = isOut ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400';
+  const amountSign = isOut ? '-' : '+';
+  const dirBadgeBg = isOut ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
+  const dirBadgeText = isOut ? t('accountant.paidOutVoucher') : t('accountant.receivedVoucher');
+
+  return (
+    <div className={`bg-card p-4 rounded-2xl shadow-sm ${coll.isReversed ? 'opacity-50' : ''} ${isOut ? 'border-r-4 border-orange-500' : 'border-r-4 border-emerald-500'}`}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <div className={`w-8 h-8 rounded-lg ${dirIconBg} flex items-center justify-center`}>
+            {isOut ? <ArrowUpCircle className={`w-4 h-4 ${dirIconColor}`} /> : <ArrowDownCircle className={`w-4 h-4 ${dirIconColor}`} />}
+          </div>
+          <div className="flex flex-col">
+            <p className="font-bold text-foreground text-sm">{coll.customerName || coll.saleId?.slice(0, 8) || '—'}</p>
+            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${dirBadgeBg} self-start mt-0.5`}>
+              {dirBadgeText}
+            </span>
+          </div>
         </div>
-        <p className="font-bold text-foreground text-sm">{coll.customerName || coll.saleId?.slice(0, 8) || '—'}</p>
+        {coll.isReversed ? (
+          <span className="bg-destructive/10 text-destructive px-2 py-0.5 rounded-lg text-[10px] font-bold">{t('accountant.cancelled')}</span>
+        ) : (
+          <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-lg text-[10px] font-bold">{t('accountant.done')}</span>
+        )}
       </div>
-      {coll.isReversed ? (
-        <span className="bg-destructive/10 text-destructive px-2 py-0.5 rounded-lg text-[10px] font-bold">{t('accountant.cancelled')}</span>
-      ) : (
-        <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-lg text-[10px] font-bold">{t('accountant.done')}</span>
+      <div className="flex items-center justify-between">
+        <p className={`font-black text-lg ${amountColor}`}>{amountSign}{Number(coll.amount).toLocaleString(locale)} {CURRENCY}</p>
+        <p className="text-xs text-muted-foreground">{new Date(coll.timestamp).toLocaleDateString(locale)}</p>
+      </div>
+      {isUsd && coll.originalAmount != null && (
+        <div className="flex items-center gap-1.5 mt-2 px-2 py-1 bg-blue-500/10 rounded-lg">
+          <DollarSign className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
+            {t('invoice.originalAmount')}: ${Number(coll.originalAmount).toLocaleString(locale)}
+            {coll.exchangeRate ? ` × ${Number(coll.exchangeRate).toLocaleString(locale)}` : ''}
+          </span>
+        </div>
+      )}
+      {coll.notes && <p className="text-xs text-muted-foreground mt-1">{coll.notes}</p>}
+      {coll.isReversed && coll.reverseReason && (
+        <p className="text-xs text-destructive mt-1">{t('common.cancelledReason')}: {coll.reverseReason}</p>
       )}
     </div>
-    <div className="flex items-center justify-between">
-      <p className="font-black text-lg text-emerald-600 dark:text-emerald-400">{Number(coll.amount).toLocaleString(locale)} {CURRENCY}</p>
-      <p className="text-xs text-muted-foreground">{new Date(coll.timestamp).toLocaleDateString(locale)}</p>
-    </div>
-    {coll.notes && <p className="text-xs text-muted-foreground mt-1">{coll.notes}</p>}
-    {coll.isReversed && coll.reverseReason && (
-      <p className="text-xs text-destructive mt-1">{t('common.cancelledReason')}: {coll.reverseReason}</p>
-    )}
-  </div>
-), (prev, next) => prev.coll.id === next.coll.id
+  );
+}, (prev, next) => prev.coll.id === next.coll.id
   && prev.coll.isReversed === next.coll.isReversed
   && prev.coll.amount === next.coll.amount
+  && prev.coll.direction === next.coll.direction
   && prev.locale === next.locale
 );
 CollectionListItem.displayName = 'CollectionListItem';
