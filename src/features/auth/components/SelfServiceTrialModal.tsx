@@ -6,7 +6,7 @@
  */
 import React, { useState, useMemo } from 'react';
 import {
-  Sparkles, Building2, User, Users, Phone, MessageCircle,
+  Building2, User, Users, Phone, MessageCircle,
   Loader2, CheckCircle2, AlertCircle, ArrowRight, Coins, ArrowRightLeft,
 } from 'lucide-react';
 import AppLogo from '@/components/ui/AppLogo';
