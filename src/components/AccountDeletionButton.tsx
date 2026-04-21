@@ -118,9 +118,22 @@ const AccountDeletionButton: React.FC = () => {
         <Trash2 size={16} /> طلب حذف الحساب
       </button>
 
-      {showModal && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir="rtl">
-          <div className="bg-card rounded-2xl w-full max-w-sm p-6 space-y-4 animate-zoom-in shadow-2xl border border-border">
+      <Dialog
+        open={showModal}
+        onOpenChange={(o) => {
+          if (!o) {
+            setShowModal(false);
+            setError('');
+            setSuccess('');
+          }
+        }}
+      >
+        <DialogContent
+          className="max-w-sm p-6"
+          dir="rtl"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <div className="space-y-4">
             <div className="text-center space-y-3">
               <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
                 <AlertTriangle size={32} className="text-destructive" />
@@ -165,9 +178,8 @@ const AccountDeletionButton: React.FC = () => {
               إلغاء
             </button>
           </div>
-        </div>,
-        document.body
-      )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

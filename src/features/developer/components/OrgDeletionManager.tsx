@@ -214,47 +214,57 @@ const OrgDeletionManager: React.FC = () => {
       )}
 
       {/* Confirm Deletion Modal */}
-      {confirmModal && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-6 safe-area-x safe-area-bottom" dir="rtl">
-          <div className="bg-card rounded-2xl w-full max-w-md p-6 space-y-4 animate-zoom-in shadow-2xl border border-border max-h-[90vh] overflow-y-auto">
-            <div className="text-center space-y-3">
-              <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
-                <AlertTriangle size={32} className="text-destructive" />
+      <Dialog
+        open={!!confirmModal}
+        onOpenChange={(o) => { if (!o) { setConfirmModal(null); setConfirmName(''); } }}
+      >
+        <DialogContent
+          className="max-w-md p-6 max-h-[90vh] overflow-y-auto"
+          dir="rtl"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          {confirmModal && (
+            <div className="space-y-4">
+              <div className="text-center space-y-3">
+                <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+                  <AlertTriangle size={32} className="text-destructive" />
+                </div>
+                <h3 className="text-lg font-black text-destructive">تأكيد الحذف النهائي</h3>
+                <p className="text-sm font-bold text-muted-foreground leading-relaxed">
+                  ⚠️ سيتم حذف المنشأة <span className="text-foreground font-black">"{getOrgName(confirmModal.organization_id)}"</span> نهائياً بناءً على طلب صاحبها.
+                </p>
+                <p className="text-xs text-destructive font-bold">
+                  سيتم حذف جميع البيانات والسجلات والمستخدمين المرتبطين بها. لا يمكن التراجع عن هذا الإجراء.
+                </p>
               </div>
-              <h3 className="text-lg font-black text-destructive">تأكيد الحذف النهائي</h3>
-              <p className="text-sm font-bold text-muted-foreground leading-relaxed">
-                ⚠️ سيتم حذف المنشأة <span className="text-foreground font-black">"{getOrgName(confirmModal.organization_id)}"</span> نهائياً بناءً على طلب صاحبها.
-              </p>
-              <p className="text-xs text-destructive font-bold">
-                سيتم حذف جميع البيانات والسجلات والمستخدمين المرتبطين بها. لا يمكن التراجع عن هذا الإجراء.
-              </p>
-            </div>
 
-            <div>
-              <label className="text-xs font-bold text-muted-foreground block mb-1">اكتب اسم المنشأة للتأكيد *</label>
-              <input
-                type="text"
-                value={confirmName}
-                onChange={(e) => setConfirmName(e.target.value)}
-                placeholder={getOrgName(confirmModal.organization_id)}
-                className="input-field text-center font-black"
-                dir="rtl"
-              />
-            </div>
+              <div>
+                <label className="text-xs font-bold text-muted-foreground block mb-1">اكتب اسم المنشأة للتأكيد *</label>
+                <input
+                  type="text"
+                  inputMode="text"
+                  autoComplete="off"
+                  value={confirmName}
+                  onChange={(e) => setConfirmName(e.target.value)}
+                  placeholder={getOrgName(confirmModal.organization_id)}
+                  className="input-field text-center font-black"
+                  dir="rtl"
+                />
+              </div>
 
-            <button
-              onClick={handleExecuteDeletion}
-              disabled={executing || confirmName !== getOrgName(confirmModal.organization_id)}
-              className="w-full py-3 bg-destructive text-destructive-foreground rounded-xl font-black disabled:opacity-40 flex items-center justify-center gap-2"
-            >
-              {executing ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-              {executing ? 'جاري الحذف...' : 'حذف نهائي'}
-            </button>
-            <button onClick={() => setConfirmModal(null)} className="w-full py-3 bg-muted text-muted-foreground rounded-xl font-black">إلغاء</button>
-          </div>
-        </div>,
-        document.body
-      )}
+              <button
+                onClick={handleExecuteDeletion}
+                disabled={executing || confirmName !== getOrgName(confirmModal.organization_id)}
+                className="w-full py-3 bg-destructive text-destructive-foreground rounded-xl font-black disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                {executing ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                {executing ? 'جاري الحذف...' : 'حذف نهائي'}
+              </button>
+              <button onClick={() => setConfirmModal(null)} className="w-full py-3 bg-muted text-muted-foreground rounded-xl font-black">إلغاء</button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
