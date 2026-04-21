@@ -422,33 +422,7 @@ const ReportsTab: React.FC = () => {
         </div>
       )}
 
-      {/* ====== Revenue Breakdown Pie ====== */}
-      {pieData.length > 0 && (
-        <div className="bg-card p-4 rounded-2xl shadow-sm">
-          <h3 className="font-bold text-sm text-foreground mb-3 flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-primary" />
-            {t('reports.revenueBreakdown')}
-          </h3>
-          <div className="h-36" dir="ltr">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} innerRadius={30} paddingAngle={3}>
-                  {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                </Pie>
-                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px', fontSize: '10px' }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex justify-center gap-3 mt-2">
-            {pieData.map((d, i) => (
-              <div key={i} className="flex items-center gap-1">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-                <span className="text-[9px] text-muted-foreground font-medium">{d.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Revenue breakdown pie removed — depended on cost data */}
 
       {/* Discounts & Returns Impact */}
       <div className="grid grid-cols-2 gap-2">
@@ -470,17 +444,7 @@ const ReportsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Profit/Loss */}
-      <div className={`p-5 rounded-2xl text-center ${profitOrLoss >= 0 ? 'bg-emerald-500/10' : 'bg-destructive/10'}`}>
-        <DollarSign className={`w-8 h-8 mx-auto mb-2 ${profitOrLoss >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`} />
-        <p className="text-xs text-muted-foreground font-bold mb-1">{t('reports.profitLoss')}</p>
-        <p className={`text-2xl font-black ${profitOrLoss >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
-          {fmt(profitOrLoss)} {CURRENCY}
-        </p>
-        <p className="text-[9px] text-muted-foreground mt-2">
-          {t('reports.salesCost')} ({fmt(totalSalesCost)}) + {t('reports.inventoryValue')} ({fmt(totalCurrentInventoryValue)}) − {t('reports.purchases')} ({fmt(purchasesTotal)})
-        </p>
-      </div>
+      {/* Profit/Loss & inventory value cards removed — system no longer tracks cost */}
 
       {/* Collections & Debts */}
       <div className="grid grid-cols-2 gap-2">
@@ -497,25 +461,6 @@ const ReportsTab: React.FC = () => {
             <span className="text-[9px] text-muted-foreground font-bold">{t('reports.debts')}</span>
           </div>
           <p className="text-lg font-black text-destructive">{fmt(totalDebt)}</p>
-        </div>
-      </div>
-
-      {/* Inventory */}
-      <div className="bg-card p-4 rounded-2xl shadow-sm space-y-2">
-        <h3 className="font-bold text-sm flex items-center gap-2 text-foreground mb-3">
-          <Package className="w-4 h-4" /> {t('reports.currentInventoryValue')}
-        </h3>
-        <div className="flex items-center justify-between p-2.5 bg-muted rounded-xl text-sm">
-          <span className="text-muted-foreground">{t('reports.mainWarehouse')}</span>
-          <span className="font-bold text-foreground">{fmt(mainWarehouseValue)}</span>
-        </div>
-        <div className="flex items-center justify-between p-2.5 bg-muted rounded-xl text-sm">
-          <span className="text-muted-foreground">{t('reports.distributorWarehouses')}</span>
-          <span className="font-bold text-foreground">{fmt(distWarehouseValue)}</span>
-        </div>
-        <div className="flex items-center justify-between p-3 bg-primary/10 rounded-xl">
-          <span className="font-black">{t('common.total')}</span>
-          <span className="font-black text-lg text-primary">{fmt(totalCurrentInventoryValue)} {CURRENCY}</span>
         </div>
       </div>
 
