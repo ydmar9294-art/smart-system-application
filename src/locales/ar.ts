@@ -253,6 +253,8 @@ const ar = {
     totalCustomers: 'العملاء',
     totalProducts: 'المنتجات',
     totalEmployees: 'الموظفين',
+    activeDistributors: 'الموزعين النشطين',
+    distributorLimitHint: 'الحد الأقصى يطبَّق على الموزعين الميدانيين فقط. المحاسبون وأمناء المستودعات بدون حد.',
     cashLabel: 'نقدي',
     creditLabel: 'آجل',
   },
