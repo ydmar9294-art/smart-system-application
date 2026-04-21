@@ -172,7 +172,7 @@ const DistributorDashboard: React.FC = () => {
       case 'new-sale':
         return <NewSaleTab selectedCustomer={selectedCustomer} localInventory={offline.localInventory} onQueueAction={offline.queueAction} isOnline={offline.isOnline} />;
       case 'collections':
-        return <CollectionTab selectedCustomer={selectedCustomer} onQueueAction={offline.queueAction} isOnline={offline.isOnline} localSales={offline.localSales} />;
+        return <CollectionTab selectedCustomer={selectedCustomer} onQueueAction={offline.queueAction} isOnline={offline.isOnline} localSales={offline.localSales} localCustomers={offline.localCustomers} />;
       case 'route':
         return <MyRouteTab isOnline={offline.isOnline} onQueueAction={offline.queueAction} />;
       default:

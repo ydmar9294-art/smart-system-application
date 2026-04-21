@@ -32,7 +32,7 @@ interface InvoiceItem {
 }
 
 interface InvoicePrintProps {
-  invoiceType: 'sale' | 'return' | 'collection';
+  invoiceType: 'sale' | 'return' | 'collection' | 'payment_out';
   invoiceId: string;
   customerName: string;
   date: Date;
@@ -46,6 +46,10 @@ interface InvoicePrintProps {
   remaining?: number;
   notes?: string;
   paymentType?: 'CASH' | 'CREDIT';
+  /** For collection / payment_out vouchers in foreign currency. */
+  currency?: 'SYP' | 'USD';
+  originalAmount?: number;
+  exchangeRate?: number;
   onClose: () => void;
 }
 
@@ -90,7 +94,7 @@ function buildInvoiceHtml(params: {
   invoiceId: string;
   date: Date;
   customerName: string;
-  invoiceType: 'sale' | 'return' | 'collection';
+  invoiceType: 'sale' | 'return' | 'collection' | 'payment_out';
   paymentType?: 'CASH' | 'CREDIT';
   items: InvoiceItem[];
   grandTotal: number;
@@ -101,12 +105,16 @@ function buildInvoiceHtml(params: {
   paidAmount?: number;
   remaining?: number;
   notes?: string;
+  currency?: 'SYP' | 'USD';
+  originalAmount?: number;
+  exchangeRate?: number;
 }): string {
   const {
     labels, locale, isRtl, orgName, legalInfo, invoiceId, date,
     customerName, invoiceType, paymentType,
     items, grandTotal, subtotal, discountType, discountPercentage, discountValue,
-    paidAmount, remaining, notes
+    paidAmount, remaining, notes,
+    currency, originalAmount, exchangeRate,
   } = params;
 
   const dir = isRtl ? 'rtl' : 'ltr';
@@ -167,13 +175,25 @@ function buildInvoiceHtml(params: {
       </div>
     </div>` : '';
 
-  const totalLabelText = invoiceType === 'collection' ? labels.collectedAmount : labels.netTotal;
+  const totalLabelText = invoiceType === 'collection'
+    ? labels.collectedAmount
+    : invoiceType === 'payment_out'
+      ? labels.collectedAmount
+      : labels.netTotal;
+
+  const isUsdVoucher = currency === 'USD' && (invoiceType === 'collection' || invoiceType === 'payment_out');
+  const usdHtml = isUsdVoucher ? `
+    <div style="margin:6px 0;padding:6px;border:1px dashed #2563eb;background:#eff6ff;font-size:10px;color:#1e40af;text-align:center;font-weight:bold;">
+      ${escapeHtml(labels.notes === 'ملاحظات' ? 'المبلغ الأصلي' : 'Original')}: $${escapeNumber(originalAmount ?? 0)}
+      ${exchangeRate ? ` × ${escapeNumber(exchangeRate)}` : ''}
+    </div>` : '';
 
   const totalsHtml = `
     ${discountHtml}
     <div style="font-size:14px;font-weight:bold;text-align:center;margin:10px 0;${hasDiscount ? 'border-top:1px dashed #7c3aed;padding-top:8px;' : ''}">
       ${escapeHtml(totalLabelText)}: ${escapeNumber(grandTotal)} ${escapeHtml(CURRENCY)}
     </div>
+    ${usdHtml}
     ${invoiceType === 'sale' && paymentType === 'CREDIT' && paidAmount !== undefined ? `
       <div style="display:flex;justify-content:space-between;font-size:11px;margin:3px 0;">
         <span>${escapeHtml(labels.paid)}:</span><span>${escapeNumber(paidAmount)} ${escapeHtml(CURRENCY)}</span>
@@ -241,6 +261,9 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
   remaining,
   notes,
   paymentType,
+  currency,
+  originalAmount,
+  exchangeRate,
   onClose
 }) => {
   const { t, i18n } = useTranslation();
@@ -302,6 +325,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
       case 'sale': return t('invoice.saleInvoice');
       case 'return': return t('invoice.returnNotice');
       case 'collection': return t('invoice.receiptVoucher');
+      case 'payment_out': return t('invoice.paymentVoucher');
       default: return t('invoice.document');
     }
   };
@@ -343,7 +367,8 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
       labels: getLabels(), locale, isRtl, orgName, legalInfo, invoiceId,
       date, customerName, invoiceType, paymentType,
       items, grandTotal, subtotal, discountType, discountPercentage, discountValue,
-      paidAmount, remaining, notes
+      paidAmount, remaining, notes,
+      currency, originalAmount, exchangeRate,
     });
 
     const { generateInvoicePdf } = await import('@/lib/invoicePdfService');

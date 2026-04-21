@@ -1,12 +1,14 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Wallet, ChevronDown, Loader2 } from 'lucide-react';
+import { Wallet, ChevronDown, ArrowDownCircle, ArrowUpCircle, Scale } from 'lucide-react';
 import { CollectionListItem } from '@/components/ui/MemoizedListItems';
 import { VirtualList } from '@/components/ui/VirtualList';
 import { CURRENCY } from '@/constants';
 import { useAuth } from '@/store/AuthContext';
 import { usePaymentsPaginatedQuery } from '@/hooks/queries';
 import { InfiniteScrollTrigger } from '@/components/ui/InfiniteScrollList';
+
+type DirectionFilter = 'ALL' | 'IN' | 'OUT';
 
 const CollectionsTab: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -16,6 +18,7 @@ const CollectionsTab: React.FC = () => {
   const [dateTo, setDateTo] = useState('');
   const [showReversed, setShowReversed] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [directionFilter, setDirectionFilter] = useState<DirectionFilter>('ALL');
 
   const {
     data: collections,
@@ -30,27 +33,78 @@ const CollectionsTab: React.FC = () => {
     if (!showReversed && c.isReversed) return false;
     if (dateFrom && new Date(c.timestamp) < new Date(dateFrom)) return false;
     if (dateTo) { const to = new Date(dateTo); to.setHours(23,59,59); if (new Date(c.timestamp) > to) return false; }
+    if (directionFilter !== 'ALL') {
+      const dir = c.direction === 'OUT' ? 'OUT' : 'IN';
+      if (dir !== directionFilter) return false;
+    }
     return true;
-  }), [collections, showReversed, dateFrom, dateTo]);
+  }), [collections, showReversed, dateFrom, dateTo, directionFilter]);
 
-  const totalAmount = useMemo(() => 
-    filteredCollections.filter(c => !c.isReversed).reduce((sum, c) => sum + Number(c.amount), 0),
-    [filteredCollections]
-  );
+  const totals = useMemo(() => {
+    let received = 0, paidOut = 0;
+    for (const c of filteredCollections) {
+      if (c.isReversed) continue;
+      if (c.direction === 'OUT') paidOut += Number(c.amount);
+      else received += Number(c.amount);
+    }
+    return { received, paidOut, net: received - paidOut, count: filteredCollections.filter(c => !c.isReversed).length };
+  }, [filteredCollections]);
 
   return (
     <div className="space-y-3">
-      {/* Summary */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="bg-emerald-500/10 rounded-2xl p-4 text-center">
-          <p className="text-[9px] text-muted-foreground font-bold">{t('accountant.totalCollections')}</p>
-          <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">{totalAmount.toLocaleString(locale)}</p>
-          <p className="text-[10px] text-muted-foreground">{CURRENCY}</p>
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="bg-emerald-500/10 rounded-2xl p-3 text-center">
+          <div className="flex items-center justify-center gap-1 mb-1">
+            <ArrowDownCircle className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+            <p className="text-[9px] text-muted-foreground font-bold">{t('accountant.totalReceived')}</p>
+          </div>
+          <p className="text-base font-black text-emerald-600 dark:text-emerald-400">{totals.received.toLocaleString(locale)}</p>
+          <p className="text-[9px] text-muted-foreground">{CURRENCY}</p>
         </div>
-        <div className="bg-muted rounded-2xl p-4 text-center">
-          <p className="text-[9px] text-muted-foreground font-bold">{t('common.operationCount')}</p>
-          <p className="text-xl font-black text-foreground">{filteredCollections.filter(c => !c.isReversed).length}</p>
+        <div className="bg-orange-500/10 rounded-2xl p-3 text-center">
+          <div className="flex items-center justify-center gap-1 mb-1">
+            <ArrowUpCircle className="w-3 h-3 text-orange-600 dark:text-orange-400" />
+            <p className="text-[9px] text-muted-foreground font-bold">{t('accountant.totalPaidOut')}</p>
+          </div>
+          <p className="text-base font-black text-orange-600 dark:text-orange-400">{totals.paidOut.toLocaleString(locale)}</p>
+          <p className="text-[9px] text-muted-foreground">{CURRENCY}</p>
         </div>
+        <div className="bg-primary/10 rounded-2xl p-3 text-center">
+          <div className="flex items-center justify-center gap-1 mb-1">
+            <Scale className="w-3 h-3 text-primary" />
+            <p className="text-[9px] text-muted-foreground font-bold">{t('accountant.netCollections')}</p>
+          </div>
+          <p className={`text-base font-black ${totals.net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'}`}>
+            {totals.net.toLocaleString(locale)}
+          </p>
+          <p className="text-[9px] text-muted-foreground">{CURRENCY}</p>
+        </div>
+      </div>
+
+      {/* Direction filter chips */}
+      <div className="flex gap-2">
+        {([
+          { v: 'ALL' as const, label: t('accountant.allTypes') },
+          { v: 'IN' as const, label: t('accountant.receiptType') },
+          { v: 'OUT' as const, label: t('accountant.paymentType') },
+        ]).map(opt => (
+          <button
+            key={opt.v}
+            onClick={() => setDirectionFilter(opt.v)}
+            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+              directionFilter === opt.v
+                ? opt.v === 'OUT'
+                  ? 'bg-orange-500 text-white'
+                  : opt.v === 'IN'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-primary text-primary-foreground'
+                : 'bg-muted text-muted-foreground'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
       </div>
 
       {/* Filters */}
@@ -89,7 +143,7 @@ const CollectionsTab: React.FC = () => {
           {filteredCollections.length > 30 ? (
             <VirtualList
               items={filteredCollections}
-              itemHeight={72}
+              itemHeight={88}
               overscan={5}
               containerHeight={480}
               className="rounded-2xl"
