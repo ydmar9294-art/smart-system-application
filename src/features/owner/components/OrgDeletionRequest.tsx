@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useApp } from '@/store/AppContext';
 import { Trash2, AlertTriangle, Clock, CheckCircle2, Ban, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 const OrgDeletionRequest: React.FC = () => {
   const { user, organization, logout } = useApp();
