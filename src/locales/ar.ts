@@ -17,6 +17,8 @@ const ar = {
     search: 'بحث',
     loading: 'جاري التحميل...',
     retry: 'إعادة المحاولة',
+    loadMore: 'تحميل المزيد',
+    loadingMore: 'جارٍ تحميل المزيد...',
     back: 'رجوع',
     next: 'التالي',
     yes: 'نعم',
@@ -1162,6 +1164,13 @@ const ar = {
   // OWNER INVENTORY TAB
   // ==========================================
   ownerInventory: {
+    warehouseValue: 'قيمة المستودع',
+    distInventoryValue: 'مخزون الموزعين',
+    activeProducts: 'منتجات نشطة',
+    lowStockCount: 'منتجات منخفضة',
+    quantity: 'الكمية',
+    unit: 'الوحدة',
+    unitPrice: 'سعر الوحدة',
     products: 'المواد',
     purchases: 'شراء',
     purchaseReturns: 'مرتجع',
