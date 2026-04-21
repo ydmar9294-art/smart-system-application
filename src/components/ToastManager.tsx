@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useApp } from '@/store/AppContext';
+import { useNotifications } from '@/store/NotificationContext';
 import { AlertCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Notification } from '@/types';
 
@@ -11,7 +11,7 @@ interface ToastEntry extends Notification {
 }
 
 export const ToastManager: React.FC = () => {
-  const { notifications } = useApp();
+  const { notifications } = useNotifications();
   const [toasts, setToasts] = useState<ToastEntry[]>([]);
   const seenRef = useRef<Set<number>>(new Set());
 
