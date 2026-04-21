@@ -175,13 +175,25 @@ function buildInvoiceHtml(params: {
       </div>
     </div>` : '';
 
-  const totalLabelText = invoiceType === 'collection' ? labels.collectedAmount : labels.netTotal;
+  const totalLabelText = invoiceType === 'collection'
+    ? labels.collectedAmount
+    : invoiceType === 'payment_out'
+      ? labels.collectedAmount
+      : labels.netTotal;
+
+  const isUsdVoucher = currency === 'USD' && (invoiceType === 'collection' || invoiceType === 'payment_out');
+  const usdHtml = isUsdVoucher ? `
+    <div style="margin:6px 0;padding:6px;border:1px dashed #2563eb;background:#eff6ff;font-size:10px;color:#1e40af;text-align:center;font-weight:bold;">
+      ${escapeHtml(labels.notes === 'ملاحظات' ? 'المبلغ الأصلي' : 'Original')}: $${escapeNumber(originalAmount ?? 0)}
+      ${exchangeRate ? ` × ${escapeNumber(exchangeRate)}` : ''}
+    </div>` : '';
 
   const totalsHtml = `
     ${discountHtml}
     <div style="font-size:14px;font-weight:bold;text-align:center;margin:10px 0;${hasDiscount ? 'border-top:1px dashed #7c3aed;padding-top:8px;' : ''}">
       ${escapeHtml(totalLabelText)}: ${escapeNumber(grandTotal)} ${escapeHtml(CURRENCY)}
     </div>
+    ${usdHtml}
     ${invoiceType === 'sale' && paymentType === 'CREDIT' && paidAmount !== undefined ? `
       <div style="display:flex;justify-content:space-between;font-size:11px;margin:3px 0;">
         <span>${escapeHtml(labels.paid)}:</span><span>${escapeNumber(paidAmount)} ${escapeHtml(CURRENCY)}</span>
