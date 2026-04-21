@@ -241,16 +241,18 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
   const handleProductSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const pricingCurrency = (formData.get('pricingCurrency') as string) === 'USD' ? 'USD' : 'SYP';
     const productData = {
       name: formData.get('name') as string,
       category: formData.get('category') as string,
-      costPrice: Number(formData.get('costPrice')),
+      costPrice: 0, // unused — system no longer tracks cost
       basePrice: Number(formData.get('basePrice')),
       consumerPrice: Number(formData.get('consumerPrice') || 0),
       stock: Number(formData.get('stock')),
       minStock: Number(formData.get('minStock')),
       unit: formData.get('unit') as string,
       isDeleted: false,
+      pricingCurrency: pricingCurrency as 'SYP' | 'USD',
     };
 
     if (editingProduct) {
@@ -853,41 +855,55 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
             />
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.costPrice')}</label>
-              <input 
-                name="costPrice" 
-                type="number" 
-                step="0.01" 
-                defaultValue={editingProduct?.costPrice} 
-                placeholder="0" 
-                className="input-field py-4 text-center text-xl font-black" 
-              />
+          <div className="space-y-2">
+            <label className="text-xs font-black text-muted-foreground uppercase">عملة التسعير</label>
+            <div className="grid grid-cols-2 gap-2">
+              {(['SYP', 'USD'] as const).map((cur) => {
+                const isSelected = (editingProduct?.pricingCurrency || 'SYP') === cur;
+                return (
+                  <label key={cur} className={`relative flex items-center justify-center gap-2 py-3 rounded-xl border-2 cursor-pointer transition-all ${
+                    isSelected ? 'border-primary bg-primary/10' : 'border-border bg-muted/30'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="pricingCurrency"
+                      value={cur}
+                      defaultChecked={isSelected}
+                      className="sr-only"
+                    />
+                    <span className="text-sm font-black text-foreground">
+                      {cur === 'SYP' ? 'ليرة سورية (ل.س)' : 'دولار ($)'}
+                    </span>
+                  </label>
+                );
+              })}
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.salePrice')}</label>
               <input 
                 name="basePrice" 
                 type="number" 
                 step="0.01" 
+                required
                 defaultValue={editingProduct?.basePrice} 
                 placeholder="0" 
                 className="input-field py-4 text-center text-xl font-black" 
               />
             </div>
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.consumerPrice')}</label>
-            <input 
-              name="consumerPrice" 
-              type="number" 
-              step="0.01" 
-              defaultValue={editingProduct?.consumerPrice ?? 0} 
-              placeholder="0" 
-              className="input-field py-4 text-center text-xl font-black" 
-            />
+            <div className="space-y-2">
+              <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.consumerPrice')}</label>
+              <input 
+                name="consumerPrice" 
+                type="number" 
+                step="0.01" 
+                defaultValue={editingProduct?.consumerPrice ?? 0} 
+                placeholder="0" 
+                className="input-field py-4 text-center text-xl font-black" 
+              />
+            </div>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
