@@ -220,34 +220,49 @@ export type Database = {
           amount: number
           collected_by: string | null
           created_at: string
+          currency: string
+          customer_id: string | null
+          direction: string
+          exchange_rate: number
           id: string
           is_reversed: boolean
           notes: string | null
           organization_id: string
+          original_amount: number
           reverse_reason: string | null
-          sale_id: string
+          sale_id: string | null
         }
         Insert: {
           amount: number
           collected_by?: string | null
           created_at?: string
+          currency?: string
+          customer_id?: string | null
+          direction?: string
+          exchange_rate?: number
           id?: string
           is_reversed?: boolean
           notes?: string | null
           organization_id: string
+          original_amount?: number
           reverse_reason?: string | null
-          sale_id: string
+          sale_id?: string | null
         }
         Update: {
           amount?: number
           collected_by?: string | null
           created_at?: string
+          currency?: string
+          customer_id?: string | null
+          direction?: string
+          exchange_rate?: number
           id?: string
           is_reversed?: boolean
           notes?: string | null
           organization_id?: string
+          original_amount?: number
           reverse_reason?: string | null
-          sale_id?: string
+          sale_id?: string | null
         }
         Relationships: [
           {
