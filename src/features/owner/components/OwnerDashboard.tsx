@@ -78,9 +78,12 @@ const OwnerDashboard: React.FC = () => {
   }, [sales, payments]);
 
   const teamMembers = users.filter(u => u.role === UserRole.EMPLOYEE);
-  const activeEmployeeCount = teamMembers.filter(u => u.isActive !== false).length;
+  // الحد الأقصى يطبَّق فقط على الموزعين الميدانيين (FIELD_AGENT)
+  const activeDistributorCount = teamMembers.filter(
+    u => u.isActive !== false && u.employeeType === EmployeeType.FIELD_AGENT
+  ).length;
 
-  const [licenseInfo, setLicenseInfo] = React.useState<{ maxEmployees: number; type: string; status: string; expiryDate?: string } | null>(null);
+  const [licenseInfo, setLicenseInfo] = React.useState<{ maxDistributors: number; type: string; status: string; expiryDate?: string } | null>(null);
 
   React.useEffect(() => {
     const fetchLicense = async () => {
@@ -88,15 +91,15 @@ const OwnerDashboard: React.FC = () => {
         const { supabase } = await import('@/integrations/supabase/client');
         const { data } = await supabase.rpc('get_my_license_info');
         const license = data?.[0];
-        if (license) setLicenseInfo({ maxEmployees: license.max_employees, type: license.type, status: license.status, expiryDate: license.expiry_date ?? undefined });
+        if (license) setLicenseInfo({ maxDistributors: license.max_employees, type: license.type, status: license.status, expiryDate: license.expiry_date ?? undefined });
       } catch {}
     };
     fetchLicense();
   }, []);
 
-  const maxEmployees = licenseInfo?.maxEmployees ?? 10;
-  const remainingSlots = Math.max(0, maxEmployees - activeEmployeeCount);
-  const usagePercent = maxEmployees > 0 ? (activeEmployeeCount / maxEmployees) * 100 : 0;
+  const maxDistributors = licenseInfo?.maxDistributors ?? 1;
+  const remainingDistributorSlots = Math.max(0, maxDistributors - activeDistributorCount);
+  const usagePercent = maxDistributors > 0 ? (activeDistributorCount / maxDistributors) * 100 : 0;
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -136,8 +139,8 @@ const OwnerDashboard: React.FC = () => {
       case 'overview': return <OwnerOverviewTab />;
       case 'inventory': return <InventoryTab />;
       case 'team': return <TeamContent
-        teamMembers={teamMembers} organization={organization} activeEmployeeCount={activeEmployeeCount}
-        maxEmployees={maxEmployees} remainingSlots={remainingSlots} usagePercent={usagePercent}
+        teamMembers={teamMembers} organization={organization} activeDistributorCount={activeDistributorCount}
+        maxDistributors={maxDistributors} remainingDistributorSlots={remainingDistributorSlots} usagePercent={usagePercent}
         showAddUserModal={showAddUserModal} setShowAddUserModal={setShowAddUserModal}
         myPendingEmployees={myPendingEmployees} myActivatedEmployees={myActivatedEmployees}
         copiedId={copiedId} setCopiedId={setCopiedId} togglingEmployee={togglingEmployee}
@@ -300,7 +303,7 @@ const OwnerDashboard: React.FC = () => {
 
 /* ========== Team Content ========== */
 const TeamContent: React.FC<any> = ({
-  teamMembers, organization, activeEmployeeCount, maxEmployees, remainingSlots, usagePercent,
+  teamMembers, organization, activeDistributorCount, maxDistributors, remainingDistributorSlots, usagePercent,
   setShowAddUserModal, myPendingEmployees, myActivatedEmployees,
   copiedId, setCopiedId, togglingEmployee, handleToggleEmployee, getEmployeeTypeLabel
 }) => {
@@ -318,20 +321,21 @@ const TeamContent: React.FC<any> = ({
           <span className="font-bold text-foreground">{organization?.name || '—'}</span>
         </div>
         <div className="flex justify-between text-xs">
-          <span className="text-muted-foreground">{t('owner.totalEmployees')}</span>
-          <span className="font-bold text-foreground">{activeEmployeeCount} / {maxEmployees}</span>
+          <span className="text-muted-foreground">{t('owner.activeDistributors')}</span>
+          <span className="font-bold text-foreground">{activeDistributorCount} / {maxDistributors}</span>
         </div>
         <div className="w-full bg-muted rounded-full h-2 mt-1">
           <div className={`h-2 rounded-full transition-all ${usagePercent >= 100 ? 'bg-destructive' : usagePercent >= 80 ? 'bg-warning' : 'bg-primary'}`}
             style={{ width: `${Math.min(100, usagePercent)}%` }} />
         </div>
+        <p className="text-[10px] text-muted-foreground pt-1">
+          {t('owner.distributorLimitHint')}
+        </p>
       </div>
     </div>
 
-    <button onClick={() => setShowAddUserModal(true)} disabled={remainingSlots <= 0}
-      className={`w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all ${
-        remainingSlots <= 0 ? 'bg-muted text-muted-foreground cursor-not-allowed' : 'bg-primary text-primary-foreground'
-      }`}>
+    <button onClick={() => setShowAddUserModal(true)}
+      className="w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all bg-primary text-primary-foreground">
       <UserPlus className="w-5 h-5" /> {t('owner.addEmployee')}
     </button>
 

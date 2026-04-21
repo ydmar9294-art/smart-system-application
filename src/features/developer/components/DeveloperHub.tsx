@@ -71,7 +71,7 @@ const DeveloperHub: React.FC = () => {
     const ownerPhone = sanitizePhone(fd.get('ownerPhone') as string || '');
 
     if (!orgName || orgName.length < 2) { alert('اسم المنشأة يجب أن يكون حرفين على الأقل'); return; }
-    if (maxEmployees < 1 || maxEmployees > 500) { alert('عدد الموظفين يجب أن يكون بين 1 و 500'); return; }
+    if (maxEmployees < 1 || maxEmployees > 500) { alert('عدد الموزعين يجب أن يكون بين 1 و 500'); return; }
     if (days < 1 || days > 365) { alert('عدد أيام التجربة يجب أن يكون بين 1 و 365'); return; }
     try {
       await issueLicense(orgName, 'TRIAL', days, maxEmployees, ownerPhone || undefined);
@@ -81,7 +81,7 @@ const DeveloperHub: React.FC = () => {
   };
 
   const handleUpdateLimit = async (licenseId: string) => {
-    if (newLimit < 1 || newLimit > 500) { alert('عدد الموظفين يجب أن يكون بين 1 و 500'); return; }
+    if (newLimit < 1 || newLimit > 500) { alert('عدد الموزعين يجب أن يكون بين 1 و 500'); return; }
     try {
       await updateLicenseMaxEmployees(licenseId, newLimit);
       setEditingLimit(null);
@@ -207,8 +207,9 @@ const DeveloperHub: React.FC = () => {
                 <input name="days" type="number" defaultValue="30" min={1} max={365} className="input-field" />
               </div>
               <div>
-                <label className="text-xs font-bold text-muted-foreground block mb-1">الحد الأقصى للموظفين (1-500)</label>
-                <input name="maxEmployees" type="number" defaultValue="10" min={1} max={500} className="input-field" />
+                <label className="text-xs font-bold text-muted-foreground block mb-1">الحد الأقصى للموزعين (1-500)</label>
+                <input name="maxEmployees" type="number" defaultValue="3" min={1} max={500} className="input-field" />
+                <p className="text-[10px] text-muted-foreground mt-1">يطبَّق على الموزعين الميدانيين فقط. المحاسبون وأمناء المستودعات بدون حد.</p>
               </div>
               <button type="submit" className="btn-primary w-full py-3.5 text-sm">توليد الترخيص التجريبي</button>
               <button type="button" onClick={() => setShowForm(false)} className="btn-secondary w-full py-3.5 text-sm">إلغاء</button>
@@ -317,8 +318,8 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
               ) : (
                 <div className="flex items-center gap-1">
                   <span className="font-bold text-muted-foreground">
-                    الحد: <span className="text-foreground">{license.maxEmployees}</span>
-                    {stats && <span> ({stats.employee_count} نشط)</span>}
+                    حد الموزعين: <span className="text-foreground">{license.maxEmployees}</span>
+                    {stats && <span> ({stats.employee_count} موزع نشط)</span>}
                   </span>
                   <button onClick={() => { setEditingLimit(license.id); setNewLimit(license.maxEmployees); }} className="text-muted-foreground hover:text-primary"><Edit2 size={12}/></button>
                 </div>

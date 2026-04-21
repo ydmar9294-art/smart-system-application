@@ -2092,34 +2092,23 @@ export type Database = {
         Args: { p_items: Json; p_reason?: string; p_sale_id: string }
         Returns: string
       }
-      create_self_service_trial:
-        | {
-            Args: {
-              p_distributors_count: number
-              p_full_name: string
-              p_org_name: string
-              p_phone: string
-              p_whatsapp: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_base_currency_code?: string
-              p_base_currency_name?: string
-              p_base_currency_symbol?: string
-              p_distributors_count: number
-              p_exchange_rate?: number
-              p_full_name: string
-              p_org_name: string
-              p_phone: string
-              p_secondary_currency_code?: string
-              p_secondary_currency_name?: string
-              p_secondary_currency_symbol?: string
-              p_whatsapp: string
-            }
-            Returns: Json
-          }
+      create_self_service_trial: {
+        Args: {
+          p_base_currency_code?: string
+          p_base_currency_name?: string
+          p_base_currency_symbol?: string
+          p_distributors_count: number
+          p_exchange_rate?: number
+          p_full_name: string
+          p_org_name: string
+          p_phone: string
+          p_secondary_currency_code?: string
+          p_secondary_currency_name?: string
+          p_secondary_currency_symbol?: string
+          p_whatsapp: string
+        }
+        Returns: Json
+      }
       deactivate_employee_rpc: {
         Args: { p_employee_id: string }
         Returns: Json
