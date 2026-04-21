@@ -287,7 +287,8 @@ export const PurchasesTab: React.FC = () => {
     setSelectedProduct(productId);
     const product = products.find(p => p.id === productId);
     if (product) {
-      setUnitPrice(String(product.costPrice));
+      // Cost price is no longer tracked — default to base price
+      setUnitPrice(String(product.basePrice || 0));
     }
   };
 

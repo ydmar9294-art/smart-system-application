@@ -23,6 +23,7 @@ const AccountantOverviewTab: React.FC = () => {
   const { data: collectionsTrend = [] } = useCollectionsTrend(30);
 
   // ============ KPIs ============
+  // Cost/profit tracking removed — only sales, collections, debts, and collection rate are shown.
   const kpis = useMemo(() => {
     const activeSales = sales.filter(s => !s.isVoided);
     const totalSales = activeSales.reduce((sum, s) => sum + Number(s.grandTotal), 0);
@@ -32,25 +33,13 @@ const AccountantOverviewTab: React.FC = () => {
 
     const collectionsFromRPC = summary ? Number(summary.collections_total) : totalCollected;
 
-    const totalSalesCost = activeSales.reduce((sum, sale) => {
-      return sum + sale.items.reduce((itemSum, item) => {
-        const product = products.find(p => p.id === item.productId);
-        return itemSum + ((product?.costPrice || 0) * item.quantity);
-      }, 0);
-    }, 0);
-
-    const grossProfit = totalSales - totalSalesCost;
-    const profitMargin = totalSales > 0 ? (grossProfit / totalSales) * 100 : 0;
-
     return {
       totalSales,
       totalCollections: collectionsFromRPC,
       totalDebt,
       collectionRate,
-      grossProfit,
-      profitMargin,
     };
-  }, [sales, customers, products, summary]);
+  }, [sales, customers, summary]);
 
   // ============ Chart data: merge sales & collections ============
   const chartData = useMemo(() => {
@@ -86,9 +75,6 @@ const AccountantOverviewTab: React.FC = () => {
     }
     if (summary && Number(summary.total_discounts) > kpis.totalSales * 0.1) {
       items.push({ type: 'warning', text: t('overview.highDiscountImpact') });
-    }
-    if (kpis.profitMargin > 20) {
-      items.push({ type: 'success', text: t('overview.healthyMargin', { margin: kpis.profitMargin.toFixed(1) }) });
     }
     if (items.length === 0) {
       items.push({ type: 'info', text: t('overview.noAlerts') });
@@ -140,25 +126,13 @@ const AccountantOverviewTab: React.FC = () => {
         />
       </div>
 
-      {/* KPI Cards Row 2 */}
-      <div className="grid grid-cols-3 gap-2">
+      {/* KPI Cards Row 2 — collection efficiency only (cost/profit tracking removed) */}
+      <div className="grid grid-cols-1 gap-2">
         <KPICard
           icon={<Percent className="w-4 h-4" />}
           label={t('overview.collectionRate')}
           value={`${kpis.collectionRate.toFixed(0)}%`}
           color={kpis.collectionRate >= 70 ? 'emerald' : 'amber'}
-        />
-        <KPICard
-          icon={<DollarSign className="w-4 h-4" />}
-          label={t('overview.grossProfit')}
-          value={formatNum(kpis.grossProfit)}
-          color={kpis.grossProfit >= 0 ? 'emerald' : 'red'}
-        />
-        <KPICard
-          icon={<BarChart3 className="w-4 h-4" />}
-          label={t('overview.profitMargin')}
-          value={`${kpis.profitMargin.toFixed(1)}%`}
-          color={kpis.profitMargin >= 15 ? 'emerald' : 'amber'}
         />
       </div>
 
