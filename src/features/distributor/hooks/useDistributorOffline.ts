@@ -469,6 +469,39 @@ export function useDistributorOffline() {
       }
     }
 
+    // For ADD_PAYMENT_OUT: optimistic invoice + customer balance update
+    if (type === 'ADD_PAYMENT_OUT') {
+      const customers = await getCachedCustomers();
+      const customer = customers.find(c => c.id === payload.customerId);
+      const localPaymentId = `local_${generateUUID()}`;
+      const cachedOrgPo = await getCachedOrgInfo();
+      const paymentInvoice: CachedInvoice = {
+        id: localPaymentId,
+        invoice_type: 'payment_out' as any,
+        invoice_number: `PAY-${localPaymentId.slice(-4).toUpperCase()}`,
+        reference_id: payload.customerId,
+        customer_id: payload.customerId,
+        customer_name: customer?.name || 'غير معروف',
+        created_by: null,
+        created_by_name: null,
+        grand_total: payload.amount,
+        paid_amount: payload.amount,
+        remaining: 0,
+        payment_type: 'CASH',
+        items: [],
+        notes: payload.notes || null,
+        reason: null,
+        org_name: cachedOrgPo?.orgName || null,
+        legal_info: cachedOrgPo?.legalInfo || null,
+        invoice_date: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        isLocal: true,
+      };
+      await addLocalInvoice(paymentInvoice);
+      // Customer had balance < 0 (credit). Payment OUT increases balance toward zero.
+      await updateCachedCustomerBalance(payload.customerId, payload.amount);
+    }
+
     // For CREATE_RETURN: add local invoice for return history
     if (type === 'CREATE_RETURN') {
       const sales = await getCachedSales();

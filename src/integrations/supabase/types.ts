@@ -220,34 +220,49 @@ export type Database = {
           amount: number
           collected_by: string | null
           created_at: string
+          currency: string
+          customer_id: string | null
+          direction: string
+          exchange_rate: number
           id: string
           is_reversed: boolean
           notes: string | null
           organization_id: string
+          original_amount: number
           reverse_reason: string | null
-          sale_id: string
+          sale_id: string | null
         }
         Insert: {
           amount: number
           collected_by?: string | null
           created_at?: string
+          currency?: string
+          customer_id?: string | null
+          direction?: string
+          exchange_rate?: number
           id?: string
           is_reversed?: boolean
           notes?: string | null
           organization_id: string
+          original_amount?: number
           reverse_reason?: string | null
-          sale_id: string
+          sale_id?: string | null
         }
         Update: {
           amount?: number
           collected_by?: string | null
           created_at?: string
+          currency?: string
+          customer_id?: string | null
+          direction?: string
+          exchange_rate?: number
           id?: string
           is_reversed?: boolean
           notes?: string | null
           organization_id?: string
+          original_amount?: number
           reverse_reason?: string | null
-          sale_id?: string
+          sale_id?: string | null
         }
         Relationships: [
           {
@@ -1944,16 +1959,39 @@ export type Database = {
         }
         Returns: Json
       }
-      add_collection_rpc: {
-        Args: { p_amount: number; p_notes?: string; p_sale_id: string }
-        Returns: string
-      }
+      add_collection_rpc:
+        | {
+            Args: { p_amount: number; p_notes?: string; p_sale_id: string }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_currency?: string
+              p_exchange_rate?: number
+              p_notes?: string
+              p_original_amount?: number
+              p_sale_id: string
+            }
+            Returns: string
+          }
       add_employee_rpc: {
         Args: {
           p_name: string
           p_phone: string
           p_role: string
           p_type: string
+        }
+        Returns: string
+      }
+      add_payment_out_rpc: {
+        Args: {
+          p_amount: number
+          p_currency?: string
+          p_customer_id: string
+          p_exchange_rate?: number
+          p_notes?: string
+          p_original_amount?: number
         }
         Returns: string
       }

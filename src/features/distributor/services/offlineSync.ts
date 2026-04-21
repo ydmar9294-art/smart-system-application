@@ -88,6 +88,7 @@ function syncPriority(type: OfflineActionType): number {
     case 'ADD_CUSTOMER': return 0;
     case 'CREATE_SALE': return 1;
     case 'ADD_COLLECTION': return 2;
+    case 'ADD_PAYMENT_OUT': return 2;
     case 'CREATE_RETURN': return 3;
     case 'TRANSFER_TO_WAREHOUSE': return 4;
     case 'ROUTE_VISIT': return 5;
@@ -190,6 +191,28 @@ async function executeActionInner(action: OfflineAction): Promise<ExecuteResult>
       const { error } = await supabase.rpc('add_collection_rpc', {
         p_sale_id: saleId,
         p_amount: action.payload.amount,
+        p_notes: action.payload.notes || null,
+        p_currency: action.payload.currency || 'SYP',
+        p_original_amount: action.payload.originalAmount ?? action.payload.amount,
+        p_exchange_rate: action.payload.exchangeRate ?? 1,
+      });
+      if (error) throw error;
+      return 'synced';
+    }
+
+    case 'ADD_PAYMENT_OUT': {
+      const customerId = resolveCustomerId(action.payload.customerId);
+      if (customerId.startsWith('local_')) {
+        logger.info(`[Sync] Deferring ADD_PAYMENT_OUT — customer ${customerId} not yet synced`, 'DistributorOffline');
+        return 'deferred';
+      }
+
+      const { error } = await supabase.rpc('add_payment_out_rpc', {
+        p_customer_id: customerId,
+        p_amount: action.payload.amount,
+        p_currency: action.payload.currency || 'SYP',
+        p_original_amount: action.payload.originalAmount ?? action.payload.amount,
+        p_exchange_rate: action.payload.exchangeRate ?? 1,
         p_notes: action.payload.notes || null,
       });
       if (error) throw error;
