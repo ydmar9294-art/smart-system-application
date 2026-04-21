@@ -11,6 +11,7 @@ import VersionManagement from './VersionManagement';
 import OrgDeletionManager from './OrgDeletionManager';
 import SubscriptionsTab from './SubscriptionsTab';
 import MonitoringTab from './MonitoringTab';
+import { licenseTypeLabel } from '@/lib/enumLabels';
 
 import {
   ShieldCheck, Key, UserPlus,
