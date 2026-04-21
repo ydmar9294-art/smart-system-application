@@ -113,7 +113,7 @@ export function useProductsQuery(orgId?: string | null, role?: UserRole | null) 
       const buildQuery = (from: number, to: number) => {
         let q = supabase
           .from('products')
-          .select('id,name,category,cost_price,base_price,consumer_price,stock,min_stock,unit,is_deleted,organization_id')
+          .select('id,name,category,cost_price,base_price,consumer_price,pricing_currency,stock,min_stock,unit,is_deleted,organization_id')
           .eq('is_deleted', false)
           .order('created_at', { ascending: false })
           .range(from, to);
