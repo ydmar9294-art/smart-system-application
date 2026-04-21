@@ -267,15 +267,6 @@ const ReportsTab: React.FC = () => {
       detail: collStatus === 'good' ? t('reports.healthGood') : collStatus === 'warning' ? t('reports.healthWarning') : t('reports.healthDanger'),
     });
 
-    // Profit margin health
-    const pmStatus = profitMargin >= 20 ? 'good' : profitMargin >= 10 ? 'warning' : 'danger';
-    items.push({
-      label: t('reports.profitMarginLabel'),
-      value: `${profitMargin.toFixed(1)}%`,
-      status: pmStatus,
-      detail: pmStatus === 'good' ? t('reports.marginHealthy') : pmStatus === 'warning' ? t('reports.marginAcceptable') : t('reports.marginLow'),
-    });
-
     // Return rate
     const rrStatus = returnRate <= 3 ? 'good' : returnRate <= 8 ? 'warning' : 'danger';
     items.push({
@@ -296,25 +287,20 @@ const ReportsTab: React.FC = () => {
     });
 
     return items;
-  }, [collectionRate, profitMargin, returnRate, totalDebt, totalSales, t]);
+  }, [collectionRate, returnRate, totalDebt, totalSales, t]);
 
-  // AI financial data payload
+  // AI financial data payload (cost/profit fields removed)
   const aiFinancialData = useMemo(() => ({
     totalSales,
     netSales,
-    salesCost: totalSalesCost,
-    grossProfit,
-    profitMargin,
     purchases: purchasesTotal,
     collections: collectionsTotal,
     totalDebt,
     collectionRate,
     discounts: totalDiscounts,
-    inventoryValue: totalCurrentInventoryValue,
-    profitLoss: profitOrLoss,
     salesReturns: salesReturnsTotal,
     purchaseReturns: purchaseReturnsTotal,
-  }), [totalSales, netSales, totalSalesCost, grossProfit, profitMargin, purchasesTotal, collectionsTotal, totalDebt, collectionRate, totalDiscounts, totalCurrentInventoryValue, profitOrLoss, salesReturnsTotal, purchaseReturnsTotal]);
+  }), [totalSales, netSales, purchasesTotal, collectionsTotal, totalDebt, collectionRate, totalDiscounts, salesReturnsTotal, purchaseReturnsTotal]);
 
   const fmt = (n: number) => n.toLocaleString(locale);
 
