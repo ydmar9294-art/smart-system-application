@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, Users, Package, TrendingUp, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, Package, TrendingUp, LayoutGrid } from 'lucide-react';
 import { useHaptics } from '@/platform/hooks/useHaptics';
 import { ImpactStyle } from '@capacitor/haptics';
 
@@ -21,7 +21,7 @@ const OwnerBottomNav: React.FC<Props> = ({ active, onChange, onOpenSettings }) =
     { id: 'inventory', label: 'المخزون',                  icon: <Package className="w-[22px] h-[22px]" /> },
     { id: 'team',      label: t('owner.tabs.team'),      icon: <Users className="w-[22px] h-[22px]" /> },
     { id: 'finance',   label: t('owner.tabs.finance'),   icon: <TrendingUp className="w-[22px] h-[22px]" /> },
-    { id: 'settings',  label: t('settings.title'),       icon: <Settings className="w-[22px] h-[22px]" /> },
+    { id: 'settings',  label: 'المزيد',                   icon: <LayoutGrid className="w-[22px] h-[22px]" /> },
   ];
 
   const handle = (id: OwnerNavTab) => {

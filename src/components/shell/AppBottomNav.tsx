@@ -1,5 +1,5 @@
 import React from 'react';
-import { LucideIcon, Settings } from 'lucide-react';
+import { LucideIcon, LayoutGrid } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useHaptics } from '@/platform/hooks/useHaptics';
 import { ImpactStyle } from '@capacitor/haptics';
@@ -93,8 +93,8 @@ function AppBottomNav<T extends string>({
           {primary.map((it) => renderButton(it.id, it.label, it.icon, active === it.id))}
           {renderButton(
             'settings',
-            settingsLabel ?? t('settings.title'),
-            Settings,
+            settingsLabel ?? 'المزيد',
+            LayoutGrid,
             active === 'settings',
           )}
         </div>
