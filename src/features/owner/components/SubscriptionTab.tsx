@@ -13,6 +13,7 @@ const SUB_CURRENCY = '$';
 import { getDeviceId } from '@/lib/deviceId';
 import { copyToClipboard } from '@/lib/clipboard';
 import { useShamcashAddress } from '@/hooks/useAppSettings';
+import { licenseStatusLabel } from '@/lib/enumLabels';
 import {
   CreditCard, Calendar, Clock, CheckCircle2, XCircle,
   Upload, Image as ImageIcon, Loader2, AlertTriangle,
