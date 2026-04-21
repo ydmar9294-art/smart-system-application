@@ -42,49 +42,39 @@ const AIAdvicePanel: React.FC<{ financialData: Record<string, number> }> = ({ fi
 البيانات المالية:
 - إجمالي المبيعات: ${financialData.totalSales?.toLocaleString()} ل.س
 - صافي المبيعات (بعد المرتجعات): ${financialData.netSales?.toLocaleString()} ل.س
-- تكلفة المبيعات: ${financialData.salesCost?.toLocaleString()} ل.س
-- الربح الإجمالي: ${financialData.grossProfit?.toLocaleString()} ل.س
-- هامش الربح: ${financialData.profitMargin?.toFixed(1)}%
 - إجمالي المشتريات: ${financialData.purchases?.toLocaleString()} ل.س
 - إجمالي التحصيلات: ${financialData.collections?.toLocaleString()} ل.س
 - إجمالي الديون: ${financialData.totalDebt?.toLocaleString()} ل.س
 - نسبة التحصيل: ${financialData.collectionRate?.toFixed(1)}%
 - إجمالي الخصومات: ${financialData.discounts?.toLocaleString()} ل.س
-- قيمة المخزون الحالي: ${financialData.inventoryValue?.toLocaleString()} ل.س
-- الربح/الخسارة: ${financialData.profitLoss?.toLocaleString()} ل.س
 - مرتجعات المبيعات: ${financialData.salesReturns?.toLocaleString()} ل.س
 - مرتجعات المشتريات: ${financialData.purchaseReturns?.toLocaleString()} ل.س
 
 قدم النصائح بصيغة نقاط مرقمة، كل نصيحة في سطرين: العنوان والتفصيل. ركز على:
-1. تحسين الربحية
+1. تحسين التدفق النقدي
 2. تقليل المخاطر المالية
-3. تحسين التدفق النقدي
-4. إدارة المخزون
-5. تقليل الديون المعدومة`
+3. تسريع عملية التحصيل
+4. تقليل الديون المعدومة
+5. تحسين سياسة الخصومات`
         : `You are an expert financial analyst. Analyze the following financial data and provide 5 practical, concise recommendations to help management make better decisions.
 
 Financial Data:
 - Total Sales: ${financialData.totalSales?.toLocaleString()} SYP
 - Net Sales (after returns): ${financialData.netSales?.toLocaleString()} SYP
-- Cost of Sales: ${financialData.salesCost?.toLocaleString()} SYP
-- Gross Profit: ${financialData.grossProfit?.toLocaleString()} SYP
-- Profit Margin: ${financialData.profitMargin?.toFixed(1)}%
 - Total Purchases: ${financialData.purchases?.toLocaleString()} SYP
 - Total Collections: ${financialData.collections?.toLocaleString()} SYP
 - Total Debt: ${financialData.totalDebt?.toLocaleString()} SYP
 - Collection Rate: ${financialData.collectionRate?.toFixed(1)}%
 - Total Discounts: ${financialData.discounts?.toLocaleString()} SYP
-- Inventory Value: ${financialData.inventoryValue?.toLocaleString()} SYP
-- Profit/Loss: ${financialData.profitLoss?.toLocaleString()} SYP
 - Sales Returns: ${financialData.salesReturns?.toLocaleString()} SYP
 - Purchase Returns: ${financialData.purchaseReturns?.toLocaleString()} SYP
 
 Provide advice as numbered points, each with a title and detail. Focus on:
-1. Improving profitability
+1. Improving cash flow
 2. Reducing financial risks
-3. Improving cash flow
-4. Inventory management
-5. Reducing bad debts`;
+3. Speeding up collections
+4. Reducing bad debts
+5. Optimizing discount policy`;
 
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`, {
         method: 'POST',
