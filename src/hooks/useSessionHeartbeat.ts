@@ -13,7 +13,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { sendHeartbeat } from '@/lib/deviceService';
 import { logger } from '@/lib/logger';
 
-const HEARTBEAT_INTERVAL_MS = 90_000; // 90 seconds (optimized for scale)
+const HEARTBEAT_INTERVAL_MS = 120_000; // 120 seconds (Phase 2.3 — optimized for 50K concurrent users)
 
 export function useSessionHeartbeat(userId: string | undefined) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
