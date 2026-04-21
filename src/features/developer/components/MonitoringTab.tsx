@@ -17,6 +17,7 @@ import {
   AlertCircle, Info, ChevronDown, ChevronUp, Loader2,
   Lightbulb, Code, Wrench
 } from 'lucide-react';
+import { licenseStatusLabel } from '@/lib/enumLabels';
 
 // ============================================
 // Types
@@ -333,7 +334,7 @@ const OrgSummarySection: React.FC<{ summaries: OrgSummary[] }> = ({ summaries })
             s.license_status === 'SUSPENDED' ? 'bg-red-500/10 text-red-500' :
             'bg-muted text-muted-foreground'
           }`}>
-            {s.license_status === 'ACTIVE' ? 'نشط' : s.license_status === 'SUSPENDED' ? 'موقوف' : s.license_status || 'جاهز'}
+            {s.license_status === 'ACTIVE' ? 'نشط' : s.license_status === 'SUSPENDED' ? 'موقوف' : licenseStatusLabel(s.license_status) || 'جاهز'}
           </span>
         </div>
       ))}

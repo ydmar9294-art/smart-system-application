@@ -378,7 +378,7 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
             )}
             {license.monthlyPrice > 0 && (
               <div className="text-[10px] text-primary font-bold mb-2">
-                💰 سعر الشهر: {license.monthlyPrice.toLocaleString()} | نوع: {license.type === 'SUBSCRIPTION' ? 'اشتراك' : license.type === 'TRIAL' ? 'تجريبي' : license.type}
+                💰 سعر الشهر: {license.monthlyPrice.toLocaleString()} | نوع: {license.type === 'SUBSCRIPTION' ? 'اشتراك' : license.type === 'TRIAL' ? 'تجريبي' : licenseTypeLabel(license.type)}
               </div>
             )}
             <div className="text-[9px] text-muted-foreground font-bold border-t border-border pt-2 flex flex-wrap justify-between gap-1">
