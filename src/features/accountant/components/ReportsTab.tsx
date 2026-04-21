@@ -479,16 +479,6 @@ const ReportsTab: React.FC = () => {
               <span className="text-muted-foreground">{t('reports.totalSales')}</span>
               <span className="font-bold text-emerald-600 dark:text-emerald-400">+{fmt(totalSales)}</span>
             </div>
-            <div className="flex items-center justify-between p-2.5 bg-muted rounded-xl text-sm">
-              <span className="text-muted-foreground">{t('reports.salesCostLabel')}</span>
-              <span className="font-bold text-foreground">{fmt(totalSalesCost)}</span>
-            </div>
-            <div className="flex items-center justify-between p-2.5 bg-emerald-500/10 rounded-xl text-sm">
-              <span className="text-muted-foreground">{t('reports.grossProfit')}</span>
-              <span className={`font-bold ${grossProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
-                {fmt(grossProfit)}
-              </span>
-            </div>
             <div className="flex items-center justify-between p-2.5 bg-amber-500/10 rounded-xl text-sm">
               <span className="text-muted-foreground">{t('reports.totalDiscounts')}</span>
               <span className="font-bold text-amber-600 dark:text-amber-400">-{fmt(totalDiscounts)}</span>
@@ -505,10 +495,10 @@ const ReportsTab: React.FC = () => {
               <span className="text-muted-foreground">{t('reports.purchaseReturns')}</span>
               <span className="font-bold text-emerald-600 dark:text-emerald-400">+{fmt(purchaseReturnsTotal)}</span>
             </div>
-            <div className={`flex items-center justify-between p-3 rounded-xl ${profitOrLoss >= 0 ? 'bg-emerald-500/20' : 'bg-destructive/20'}`}>
-              <span className="font-black">{t('reports.profitLoss')}</span>
-              <span className={`font-black text-lg ${profitOrLoss >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
-                {fmt(profitOrLoss)} {CURRENCY}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/20">
+              <span className="font-black">{t('reports.collections')}</span>
+              <span className="font-black text-lg text-emerald-600 dark:text-emerald-400">
+                {fmt(collectionsTotal)} {CURRENCY}
               </span>
             </div>
           </div>
