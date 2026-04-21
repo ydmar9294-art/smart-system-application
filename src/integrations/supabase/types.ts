@@ -1046,6 +1046,7 @@ export type Database = {
           min_stock: number
           name: string
           organization_id: string
+          pricing_currency: string
           stock: number
           unit: string
           updated_at: string
@@ -1061,6 +1062,7 @@ export type Database = {
           min_stock?: number
           name: string
           organization_id: string
+          pricing_currency?: string
           stock?: number
           unit?: string
           updated_at?: string
@@ -1076,6 +1078,7 @@ export type Database = {
           min_stock?: number
           name?: string
           organization_id?: string
+          pricing_currency?: string
           stock?: number
           unit?: string
           updated_at?: string

@@ -13,7 +13,7 @@ export const productService = {
     try {
       let query = supabase
         .from('products')
-        .select('id,name,category,cost_price,base_price,consumer_price,stock,min_stock,unit,is_deleted,organization_id,created_at')
+        .select('id,name,category,cost_price,base_price,consumer_price,pricing_currency,stock,min_stock,unit,is_deleted,organization_id,created_at')
         .eq('is_deleted', false)
         .order('created_at', { ascending: false })
         .limit(limit + 1);
@@ -43,8 +43,10 @@ export const productService = {
 
     const { error } = await supabase.from('products').insert({
       name: product.name, category: product.category,
-      cost_price: product.costPrice, base_price: product.basePrice,
+      cost_price: 0, // unused — system no longer tracks cost
+      base_price: product.basePrice,
       consumer_price: product.consumerPrice ?? 0,
+      pricing_currency: product.pricingCurrency === 'USD' ? 'USD' : 'SYP',
       stock: product.stock, min_stock: product.minStock,
       unit: product.unit, organization_id: orgId,
     });
@@ -57,8 +59,10 @@ export const productService = {
 
     const { error } = await supabase.from('products').update({
       name: product.name, category: product.category,
-      cost_price: product.costPrice, base_price: product.basePrice,
+      cost_price: 0, // unused
+      base_price: product.basePrice,
       consumer_price: product.consumerPrice ?? 0,
+      pricing_currency: product.pricingCurrency === 'USD' ? 'USD' : 'SYP',
       stock: product.stock, min_stock: product.minStock,
       unit: product.unit,
     }).eq('id', product.id);
@@ -74,8 +78,8 @@ export const productService = {
   async logPriceChanges(
     oldProduct: Product, newProduct: Product, orgId: string, userId: string, changerName: string
   ): Promise<void> {
+    // cost_price tracking removed — only sales/consumer prices are user-editable now.
     const priceFields = [
-      { field: 'cost_price', old: oldProduct.costPrice, new: newProduct.costPrice },
       { field: 'base_price', old: oldProduct.basePrice, new: newProduct.basePrice },
       { field: 'consumer_price', old: oldProduct.consumerPrice, new: newProduct.consumerPrice ?? 0 },
     ];

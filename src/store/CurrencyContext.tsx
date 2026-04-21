@@ -11,12 +11,15 @@
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { currencyService, OrgCurrency, ExchangeRate } from '@/services/currencyService';
+import { getUsdToSypRate } from '@/lib/priceConversion';
 import { logger } from '@/lib/logger';
 
 interface CurrencyContextType {
   currencies: OrgCurrency[];
   rates: ExchangeRate[];
   baseCurrency: OrgCurrency | null;
+  /** Latest "1 USD = X SYP" rate, or null when not yet set. */
+  usdRate: number | null;
   isLoading: boolean;
   refresh: () => Promise<void>;
   getLatestRate: (from: string, to: string) => number | null;
@@ -63,6 +66,8 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     [currencies]
   );
 
+  const usdRate = useMemo(() => getUsdToSypRate(rates), [rates]);
+
   const getLatestRate = useCallback(
     (from: string, to: string) => currencyService.getLatestRate(rates, from, to),
     [rates]
@@ -77,11 +82,12 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     currencies,
     rates,
     baseCurrency,
+    usdRate,
     isLoading,
     refresh,
     getLatestRate,
     convert,
-  }), [currencies, rates, baseCurrency, isLoading, refresh, getLatestRate, convert]);
+  }), [currencies, rates, baseCurrency, usdRate, isLoading, refresh, getLatestRate, convert]);
 
   return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
 };
@@ -94,6 +100,7 @@ export const useCurrency = (): CurrencyContextType => {
       currencies: [],
       rates: [],
       baseCurrency: null,
+      usdRate: null,
       isLoading: false,
       refresh: async () => {},
       getLatestRate: () => null,
