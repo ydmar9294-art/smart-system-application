@@ -17,6 +17,7 @@ import { STORES, putItem, getAllItems, getItem, deleteItem, openDB } from './off
 export type OfflineActionType =
   | 'CREATE_SALE'
   | 'ADD_COLLECTION'
+  | 'ADD_PAYMENT_OUT'
   | 'CREATE_RETURN'
   | 'TRANSFER_TO_WAREHOUSE'
   | 'ADD_CUSTOMER'
