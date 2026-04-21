@@ -64,7 +64,7 @@ export interface Product {
   unit: string;
   isDeleted: boolean;
   /** Currency in which base/consumer prices were entered. Defaults to 'SYP'. */
-  pricingCurrency: PricingCurrency;
+  pricingCurrency?: PricingCurrency;
 }
 
 export interface Customer {

@@ -33,11 +33,12 @@ export function getUsdToSypRate(rates: ExchangeRate[]): number | null {
  */
 export function toSyp(
   amount: number,
-  sourceCurrency: PricingCurrency,
+  sourceCurrency: PricingCurrency | undefined,
   usdRate: number | null,
 ): number | null {
   if (!Number.isFinite(amount)) return null;
-  if (sourceCurrency === 'SYP') return amount;
+  const cur: PricingCurrency = sourceCurrency === 'USD' ? 'USD' : 'SYP';
+  if (cur === 'SYP') return amount;
   if (usdRate === null || usdRate <= 0) return null;
   return amount * usdRate;
 }
