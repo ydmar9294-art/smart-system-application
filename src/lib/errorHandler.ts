@@ -4,6 +4,7 @@
  */
 import i18n from '@/lib/i18n';
 import { logger } from '@/lib/logger';
+import { formatError } from '@/lib/errorMessages';
 
 // ============================================
 // Error Message Translation Keys
@@ -64,19 +65,24 @@ export const translateError = (message: string): string => {
 export const extractErrorMessage = (error: unknown): string => {
   if (!error) return i18n.t('errors.unexpected');
 
-  // Supabase error format
-  if (typeof error === 'object' && 'message' in error) {
-    return translateError((error as { message: string }).message);
+  // Try i18n-based translation first (backward compatible)
+  let raw: string | null = null;
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    raw = String((error as { message: unknown }).message);
+  } else if (error instanceof Error) {
+    raw = error.message;
+  } else if (typeof error === 'string') {
+    raw = error;
   }
 
-  // Standard Error
-  if (error instanceof Error) {
-    return translateError(error.message);
-  }
-
-  // String error
-  if (typeof error === 'string') {
-    return translateError(error);
+  if (raw) {
+    const translated = translateError(raw);
+    // If translateError returned the same raw string, fall back to formatError
+    // which handles Postgres codes (23505, 42501, etc.) and Arabic patterns.
+    if (translated === raw) {
+      return formatError(error, raw);
+    }
+    return translated;
   }
 
   return i18n.t('errors.unexpected');
