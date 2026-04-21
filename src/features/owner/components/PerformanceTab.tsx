@@ -95,10 +95,11 @@ export const PerformanceTab: React.FC = () => {
     const monthCash = monthSales.filter(s => s.paymentType === PaymentType.CASH).reduce((s, v) => s + v.grandTotal, 0);
     const monthCredit = monthSales.filter(s => s.paymentType === PaymentType.CREDIT).reduce((s, v) => s + v.grandTotal, 0);
     const monthCollections = payments.filter(p => p.timestamp >= monthStart && !p.isReversed).reduce((s, p) => s + p.amount, 0);
-    const totalInventoryValue = products.filter(p => !p.isDeleted).reduce((s, p) => s + (p.costPrice * p.stock), 0);
+    // Inventory value uses base price (cost no longer tracked)
+    const totalInventoryValue = products.filter(p => !p.isDeleted).reduce((s, p) => s + ((Number(p.basePrice) || 0) * p.stock), 0);
     const distInvValue = distributorInventory.reduce((s, item) => {
       const product = products.find(p => p.id === item.product_id);
-      return s + (product ? product.costPrice * item.quantity : 0);
+      return s + (product ? (Number(product.basePrice) || 0) * item.quantity : 0);
     }, 0);
 
     return { monthRevenue, monthCash, monthCredit, monthCollections, totalInventoryValue, distInvValue, totalSalesCount: monthSales.length };

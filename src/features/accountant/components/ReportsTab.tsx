@@ -42,49 +42,39 @@ const AIAdvicePanel: React.FC<{ financialData: Record<string, number> }> = ({ fi
 البيانات المالية:
 - إجمالي المبيعات: ${financialData.totalSales?.toLocaleString()} ل.س
 - صافي المبيعات (بعد المرتجعات): ${financialData.netSales?.toLocaleString()} ل.س
-- تكلفة المبيعات: ${financialData.salesCost?.toLocaleString()} ل.س
-- الربح الإجمالي: ${financialData.grossProfit?.toLocaleString()} ل.س
-- هامش الربح: ${financialData.profitMargin?.toFixed(1)}%
 - إجمالي المشتريات: ${financialData.purchases?.toLocaleString()} ل.س
 - إجمالي التحصيلات: ${financialData.collections?.toLocaleString()} ل.س
 - إجمالي الديون: ${financialData.totalDebt?.toLocaleString()} ل.س
 - نسبة التحصيل: ${financialData.collectionRate?.toFixed(1)}%
 - إجمالي الخصومات: ${financialData.discounts?.toLocaleString()} ل.س
-- قيمة المخزون الحالي: ${financialData.inventoryValue?.toLocaleString()} ل.س
-- الربح/الخسارة: ${financialData.profitLoss?.toLocaleString()} ل.س
 - مرتجعات المبيعات: ${financialData.salesReturns?.toLocaleString()} ل.س
 - مرتجعات المشتريات: ${financialData.purchaseReturns?.toLocaleString()} ل.س
 
 قدم النصائح بصيغة نقاط مرقمة، كل نصيحة في سطرين: العنوان والتفصيل. ركز على:
-1. تحسين الربحية
+1. تحسين التدفق النقدي
 2. تقليل المخاطر المالية
-3. تحسين التدفق النقدي
-4. إدارة المخزون
-5. تقليل الديون المعدومة`
+3. تسريع عملية التحصيل
+4. تقليل الديون المعدومة
+5. تحسين سياسة الخصومات`
         : `You are an expert financial analyst. Analyze the following financial data and provide 5 practical, concise recommendations to help management make better decisions.
 
 Financial Data:
 - Total Sales: ${financialData.totalSales?.toLocaleString()} SYP
 - Net Sales (after returns): ${financialData.netSales?.toLocaleString()} SYP
-- Cost of Sales: ${financialData.salesCost?.toLocaleString()} SYP
-- Gross Profit: ${financialData.grossProfit?.toLocaleString()} SYP
-- Profit Margin: ${financialData.profitMargin?.toFixed(1)}%
 - Total Purchases: ${financialData.purchases?.toLocaleString()} SYP
 - Total Collections: ${financialData.collections?.toLocaleString()} SYP
 - Total Debt: ${financialData.totalDebt?.toLocaleString()} SYP
 - Collection Rate: ${financialData.collectionRate?.toFixed(1)}%
 - Total Discounts: ${financialData.discounts?.toLocaleString()} SYP
-- Inventory Value: ${financialData.inventoryValue?.toLocaleString()} SYP
-- Profit/Loss: ${financialData.profitLoss?.toLocaleString()} SYP
 - Sales Returns: ${financialData.salesReturns?.toLocaleString()} SYP
 - Purchase Returns: ${financialData.purchaseReturns?.toLocaleString()} SYP
 
 Provide advice as numbered points, each with a title and detail. Focus on:
-1. Improving profitability
+1. Improving cash flow
 2. Reducing financial risks
-3. Improving cash flow
-4. Inventory management
-5. Reducing bad debts`;
+3. Speeding up collections
+4. Reducing bad debts
+5. Optimizing discount policy`;
 
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`, {
         method: 'POST',
@@ -222,17 +212,7 @@ const ReportsTab: React.FC = () => {
   const totalDiscounts = summary ? Number(summary.total_discounts) : 0;
   const distributorInventory = summary?.distributor_inventory || [];
 
-  // Calculations
-  const totalSalesCost = useMemo(() => {
-    return filteredSales.reduce((sum, sale) => {
-      return sum + sale.items.reduce((itemSum, item) => {
-        const product = products.find(p => p.id === item.productId);
-        const costPrice = product ? product.costPrice : 0;
-        return itemSum + (costPrice * item.quantity);
-      }, 0);
-    }, 0);
-  }, [filteredSales, products]);
-
+  // Calculations — cost/profit tracking removed; only sales/collections metrics remain
   const totalSales = useMemo(() =>
     filteredSales.reduce((sum, s) => sum + Number(s.grandTotal), 0),
     [filteredSales]
@@ -251,34 +231,8 @@ const ReportsTab: React.FC = () => {
   );
 
   const collectionRate = totalSales > 0 ? (collectionsTotal / totalSales) * 100 : 0;
-
-  const mainWarehouseValue = useMemo(() =>
-    products.filter(p => !p.isDeleted).reduce((s, p) => s + (p.costPrice * p.stock), 0),
-    [products]
-  );
-
-  const distWarehouseValue = useMemo(() =>
-    distributorInventory.reduce((s, item) => {
-      const product = products.find(p => p.id === item.product_id);
-      return s + (product ? product.costPrice * item.quantity : 0);
-    }, 0),
-    [distributorInventory, products]
-  );
-
-  const totalCurrentInventoryValue = mainWarehouseValue + distWarehouseValue;
-  // Business rule: (Sales Cost + Inventory Value) - Purchases
-  const profitOrLoss = totalSalesCost + totalCurrentInventoryValue - purchasesTotal;
-  const grossProfit = totalSales - totalSalesCost;
-  const profitMargin = totalSales > 0 ? (grossProfit / totalSales) * 100 : 0;
   const returnRate = totalSales > 0 ? (salesReturnsTotal / totalSales) * 100 : 0;
   const discountImpact = totalSales > 0 ? (totalDiscounts / (totalSales + totalDiscounts)) * 100 : 0;
-
-  // Chart: revenue breakdown for pie
-  const pieData = useMemo(() => [
-    { name: t('reports.salesCostLabel'), value: totalSalesCost, color: '#3b82f6' },
-    { name: t('reports.grossProfit'), value: Math.max(0, grossProfit), color: '#22c55e' },
-    { name: t('reports.totalDiscounts'), value: totalDiscounts, color: '#f59e0b' },
-  ].filter(d => d.value > 0), [totalSalesCost, grossProfit, totalDiscounts, t]);
 
   // Chart: daily trend
   const trendData = useMemo(() =>
@@ -303,15 +257,6 @@ const ReportsTab: React.FC = () => {
       detail: collStatus === 'good' ? t('reports.healthGood') : collStatus === 'warning' ? t('reports.healthWarning') : t('reports.healthDanger'),
     });
 
-    // Profit margin health
-    const pmStatus = profitMargin >= 20 ? 'good' : profitMargin >= 10 ? 'warning' : 'danger';
-    items.push({
-      label: t('reports.profitMarginLabel'),
-      value: `${profitMargin.toFixed(1)}%`,
-      status: pmStatus,
-      detail: pmStatus === 'good' ? t('reports.marginHealthy') : pmStatus === 'warning' ? t('reports.marginAcceptable') : t('reports.marginLow'),
-    });
-
     // Return rate
     const rrStatus = returnRate <= 3 ? 'good' : returnRate <= 8 ? 'warning' : 'danger';
     items.push({
@@ -332,25 +277,20 @@ const ReportsTab: React.FC = () => {
     });
 
     return items;
-  }, [collectionRate, profitMargin, returnRate, totalDebt, totalSales, t]);
+  }, [collectionRate, returnRate, totalDebt, totalSales, t]);
 
-  // AI financial data payload
+  // AI financial data payload (cost/profit fields removed)
   const aiFinancialData = useMemo(() => ({
     totalSales,
     netSales,
-    salesCost: totalSalesCost,
-    grossProfit,
-    profitMargin,
     purchases: purchasesTotal,
     collections: collectionsTotal,
     totalDebt,
     collectionRate,
     discounts: totalDiscounts,
-    inventoryValue: totalCurrentInventoryValue,
-    profitLoss: profitOrLoss,
     salesReturns: salesReturnsTotal,
     purchaseReturns: purchaseReturnsTotal,
-  }), [totalSales, netSales, totalSalesCost, grossProfit, profitMargin, purchasesTotal, collectionsTotal, totalDebt, collectionRate, totalDiscounts, totalCurrentInventoryValue, profitOrLoss, salesReturnsTotal, purchaseReturnsTotal]);
+  }), [totalSales, netSales, purchasesTotal, collectionsTotal, totalDebt, collectionRate, totalDiscounts, salesReturnsTotal, purchaseReturnsTotal]);
 
   const fmt = (n: number) => n.toLocaleString(locale);
 
@@ -438,27 +378,7 @@ const ReportsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Gross Profit & Margin */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className={`p-4 rounded-2xl ${grossProfit >= 0 ? 'bg-emerald-500/10' : 'bg-destructive/10'}`}>
-          <div className="flex items-center gap-2 mb-1">
-            <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span className="text-[9px] text-muted-foreground font-bold">{t('reports.grossProfit')}</span>
-          </div>
-          <p className={`text-lg font-black ${grossProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
-            {fmt(grossProfit)}
-          </p>
-        </div>
-        <div className={`p-4 rounded-2xl ${profitMargin >= 15 ? 'bg-emerald-500/10' : 'bg-amber-500/10'}`}>
-          <div className="flex items-center gap-2 mb-1">
-            <Percent className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            <span className="text-[9px] text-muted-foreground font-bold">{t('reports.profitMarginLabel')}</span>
-          </div>
-          <p className={`text-lg font-black ${profitMargin >= 15 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-            {profitMargin.toFixed(1)}%
-          </p>
-        </div>
-      </div>
+      {/* Gross Profit & Margin removed — system no longer tracks cost */}
 
       {/* ====== Sales Trend Chart ====== */}
       {trendData.length > 2 && (
@@ -492,33 +412,7 @@ const ReportsTab: React.FC = () => {
         </div>
       )}
 
-      {/* ====== Revenue Breakdown Pie ====== */}
-      {pieData.length > 0 && (
-        <div className="bg-card p-4 rounded-2xl shadow-sm">
-          <h3 className="font-bold text-sm text-foreground mb-3 flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-primary" />
-            {t('reports.revenueBreakdown')}
-          </h3>
-          <div className="h-36" dir="ltr">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} innerRadius={30} paddingAngle={3}>
-                  {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                </Pie>
-                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px', fontSize: '10px' }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex justify-center gap-3 mt-2">
-            {pieData.map((d, i) => (
-              <div key={i} className="flex items-center gap-1">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-                <span className="text-[9px] text-muted-foreground font-medium">{d.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Revenue breakdown pie removed — depended on cost data */}
 
       {/* Discounts & Returns Impact */}
       <div className="grid grid-cols-2 gap-2">
@@ -540,17 +434,7 @@ const ReportsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Profit/Loss */}
-      <div className={`p-5 rounded-2xl text-center ${profitOrLoss >= 0 ? 'bg-emerald-500/10' : 'bg-destructive/10'}`}>
-        <DollarSign className={`w-8 h-8 mx-auto mb-2 ${profitOrLoss >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`} />
-        <p className="text-xs text-muted-foreground font-bold mb-1">{t('reports.profitLoss')}</p>
-        <p className={`text-2xl font-black ${profitOrLoss >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
-          {fmt(profitOrLoss)} {CURRENCY}
-        </p>
-        <p className="text-[9px] text-muted-foreground mt-2">
-          {t('reports.salesCost')} ({fmt(totalSalesCost)}) + {t('reports.inventoryValue')} ({fmt(totalCurrentInventoryValue)}) − {t('reports.purchases')} ({fmt(purchasesTotal)})
-        </p>
-      </div>
+      {/* Profit/Loss & inventory value cards removed — system no longer tracks cost */}
 
       {/* Collections & Debts */}
       <div className="grid grid-cols-2 gap-2">
@@ -570,25 +454,6 @@ const ReportsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Inventory */}
-      <div className="bg-card p-4 rounded-2xl shadow-sm space-y-2">
-        <h3 className="font-bold text-sm flex items-center gap-2 text-foreground mb-3">
-          <Package className="w-4 h-4" /> {t('reports.currentInventoryValue')}
-        </h3>
-        <div className="flex items-center justify-between p-2.5 bg-muted rounded-xl text-sm">
-          <span className="text-muted-foreground">{t('reports.mainWarehouse')}</span>
-          <span className="font-bold text-foreground">{fmt(mainWarehouseValue)}</span>
-        </div>
-        <div className="flex items-center justify-between p-2.5 bg-muted rounded-xl text-sm">
-          <span className="text-muted-foreground">{t('reports.distributorWarehouses')}</span>
-          <span className="font-bold text-foreground">{fmt(distWarehouseValue)}</span>
-        </div>
-        <div className="flex items-center justify-between p-3 bg-primary/10 rounded-xl">
-          <span className="font-black">{t('common.total')}</span>
-          <span className="font-black text-lg text-primary">{fmt(totalCurrentInventoryValue)} {CURRENCY}</span>
-        </div>
-      </div>
-
       {/* Detailed Financial Table (collapsible) */}
       <div className="bg-card p-4 rounded-2xl shadow-sm">
         <button onClick={() => setShowDetails(!showDetails)} className="w-full flex items-center justify-between">
@@ -603,16 +468,6 @@ const ReportsTab: React.FC = () => {
             <div className="flex items-center justify-between p-2.5 bg-muted rounded-xl text-sm">
               <span className="text-muted-foreground">{t('reports.totalSales')}</span>
               <span className="font-bold text-emerald-600 dark:text-emerald-400">+{fmt(totalSales)}</span>
-            </div>
-            <div className="flex items-center justify-between p-2.5 bg-muted rounded-xl text-sm">
-              <span className="text-muted-foreground">{t('reports.salesCostLabel')}</span>
-              <span className="font-bold text-foreground">{fmt(totalSalesCost)}</span>
-            </div>
-            <div className="flex items-center justify-between p-2.5 bg-emerald-500/10 rounded-xl text-sm">
-              <span className="text-muted-foreground">{t('reports.grossProfit')}</span>
-              <span className={`font-bold ${grossProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
-                {fmt(grossProfit)}
-              </span>
             </div>
             <div className="flex items-center justify-between p-2.5 bg-amber-500/10 rounded-xl text-sm">
               <span className="text-muted-foreground">{t('reports.totalDiscounts')}</span>
@@ -630,10 +485,10 @@ const ReportsTab: React.FC = () => {
               <span className="text-muted-foreground">{t('reports.purchaseReturns')}</span>
               <span className="font-bold text-emerald-600 dark:text-emerald-400">+{fmt(purchaseReturnsTotal)}</span>
             </div>
-            <div className={`flex items-center justify-between p-3 rounded-xl ${profitOrLoss >= 0 ? 'bg-emerald-500/20' : 'bg-destructive/20'}`}>
-              <span className="font-black">{t('reports.profitLoss')}</span>
-              <span className={`font-black text-lg ${profitOrLoss >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
-                {fmt(profitOrLoss)} {CURRENCY}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/20">
+              <span className="font-black">{t('reports.collections')}</span>
+              <span className="font-black text-lg text-emerald-600 dark:text-emerald-400">
+                {fmt(collectionsTotal)} {CURRENCY}
               </span>
             </div>
           </div>

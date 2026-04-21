@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { logger } from '@/lib/logger';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '@/store/AppContext';
+import { useCurrency } from '@/store/CurrencyContext';
+import { resolveProductBasePriceSYP } from '@/lib/priceConversion';
 import { CURRENCY } from '@/constants';
 import { 
   Package, Box, ShoppingCart, Truck, Plus, X, Calendar, User, 
@@ -40,18 +42,19 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
   const [subTab, setSubTab] = useState<SubTab>(forceSubTab || 'products');
   const effectiveSubTab = forceSubTab || (productsOnly ? 'products' : subTab);
 
-  // Inventory Summary KPIs
+  const { usdRate } = useCurrency();
+  // Inventory Summary KPIs — use base price (in SYP) since cost is no longer tracked
   const inventorySummary = React.useMemo(() => {
     const activeProducts = products.filter(p => !p.isDeleted);
-    const warehouseValue = activeProducts.reduce((s, p) => s + (p.stock * p.costPrice), 0);
+    const warehouseValue = activeProducts.reduce((s, p) => s + (p.stock * resolveProductBasePriceSYP(p, usdRate)), 0);
     const distInv = distributorInventory as any[];
     const distValue = distInv.reduce((s: number, di: any) => {
       const prod = products.find(p => p.id === di.product_id);
-      return s + (di.quantity * (prod?.costPrice || 0));
+      return s + (di.quantity * (prod ? resolveProductBasePriceSYP(prod, usdRate) : 0));
     }, 0);
     const lowStock = activeProducts.filter(p => p.stock <= p.minStock).length;
     return { warehouseValue, distValue, totalValue: warehouseValue + distValue, activeCount: activeProducts.length, lowStock };
-  }, [products, distributorInventory]);
+  }, [products, distributorInventory, usdRate]);
 
   // Purchases Modal State
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
@@ -88,11 +91,11 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
   const filteredProducts = products.filter(p => p.name.includes(searchTerm) || p.category.includes(searchTerm));
   const lowStockCount = products.filter(p => p.stock <= p.minStock).length;
 
-  // Purchase Handlers
+  // Purchase Handlers — unit price defaults to base price (cost is no longer tracked)
   const handlePurchaseProductChange = (productId: string) => {
     setPurchaseProduct(productId);
     const product = products.find(p => p.id === productId);
-    if (product) setPurchasePrice(String(product.costPrice));
+    if (product) setPurchasePrice(String(resolveProductBasePriceSYP(product, usdRate)));
   };
 
   const handlePurchaseSubmit = async (e: React.FormEvent) => {
@@ -172,11 +175,11 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
     setDeliveryItemQty(1);
   };
 
-  // Purchase Return Handlers
+  // Purchase Return Handlers — unit price defaults to base price
   const handleReturnProductChange = (productId: string) => {
     setSelectedReturnProduct(productId);
     const product = products.find(p => p.id === productId);
-    if (product) setReturnItemPrice(String(product.costPrice));
+    if (product) setReturnItemPrice(String(resolveProductBasePriceSYP(product, usdRate)));
   };
 
   const addPurchaseReturnItem = () => {
