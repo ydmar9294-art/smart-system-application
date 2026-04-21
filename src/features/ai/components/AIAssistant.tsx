@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Sparkles, X, Send, Loader2, MessageCircle } from 'lucide-react';
+import { X, Send, Loader2, MessageCircle } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { supabase } from '@/integrations/supabase/client';
+import AppLogo from '@/components/ui/AppLogo';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -105,8 +106,8 @@ const AIAssistantModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
         onClick={(e) => e.stopPropagation()}>
         <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-              <Sparkles className="w-5 h-5" />
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center overflow-hidden">
+              <AppLogo size={32} />
             </div>
             <div>
               <h3 className="font-bold text-base">{t('aiAssistant.title')}</h3>
@@ -174,9 +175,9 @@ const AIAssistant: React.FC<{ className?: string }> = ({ className }) => {
   return (
     <>
       <button onClick={() => setIsOpen(true)}
-        className={`p-1.5 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg text-white hover:from-purple-600 hover:to-blue-700 transition-all active:scale-95 ${className || ''}`}
+        className={`p-0.5 rounded-lg overflow-hidden transition-all active:scale-95 ${className || ''}`}
         title={t('aiAssistant.title')} type="button">
-        <Sparkles className="w-5 h-5" />
+        <AppLogo size={32} />
       </button>
       <AIAssistantModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
     </>

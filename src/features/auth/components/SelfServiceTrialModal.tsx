@@ -9,6 +9,7 @@ import {
   Sparkles, Building2, User, Users, Phone, MessageCircle,
   Loader2, CheckCircle2, AlertCircle, ArrowRight, Coins, ArrowRightLeft,
 } from 'lucide-react';
+import AppLogo from '@/components/ui/AppLogo';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { sanitizeText, sanitizePhone } from '@/lib/validation';

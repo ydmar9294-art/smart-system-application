@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { X, MessageCircle, Sparkles, Star } from 'lucide-react';
+import { X, MessageCircle, Star } from 'lucide-react';
+import AppLogo from '@/components/ui/AppLogo';
 import { useTranslation } from 'react-i18next';
 import { SUPPORT_WHATSAPP } from '@/constants';
 
@@ -73,8 +74,8 @@ const GuestPromoOverlay: React.FC = () => {
             </button>
 
             {/* Icon */}
-            <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg mb-4">
-              <Sparkles className="w-8 h-8 text-primary-foreground" />
+            <div className="mx-auto w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg mb-4">
+              <AppLogo size={64} />
             </div>
 
             <h3 className="text-lg font-black text-foreground text-center leading-tight">
