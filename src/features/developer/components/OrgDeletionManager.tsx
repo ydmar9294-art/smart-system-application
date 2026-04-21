@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Trash2, AlertTriangle, CheckCircle2, Clock,
   FileText, User, Building2, Loader2, Ban
 } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 interface DeletionRequest {
   id: string;
