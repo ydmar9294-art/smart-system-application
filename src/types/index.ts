@@ -48,11 +48,14 @@ export interface Organization {
   expiryDate?: number;
 }
 
+export type PricingCurrency = 'SYP' | 'USD';
+
 export interface Product {
   id: string;
   organization_id?: string;
   name: string;
   category: string;
+  /** @deprecated cost is no longer used by the UI; kept for DB compatibility */
   costPrice: number;
   basePrice: number;
   consumerPrice: number;
@@ -60,6 +63,8 @@ export interface Product {
   minStock: number;
   unit: string;
   isDeleted: boolean;
+  /** Currency in which base/consumer prices were entered. Defaults to 'SYP'. */
+  pricingCurrency: PricingCurrency;
 }
 
 export interface Customer {

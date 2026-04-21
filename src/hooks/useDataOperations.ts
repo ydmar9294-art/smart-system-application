@@ -75,13 +75,14 @@ export const transformProduct = (p: any): Product => ({
   organization_id: p.organization_id,
   name: p.name,
   category: p.category,
-  costPrice: Number(p.cost_price),
+  costPrice: Number(p.cost_price ?? 0),
   basePrice: Number(p.base_price),
   consumerPrice: Number(p.consumer_price ?? 0),
   stock: p.stock,
   minStock: p.min_stock,
   unit: p.unit,
-  isDeleted: p.is_deleted
+  isDeleted: p.is_deleted,
+  pricingCurrency: (p.pricing_currency === 'USD' ? 'USD' : 'SYP'),
 });
 
 export const transformCustomer = (c: any): Customer => ({
