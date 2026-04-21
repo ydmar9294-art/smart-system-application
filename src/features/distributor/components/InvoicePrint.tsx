@@ -94,7 +94,7 @@ function buildInvoiceHtml(params: {
   invoiceId: string;
   date: Date;
   customerName: string;
-  invoiceType: 'sale' | 'return' | 'collection';
+  invoiceType: 'sale' | 'return' | 'collection' | 'payment_out';
   paymentType?: 'CASH' | 'CREDIT';
   items: InvoiceItem[];
   grandTotal: number;
@@ -105,12 +105,16 @@ function buildInvoiceHtml(params: {
   paidAmount?: number;
   remaining?: number;
   notes?: string;
+  currency?: 'SYP' | 'USD';
+  originalAmount?: number;
+  exchangeRate?: number;
 }): string {
   const {
     labels, locale, isRtl, orgName, legalInfo, invoiceId, date,
     customerName, invoiceType, paymentType,
     items, grandTotal, subtotal, discountType, discountPercentage, discountValue,
-    paidAmount, remaining, notes
+    paidAmount, remaining, notes,
+    currency, originalAmount, exchangeRate,
   } = params;
 
   const dir = isRtl ? 'rtl' : 'ltr';
