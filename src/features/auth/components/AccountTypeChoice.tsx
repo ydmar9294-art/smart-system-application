@@ -3,7 +3,8 @@
  * يعرض بعد تسجيل الدخول لمن لا يملك حساباً مفعّلاً.
  */
 import React from 'react';
-import { Building2, UserCheck, Sparkles, LogOut } from 'lucide-react';
+import { Building2, UserCheck, LogOut } from 'lucide-react';
+import AppLogo from '@/components/ui/AppLogo';
 
 interface AccountTypeChoiceProps {
   fullName: string;
@@ -40,8 +41,8 @@ const AccountTypeChoice: React.FC<AccountTypeChoiceProps> = ({
 
       {/* Header */}
       <div className="text-center space-y-2 pb-2">
-        <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-3">
-          <Sparkles className="w-7 h-7 text-primary" />
+        <div className="w-14 h-14 mx-auto rounded-2xl overflow-hidden flex items-center justify-center mb-3">
+          <AppLogo size={56} />
         </div>
         <h3 className="text-lg font-black text-foreground">أهلاً بك 👋</h3>
         <p className="text-xs text-muted-foreground">اختر نوع حسابك للمتابعة</p>

@@ -17,8 +17,9 @@ import {
   Copy, CheckCircle2,
   Clock, Lock, Unlock, Activity,
   Users, BarChart3, AlertTriangle, Phone, Edit2, Save, X, Smartphone, Trash2, Settings as SettingsIcon, Wallet,
-  Sparkles, User, MessageCircle,
+  User, MessageCircle,
 } from 'lucide-react';
+import AppLogo from '@/components/ui/AppLogo';
 import {
   AppHeader,
   AppBottomNav,
@@ -332,7 +333,7 @@ const LicensesTab: React.FC<LicensesTabProps> = ({
             {license.isSelfServiceTrial && (
               <div className="mb-2 p-2.5 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 space-y-1.5">
                 <div className="flex items-center gap-1.5 text-[10px] font-black text-primary uppercase tracking-wider">
-                  <Sparkles size={11} />
+                  <div className="w-3 h-3 overflow-hidden rounded-sm"><AppLogo size={11} /></div>
                   <span>تجريبي ذاتي (15 يوم)</span>
                 </div>
                 {license.ownerFullName && (

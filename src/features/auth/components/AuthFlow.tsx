@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { logger } from '@/lib/logger';
-import { Loader2, AlertCircle, XCircle, Zap, BarChart3, Lock, RefreshCw, ShieldCheck, Sparkles, ArrowLeft } from 'lucide-react';
+import { Loader2, AlertCircle, XCircle, Zap, BarChart3, Lock, RefreshCw, ShieldCheck, ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import AppLogo from '@/components/ui/AppLogo';
 import { supabase } from '@/integrations/supabase/client';
@@ -499,7 +499,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
                 }}
               >
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: 'linear-gradient(135deg, hsl(0 0% 100% / 0.15), transparent 60%)' }} />
-                <Sparkles className="w-5 h-5 drop-shadow" />
+                <div className="w-5 h-5 overflow-hidden rounded-md drop-shadow"><AppLogo size={20} /></div>
                 <span className="drop-shadow-sm">{t('auth.guestPromoTitle')}</span>
                 <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1 rtl:rotate-180 rtl:group-hover:translate-x-1 rtl:group-hover:-translate-x-0" />
               </button>

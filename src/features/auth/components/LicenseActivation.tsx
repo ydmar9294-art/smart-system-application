@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Key, Building2, User, Loader2, CheckCircle2, AlertCircle, Sparkles, Copy, Wallet, LogOut, MessageCircle, Clock, AlertTriangle } from 'lucide-react';
+import { Key, Building2, User, Loader2, CheckCircle2, AlertCircle, Copy, Wallet, LogOut, MessageCircle, Clock, AlertTriangle } from 'lucide-react';
+import AppLogo from '@/components/ui/AppLogo';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -92,7 +93,7 @@ const LicenseActivation: React.FC<LicenseActivationProps> = ({ userId, email, fu
       </div>
 
       <div className="text-center space-y-2 pb-2">
-        <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-3"><Sparkles className="w-7 h-7 text-primary" /></div>
+        <div className="w-14 h-14 mx-auto rounded-2xl overflow-hidden flex items-center justify-center mb-3"><AppLogo size={56} /></div>
         <h3 className="text-lg font-black text-foreground">{t('activation.title')}</h3>
         <p className="text-xs text-muted-foreground">{t('activation.subtitle')}</p>
       </div>

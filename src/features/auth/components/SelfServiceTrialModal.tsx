@@ -6,9 +6,10 @@
  */
 import React, { useState, useMemo } from 'react';
 import {
-  Sparkles, Building2, User, Users, Phone, MessageCircle,
+  Building2, User, Users, Phone, MessageCircle,
   Loader2, CheckCircle2, AlertCircle, ArrowRight, Coins, ArrowRightLeft,
 } from 'lucide-react';
+import AppLogo from '@/components/ui/AppLogo';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { sanitizeText, sanitizePhone } from '@/lib/validation';
@@ -157,7 +158,7 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
         isOpen={isOpen}
         onClose={onClose}
         title="حساب تجريبي مجاني"
-        icon={<Sparkles className="w-5 h-5" />}
+        icon={<div className="w-5 h-5 overflow-hidden rounded-md"><AppLogo size={20} /></div>}
         headerColor="primary"
         footer={
           <div className="space-y-2">
@@ -178,8 +179,8 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
       >
         <div className="space-y-5 py-3">
           <div className="text-center space-y-3">
-            <div className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-              <Sparkles className="w-10 h-10 text-primary" />
+            <div className="w-20 h-20 mx-auto rounded-3xl overflow-hidden flex items-center justify-center">
+              <AppLogo size={80} />
             </div>
             <h3 className="text-xl font-black text-foreground">على وشك إنشاء حسابك التجريبي 🎉</h3>
           </div>
@@ -309,7 +310,7 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
             {loading ? (
               <><Loader2 className="w-5 h-5 animate-spin" /> جاري الإنشاء...</>
             ) : (
-              <><Sparkles className="w-5 h-5" /> إنشاء الحساب التجريبي</>
+              <><div className="w-5 h-5 overflow-hidden rounded-md"><AppLogo size={20} /></div> إنشاء الحساب التجريبي</>
             )}
           </button>
           <button

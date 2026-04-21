@@ -2,9 +2,10 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   BarChart3, TrendingUp, TrendingDown, DollarSign,
-  ShoppingCart, Wallet, Package, Percent, Sparkles, Loader2,
+  ShoppingCart, Wallet, Package, Percent, Loader2,
   ArrowUpRight, ArrowDownRight, ChevronDown, ChevronUp
 } from 'lucide-react';
+import AppLogo from '@/components/ui/AppLogo';
 import { useApp } from '@/store/AppContext';
 import { useFinancialSummary, useDailySalesTrend } from '../hooks/useAccountantData';
 import { CURRENCY } from '@/constants';
@@ -128,7 +129,7 @@ Provide advice as numbered points, each with a title and detail. Focus on:
     <div className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 p-4 rounded-2xl border border-purple-500/20">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-bold text-sm flex items-center gap-2 text-foreground">
-          <Sparkles className="w-4 h-4 text-purple-500" />
+          <div className="w-4 h-4 overflow-hidden rounded-sm"><AppLogo size={16} /></div>
           {t('reports.aiAdvice')}
         </h3>
         <button
@@ -136,7 +137,7 @@ Provide advice as numbered points, each with a title and detail. Focus on:
           disabled={loading}
           className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 disabled:opacity-50 active:scale-95 transition-all"
         >
-          {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+          {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <div className="w-3.5 h-3.5 overflow-hidden rounded-sm"><AppLogo size={14} /></div>}
           {loading ? t('common.loading') : t('reports.getAdvice')}
         </button>
       </div>
