@@ -117,14 +117,19 @@ export const transformSale = (s: any): Sale => ({
 
 export const transformPayment = (p: any): Payment => ({
   id: p.id,
-  saleId: p.sale_id,
+  saleId: p.sale_id ?? null,
+  customerId: p.customer_id ?? p.sales?.customer_id ?? null,
   amount: Number(p.amount),
   notes: p.notes,
   isReversed: p.is_reversed,
   reverseReason: p.reverse_reason,
   timestamp: new Date(p.created_at).getTime(),
   collectedBy: p.collected_by || undefined,
-  customerName: p.sales?.customer_name || p.customer_name || undefined,
+  customerName: p.customers?.name || p.sales?.customer_name || p.customer_name || undefined,
+  direction: (p.direction === 'OUT' ? 'OUT' : 'IN'),
+  currency: (p.currency === 'USD' ? 'USD' : 'SYP'),
+  originalAmount: p.original_amount != null ? Number(p.original_amount) : Number(p.amount),
+  exchangeRate: p.exchange_rate != null ? Number(p.exchange_rate) : 1,
 });
 
 export const transformPurchase = (p: any): Purchase => ({

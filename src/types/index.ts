@@ -106,9 +106,15 @@ export interface SaleItem {
   totalPrice: number;
 }
 
+export type PaymentDirection = 'IN' | 'OUT';
+export type PaymentCurrency = 'SYP' | 'USD';
+
 export interface Payment {
   id: string;
-  saleId: string;
+  /** May be null for OUT (payment-out) entries that are not tied to an invoice. */
+  saleId: string | null;
+  /** Customer linked to the payment (always present for OUT, usually present for IN). */
+  customerId?: string | null;
   amount: number;
   notes?: string;
   isReversed: boolean;
@@ -116,6 +122,14 @@ export interface Payment {
   timestamp: number;
   collectedBy?: string;
   customerName?: string;
+  /** 'IN' = receipt voucher (سند قبض), 'OUT' = payment voucher (سند دفع). Defaults to 'IN'. */
+  direction?: PaymentDirection;
+  /** Currency in which the user originally entered the amount. Defaults to 'SYP'. */
+  currency?: PaymentCurrency;
+  /** Amount as originally entered (in `currency` units). */
+  originalAmount?: number;
+  /** USD→SYP rate at the time of the transaction (for OUT/IN in USD). */
+  exchangeRate?: number;
 }
 
 export interface License {
