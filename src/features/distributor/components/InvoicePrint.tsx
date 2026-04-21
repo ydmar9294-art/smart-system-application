@@ -32,7 +32,7 @@ interface InvoiceItem {
 }
 
 interface InvoicePrintProps {
-  invoiceType: 'sale' | 'return' | 'collection';
+  invoiceType: 'sale' | 'return' | 'collection' | 'payment_out';
   invoiceId: string;
   customerName: string;
   date: Date;
@@ -46,6 +46,10 @@ interface InvoicePrintProps {
   remaining?: number;
   notes?: string;
   paymentType?: 'CASH' | 'CREDIT';
+  /** For collection / payment_out vouchers in foreign currency. */
+  currency?: 'SYP' | 'USD';
+  originalAmount?: number;
+  exchangeRate?: number;
   onClose: () => void;
 }
 
@@ -302,6 +306,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({
       case 'sale': return t('invoice.saleInvoice');
       case 'return': return t('invoice.returnNotice');
       case 'collection': return t('invoice.receiptVoucher');
+      case 'payment_out': return t('invoice.paymentVoucher');
       default: return t('invoice.document');
     }
   };
