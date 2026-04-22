@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Package } from 'lucide-react';
 import FullScreenModal from '@/components/ui/FullScreenModal';
-import type { Product } from '@/types';
+import type { Product, PricingCurrency } from '@/types';
 
 interface Props {
   isOpen: boolean;
@@ -13,6 +13,16 @@ interface Props {
 
 export const ProductModal: React.FC<Props> = ({ isOpen, onClose, editingProduct, onSubmit }) => {
   const { t } = useTranslation();
+  const [pricingCurrency, setPricingCurrency] = useState<PricingCurrency>(
+    (editingProduct?.pricingCurrency as PricingCurrency) || 'SYP'
+  );
+
+  // Reset selection when opening modal or switching products
+  useEffect(() => {
+    if (isOpen) {
+      setPricingCurrency((editingProduct?.pricingCurrency as PricingCurrency) || 'SYP');
+    }
+  }, [isOpen, editingProduct]);
   return (
     <FullScreenModal
       isOpen={isOpen}
@@ -59,25 +69,25 @@ export const ProductModal: React.FC<Props> = ({ isOpen, onClose, editingProduct,
           <label className="text-xs font-black text-muted-foreground uppercase">عملة التسعير</label>
           <div className="grid grid-cols-2 gap-2">
             {(['SYP', 'USD'] as const).map((cur) => {
-              const isSelected = (editingProduct?.pricingCurrency || 'SYP') === cur;
+              const isSelected = pricingCurrency === cur;
               return (
-                <label key={cur} className={`relative flex items-center justify-center gap-2 py-3 rounded-xl border-2 cursor-pointer transition-all ${
-                  isSelected ? 'border-primary bg-primary/10' : 'border-border bg-muted/30'
-                }`}>
-                  <input
-                    type="radio"
-                    name="pricingCurrency"
-                    value={cur}
-                    defaultChecked={isSelected}
-                    className="sr-only"
-                  />
+                <button
+                  key={cur}
+                  type="button"
+                  onClick={() => setPricingCurrency(cur)}
+                  className={`relative flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all ${
+                    isSelected ? 'border-primary bg-primary/10' : 'border-border bg-muted/30'
+                  }`}
+                >
                   <span className="text-sm font-black text-foreground">
                     {cur === 'SYP' ? 'ليرة سورية (ل.س)' : 'دولار ($)'}
                   </span>
-                </label>
+                </button>
               );
             })}
           </div>
+          {/* Hidden field carries the selected value into form submission */}
+          <input type="hidden" name="pricingCurrency" value={pricingCurrency} />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
