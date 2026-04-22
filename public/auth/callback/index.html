@@ -77,8 +77,6 @@
   <script>
     (function() {
       var origin = window.location.origin;
-      var APP_SCHEME = 'myapp';
-      var APP_PACKAGE = 'app.lovable.bac2f6ed2db54e828d262c37cac1581f';
 
       document.getElementById('loginBtn').href = origin + '/';
       document.getElementById('retryBtn').href = origin + '/';
@@ -103,38 +101,6 @@
         document.getElementById('error').style.display = 'block';
       }
 
-      /**
-       * Detect if the page was opened from a native app (Capacitor)
-       * by checking for common Android/iOS browser indicators
-       */
-      function isNativeContext() {
-        var ua = navigator.userAgent || '';
-        // Chrome Custom Tab on Android includes "Android" but not "wv" (WebView)
-        // We also check for the referrer or opener being absent (system browser opened externally)
-        return /Android/i.test(ua) || /iPhone|iPad|iPod/i.test(ua);
-      }
-
-      /**
-       * Try to open the native app via deep link.
-       * On Android Chrome: uses Intent URL which is the most reliable method.
-       * Fallback: uses custom scheme URL.
-       */
-      function openNativeApp(fragment) {
-        var isAndroidChrome = /Android/i.test(navigator.userAgent) && /Chrome/i.test(navigator.userAgent);
-        
-        if (isAndroidChrome) {
-          // Android Intent URL — Chrome handles this natively and opens the app directly
-          var intentUrl = 'intent://oauth-callback' + fragment + 
-            '#Intent;scheme=' + APP_SCHEME + 
-            ';package=' + APP_PACKAGE + 
-            ';end';
-          window.location.href = intentUrl;
-        } else {
-          // iOS / other browsers: use custom scheme
-          window.location.href = APP_SCHEME + '://oauth-callback' + fragment;
-        }
-      }
-
       // If there's an error in the URL
       if (error) {
         showError(errorDescription || 'حدث خطأ أثناء التحقق');
@@ -142,56 +108,33 @@
       }
 
       // If this is a signup/email confirmation
+      // (Web flow only — native apps reach myapp://auth/email-confirmed directly via deep link)
       if (type === 'signup' || type === 'email_change' || type === 'magiclink') {
         if (accessToken) {
           try {
             localStorage.removeItem('sb-' + 'nrqueogifxxdwladewey' + '-auth-token');
           } catch(e) {}
         }
-        // On native context, redirect to app via deep link
-        if (isNativeContext() && accessToken) {
-          var confirmFragment = '#access_token=' + accessToken + '&refresh_token=' + refreshToken + '&type=' + type;
-          openNativeApp(confirmFragment.replace('oauth-callback', 'email-confirmed'));
-          // Use direct deep link
-          window.location.href = APP_SCHEME + '://auth/email-confirmed' + confirmFragment;
-          setTimeout(showSuccess, 2000);
-          return;
-        }
         setTimeout(showSuccess, 800);
         return;
       }
 
       // OAuth callback (Google, etc.)
+      // NOTE: This HTML page is ONLY reached from web/browser flows.
+      // The native Capacitor app uses myapp://auth/oauth-callback directly via deep link
+      // and never lands on this page. Therefore, we always redirect to the web app —
+      // attempting an Android intent here would fail (no app installed in browser context)
+      // and waste 2 seconds before falling back, breaking the OAuth flow.
       if (accessToken && !type) {
-        // Build fragment with tokens
         var tokenFragment = '#access_token=' + accessToken + '&refresh_token=' + refreshToken + '&type=oauth';
-        
-        if (isNativeContext()) {
-          // Native app: open via deep link (Intent URL on Android, custom scheme on iOS)
-          openNativeApp(tokenFragment);
-          
-          // Fallback: if the app didn't open within 2 seconds, redirect to web app
-          setTimeout(function() {
-            window.location.replace(origin + '/' + tokenFragment);
-          }, 2000);
-        } else {
-          // Web: redirect normally
-          window.location.replace(origin + '/' + tokenFragment);
-        }
+        // Use replace() so back-button doesn't return to /auth/callback
+        window.location.replace(origin + '/' + tokenFragment);
         return;
       }
 
       // If this is a password recovery, redirect to reset-password page
       if (type === 'recovery') {
-        if (isNativeContext()) {
-          // Redirect to native app via deep link
-          var recoveryFragment = '#access_token=' + accessToken + '&refresh_token=' + refreshToken + '&type=recovery';
-          window.location.href = APP_SCHEME + '://auth/reset-password' + recoveryFragment;
-          setTimeout(function() {
-            window.location.replace(origin + '/reset-password#' + hash);
-          }, 2000);
-          return;
-        }
+        // Web flow only — native apps reach myapp://auth/reset-password directly via deep link
         window.location.replace(origin + '/reset-password#' + hash);
         return;
       }
