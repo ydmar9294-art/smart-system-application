@@ -77,8 +77,6 @@
   <script>
     (function() {
       var origin = window.location.origin;
-      var APP_SCHEME = 'myapp';
-      var APP_PACKAGE = 'app.lovable.bac2f6ed2db54e828d262c37cac1581f';
 
       document.getElementById('loginBtn').href = origin + '/';
       document.getElementById('retryBtn').href = origin + '/';
@@ -101,38 +99,6 @@
         document.getElementById('loading').style.display = 'none';
         if (msg) document.getElementById('errorMsg').textContent = msg;
         document.getElementById('error').style.display = 'block';
-      }
-
-      /**
-       * Detect if the page was opened from a native app (Capacitor)
-       * by checking for common Android/iOS browser indicators
-       */
-      function isNativeContext() {
-        var ua = navigator.userAgent || '';
-        // Chrome Custom Tab on Android includes "Android" but not "wv" (WebView)
-        // We also check for the referrer or opener being absent (system browser opened externally)
-        return /Android/i.test(ua) || /iPhone|iPad|iPod/i.test(ua);
-      }
-
-      /**
-       * Try to open the native app via deep link.
-       * On Android Chrome: uses Intent URL which is the most reliable method.
-       * Fallback: uses custom scheme URL.
-       */
-      function openNativeApp(fragment) {
-        var isAndroidChrome = /Android/i.test(navigator.userAgent) && /Chrome/i.test(navigator.userAgent);
-        
-        if (isAndroidChrome) {
-          // Android Intent URL — Chrome handles this natively and opens the app directly
-          var intentUrl = 'intent://oauth-callback' + fragment + 
-            '#Intent;scheme=' + APP_SCHEME + 
-            ';package=' + APP_PACKAGE + 
-            ';end';
-          window.location.href = intentUrl;
-        } else {
-          // iOS / other browsers: use custom scheme
-          window.location.href = APP_SCHEME + '://oauth-callback' + fragment;
-        }
       }
 
       // If there's an error in the URL
