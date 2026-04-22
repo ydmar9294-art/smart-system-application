@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNotifications } from '@/store/NotificationContext';
-import { AlertCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, AlertTriangle, X } from 'lucide-react';
 import { Notification } from '@/types';
 
-const DISMISS_MS = 2000;
+// Auto-dismiss window (ms) — within the 4-6s range requested.
+const DISMISS_MS = 5000;
 const ANIM_MS = 300;
+const MAX_VISIBLE = 3;
 
 interface ToastEntry extends Notification {
   exiting?: boolean;
@@ -14,10 +16,32 @@ export const ToastManager: React.FC = () => {
   const { notifications } = useNotifications();
   const [toasts, setToasts] = useState<ToastEntry[]>([]);
   const seenRef = useRef<Set<number>>(new Set());
+  const timersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
 
   const dismiss = useCallback((id: number) => {
+    // Cancel any pending auto-dismiss timer for this toast
+    const existing = timersRef.current.get(id);
+    if (existing) {
+      clearTimeout(existing);
+      timersRef.current.delete(id);
+    }
     setToasts(prev => prev.map(t => t.id === id ? { ...t, exiting: true } : t));
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), ANIM_MS);
+  }, []);
+
+  const scheduleDismiss = useCallback((id: number) => {
+    const existing = timersRef.current.get(id);
+    if (existing) clearTimeout(existing);
+    const handle = setTimeout(() => dismiss(id), DISMISS_MS);
+    timersRef.current.set(id, handle);
+  }, [dismiss]);
+
+  const pauseDismiss = useCallback((id: number) => {
+    const existing = timersRef.current.get(id);
+    if (existing) {
+      clearTimeout(existing);
+      timersRef.current.delete(id);
+    }
   }, []);
 
   useEffect(() => {
@@ -30,10 +54,17 @@ export const ToastManager: React.FC = () => {
       const arr = Array.from(seenRef.current);
       seenRef.current = new Set(arr.slice(-100));
     }
-    setToasts(prev => [latest, ...prev].slice(0, 3)); // max 3 visible
-    const timer = setTimeout(() => dismiss(latest.id), DISMISS_MS);
-    return () => clearTimeout(timer);
-  }, [notifications, dismiss]);
+    setToasts(prev => [latest, ...prev].slice(0, MAX_VISIBLE));
+    scheduleDismiss(latest.id);
+  }, [notifications, scheduleDismiss]);
+
+  // Cleanup all timers on unmount
+  useEffect(() => {
+    return () => {
+      timersRef.current.forEach(t => clearTimeout(t));
+      timersRef.current.clear();
+    };
+  }, []);
 
   if (toasts.length === 0) return null;
 
@@ -42,7 +73,11 @@ export const ToastManager: React.FC = () => {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`pointer-events-auto flex items-center gap-3 px-5 py-3 rounded-2xl border transition-all duration-300 ${
+          role="status"
+          aria-live="polite"
+          onMouseEnter={() => pauseDismiss(toast.id)}
+          onMouseLeave={() => scheduleDismiss(toast.id)}
+          className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-300 ${
             toast.exiting ? 'opacity-0 -translate-y-2 scale-95' : 'opacity-100 translate-y-0 scale-100 animate-fade-in'
           } ${getGlassStyle(toast.type)}`}
           style={{
@@ -52,6 +87,14 @@ export const ToastManager: React.FC = () => {
         >
           {getIcon(toast.type)}
           <p className="flex-1 font-semibold text-sm text-end leading-relaxed">{toast.message}</p>
+          <button
+            type="button"
+            onClick={() => dismiss(toast.id)}
+            aria-label="إغلاق"
+            className="shrink-0 p-1 rounded-full hover:bg-foreground/10 active:scale-90 transition-all"
+          >
+            <X className="h-4 w-4 opacity-70" />
+          </button>
         </div>
       ))}
     </div>
