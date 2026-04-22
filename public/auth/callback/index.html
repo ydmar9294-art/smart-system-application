@@ -142,20 +142,12 @@
       }
 
       // If this is a signup/email confirmation
+      // (Web flow only — native apps reach myapp://auth/email-confirmed directly via deep link)
       if (type === 'signup' || type === 'email_change' || type === 'magiclink') {
         if (accessToken) {
           try {
             localStorage.removeItem('sb-' + 'nrqueogifxxdwladewey' + '-auth-token');
           } catch(e) {}
-        }
-        // On native context, redirect to app via deep link
-        if (isNativeContext() && accessToken) {
-          var confirmFragment = '#access_token=' + accessToken + '&refresh_token=' + refreshToken + '&type=' + type;
-          openNativeApp(confirmFragment.replace('oauth-callback', 'email-confirmed'));
-          // Use direct deep link
-          window.location.href = APP_SCHEME + '://auth/email-confirmed' + confirmFragment;
-          setTimeout(showSuccess, 2000);
-          return;
         }
         setTimeout(showSuccess, 800);
         return;
