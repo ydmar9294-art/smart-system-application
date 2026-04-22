@@ -168,15 +168,7 @@
 
       // If this is a password recovery, redirect to reset-password page
       if (type === 'recovery') {
-        if (isNativeContext()) {
-          // Redirect to native app via deep link
-          var recoveryFragment = '#access_token=' + accessToken + '&refresh_token=' + refreshToken + '&type=recovery';
-          window.location.href = APP_SCHEME + '://auth/reset-password' + recoveryFragment;
-          setTimeout(function() {
-            window.location.replace(origin + '/reset-password#' + hash);
-          }, 2000);
-          return;
-        }
+        // Web flow only — native apps reach myapp://auth/reset-password directly via deep link
         window.location.replace(origin + '/reset-password#' + hash);
         return;
       }
