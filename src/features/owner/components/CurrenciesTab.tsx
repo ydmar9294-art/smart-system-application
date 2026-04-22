@@ -136,8 +136,8 @@ export const CurrenciesTab: React.FC = () => {
         <h4 className="font-bold text-foreground text-sm mb-3">تحديث سعر اليوم</h4>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="bg-muted/30 rounded-xl p-3">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-foreground whitespace-nowrap">1 دولار =</span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-xs font-bold text-foreground whitespace-nowrap shrink-0">1$ =</span>
               <input
                 type="number"
                 inputMode="decimal"
@@ -147,10 +147,10 @@ export const CurrenciesTab: React.FC = () => {
                 onChange={(e) => setNewRate(e.target.value)}
                 placeholder={usdRate ? formatRate(usdRate) : '14000'}
                 required
-                className="flex-1 px-3 py-3 bg-background text-foreground rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary text-center text-lg font-black"
+                className="flex-1 min-w-0 px-2 py-3 bg-background text-foreground rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary text-center text-base font-black"
                 dir="ltr"
               />
-              <span className="text-sm font-bold text-foreground whitespace-nowrap">ل.س</span>
+              <span className="text-xs font-bold text-foreground whitespace-nowrap shrink-0">ل.س</span>
             </div>
           </div>
           <button

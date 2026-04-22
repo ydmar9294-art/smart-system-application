@@ -41,7 +41,7 @@ const AppSubPageSheet: React.FC<Props> = ({ open, onClose, title, children }) =>
             </h2>
           </div>
           <div
-            className="flex-1 overflow-y-auto overscroll-contain px-3 py-3"
+            className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-3 py-3"
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}
             dir={isRtl ? 'rtl' : 'ltr'}
           >
