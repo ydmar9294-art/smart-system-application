@@ -162,22 +162,15 @@
       }
 
       // OAuth callback (Google, etc.)
+      // NOTE: This HTML page is ONLY reached from web/browser flows.
+      // The native Capacitor app uses myapp://auth/oauth-callback directly via deep link
+      // and never lands on this page. Therefore, we always redirect to the web app —
+      // attempting an Android intent here would fail (no app installed in browser context)
+      // and waste 2 seconds before falling back, breaking the OAuth flow.
       if (accessToken && !type) {
-        // Build fragment with tokens
         var tokenFragment = '#access_token=' + accessToken + '&refresh_token=' + refreshToken + '&type=oauth';
-        
-        if (isNativeContext()) {
-          // Native app: open via deep link (Intent URL on Android, custom scheme on iOS)
-          openNativeApp(tokenFragment);
-          
-          // Fallback: if the app didn't open within 2 seconds, redirect to web app
-          setTimeout(function() {
-            window.location.replace(origin + '/' + tokenFragment);
-          }, 2000);
-        } else {
-          // Web: redirect normally
-          window.location.replace(origin + '/' + tokenFragment);
-        }
+        // Use replace() so back-button doesn't return to /auth/callback
+        window.location.replace(origin + '/' + tokenFragment);
         return;
       }
 
