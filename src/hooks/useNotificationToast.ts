@@ -24,14 +24,16 @@ export function useNotificationToast(userId?: string | null) {
           const row = payload.new as any;
           if (!row) return;
 
-          // Map server type → toast severity
-          let severity: 'info' | 'success' | 'warning' | 'error' = 'info';
-          if (row.type === 'price_change' || row.type === 'exchange_rate_change') severity = 'warning';
+          // Map server type → toast severity (NotificationContext supports: success | error | warning)
+          let severity: 'success' | 'error' | 'warning' = 'warning';
           if (row.type === 'success') severity = 'success';
-          if (row.type === 'error') severity = 'error';
+          else if (row.type === 'error') severity = 'error';
 
           try {
-            addNotification(severity, row.title || 'إشعار جديد', row.description || '');
+            const message = row.title
+              ? (row.description ? `${row.title} — ${row.description}` : row.title)
+              : (row.description || 'إشعار جديد');
+            addNotification(message, severity);
           } catch (e) {
             logger.warn('[useNotificationToast] Failed to display', 'useNotificationToast');
           }
