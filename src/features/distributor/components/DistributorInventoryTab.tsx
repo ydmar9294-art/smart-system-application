@@ -75,22 +75,31 @@ const DistributorInventoryTab: React.FC<DistributorInventoryTabProps> = ({ local
   const [showConfirm, setShowConfirm] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const availableItems = localInventory.filter(item => item.quantity > 0);
-  const totalItems = availableItems.reduce((sum, item) => sum + item.quantity, 0);
+  const availableItems = useMemo(
+    () => localInventory.filter(item => item.quantity > 0),
+    [localInventory]
+  );
+  const totalItems = useMemo(
+    () => availableItems.reduce((sum, item) => sum + item.quantity, 0),
+    [availableItems]
+  );
+  const selectedIds = useMemo(
+    () => new Set(transferCart.map(c => c.product_id)),
+    [transferCart]
+  );
 
-  const toggleTransferItem = (item: CachedInventoryItem) => {
-    const exists = transferCart.find(c => c.product_id === item.product_id);
-    if (exists) {
-      setTransferCart(transferCart.filter(c => c.product_id !== item.product_id));
-    } else {
-      setTransferCart([...transferCart, {
+  const toggleTransferItem = useCallback((item: CachedInventoryItem) => {
+    setTransferCart(prev => {
+      const exists = prev.find(c => c.product_id === item.product_id);
+      if (exists) return prev.filter(c => c.product_id !== item.product_id);
+      return [...prev, {
         product_id: item.product_id,
         product_name: item.product_name,
         quantity: 1,
         max_quantity: item.quantity,
-      }]);
-    }
-  };
+      }];
+    });
+  }, []);
 
   const updateTransferQty = (productId: string, delta: number) => {
     setTransferCart(transferCart.map(item => {
