@@ -76,7 +76,7 @@ const CollectionTab: React.FC<CollectionTabProps> = ({ selectedCustomer, onQueue
   const handleSubmit = async () => {
     if (!canSubmit) return;
     if (numAmount <= 0) { setError('يرجى إدخال مبلغ صحيح'); return; }
-    if (currency === 'USD' && !usdRate) { setError('سعر صرف الدولار غير متوفر — يرجى إعداده من قبل المالك'); return; }
+    if (currency === 'USD' && !usdRate) { setError('سعر صرف الدولار غير متوفر — يرجى إعداده من قبل الإدارة'); return; }
 
     if (direction === 'IN' && selectedSale && sypAmount > Number(selectedSale.remaining)) {
       setError('المبلغ أكبر من المتبقي'); return;
