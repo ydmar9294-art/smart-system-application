@@ -547,35 +547,35 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer, onQue
           />
         </div>
 
-        <div className="space-y-2">
-          {filteredSales.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground">
-              <FileText className="w-20 h-20 mx-auto mb-4 opacity-30" />
-              <p className="font-bold text-lg mb-2">لا توجد فواتير</p>
-              <p className="text-sm">لا توجد فواتير لهذا الزبون</p>
-            </div>
-          ) : (
-            filteredSales.map((sale) => (
+        {filteredSales.length === 0 ? (
+          <div className="text-center py-16 text-muted-foreground">
+            <FileText className="w-20 h-20 mx-auto mb-4 opacity-30" />
+            <p className="font-bold text-lg mb-2">لا توجد فواتير</p>
+            <p className="text-sm">لا توجد فواتير لهذا الزبون</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filteredSales.map((sale) => (
               <button
                 key={sale.id}
                 onClick={() => handleSelectSale(sale.id)}
-                className="w-full text-start p-5 bg-muted rounded-2xl hover:bg-muted/80 transition-colors active:scale-[0.98]"
+                className="w-full text-start p-4 bg-muted rounded-2xl hover:bg-muted/80 active:scale-[0.98] transition-all"
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-foreground text-lg">{sale.customerName}</p>
-                    <p className="text-sm text-muted-foreground mt-1">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-bold text-foreground text-base truncate">{sale.customerName}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
                       {new Date(sale.timestamp).toLocaleDateString('ar-SA')}
                     </p>
                   </div>
-                  <span className="font-black text-primary text-lg">
+                  <span className="font-black text-primary text-base whitespace-nowrap">
                     {Number(sale.grandTotal).toLocaleString('ar-SA')} ل.س
                   </span>
                 </div>
               </button>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </FullScreenModal>
 
       {/* Product Picker Modal */}
@@ -597,43 +597,44 @@ const SalesReturnTab: React.FC<SalesReturnTabProps> = ({ selectedCustomer, onQue
           />
         </div>
 
-        <div className="space-y-2">
-          {loadingItems ? (
-            <div className="text-center py-16">
-              <Loader2 className="w-10 h-10 mx-auto mb-4 animate-spin text-primary" />
-              <p className="text-muted-foreground font-bold">جارٍ التحميل...</p>
-            </div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground">
-              <Package className="w-20 h-20 mx-auto mb-4 opacity-30" />
-              <p className="font-bold text-lg mb-2">لا توجد مواد متاحة</p>
-              <p className="text-sm">تمت إضافة جميع المواد أو لا توجد مواد في هذه الفاتورة</p>
-            </div>
-          ) : (
-            filteredProducts.map((item: any) => (
+        {loadingItems ? (
+          <div className="text-center py-16">
+            <Loader2 className="w-10 h-10 mx-auto mb-4 animate-spin text-primary" />
+            <p className="text-muted-foreground font-bold">جارٍ التحميل...</p>
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="text-center py-16 text-muted-foreground">
+            <Package className="w-20 h-20 mx-auto mb-4 opacity-30" />
+            <p className="font-bold text-lg mb-2">لا توجد مواد متاحة</p>
+            <p className="text-sm">تمت إضافة جميع المواد أو لا توجد مواد في هذه الفاتورة</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filteredProducts.map((item: any) => (
               <button
                 key={item.product_id}
                 onClick={() => addToCart(item)}
-                className="w-full text-start p-5 bg-muted rounded-2xl hover:bg-muted/80 transition-colors active:scale-[0.98]"
+                className="w-full text-start p-4 bg-muted rounded-2xl hover:bg-muted/80 active:scale-[0.98] transition-all"
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-foreground text-lg">{item.product_name}</p>
-                    <p className="text-sm text-muted-foreground mt-1">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-foreground text-base truncate">{item.product_name}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
                       الكمية: {item.quantity} | السعر: {Number(item.unit_price).toLocaleString('ar-SA')} ل.س
                     </p>
                   </div>
-                  <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+                  <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center shrink-0">
                     <Plus className="w-5 h-5 text-orange-500" />
                   </div>
                 </div>
               </button>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </FullScreenModal>
     </div>
   );
 };
 
 export default SalesReturnTab;
+
