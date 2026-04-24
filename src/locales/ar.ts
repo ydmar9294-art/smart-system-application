@@ -203,7 +203,7 @@ const ar = {
   // ROLES
   // ==========================================
   roles: {
-    owner: 'المالك',
+    owner: 'الإدارة',
     salesManager: 'مدير المبيعات',
     accountant: 'المحاسب',
     warehouseKeeper: 'أمين المستودع',

@@ -26,6 +26,7 @@ import SubscriptionTab from './SubscriptionTab';
 import BackupTab from './BackupTab';
 import { OwnerOverviewTab } from './OwnerOverviewTab';
 import CurrenciesTab from './CurrenciesTab';
+import PricesManagementTab from './PricesManagementTab';
 import OwnerCompactHeader from './OwnerCompactHeader';
 import OwnerBottomNav, { OwnerNavTab } from './OwnerBottomNav';
 import OwnerSettingsSheet, { SettingsSubPage } from './OwnerSettingsSheet';
@@ -156,6 +157,7 @@ const OwnerDashboard: React.FC = () => {
       case 'subscription':     return t('owner.tabs.subscription');
       case 'backup':           return t('owner.tabs.backup');
       case 'currencies':       return 'العملات والصرف';
+      case 'prices':           return 'إدارة الأسعار';
       case 'tracking':         return 'تتبع المسارات والخريطة';
       case 'stock-movements':  return 'حركات المخزون';
       case 'deliveries':       return 'التوريدات للموزعين';
@@ -172,6 +174,7 @@ const OwnerDashboard: React.FC = () => {
       case 'subscription': return <SubscriptionTab />;
       case 'backup':       return <BackupTab />;
       case 'currencies':   return <CurrenciesTab />;
+      case 'prices':       return <PricesManagementTab />;
       case 'legal':        return <><LegalInfoTab /><OrgDeletionRequest /></>;
       case 'tracking':
         return (

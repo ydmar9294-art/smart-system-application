@@ -81,7 +81,7 @@ const ViewManager: React.FC = () => {
               <div className="flex items-center justify-center h-64 p-6">
                 <p className="text-muted-foreground text-center">
                   هذا النوع من الحسابات تم إيقافه نهائياً.<br />
-                  يرجى التواصل مع المالك.
+                  يرجى التواصل مع الإدارة.
                 </p>
               </div>
             );
