@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { X } from 'lucide-react';
 
@@ -20,6 +20,16 @@ const headerColors = {
   default: 'bg-card text-foreground'
 };
 
+/**
+ * FullScreenModal — Mobile-first full-screen overlay.
+ *
+ * Architecture:
+ * - Single fixed container that captures ALL pointer events (no leaks to underlying UI).
+ * - Header & footer use normal flex layout (NOT position:fixed) so they stay inside the modal.
+ * - Renders via portal to body to avoid z-index conflicts with parent Sheets/Drawers.
+ * - Z-index: 200 (above Drawer/Sheet which sit at 50).
+ * - Locks body scroll while open.
+ */
 const FullScreenModal: React.FC<FullScreenModalProps> = ({
   isOpen,
   onClose,
@@ -29,69 +39,75 @@ const FullScreenModal: React.FC<FullScreenModalProps> = ({
   children,
   footer
 }) => {
+  // Lock body scroll
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [isOpen]);
+
+  // ESC key to close
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const modalContent = (
-    <div 
-      className="fixed inset-0 z-[9999] flex flex-col"
+    <div
+      className="fixed inset-0 flex flex-col animate-fade-in"
       style={{
-        background: 'var(--card-glass-bg)',
-        backdropFilter: 'blur(24px) saturate(1.5)',
-        WebkitBackdropFilter: 'blur(24px) saturate(1.5)',
+        zIndex: 200,
+        background: 'hsl(var(--background))',
+        // Critical: ensures we capture every touch/click, blocking pass-through
+        pointerEvents: 'auto',
+        touchAction: 'manipulation',
       }}
+      onClick={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
     >
-      {/* Full Screen Modal Container */}
-      <div className="flex flex-col w-full h-full overflow-hidden animate-fade-in">
-        {/* Header - Rounded at top on mobile, respects notch */}
-        <div
-          className={`${headerColors[headerColor]} px-5 py-4 flex items-center justify-between shrink-0 rounded-t-[2rem] mt-2 mx-2 shadow-lg fixed-top-safe`}
-          style={{
-            boxShadow: 'var(--glass-highlight), 0 4px 20px hsla(0,0%,0%,0.15)',
-          }}
+      {/* Header */}
+      <div
+        className={`${headerColors[headerColor]} px-4 py-3 flex items-center justify-between shrink-0 shadow-md`}
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+      >
+        <h2 className="text-base font-black flex items-center gap-2 min-w-0 flex-1">
+          {icon}
+          <span className="truncate">{title}</span>
+        </h2>
+        <button
+          onClick={onClose}
+          className="p-2 hover:bg-white/10 rounded-xl transition-colors active:scale-95 shrink-0"
+          aria-label="إغلاق"
+          type="button"
         >
-          <h2 className="text-lg font-black flex items-center gap-3">
-            {icon}
-            {title}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white/10 rounded-xl transition-colors"
-            aria-label="إغلاق"
-          >
-            <X size={24} />
-          </button>
-        </div>
-
-        {/* Body - Scrollable with glass background */}
-        <div
-          className="flex-1 overflow-y-auto mx-2"
-          style={{
-            background: 'var(--card-glass-bg)',
-          }}
-        >
-          <div className="p-5 space-y-5">
-            {children}
-          </div>
-        </div>
-
-        {/* Footer - Fixed at bottom */}
-        {footer && (
-          <div
-            className="shrink-0 p-5 pt-4 mx-2 mb-2 rounded-b-[2rem] fixed-bottom-safe border-t border-border"
-            style={{
-              background: 'var(--card-glass-bg)',
-              backdropFilter: 'blur(var(--glass-blur))',
-              WebkitBackdropFilter: 'blur(var(--glass-blur))',
-            }}
-          >
-            {footer}
-          </div>
-        )}
+          <X size={22} />
+        </button>
       </div>
+
+      {/* Body — scrollable */}
+      <div className="flex-1 overflow-y-auto overscroll-contain">
+        <div className="p-4 space-y-4">
+          {children}
+        </div>
+      </div>
+
+      {/* Footer */}
+      {footer && (
+        <div
+          className="shrink-0 border-t border-border bg-card p-4"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+        >
+          {footer}
+        </div>
+      )}
     </div>
   );
 
-  // Use portal to render modal at document.body level
   return ReactDOM.createPortal(modalContent, document.body);
 };
 

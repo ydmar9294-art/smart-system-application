@@ -5,11 +5,11 @@
  */
 
 // ─────────── Employee Types ───────────
+// Note: WAREHOUSE_KEEPER and SALES_MANAGER were removed from the system.
+// Only FIELD_AGENT and ACCOUNTANT are valid for new accounts.
 export const EMPLOYEE_TYPE_LABELS: Record<string, string> = {
   FIELD_AGENT: 'موزع ميداني',
   ACCOUNTANT: 'محاسب',
-  WAREHOUSE_KEEPER: 'أمين مستودع',
-  SALES_MANAGER: 'مدير مبيعات',
 };
 
 export const employeeTypeLabel = (type?: string | null): string =>
