@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { generateUUID } from '@/lib/uuid';
 import { 
@@ -10,6 +10,7 @@ import { Customer } from '@/types';
 import { CURRENCY } from '@/constants';
 import InvoicePrint from './InvoicePrint';
 import FullScreenModal from '@/components/ui/FullScreenModal';
+import { VirtualList } from '@/components/ui/VirtualList';
 import type { CachedInventoryItem } from '../services/distributorOfflineService';
 
 interface CartItem {
@@ -31,6 +32,68 @@ interface NewSaleTabProps {
 type PaymentType = 'CASH' | 'CREDIT';
 type DiscountType = 'percentage' | 'fixed' | null;
 
+// ─── Memoized cart row — stable identity prevents 100-row re-render storm ───
+const CartRow = React.memo<{
+  item: CartItem;
+  locale: string;
+  onIncrement: (productId: string) => void;
+  onDecrement: (productId: string) => void;
+  onRemove: (productId: string) => void;
+}>(({ item, locale, onIncrement, onDecrement, onRemove }) => (
+  <div className="bg-muted rounded-2xl p-4">
+    <div className="flex items-center justify-between mb-3">
+      <span className="font-bold text-foreground">{item.product_name}</span>
+      <button onClick={() => onRemove(item.product_id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3 bg-card rounded-xl p-1">
+        <button onClick={() => onDecrement(item.product_id)} className="w-9 h-9 bg-muted rounded-lg flex items-center justify-center hover:bg-accent">
+          <Minus className="w-4 h-4 text-muted-foreground" />
+        </button>
+        <span className="font-black w-8 text-center text-lg text-foreground">{item.quantity}</span>
+        <button onClick={() => onIncrement(item.product_id)} className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-700">
+          <Plus className="w-4 h-4 text-white" />
+        </button>
+      </div>
+      <span className="font-black text-blue-600 text-lg">
+        {(item.quantity * item.unit_price).toLocaleString(locale)}
+      </span>
+    </div>
+  </div>
+), (prev, next) =>
+  prev.item.product_id === next.item.product_id &&
+  prev.item.quantity === next.item.quantity &&
+  prev.item.unit_price === next.item.unit_price &&
+  prev.locale === next.locale
+);
+CartRow.displayName = 'CartRow';
+
+// ─── Memoized product picker row ───
+const ProductPickerRow = React.memo<{
+  product: CachedInventoryItem;
+  locale: string;
+  onAdd: (product: CachedInventoryItem) => void;
+  t: (key: string) => string;
+}>(({ product, locale, onAdd, t }) => (
+  <button onClick={() => onAdd(product)}
+    className="w-full text-start p-5 bg-muted rounded-2xl hover:bg-muted/80 transition-colors active:scale-[0.98]">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="font-bold text-foreground text-lg">{product.product_name}</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          {t('distributorSale.available')} {product.quantity} | {t('distributorSale.price')} {product.base_price.toLocaleString(locale)} {CURRENCY}
+        </p>
+      </div>
+      <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+        <Plus className="w-5 h-5 text-primary" />
+      </div>
+    </div>
+  </button>
+));
+ProductPickerRow.displayName = 'ProductPickerRow';
+
 const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventory, onQueueAction, isOnline }) => {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
@@ -46,45 +109,66 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [lastSaleData, setLastSaleData] = useState<any | null>(null);
 
-  const activeProducts = localInventory.filter(p => p.quantity > 0);
-  const filteredProducts = activeProducts.filter(p =>
-    p.product_name.toLowerCase().includes(searchProduct.toLowerCase())
+  const activeProducts = useMemo(() => localInventory.filter(p => p.quantity > 0), [localInventory]);
+  const filteredProducts = useMemo(
+    () => {
+      const q = searchProduct.toLowerCase();
+      return q ? activeProducts.filter(p => p.product_name.toLowerCase().includes(q)) : activeProducts;
+    },
+    [activeProducts, searchProduct]
   );
 
-  const addToCart = (product: CachedInventoryItem) => {
-    const existing = cart.find(item => item.product_id === product.product_id);
-    if (existing) {
-      if (existing.quantity < product.quantity) {
-        setCart(cart.map(item =>
-          item.product_id === product.product_id ? { ...item, quantity: item.quantity + 1 } : item
-        ));
+  const addToCart = useCallback((product: CachedInventoryItem) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.product_id === product.product_id);
+      if (existing) {
+        if (existing.quantity < product.quantity) {
+          return prev.map(item =>
+            item.product_id === product.product_id ? { ...item, quantity: item.quantity + 1 } : item
+          );
+        }
+        return prev;
       }
-    } else {
-      setCart([...cart, {
+      return [...prev, {
         product_id: product.product_id, product_name: product.product_name,
         quantity: 1, unit_price: product.base_price, consumer_price: product.consumer_price, unit: product.unit
-      }]);
-    }
+      }];
+    });
     setShowProductPicker(false);
     setSearchProduct('');
-  };
+  }, []);
 
-  const updateQuantity = (productId: string, delta: number) => {
+  const incrementCartItem = useCallback((productId: string) => {
     const product = localInventory.find(p => p.product_id === productId);
-    setCart(cart.map(item => {
+    setCart(prev => prev.map(item => {
       if (item.product_id === productId) {
-        const newQty = item.quantity + delta;
-        if (newQty <= 0) return item;
+        const newQty = item.quantity + 1;
         if (product && newQty > product.quantity) return item;
         return { ...item, quantity: newQty };
       }
       return item;
+    }));
+  }, [localInventory]);
+
+  const decrementCartItem = useCallback((productId: string) => {
+    setCart(prev => prev.map(item => {
+      if (item.product_id === productId) {
+        const newQty = item.quantity - 1;
+        if (newQty <= 0) return item;
+        return { ...item, quantity: newQty };
+      }
+      return item;
     }).filter(item => item.quantity > 0));
-  };
+  }, []);
 
-  const removeFromCart = (productId: string) => setCart(cart.filter(item => item.product_id !== productId));
+  const removeFromCart = useCallback((productId: string) => {
+    setCart(prev => prev.filter(item => item.product_id !== productId));
+  }, []);
 
-  const subtotal = cart.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+  const subtotal = useMemo(
+    () => cart.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0),
+    [cart]
+  );
   const discountPercentage = discountType === 'percentage' ? Math.min(100, Math.max(0, Number(discountInput) || 0)) : 
     subtotal > 0 ? ((Number(discountInput) || 0) / subtotal) * 100 : 0;
   const discountValue = discountType === 'percentage' 
@@ -193,28 +277,14 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
       ) : (
         <div className="space-y-3">
           {cart.map((item) => (
-            <div key={item.product_id} className="bg-muted rounded-2xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="font-bold text-foreground">{item.product_name}</span>
-                <button onClick={() => removeFromCart(item.product_id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 bg-card rounded-xl p-1">
-                  <button onClick={() => updateQuantity(item.product_id, -1)} className="w-9 h-9 bg-muted rounded-lg flex items-center justify-center hover:bg-accent">
-                    <Minus className="w-4 h-4 text-muted-foreground" />
-                  </button>
-                  <span className="font-black w-8 text-center text-lg text-foreground">{item.quantity}</span>
-                  <button onClick={() => updateQuantity(item.product_id, 1)} className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-700">
-                    <Plus className="w-4 h-4 text-white" />
-                  </button>
-                </div>
-                <span className="font-black text-blue-600 text-lg">
-                  {(item.quantity * item.unit_price).toLocaleString(locale)}
-                </span>
-              </div>
-            </div>
+            <CartRow
+              key={item.product_id}
+              item={item}
+              locale={locale}
+              onIncrement={incrementCartItem}
+              onDecrement={decrementCartItem}
+              onRemove={removeFromCart}
+            />
           ))}
         </div>
       )}

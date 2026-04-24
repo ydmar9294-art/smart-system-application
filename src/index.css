@@ -627,11 +627,15 @@ html.lang-transition * {
   }
 
   /* Modal Overlay — Glass */
+  /* CRITICAL: pointer-events:auto + p-4 ensures touches NEVER pass through
+     to the underlying app shell (bottom nav, sheets, dashboard tabs). */
   .modal-overlay {
-    @apply fixed inset-0 z-[500] flex items-center justify-center;
-    background: hsla(215, 25%, 15%, 0.4);
+    @apply fixed inset-0 z-[9999] flex items-center justify-center p-4;
+    background: hsla(215, 25%, 15%, 0.55);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+    pointer-events: auto;
+    touch-action: manipulation;
   }
 
   /* KPI Card — Glass */
