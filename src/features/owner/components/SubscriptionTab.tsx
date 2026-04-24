@@ -371,8 +371,11 @@ const SubscriptionTab: React.FC = () => {
 
       {/* Renew Modal - ShamCash Payment */}
       {showRenewModal && createPortal(
-        <div className="modal-overlay safe-area-x safe-area-bottom" dir="rtl">
-          <div className="card-elevated w-full max-w-md p-5 space-y-5 animate-zoom-in mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="modal-overlay safe-area-x safe-area-bottom" dir="rtl"
+          onClick={() => { setShowRenewModal(false); setReceiptFile(null); setReceiptPreview(null); }}>
+          <div className="card-elevated w-full max-w-md p-5 space-y-5 animate-zoom-in mx-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}>
+
             <div className="flex justify-between items-center">
               <h3 className="font-black text-foreground text-lg">تجديد الاشتراك عبر شام كاش</h3>
               <button onClick={() => { setShowRenewModal(false); setReceiptFile(null); setReceiptPreview(null); }}
