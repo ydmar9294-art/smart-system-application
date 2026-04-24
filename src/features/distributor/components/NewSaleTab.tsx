@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { generateUUID } from '@/lib/uuid';
 import { 
@@ -10,6 +10,7 @@ import { Customer } from '@/types';
 import { CURRENCY } from '@/constants';
 import InvoicePrint from './InvoicePrint';
 import FullScreenModal from '@/components/ui/FullScreenModal';
+import { VirtualList } from '@/components/ui/VirtualList';
 import type { CachedInventoryItem } from '../services/distributorOfflineService';
 
 interface CartItem {
