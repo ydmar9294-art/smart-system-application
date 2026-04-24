@@ -28,12 +28,6 @@ interface DistributorInventoryTabProps {
   isOnline: boolean;
 }
 
-interface DistributorInventoryTabProps {
-  localInventory: CachedInventoryItem[];
-  onQueueAction: (type: OfflineActionType, payload: any, inventoryUpdates?: { productId: string; quantityDelta: number }[]) => Promise<any>;
-  isOnline: boolean;
-}
-
 // ─── Memoized inventory row — prevents re-render on transferCart toggles ───
 const InventoryRow = React.memo<{
   item: CachedInventoryItem;
