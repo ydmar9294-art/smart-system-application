@@ -222,46 +222,36 @@ const DistributorInventoryTab: React.FC<DistributorInventoryTabProps> = ({ local
             سيتم إضافة المواد تلقائياً عند استلامها من صاحب المنشأة
           </p>
         </div>
+      ) : availableItems.length > 50 ? (
+        <div style={{ height: 'calc(100vh - 360px)', minHeight: 360 }}>
+          <VirtualList
+            items={availableItems}
+            itemHeight={88}
+            overscan={6}
+            containerHeight="100%"
+            renderItem={(item) => (
+              <div className="pb-2">
+                <InventoryRow
+                  item={item}
+                  isSelected={selectedIds.has(item.product_id)}
+                  transferMode={transferMode}
+                  onToggle={toggleTransferItem}
+                />
+              </div>
+            )}
+          />
+        </div>
       ) : (
         <div className="space-y-2">
-          {availableItems.map((item) => {
-            const isSelected = transferCart.find(c => c.product_id === item.product_id);
-            return (
-              <div
-                key={item.product_id}
-                className={`rounded-2xl p-4 flex items-center justify-between transition-colors ${
-                  transferMode
-                    ? isSelected
-                      ? 'bg-amber-500/10 border-2 border-amber-500'
-                      : 'bg-muted cursor-pointer hover:bg-accent'
-                    : 'bg-muted'
-                }`}
-                onClick={transferMode ? () => toggleTransferItem(item) : undefined}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                    isSelected ? 'bg-amber-500 text-white' : 'bg-primary/10'
-                  }`}>
-                    {isSelected ? (
-                      <Check className="w-6 h-6" />
-                    ) : (
-                      <Package className="w-6 h-6 text-primary" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-bold text-foreground">{item.product_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {item.unit || 'قطعة'}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-left">
-                  <p className="text-2xl font-black text-primary">{item.quantity}</p>
-                  <p className="text-xs text-muted-foreground">قطعة</p>
-                </div>
-              </div>
-            );
-          })}
+          {availableItems.map((item) => (
+            <InventoryRow
+              key={item.product_id}
+              item={item}
+              isSelected={selectedIds.has(item.product_id)}
+              transferMode={transferMode}
+              onToggle={toggleTransferItem}
+            />
+          ))}
         </div>
       )}
 
