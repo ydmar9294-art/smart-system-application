@@ -163,7 +163,7 @@ const PricesManagementTab: React.FC = () => {
         });
       }, 2500);
     } catch (err) {
-      logger.error('Price update failed', 'PricesManagementTab', err as Error);
+      logger.error('Price update failed', 'PricesManagementTab', { error: String(err) });
     } finally {
       setSavingId(null);
     }
@@ -234,7 +234,7 @@ const PricesManagementTab: React.FC = () => {
         </div>
       ) : useVirtual ? (
         <div style={{ height: 'calc(100vh - 360px)', minHeight: 400 }}>
-          <VirtualList
+          <VirtualList<Product>
             items={filtered}
             itemHeight={150}
             overscan={4}
