@@ -17,7 +17,7 @@ export const employeeTypeLabel = (type?: string | null): string =>
 
 // ─────────── Roles ───────────
 export const ROLE_LABELS: Record<string, string> = {
-  OWNER: 'مالك',
+  OWNER: 'الإدارة',
   EMPLOYEE: 'موظف',
   DEVELOPER: 'مطوّر',
 };
