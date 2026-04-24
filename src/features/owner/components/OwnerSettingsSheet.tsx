@@ -5,14 +5,14 @@ import { Drawer, DrawerContent, DrawerOverlay, DrawerPortal } from '@/components
 import {
   CreditCard, Database, Coins, MapPin, ShieldCheck, MessageCircle, LogOut,
   ChevronLeft, ChevronRight, Sun, Moon, Shield, FileText,
-  ArrowUpDown, Truck, RotateCcw,
+  ArrowUpDown, Truck, RotateCcw, DollarSign,
 } from 'lucide-react';
 import { usePageTheme } from '@/hooks/usePageTheme';
 import AccountDeletionButton from '@/components/AccountDeletionButton';
 
 export type SettingsSubPage =
   | 'subscription' | 'backup' | 'currencies' | 'tracking' | 'legal'
-  | 'stock-movements' | 'deliveries' | 'purchase-returns'
+  | 'stock-movements' | 'deliveries' | 'purchase-returns' | 'prices'
   | null;
 
 interface Props {
@@ -37,6 +37,7 @@ const OwnerSettingsSheet: React.FC<Props> = ({ open, onClose, onOpenSubPage, onL
     color: string;
     bg: string;
   }[] = [
+    { id: 'prices',           label: 'إدارة الأسعار',                icon: <DollarSign className="w-5 h-5" />,  color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
     { id: 'subscription',     label: t('owner.tabs.subscription'), icon: <CreditCard className="w-5 h-5" />,  color: 'text-primary',     bg: 'bg-primary/10' },
     { id: 'backup',           label: t('owner.tabs.backup'),       icon: <Database className="w-5 h-5" />,    color: 'text-blue-600',    bg: 'bg-blue-500/10' },
     { id: 'currencies',       label: 'العملات والصرف',              icon: <Coins className="w-5 h-5" />,       color: 'text-amber-600',   bg: 'bg-amber-500/10' },
@@ -44,7 +45,7 @@ const OwnerSettingsSheet: React.FC<Props> = ({ open, onClose, onOpenSubPage, onL
     { id: 'stock-movements',  label: 'حركات المخزون',                icon: <ArrowUpDown className="w-5 h-5" />, color: 'text-indigo-600',  bg: 'bg-indigo-500/10' },
     { id: 'deliveries',       label: 'التوريدات للموزعين',           icon: <Truck className="w-5 h-5" />,       color: 'text-cyan-600',    bg: 'bg-cyan-500/10' },
     { id: 'purchase-returns', label: 'مرتجع المشتريات',              icon: <RotateCcw className="w-5 h-5" />,   color: 'text-orange-600',  bg: 'bg-orange-500/10' },
-    { id: 'legal',            label: t('owner.tabs.legal'),         icon: <ShieldCheck className="w-5 h-5" />, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
+    { id: 'legal',            label: t('owner.tabs.legal'),         icon: <ShieldCheck className="w-5 h-5" />, color: 'text-emerald-700', bg: 'bg-emerald-600/10' },
   ];
 
   const Row: React.FC<{
