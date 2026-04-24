@@ -277,28 +277,14 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
       ) : (
         <div className="space-y-3">
           {cart.map((item) => (
-            <div key={item.product_id} className="bg-muted rounded-2xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="font-bold text-foreground">{item.product_name}</span>
-                <button onClick={() => removeFromCart(item.product_id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 bg-card rounded-xl p-1">
-                  <button onClick={() => updateQuantity(item.product_id, -1)} className="w-9 h-9 bg-muted rounded-lg flex items-center justify-center hover:bg-accent">
-                    <Minus className="w-4 h-4 text-muted-foreground" />
-                  </button>
-                  <span className="font-black w-8 text-center text-lg text-foreground">{item.quantity}</span>
-                  <button onClick={() => updateQuantity(item.product_id, 1)} className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-700">
-                    <Plus className="w-4 h-4 text-white" />
-                  </button>
-                </div>
-                <span className="font-black text-blue-600 text-lg">
-                  {(item.quantity * item.unit_price).toLocaleString(locale)}
-                </span>
-              </div>
-            </div>
+            <CartRow
+              key={item.product_id}
+              item={item}
+              locale={locale}
+              onIncrement={incrementCartItem}
+              onDecrement={decrementCartItem}
+              onRemove={removeFromCart}
+            />
           ))}
         </div>
       )}
