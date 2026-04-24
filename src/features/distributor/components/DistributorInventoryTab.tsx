@@ -28,6 +28,52 @@ interface DistributorInventoryTabProps {
   isOnline: boolean;
 }
 
+interface DistributorInventoryTabProps {
+  localInventory: CachedInventoryItem[];
+  onQueueAction: (type: OfflineActionType, payload: any, inventoryUpdates?: { productId: string; quantityDelta: number }[]) => Promise<any>;
+  isOnline: boolean;
+}
+
+// ─── Memoized inventory row — prevents re-render on transferCart toggles ───
+const InventoryRow = React.memo<{
+  item: CachedInventoryItem;
+  isSelected: boolean;
+  transferMode: boolean;
+  onToggle: (item: CachedInventoryItem) => void;
+}>(({ item, isSelected, transferMode, onToggle }) => (
+  <div
+    className={`rounded-2xl p-4 flex items-center justify-between transition-colors ${
+      transferMode
+        ? isSelected
+          ? 'bg-amber-500/10 border-2 border-amber-500'
+          : 'bg-muted cursor-pointer hover:bg-accent'
+        : 'bg-muted'
+    }`}
+    onClick={transferMode ? () => onToggle(item) : undefined}
+  >
+    <div className="flex items-center gap-3">
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+        isSelected ? 'bg-amber-500 text-white' : 'bg-primary/10'
+      }`}>
+        {isSelected ? (
+          <Check className="w-6 h-6" />
+        ) : (
+          <Package className="w-6 h-6 text-primary" />
+        )}
+      </div>
+      <div>
+        <p className="font-bold text-foreground">{item.product_name}</p>
+        <p className="text-xs text-muted-foreground">{item.unit || 'قطعة'}</p>
+      </div>
+    </div>
+    <div className="text-left">
+      <p className="text-2xl font-black text-primary">{item.quantity}</p>
+      <p className="text-xs text-muted-foreground">قطعة</p>
+    </div>
+  </div>
+));
+InventoryRow.displayName = 'InventoryRow';
+
 const DistributorInventoryTab: React.FC<DistributorInventoryTabProps> = ({ localInventory, onQueueAction, isOnline }) => {
   const [transferMode, setTransferMode] = useState(false);
   const [transferCart, setTransferCart] = useState<TransferItem[]>([]);
