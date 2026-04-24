@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { X } from 'lucide-react';
+import { useBackButton } from '@/hooks/useBackButton';
 
 interface FullScreenModalProps {
   isOpen: boolean;
@@ -54,6 +55,13 @@ const FullScreenModal: React.FC<FullScreenModalProps> = ({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, onClose]);
+
+  // Capacitor hardware back button — close modal first
+  const handleBack = useCallback(() => {
+    onClose();
+    return true; // consumed
+  }, [onClose]);
+  useBackButton(handleBack, isOpen);
 
   if (!isOpen) return null;
 
