@@ -34,6 +34,7 @@ import InvoiceHistoryTab from './InvoiceHistoryTab';
 import OfflineSyncBanner from './OfflineSyncBanner';
 import MyRouteTab from './MyRouteTab';
 import { useDistributorOffline } from '../hooks/useDistributorOffline';
+import { useNotificationToast } from '@/hooks/useNotificationToast';
 import { useGpsTracker } from '@/platform/hooks/useGpsTracker';
 import { Customer } from '@/types';
 import { CURRENCY } from '@/constants';
