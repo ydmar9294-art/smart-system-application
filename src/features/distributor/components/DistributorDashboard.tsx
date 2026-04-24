@@ -60,6 +60,10 @@ const DistributorDashboard: React.FC = () => {
   const offline = useDistributorOffline();
   const { role: authRole, organization: authOrg } = useAuth();
 
+  // Subscribe to realtime price/exchange-rate notifications
+  useNotificationToast(appUser?.id);
+
+
   // Activate GPS tracking for field agents (works offline)
   useGpsTracker({
     enabled: !!authOrg?.id,
