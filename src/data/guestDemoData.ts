@@ -206,7 +206,7 @@ export const DEMO_PURCHASE_RETURNS: PurchaseReturn[] = [
 // ============================================
 export const DEMO_TEAM_USERS = [
   { id: 'demo-user-acc', full_name: 'فاطمة حسن', phone: '0934567890', role: 'EMPLOYEE', employee_type: 'ACCOUNTANT', is_active: true, organization_id: DEMO_ORG.id },
-  { id: 'demo-user-wh', full_name: 'عمر سعيد', phone: '0945678901', role: 'EMPLOYEE', employee_type: 'WAREHOUSE_KEEPER', is_active: true, organization_id: DEMO_ORG.id },
+  { id: 'demo-user-acc2', full_name: 'سارة محمود', phone: '0945678901', role: 'EMPLOYEE', employee_type: 'ACCOUNTANT', is_active: true, organization_id: DEMO_ORG.id },
   { id: 'demo-user-fa', full_name: 'محمد ياسر', phone: '0956789012', role: 'EMPLOYEE', employee_type: 'FIELD_AGENT', is_active: true, organization_id: DEMO_ORG.id },
   { id: 'demo-user-fa2', full_name: 'أحمد علي', phone: '0967890123', role: 'EMPLOYEE', employee_type: 'FIELD_AGENT', is_active: true, organization_id: DEMO_ORG.id },
   { id: 'demo-user-fa3', full_name: 'سامر حسن', phone: '0978901234', role: 'EMPLOYEE', employee_type: 'FIELD_AGENT', is_active: false, organization_id: DEMO_ORG.id },

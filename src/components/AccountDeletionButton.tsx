@@ -1,13 +1,15 @@
 /**
  * AccountDeletionButton - Hierarchical account deletion request
- * Employees submit requests → approved by their manager
- * Owners redirect to org deletion flow
+ * Employees submit requests → approved by their manager (Owner)
+ * Owners redirect to org deletion flow.
+ *
+ * Mobile-first: dialog scales fully on small screens (320–414px).
  */
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/store/AuthContext';
 import { UserRole } from '@/types';
-import { Trash2, AlertTriangle, Loader2, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { Trash2, AlertTriangle, Loader2, Clock, XCircle } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 const AccountDeletionButton: React.FC = () => {
@@ -20,7 +22,6 @@ const AccountDeletionButton: React.FC = () => {
   const [pendingRequest, setPendingRequest] = useState<any>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
 
-  // Check if user already has a pending request
   useEffect(() => {
     const checkPending = async () => {
       setLoadingStatus(true);
@@ -31,17 +32,13 @@ const AccountDeletionButton: React.FC = () => {
           .eq('requester_id', user?.id || '')
           .order('created_at', { ascending: false })
           .limit(1);
-
-        if (data && data.length > 0) {
-          setPendingRequest(data[0]);
-        }
+        if (data && data.length > 0) setPendingRequest(data[0]);
       } catch {}
       setLoadingStatus(false);
     };
     if (user?.id) checkPending();
   }, [user?.id]);
 
-  // Owner uses org deletion, not this flow
   if (user?.role === UserRole.OWNER) return null;
   if (user?.role === UserRole.DEVELOPER) return null;
 
@@ -49,13 +46,11 @@ const AccountDeletionButton: React.FC = () => {
     setSubmitting(true);
     setError('');
     setSuccess('');
-
     try {
       const { data, error: rpcError } = await supabase.rpc('submit_account_deletion_request', {
         p_reason: reason || null
       });
       if (rpcError) throw rpcError;
-
       const result = data as any;
       if (result?.success) {
         setSuccess(result.message);
@@ -73,7 +68,6 @@ const AccountDeletionButton: React.FC = () => {
 
   const latestStatus = pendingRequest?.status;
 
-  // Show status if there's a recent request
   if (pendingRequest && latestStatus === 'PENDING') {
     return (
       <div className="w-full py-3 bg-warning/10 text-warning rounded-xl font-black text-sm flex items-center justify-center gap-2">
@@ -89,7 +83,7 @@ const AccountDeletionButton: React.FC = () => {
           <XCircle size={16} /> تم رفض طلب حذف حسابك
         </div>
         {pendingRequest.decision_note && (
-          <p className="text-xs text-muted-foreground text-center px-2">السبب: {pendingRequest.decision_note}</p>
+          <p className="text-xs text-muted-foreground text-center px-2 break-words">السبب: {pendingRequest.decision_note}</p>
         )}
         <button
           onClick={() => { setPendingRequest(null); setReason(''); }}
@@ -129,19 +123,18 @@ const AccountDeletionButton: React.FC = () => {
         }}
       >
         <DialogContent
-          className="max-w-sm p-6"
+          className="w-[calc(100vw-1rem)] max-w-md p-4 sm:p-6 max-h-[90vh] overflow-y-auto"
           dir="rtl"
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <div className="space-y-4">
             <div className="text-center space-y-3">
-              <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
-                <AlertTriangle size={32} className="text-destructive" />
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+                <AlertTriangle size={28} className="text-destructive" />
               </div>
-              <h3 className="text-xl font-black text-destructive">طلب حذف الحساب</h3>
-              <p className="text-sm text-muted-foreground font-bold leading-relaxed">
-                سيتم إرسال طلب حذف حسابك إلى المسؤول المباشر للمراجعة والموافقة.
-                لا يتم الحذف مباشرة.
+              <h3 className="text-lg sm:text-xl font-black text-destructive">طلب حذف الحساب</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground font-bold leading-relaxed px-1">
+                سيتم إرسال طلب حذف حسابك إلى المسؤول للمراجعة. الحذف لا يتم مباشرة.
               </p>
             </div>
 
@@ -157,26 +150,28 @@ const AccountDeletionButton: React.FC = () => {
             </div>
 
             {error && (
-              <p className="text-xs text-destructive font-bold text-center bg-destructive/10 p-2 rounded-lg">{error}</p>
+              <p className="text-xs text-destructive font-bold text-center bg-destructive/10 p-2 rounded-lg break-words">{error}</p>
             )}
             {success && (
-              <p className="text-xs text-primary font-bold text-center bg-primary/10 p-2 rounded-lg">{success}</p>
+              <p className="text-xs text-primary font-bold text-center bg-primary/10 p-2 rounded-lg break-words">{success}</p>
             )}
 
-            <button
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="w-full py-3 bg-destructive text-destructive-foreground rounded-xl font-black disabled:opacity-40 flex items-center justify-center gap-2"
-            >
-              {submitting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-              {submitting ? 'جاري الإرسال...' : 'تقديم طلب الحذف'}
-            </button>
-            <button
-              onClick={() => { setShowModal(false); setError(''); setSuccess(''); }}
-              className="w-full py-3 bg-muted text-muted-foreground rounded-xl font-black"
-            >
-              إلغاء
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="w-full py-3 bg-destructive text-destructive-foreground rounded-xl font-black disabled:opacity-40 flex items-center justify-center gap-2 active:scale-95 transition-transform"
+              >
+                {submitting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                {submitting ? 'جاري الإرسال...' : 'تقديم طلب الحذف'}
+              </button>
+              <button
+                onClick={() => { setShowModal(false); setError(''); setSuccess(''); }}
+                className="w-full py-3 bg-muted text-muted-foreground rounded-xl font-black active:scale-95 transition-transform"
+              >
+                إلغاء
+              </button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

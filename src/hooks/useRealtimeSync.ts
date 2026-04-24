@@ -72,6 +72,12 @@ export function useRealtimeSync(orgId?: string | null, role?: string | null) {
         () => { queryClient.invalidateQueries({ queryKey: queryKeys.pendingEmployees(orgId) }); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'developer_licenses', filter: `organization_id=eq.${orgId}` },
         () => { queryClient.invalidateQueries({ queryKey: queryKeys.licenses() }); })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'exchange_rates', filter: `organization_id=eq.${orgId}` },
+        () => {
+          // Exchange rate changed — invalidate products & rates so prices recompute
+          queryClient.invalidateQueries({ queryKey: queryKeys.products(orgId) });
+          queryClient.invalidateQueries({ queryKey: ['exchangeRates', orgId] });
+        })
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
           state.current.attempts = 0;

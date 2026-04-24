@@ -29,8 +29,6 @@ interface DeletionRequest {
 
 const employeeTypeLabel: Record<string, string> = {
   FIELD_AGENT: 'موزع ميداني',
-  WAREHOUSE_KEEPER: 'أمين مستودع',
-  SALES_MANAGER: 'مدير مبيعات',
   ACCOUNTANT: 'محاسب',
 };
 
