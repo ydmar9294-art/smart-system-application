@@ -32,6 +32,68 @@ interface NewSaleTabProps {
 type PaymentType = 'CASH' | 'CREDIT';
 type DiscountType = 'percentage' | 'fixed' | null;
 
+// ─── Memoized cart row — stable identity prevents 100-row re-render storm ───
+const CartRow = React.memo<{
+  item: CartItem;
+  locale: string;
+  onIncrement: (productId: string) => void;
+  onDecrement: (productId: string) => void;
+  onRemove: (productId: string) => void;
+}>(({ item, locale, onIncrement, onDecrement, onRemove }) => (
+  <div className="bg-muted rounded-2xl p-4">
+    <div className="flex items-center justify-between mb-3">
+      <span className="font-bold text-foreground">{item.product_name}</span>
+      <button onClick={() => onRemove(item.product_id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3 bg-card rounded-xl p-1">
+        <button onClick={() => onDecrement(item.product_id)} className="w-9 h-9 bg-muted rounded-lg flex items-center justify-center hover:bg-accent">
+          <Minus className="w-4 h-4 text-muted-foreground" />
+        </button>
+        <span className="font-black w-8 text-center text-lg text-foreground">{item.quantity}</span>
+        <button onClick={() => onIncrement(item.product_id)} className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-700">
+          <Plus className="w-4 h-4 text-white" />
+        </button>
+      </div>
+      <span className="font-black text-blue-600 text-lg">
+        {(item.quantity * item.unit_price).toLocaleString(locale)}
+      </span>
+    </div>
+  </div>
+), (prev, next) =>
+  prev.item.product_id === next.item.product_id &&
+  prev.item.quantity === next.item.quantity &&
+  prev.item.unit_price === next.item.unit_price &&
+  prev.locale === next.locale
+);
+CartRow.displayName = 'CartRow';
+
+// ─── Memoized product picker row ───
+const ProductPickerRow = React.memo<{
+  product: CachedInventoryItem;
+  locale: string;
+  onAdd: (product: CachedInventoryItem) => void;
+  t: (key: string) => string;
+}>(({ product, locale, onAdd, t }) => (
+  <button onClick={() => onAdd(product)}
+    className="w-full text-start p-5 bg-muted rounded-2xl hover:bg-muted/80 transition-colors active:scale-[0.98]">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="font-bold text-foreground text-lg">{product.product_name}</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          {t('distributorSale.available')} {product.quantity} | {t('distributorSale.price')} {product.base_price.toLocaleString(locale)} {CURRENCY}
+        </p>
+      </div>
+      <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+        <Plus className="w-5 h-5 text-primary" />
+      </div>
+    </div>
+  </button>
+));
+ProductPickerRow.displayName = 'ProductPickerRow';
+
 const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventory, onQueueAction, isOnline }) => {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
