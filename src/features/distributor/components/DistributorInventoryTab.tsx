@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { 
   Package, 
   Warehouse, 
@@ -12,6 +12,7 @@ import {
   WifiOff
 } from 'lucide-react';
 import FullScreenModal from '@/components/ui/FullScreenModal';
+import { VirtualList } from '@/components/ui/VirtualList';
 import type { CachedInventoryItem, OfflineActionType } from '../services/distributorOfflineService';
 
 interface TransferItem {
