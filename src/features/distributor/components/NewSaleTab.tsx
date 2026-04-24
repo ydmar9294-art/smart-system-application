@@ -109,45 +109,66 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [lastSaleData, setLastSaleData] = useState<any | null>(null);
 
-  const activeProducts = localInventory.filter(p => p.quantity > 0);
-  const filteredProducts = activeProducts.filter(p =>
-    p.product_name.toLowerCase().includes(searchProduct.toLowerCase())
+  const activeProducts = useMemo(() => localInventory.filter(p => p.quantity > 0), [localInventory]);
+  const filteredProducts = useMemo(
+    () => {
+      const q = searchProduct.toLowerCase();
+      return q ? activeProducts.filter(p => p.product_name.toLowerCase().includes(q)) : activeProducts;
+    },
+    [activeProducts, searchProduct]
   );
 
-  const addToCart = (product: CachedInventoryItem) => {
-    const existing = cart.find(item => item.product_id === product.product_id);
-    if (existing) {
-      if (existing.quantity < product.quantity) {
-        setCart(cart.map(item =>
-          item.product_id === product.product_id ? { ...item, quantity: item.quantity + 1 } : item
-        ));
+  const addToCart = useCallback((product: CachedInventoryItem) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.product_id === product.product_id);
+      if (existing) {
+        if (existing.quantity < product.quantity) {
+          return prev.map(item =>
+            item.product_id === product.product_id ? { ...item, quantity: item.quantity + 1 } : item
+          );
+        }
+        return prev;
       }
-    } else {
-      setCart([...cart, {
+      return [...prev, {
         product_id: product.product_id, product_name: product.product_name,
         quantity: 1, unit_price: product.base_price, consumer_price: product.consumer_price, unit: product.unit
-      }]);
-    }
+      }];
+    });
     setShowProductPicker(false);
     setSearchProduct('');
-  };
+  }, []);
 
-  const updateQuantity = (productId: string, delta: number) => {
+  const incrementCartItem = useCallback((productId: string) => {
     const product = localInventory.find(p => p.product_id === productId);
-    setCart(cart.map(item => {
+    setCart(prev => prev.map(item => {
       if (item.product_id === productId) {
-        const newQty = item.quantity + delta;
-        if (newQty <= 0) return item;
+        const newQty = item.quantity + 1;
         if (product && newQty > product.quantity) return item;
         return { ...item, quantity: newQty };
       }
       return item;
+    }));
+  }, [localInventory]);
+
+  const decrementCartItem = useCallback((productId: string) => {
+    setCart(prev => prev.map(item => {
+      if (item.product_id === productId) {
+        const newQty = item.quantity - 1;
+        if (newQty <= 0) return item;
+        return { ...item, quantity: newQty };
+      }
+      return item;
     }).filter(item => item.quantity > 0));
-  };
+  }, []);
 
-  const removeFromCart = (productId: string) => setCart(cart.filter(item => item.product_id !== productId));
+  const removeFromCart = useCallback((productId: string) => {
+    setCart(prev => prev.filter(item => item.product_id !== productId));
+  }, []);
 
-  const subtotal = cart.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+  const subtotal = useMemo(
+    () => cart.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0),
+    [cart]
+  );
   const discountPercentage = discountType === 'percentage' ? Math.min(100, Math.max(0, Number(discountInput) || 0)) : 
     subtotal > 0 ? ((Number(discountInput) || 0) / subtotal) * 100 : 0;
   const discountValue = discountType === 'percentage' 
