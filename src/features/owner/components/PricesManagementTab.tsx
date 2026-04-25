@@ -16,10 +16,19 @@ import { logger } from '@/lib/logger';
  * New invoices use the new price; old invoices are unaffected.
  */
 
+type Draft = {
+  basePrice: string;
+  consumerPrice: string;
+  packPrice: string;
+  packConsumerPrice: string;
+  pricingCurrency: PricingCurrency;
+  pricingUnit: 'PIECE' | 'PACK';
+};
+
 interface RowProps {
   product: Product;
-  draft: { basePrice: string; consumerPrice: string; pricingCurrency: PricingCurrency } | undefined;
-  onChange: (id: string, patch: Partial<{ basePrice: string; consumerPrice: string; pricingCurrency: PricingCurrency }>) => void;
+  draft: Draft | undefined;
+  onChange: (id: string, patch: Partial<Draft>) => void;
   onSave: (id: string) => void;
   saving: boolean;
   saved: boolean;
@@ -27,17 +36,28 @@ interface RowProps {
 
 const PriceRow: React.FC<RowProps> = React.memo(({ product, draft, onChange, onSave, saving, saved }) => {
   const cur = draft?.pricingCurrency ?? (product.pricingCurrency as PricingCurrency) ?? 'SYP';
+  const unit = draft?.pricingUnit ?? (product.pricingUnit as 'PIECE' | 'PACK') ?? 'PIECE';
+  const upp = Math.max(1, product.unitsPerPack ?? 1);
   const baseVal = draft?.basePrice ?? String(product.basePrice ?? 0);
   const consumerVal = draft?.consumerPrice ?? String(product.consumerPrice ?? 0);
+  const packVal = draft?.packPrice ?? String(product.packPrice ?? (Number(baseVal) * upp));
+  const packConsumerVal = draft?.packConsumerPrice ?? String(product.packConsumerPrice ?? (Number(consumerVal) * upp));
   const curSymbol = cur === 'USD' ? '$' : CURRENCY;
   const isDirty = !!draft;
+  const hasPacks = upp > 1;
+
+  // Derived values for display
+  const derivedPiecePrice = unit === 'PACK' && upp > 0 ? Number(packVal) / upp : Number(baseVal);
+  const derivedPackPrice = unit === 'PIECE' ? Number(baseVal) * upp : Number(packVal);
 
   return (
     <div className={`bg-card p-3 rounded-2xl border shadow-sm transition-colors ${isDirty ? 'border-primary/40 bg-primary/5' : 'border-border'}`}>
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="min-w-0 flex-1">
           <p className="font-black text-foreground text-sm truncate">{product.name}</p>
-          <p className="text-[10px] text-muted-foreground font-bold truncate">{product.category} · {product.unit}</p>
+          <p className="text-[10px] text-muted-foreground font-bold truncate">
+            {product.category} · {hasPacks ? `${upp} قطعة/طرد` : product.unit}
+          </p>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {(['SYP', 'USD'] as const).map(c => (
@@ -55,30 +75,80 @@ const PriceRow: React.FC<RowProps> = React.memo(({ product, draft, onChange, onS
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="text-[10px] font-black text-muted-foreground block mb-1">سعر البيع ({curSymbol})</label>
-          <input
-            type="number"
-            inputMode="decimal"
-            step="0.01"
-            value={baseVal}
-            onChange={(e) => onChange(product.id, { basePrice: e.target.value })}
-            className="w-full px-3 py-2 bg-muted rounded-xl text-foreground font-black text-sm text-center outline-none focus:ring-2 focus:ring-primary"
-          />
+      {/* Pricing unit selector (only relevant if has packs) */}
+      {hasPacks && (
+        <div className="grid grid-cols-2 gap-1 mb-2">
+          {(['PIECE', 'PACK'] as const).map(u => (
+            <button
+              key={u}
+              type="button"
+              onClick={() => onChange(product.id, { pricingUnit: u })}
+              className={`py-1.5 text-[10px] font-black rounded-lg transition-all ${
+                unit === u ? 'bg-success text-success-foreground' : 'bg-muted text-muted-foreground'
+              }`}
+            >
+              {u === 'PIECE' ? 'تسعير بالقطعة' : 'تسعير بالطرد'}
+            </button>
+          ))}
         </div>
-        <div>
-          <label className="text-[10px] font-black text-muted-foreground block mb-1">سعر المستهلك ({curSymbol})</label>
-          <input
-            type="number"
-            inputMode="decimal"
-            step="0.01"
-            value={consumerVal}
-            onChange={(e) => onChange(product.id, { consumerPrice: e.target.value })}
-            className="w-full px-3 py-2 bg-muted rounded-xl text-foreground font-black text-sm text-center outline-none focus:ring-2 focus:ring-primary"
-          />
+      )}
+
+      {unit === 'PIECE' || !hasPacks ? (
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[10px] font-black text-muted-foreground block mb-1">سعر القطعة ({curSymbol})</label>
+            <input
+              type="number" inputMode="decimal" step="0.01"
+              value={baseVal}
+              onChange={(e) => onChange(product.id, { basePrice: e.target.value })}
+              className="w-full px-3 py-2 bg-muted rounded-xl text-foreground font-black text-sm text-center outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-black text-muted-foreground block mb-1">سعر المستهلك ({curSymbol})</label>
+            <input
+              type="number" inputMode="decimal" step="0.01"
+              value={consumerVal}
+              onChange={(e) => onChange(product.id, { consumerPrice: e.target.value })}
+              className="w-full px-3 py-2 bg-muted rounded-xl text-foreground font-black text-sm text-center outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[10px] font-black text-muted-foreground block mb-1">سعر الطرد ({curSymbol})</label>
+            <input
+              type="number" inputMode="decimal" step="0.01"
+              value={packVal}
+              onChange={(e) => onChange(product.id, { packPrice: e.target.value })}
+              className="w-full px-3 py-2 bg-muted rounded-xl text-foreground font-black text-sm text-center outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-black text-muted-foreground block mb-1">سعر طرد المستهلك ({curSymbol})</label>
+            <input
+              type="number" inputMode="decimal" step="0.01"
+              value={packConsumerVal}
+              onChange={(e) => onChange(product.id, { packConsumerPrice: e.target.value })}
+              className="w-full px-3 py-2 bg-muted rounded-xl text-foreground font-black text-sm text-center outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+        </div>
+      )}
+
+      {hasPacks && (
+        <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] font-bold">
+          <div className="bg-muted/40 rounded-lg p-2 text-center">
+            <span className="text-muted-foreground">قطعة: </span>
+            <span className="text-success font-black">{derivedPiecePrice.toFixed(2)}</span>
+          </div>
+          <div className="bg-muted/40 rounded-lg p-2 text-center">
+            <span className="text-muted-foreground">طرد: </span>
+            <span className="text-success font-black">{derivedPackPrice.toFixed(2)}</span>
+          </div>
+        </div>
+      )}
 
       {isDirty && (
         <button
@@ -109,7 +179,7 @@ const PricesManagementTab: React.FC = () => {
   const isOwner = role === UserRole.OWNER || role === UserRole.DEVELOPER;
 
   const [search, setSearch] = useState('');
-  const [drafts, setDrafts] = useState<Record<string, { basePrice: string; consumerPrice: string; pricingCurrency: PricingCurrency }>>({});
+  const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
 
@@ -120,14 +190,18 @@ const PricesManagementTab: React.FC = () => {
     return list.filter(p => p.name.includes(q) || p.category?.includes(q));
   }, [products, search]);
 
-  const handleChange = useCallback((id: string, patch: Partial<{ basePrice: string; consumerPrice: string; pricingCurrency: PricingCurrency }>) => {
+  const handleChange = useCallback((id: string, patch: Partial<Draft>) => {
     setDrafts(prev => {
       const product = products.find(p => p.id === id);
       if (!product) return prev;
-      const existing = prev[id] ?? {
+      const upp = Math.max(1, product.unitsPerPack ?? 1);
+      const existing: Draft = prev[id] ?? {
         basePrice: String(product.basePrice ?? 0),
         consumerPrice: String(product.consumerPrice ?? 0),
+        packPrice: String(product.packPrice ?? ((product.basePrice ?? 0) * upp)),
+        packConsumerPrice: String(product.packConsumerPrice ?? ((product.consumerPrice ?? 0) * upp)),
         pricingCurrency: (product.pricingCurrency as PricingCurrency) ?? 'SYP',
+        pricingUnit: (product.pricingUnit as 'PIECE' | 'PACK') ?? 'PIECE',
       };
       return { ...prev, [id]: { ...existing, ...patch } };
     });
@@ -139,10 +213,20 @@ const PricesManagementTab: React.FC = () => {
     if (!product || !draft) return;
     setSavingId(id);
     try {
+      const upp = Math.max(1, product.unitsPerPack ?? 1);
+      const isPackUnit = draft.pricingUnit === 'PACK';
+      const basePrice = isPackUnit ? (Number(draft.packPrice) || 0) / upp : Number(draft.basePrice) || 0;
+      const consumerPrice = isPackUnit ? (Number(draft.packConsumerPrice) || 0) / upp : Number(draft.consumerPrice) || 0;
+      const packPrice = isPackUnit ? Number(draft.packPrice) || 0 : basePrice * upp;
+      const packConsumerPrice = isPackUnit ? Number(draft.packConsumerPrice) || 0 : consumerPrice * upp;
+
       await updateProduct({
         ...product,
-        basePrice: Number(draft.basePrice) || 0,
-        consumerPrice: Number(draft.consumerPrice) || 0,
+        basePrice,
+        consumerPrice,
+        packPrice,
+        packConsumerPrice,
+        pricingUnit: draft.pricingUnit,
         pricingCurrency: draft.pricingCurrency,
       });
       setDrafts(prev => {
