@@ -28,10 +28,23 @@ import { getSaleIdMap } from './offlineIdMap';
 export interface CachedInventoryItem {
   product_id: string;
   product_name: string;
+  /** Total quantity in PIECES (always pieces internally) */
   quantity: number;
+  /** Price per single PIECE (already converted to SYP if pricing was in USD) */
   base_price: number;
   consumer_price: number;
   unit: string;
+  /** Pieces inside one pack/box (default 1) */
+  units_per_pack?: number;
+  /** Price per full PACK (already converted to SYP) */
+  pack_price?: number;
+  pack_consumer_price?: number;
+  /** Allow selling by full pack */
+  allow_pack_sales?: boolean;
+  /** Allow selling by individual piece */
+  allow_piece_sales?: boolean;
+  /** How to display stock: PIECE | PACK | BOTH */
+  stock_display_unit?: 'PIECE' | 'PACK' | 'BOTH';
   updated_at: number;
 }
 
