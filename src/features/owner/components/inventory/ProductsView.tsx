@@ -18,29 +18,52 @@ interface Props {
  * Renders large product catalogs (up to 2,000+ items) using virtualization.
  * Falls back to a normal list for tiny catalogs (< 30 items) for simplicity.
  */
+/** Format stock per the product's stock_display_unit preference. */
+const formatStock = (p: Product): string => {
+  const upp = Math.max(1, p.unitsPerPack ?? 1);
+  const unit = p.unit || 'قطعة';
+  const display = p.stockDisplayUnit ?? 'PIECE';
+  if (upp <= 1 || display === 'PIECE') {
+    return `${p.stock} ${unit}`;
+  }
+  const packs = Math.floor(p.stock / upp);
+  const loose = p.stock % upp;
+  if (display === 'PACK') {
+    // Show as decimal packs if there are loose pieces
+    return loose === 0 ? `${packs} طرد` : `${packs} طرد + ${loose} ${unit}`;
+  }
+  // BOTH
+  return loose === 0 ? `${packs} طرد (${p.stock} ${unit})` : `${packs}ط + ${loose}ق`;
+};
+
 const ProductRow: React.FC<{
   p: Product;
   onEdit: (p: Product) => void;
   onDelete: (id: string) => void;
-}> = React.memo(({ p, onEdit, onDelete }) => (
-  <div className="bg-card p-4 rounded-2xl border shadow-sm flex justify-between items-center gap-2">
-    <div className="min-w-0 flex-1">
-      <p className="font-black text-foreground text-sm truncate">{p.name}</p>
-      <p className="text-[10px] text-muted-foreground font-bold truncate">{p.category}</p>
+}> = React.memo(({ p, onEdit, onDelete }) => {
+  const upp = Math.max(1, p.unitsPerPack ?? 1);
+  return (
+    <div className="bg-card p-4 rounded-2xl border shadow-sm flex justify-between items-center gap-2">
+      <div className="min-w-0 flex-1">
+        <p className="font-black text-foreground text-sm truncate">{p.name}</p>
+        <p className="text-[10px] text-muted-foreground font-bold truncate">
+          {p.category}{upp > 1 ? ` · ${upp} قطعة/طرد` : ''}
+        </p>
+      </div>
+      <div className="flex items-center gap-1.5 shrink-0">
+        <span className={`text-xs font-black px-2 py-1 rounded-lg whitespace-nowrap ${p.stock <= p.minStock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'}`}>
+          {formatStock(p)}
+        </span>
+        <button onClick={() => onEdit(p)} className="p-2 bg-muted rounded-xl text-muted-foreground hover:text-primary active:scale-95 transition-transform">
+          <Settings2 size={16} />
+        </button>
+        <button onClick={() => onDelete(p.id)} className="p-2 bg-destructive/10 rounded-xl text-destructive active:scale-95 transition-transform">
+          <Trash2 size={16} />
+        </button>
+      </div>
     </div>
-    <div className="flex items-center gap-1.5 shrink-0">
-      <span className={`text-xs font-black px-2 py-1 rounded-lg whitespace-nowrap ${p.stock <= p.minStock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'}`}>
-        {p.stock} {p.unit}
-      </span>
-      <button onClick={() => onEdit(p)} className="p-2 bg-muted rounded-xl text-muted-foreground hover:text-primary active:scale-95 transition-transform">
-        <Settings2 size={16} />
-      </button>
-      <button onClick={() => onDelete(p.id)} className="p-2 bg-destructive/10 rounded-xl text-destructive active:scale-95 transition-transform">
-        <Trash2 size={16} />
-      </button>
-    </div>
-  </div>
-));
+  );
+});
 ProductRow.displayName = 'ProductRow';
 
 export const ProductsView: React.FC<Props> = ({
