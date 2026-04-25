@@ -436,25 +436,34 @@ export type Database = {
           created_at: string
           delivery_id: string
           id: string
+          pack_quantity: number
+          piece_quantity: number
           product_id: string
           product_name: string
           quantity: number
+          units_per_pack_snapshot: number
         }
         Insert: {
           created_at?: string
           delivery_id: string
           id?: string
+          pack_quantity?: number
+          piece_quantity?: number
           product_id: string
           product_name: string
           quantity: number
+          units_per_pack_snapshot?: number
         }
         Update: {
           created_at?: string
           delivery_id?: string
           id?: string
+          pack_quantity?: number
+          piece_quantity?: number
           product_id?: string
           product_name?: string
           quantity?: number
+          units_per_pack_snapshot?: number
         }
         Relationships: [
           {
@@ -615,6 +624,7 @@ export type Database = {
           product_id: string
           product_name: string
           quantity: number
+          units_per_pack_snapshot: number
           updated_at: string
         }
         Insert: {
@@ -624,6 +634,7 @@ export type Database = {
           product_id: string
           product_name: string
           quantity?: number
+          units_per_pack_snapshot?: number
           updated_at?: string
         }
         Update: {
@@ -633,6 +644,7 @@ export type Database = {
           product_id?: string
           product_name?: string
           quantity?: number
+          units_per_pack_snapshot?: number
           updated_at?: string
         }
         Relationships: [
@@ -1051,6 +1063,8 @@ export type Database = {
       }
       products: {
         Row: {
+          allow_pack_sales: boolean
+          allow_piece_sales: boolean
           base_price: number
           category: string
           consumer_price: number
@@ -1061,12 +1075,19 @@ export type Database = {
           min_stock: number
           name: string
           organization_id: string
+          pack_consumer_price: number
+          pack_price: number
           pricing_currency: string
+          pricing_unit: string
           stock: number
+          stock_display_unit: string
           unit: string
+          units_per_pack: number
           updated_at: string
         }
         Insert: {
+          allow_pack_sales?: boolean
+          allow_piece_sales?: boolean
           base_price?: number
           category?: string
           consumer_price?: number
@@ -1077,12 +1098,19 @@ export type Database = {
           min_stock?: number
           name: string
           organization_id: string
+          pack_consumer_price?: number
+          pack_price?: number
           pricing_currency?: string
+          pricing_unit?: string
           stock?: number
+          stock_display_unit?: string
           unit?: string
+          units_per_pack?: number
           updated_at?: string
         }
         Update: {
+          allow_pack_sales?: boolean
+          allow_piece_sales?: boolean
           base_price?: number
           category?: string
           consumer_price?: number
@@ -1093,9 +1121,14 @@ export type Database = {
           min_stock?: number
           name?: string
           organization_id?: string
+          pack_consumer_price?: number
+          pack_price?: number
           pricing_currency?: string
+          pricing_unit?: string
           stock?: number
+          stock_display_unit?: string
           unit?: string
+          units_per_pack?: number
           updated_at?: string
         }
         Relationships: [
@@ -1162,32 +1195,41 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          pack_quantity: number
+          piece_quantity: number
           product_id: string
           product_name: string
           quantity: number
           return_id: string
           total_price: number
           unit_price: number
+          units_per_pack_snapshot: number
         }
         Insert: {
           created_at?: string
           id?: string
+          pack_quantity?: number
+          piece_quantity?: number
           product_id: string
           product_name: string
           quantity: number
           return_id: string
           total_price: number
           unit_price: number
+          units_per_pack_snapshot?: number
         }
         Update: {
           created_at?: string
           id?: string
+          pack_quantity?: number
+          piece_quantity?: number
           product_id?: string
           product_name?: string
           quantity?: number
           return_id?: string
           total_price?: number
           unit_price?: number
+          units_per_pack_snapshot?: number
         }
         Relationships: [
           {
@@ -1251,12 +1293,15 @@ export type Database = {
           id: string
           notes: string | null
           organization_id: string
+          pack_quantity: number
+          piece_quantity: number
           product_id: string
           product_name: string
           quantity: number
           supplier_name: string | null
           total_price: number
           unit_price: number
+          units_per_pack_snapshot: number
         }
         Insert: {
           created_at?: string
@@ -1264,12 +1309,15 @@ export type Database = {
           id?: string
           notes?: string | null
           organization_id: string
+          pack_quantity?: number
+          piece_quantity?: number
           product_id: string
           product_name: string
           quantity: number
           supplier_name?: string | null
           total_price: number
           unit_price: number
+          units_per_pack_snapshot?: number
         }
         Update: {
           created_at?: string
@@ -1277,12 +1325,15 @@ export type Database = {
           id?: string
           notes?: string | null
           organization_id?: string
+          pack_quantity?: number
+          piece_quantity?: number
           product_id?: string
           product_name?: string
           quantity?: number
           supplier_name?: string | null
           total_price?: number
           unit_price?: number
+          units_per_pack_snapshot?: number
         }
         Relationships: [
           {
@@ -1434,32 +1485,44 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          pack_quantity: number
+          piece_quantity: number
           product_id: string
           product_name: string
           quantity: number
           sale_id: string
+          sold_unit: string
           total_price: number
           unit_price: number
+          units_per_pack_snapshot: number
         }
         Insert: {
           created_at?: string
           id?: string
+          pack_quantity?: number
+          piece_quantity?: number
           product_id: string
           product_name: string
           quantity: number
           sale_id: string
+          sold_unit?: string
           total_price: number
           unit_price: number
+          units_per_pack_snapshot?: number
         }
         Update: {
           created_at?: string
           id?: string
+          pack_quantity?: number
+          piece_quantity?: number
           product_id?: string
           product_name?: string
           quantity?: number
           sale_id?: string
+          sold_unit?: string
           total_price?: number
           unit_price?: number
+          units_per_pack_snapshot?: number
         }
         Relationships: [
           {
@@ -1551,32 +1614,41 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          pack_quantity: number
+          piece_quantity: number
           product_id: string
           product_name: string
           quantity: number
           return_id: string
           total_price: number
           unit_price: number
+          units_per_pack_snapshot: number
         }
         Insert: {
           created_at?: string
           id?: string
+          pack_quantity?: number
+          piece_quantity?: number
           product_id: string
           product_name: string
           quantity: number
           return_id: string
           total_price: number
           unit_price: number
+          units_per_pack_snapshot?: number
         }
         Update: {
           created_at?: string
           id?: string
+          pack_quantity?: number
+          piece_quantity?: number
           product_id?: string
           product_name?: string
           quantity?: number
           return_id?: string
           total_price?: number
           unit_price?: number
+          units_per_pack_snapshot?: number
         }
         Relationships: [
           {
