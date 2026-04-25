@@ -154,7 +154,7 @@ export function useDistributorOffline() {
 
       const { data: productsData } = await supabase
         .from('products')
-        .select('id, base_price, consumer_price, unit, pricing_currency, organization_id')
+        .select('id, base_price, consumer_price, pack_price, pack_consumer_price, units_per_pack, allow_pack_sales, allow_piece_sales, stock_display_unit, unit, pricing_currency, organization_id')
         .in('id', productIds);
 
       // Resolve org id from any product (all products belong to same org for distributor)
@@ -196,24 +196,39 @@ export function useDistributorOffline() {
       };
 
       const priceMap = new Map(
-        (productsData || []).map(p => [
-          p.id,
-          {
-            base_price: toSyp(Number(p.base_price), p.pricing_currency),
-            consumer_price: toSyp(Number(p.consumer_price ?? 0), p.pricing_currency),
-            unit: p.unit || '',
-          },
-        ])
+        (productsData || []).map((p: any) => {
+          const upp = Math.max(1, Number(p.units_per_pack ?? 1));
+          return [
+            p.id,
+            {
+              base_price: toSyp(Number(p.base_price), p.pricing_currency),
+              consumer_price: toSyp(Number(p.consumer_price ?? 0), p.pricing_currency),
+              pack_price: toSyp(Number(p.pack_price ?? p.base_price * upp), p.pricing_currency),
+              pack_consumer_price: toSyp(Number(p.pack_consumer_price ?? p.consumer_price * upp), p.pricing_currency),
+              units_per_pack: upp,
+              allow_pack_sales: Boolean(p.allow_pack_sales ?? false),
+              allow_piece_sales: Boolean(p.allow_piece_sales ?? true),
+              stock_display_unit: (p.stock_display_unit ?? 'PIECE') as 'PIECE' | 'PACK' | 'BOTH',
+              unit: p.unit || '',
+            },
+          ];
+        })
       );
 
       const items: CachedInventoryItem[] = (data || []).map(item => {
-        const priceInfo = priceMap.get(item.product_id);
+        const priceInfo: any = priceMap.get(item.product_id);
         return {
           product_id: item.product_id,
           product_name: item.product_name,
           quantity: item.quantity,
           base_price: priceInfo?.base_price || 0,
           consumer_price: priceInfo?.consumer_price || 0,
+          pack_price: priceInfo?.pack_price || 0,
+          pack_consumer_price: priceInfo?.pack_consumer_price || 0,
+          units_per_pack: priceInfo?.units_per_pack || 1,
+          allow_pack_sales: priceInfo?.allow_pack_sales ?? false,
+          allow_piece_sales: priceInfo?.allow_piece_sales ?? true,
+          stock_display_unit: priceInfo?.stock_display_unit ?? 'PIECE',
           unit: priceInfo?.unit || '',
           updated_at: Date.now(),
         };

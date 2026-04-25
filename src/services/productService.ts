@@ -13,7 +13,7 @@ export const productService = {
     try {
       let query = supabase
         .from('products')
-        .select('id,name,category,cost_price,base_price,consumer_price,pricing_currency,stock,min_stock,unit,is_deleted,organization_id,created_at')
+        .select('id,name,category,cost_price,base_price,consumer_price,pack_price,pack_consumer_price,units_per_pack,pricing_unit,stock_display_unit,allow_pack_sales,allow_piece_sales,pricing_currency,stock,min_stock,unit,is_deleted,organization_id,created_at')
         .eq('is_deleted', false)
         .order('created_at', { ascending: false })
         .limit(limit + 1);
@@ -41,11 +41,20 @@ export const productService = {
     validateRequiredString(product.name, 'اسم المنتج');
     validatePositiveNumber(product.basePrice, 'سعر البيع');
 
+    const unitsPerPack = Math.max(1, Number(product.unitsPerPack ?? 1));
+    const pricingUnit = product.pricingUnit === 'PACK' ? 'PACK' : 'PIECE';
     const { error } = await supabase.from('products').insert({
       name: product.name, category: product.category,
       cost_price: 0, // unused — system no longer tracks cost
       base_price: product.basePrice,
       consumer_price: product.consumerPrice ?? 0,
+      pack_price: product.packPrice ?? (product.basePrice * unitsPerPack),
+      pack_consumer_price: product.packConsumerPrice ?? ((product.consumerPrice ?? 0) * unitsPerPack),
+      units_per_pack: unitsPerPack,
+      pricing_unit: pricingUnit,
+      stock_display_unit: product.stockDisplayUnit ?? 'PIECE',
+      allow_pack_sales: Boolean(product.allowPackSales ?? false),
+      allow_piece_sales: Boolean(product.allowPieceSales ?? true),
       pricing_currency: product.pricingCurrency === 'USD' ? 'USD' : 'SYP',
       stock: product.stock, min_stock: product.minStock,
       unit: product.unit, organization_id: orgId,
@@ -57,11 +66,20 @@ export const productService = {
     validateUUID(product.id, 'معرف المنتج');
     validateRequiredString(product.name, 'اسم المنتج');
 
+    const unitsPerPack = Math.max(1, Number(product.unitsPerPack ?? 1));
+    const pricingUnit = product.pricingUnit === 'PACK' ? 'PACK' : 'PIECE';
     const { error } = await supabase.from('products').update({
       name: product.name, category: product.category,
       cost_price: 0, // unused
       base_price: product.basePrice,
       consumer_price: product.consumerPrice ?? 0,
+      pack_price: product.packPrice ?? (product.basePrice * unitsPerPack),
+      pack_consumer_price: product.packConsumerPrice ?? ((product.consumerPrice ?? 0) * unitsPerPack),
+      units_per_pack: unitsPerPack,
+      pricing_unit: pricingUnit,
+      stock_display_unit: product.stockDisplayUnit ?? 'PIECE',
+      allow_pack_sales: Boolean(product.allowPackSales ?? false),
+      allow_piece_sales: Boolean(product.allowPieceSales ?? true),
       pricing_currency: product.pricingCurrency === 'USD' ? 'USD' : 'SYP',
       stock: product.stock, min_stock: product.minStock,
       unit: product.unit,
