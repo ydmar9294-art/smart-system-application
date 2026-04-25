@@ -65,18 +65,18 @@ export interface Product {
   basePrice: number;
   consumerPrice: number;
   /** Price per full PACK (auto-synced from basePrice * unitsPerPack via DB trigger) */
-  packPrice: number;
-  packConsumerPrice: number;
+  packPrice?: number;
+  packConsumerPrice?: number;
   /** Number of pieces inside one pack/box */
-  unitsPerPack: number;
+  unitsPerPack?: number;
   /** Which unit the user enters the price in: PIECE or PACK */
-  pricingUnit: PricingUnit;
+  pricingUnit?: PricingUnit;
   /** How stock should be displayed: as pieces, as packs, or both */
-  stockDisplayUnit: StockDisplayUnit;
+  stockDisplayUnit?: StockDisplayUnit;
   /** Allow selling this product by full pack */
-  allowPackSales: boolean;
+  allowPackSales?: boolean;
   /** Allow selling this product by individual piece */
-  allowPieceSales: boolean;
+  allowPieceSales?: boolean;
   stock: number;
   minStock: number;
   unit: string;
