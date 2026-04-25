@@ -1,25 +1,37 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { generateUUID } from '@/lib/uuid';
 import { 
   Plus, Minus, ShoppingBag, User, Search, X, Check, Loader2,
-  Package, AlertCircle, WifiOff, Percent, Tag
+  Package, AlertCircle, WifiOff, Percent, Tag, Box, Layers
 } from 'lucide-react';
 import { useApp } from '@/store/AppContext';
 import { Customer } from '@/types';
 import { CURRENCY } from '@/constants';
 import InvoicePrint from './InvoicePrint';
 import FullScreenModal from '@/components/ui/FullScreenModal';
-import { VirtualList } from '@/components/ui/VirtualList';
 import type { CachedInventoryItem } from '../services/distributorOfflineService';
 
 interface CartItem {
   product_id: string;
   product_name: string;
+  /** Total pieces (= packs * units_per_pack + loose pieces) */
   quantity: number;
+  /** Number of full packs */
+  pack_quantity: number;
+  /** Loose pieces in addition to packs */
+  piece_quantity: number;
+  /** Pieces per pack snapshot */
+  units_per_pack: number;
+  /** Price per single piece (always) */
   unit_price: number;
+  /** Price per full pack */
+  pack_price: number;
   consumer_price: number;
   unit: string;
+  /** Whether this item allows pack/piece sales */
+  allow_pack_sales: boolean;
+  allow_piece_sales: boolean;
 }
 
 interface NewSaleTabProps {
@@ -32,67 +44,98 @@ interface NewSaleTabProps {
 type PaymentType = 'CASH' | 'CREDIT';
 type DiscountType = 'percentage' | 'fixed' | null;
 
-// ─── Memoized cart row — stable identity prevents 100-row re-render storm ───
+// Compute total pieces from packs + loose pieces
+const totalPieces = (packs: number, loose: number, upp: number) =>
+  Math.max(0, packs) * Math.max(1, upp) + Math.max(0, loose);
+
+// Compute total price for cart line
+const lineTotal = (item: CartItem) =>
+  item.pack_quantity * item.pack_price + item.piece_quantity * item.unit_price;
+
+// ─── Memoized cart row with pack/piece inputs ───
 const CartRow = React.memo<{
   item: CartItem;
   locale: string;
-  onIncrement: (productId: string) => void;
-  onDecrement: (productId: string) => void;
+  onUpdatePacks: (productId: string, delta: number) => void;
+  onUpdatePieces: (productId: string, delta: number) => void;
   onRemove: (productId: string) => void;
-}>(({ item, locale, onIncrement, onDecrement, onRemove }) => (
-  <div className="bg-muted rounded-2xl p-4">
-    <div className="flex items-center justify-between mb-3">
-      <span className="font-bold text-foreground">{item.product_name}</span>
-      <button onClick={() => onRemove(item.product_id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
-        <X className="w-4 h-4" />
-      </button>
-    </div>
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3 bg-card rounded-xl p-1">
-        <button onClick={() => onDecrement(item.product_id)} className="w-9 h-9 bg-muted rounded-lg flex items-center justify-center hover:bg-accent">
-          <Minus className="w-4 h-4 text-muted-foreground" />
-        </button>
-        <span className="font-black w-8 text-center text-lg text-foreground">{item.quantity}</span>
-        <button onClick={() => onIncrement(item.product_id)} className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-700">
-          <Plus className="w-4 h-4 text-white" />
+}>(({ item, locale, onUpdatePacks, onUpdatePieces, onRemove }) => {
+  const hasPacks = item.units_per_pack > 1 && item.allow_pack_sales;
+  const total = lineTotal(item);
+
+  return (
+    <div className="bg-muted rounded-2xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="min-w-0 flex-1">
+          <span className="font-bold text-foreground block truncate">{item.product_name}</span>
+          {hasPacks && (
+            <span className="text-[10px] text-muted-foreground font-bold">
+              الطرد = {item.units_per_pack} قطعة
+            </span>
+          )}
+        </div>
+        <button onClick={() => onRemove(item.product_id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg shrink-0">
+          <X className="w-4 h-4" />
         </button>
       </div>
-      <span className="font-black text-blue-600 text-lg">
-        {(item.quantity * item.unit_price).toLocaleString(locale)}
-      </span>
+
+      {/* Packs row */}
+      {hasPacks && (
+        <div className="flex items-center justify-between mb-2 bg-card rounded-xl p-2">
+          <div className="flex items-center gap-2">
+            <Box className="w-4 h-4 text-primary" />
+            <span className="text-xs font-black text-foreground">طرود</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => onUpdatePacks(item.product_id, -1)} className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center">
+              <Minus className="w-3.5 h-3.5 text-muted-foreground" />
+            </button>
+            <span className="font-black w-7 text-center text-base text-foreground">{item.pack_quantity}</span>
+            <button onClick={() => onUpdatePacks(item.product_id, 1)} className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <Plus className="w-3.5 h-3.5 text-white" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Pieces row */}
+      {item.allow_piece_sales && (
+        <div className="flex items-center justify-between mb-2 bg-card rounded-xl p-2">
+          <div className="flex items-center gap-2">
+            <Layers className="w-4 h-4 text-success" />
+            <span className="text-xs font-black text-foreground">قطع</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => onUpdatePieces(item.product_id, -1)} className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center">
+              <Minus className="w-3.5 h-3.5 text-muted-foreground" />
+            </button>
+            <span className="font-black w-7 text-center text-base text-foreground">{item.piece_quantity}</span>
+            <button onClick={() => onUpdatePieces(item.product_id, 1)} className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <Plus className="w-3.5 h-3.5 text-white" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between pt-2 border-t border-border/50">
+        <span className="text-xs text-muted-foreground font-bold">
+          إجمالي: {item.quantity} قطعة
+        </span>
+        <span className="font-black text-blue-600 text-lg">
+          {total.toLocaleString(locale)} {CURRENCY}
+        </span>
+      </div>
     </div>
-  </div>
-), (prev, next) =>
+  );
+}, (prev, next) =>
   prev.item.product_id === next.item.product_id &&
-  prev.item.quantity === next.item.quantity &&
+  prev.item.pack_quantity === next.item.pack_quantity &&
+  prev.item.piece_quantity === next.item.piece_quantity &&
   prev.item.unit_price === next.item.unit_price &&
+  prev.item.pack_price === next.item.pack_price &&
   prev.locale === next.locale
 );
 CartRow.displayName = 'CartRow';
-
-// ─── Memoized product picker row ───
-const ProductPickerRow = React.memo<{
-  product: CachedInventoryItem;
-  locale: string;
-  onAdd: (product: CachedInventoryItem) => void;
-  t: (key: string) => string;
-}>(({ product, locale, onAdd, t }) => (
-  <button onClick={() => onAdd(product)}
-    className="w-full text-start p-5 bg-muted rounded-2xl hover:bg-muted/80 transition-colors active:scale-[0.98]">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="font-bold text-foreground text-lg">{product.product_name}</p>
-        <p className="text-sm text-muted-foreground mt-1">
-          {t('distributorSale.available')} {product.quantity} | {t('distributorSale.price')} {product.base_price.toLocaleString(locale)} {CURRENCY}
-        </p>
-      </div>
-      <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
-        <Plus className="w-5 h-5 text-primary" />
-      </div>
-    </div>
-  </button>
-));
-ProductPickerRow.displayName = 'ProductPickerRow';
 
 const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventory, onQueueAction, isOnline }) => {
   const { t, i18n } = useTranslation();
@@ -120,53 +163,60 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
 
   const addToCart = useCallback((product: CachedInventoryItem) => {
     setCart(prev => {
-      const existing = prev.find(item => item.product_id === product.product_id);
-      if (existing) {
-        if (existing.quantity < product.quantity) {
-          return prev.map(item =>
-            item.product_id === product.product_id ? { ...item, quantity: item.quantity + 1 } : item
-          );
-        }
-        return prev;
-      }
+      if (prev.find(item => item.product_id === product.product_id)) return prev;
+      const upp = Math.max(1, product.units_per_pack ?? 1);
+      const allowPack = Boolean(product.allow_pack_sales) && upp > 1;
+      const allowPiece = product.allow_piece_sales !== false;
+      // Default add: 1 pack if pack-only, else 1 piece
+      const initialPack = allowPack && !allowPiece ? 1 : 0;
+      const initialPiece = allowPiece ? 1 : 0;
       return [...prev, {
-        product_id: product.product_id, product_name: product.product_name,
-        quantity: 1, unit_price: product.base_price, consumer_price: product.consumer_price, unit: product.unit
+        product_id: product.product_id,
+        product_name: product.product_name,
+        pack_quantity: initialPack,
+        piece_quantity: initialPiece,
+        units_per_pack: upp,
+        quantity: totalPieces(initialPack, initialPiece, upp),
+        unit_price: product.base_price,
+        pack_price: product.pack_price ?? (product.base_price * upp),
+        consumer_price: product.consumer_price,
+        unit: product.unit,
+        allow_pack_sales: allowPack,
+        allow_piece_sales: allowPiece,
       }];
     });
     setShowProductPicker(false);
     setSearchProduct('');
   }, []);
 
-  const incrementCartItem = useCallback((productId: string) => {
+  const updatePacks = useCallback((productId: string, delta: number) => {
     const product = localInventory.find(p => p.product_id === productId);
     setCart(prev => prev.map(item => {
-      if (item.product_id === productId) {
-        const newQty = item.quantity + 1;
-        if (product && newQty > product.quantity) return item;
-        return { ...item, quantity: newQty };
-      }
-      return item;
-    }));
+      if (item.product_id !== productId) return item;
+      const newPacks = Math.max(0, item.pack_quantity + delta);
+      const newQty = totalPieces(newPacks, item.piece_quantity, item.units_per_pack);
+      if (product && newQty > product.quantity) return item;
+      return { ...item, pack_quantity: newPacks, quantity: newQty };
+    }).filter(i => i.quantity > 0));
   }, [localInventory]);
 
-  const decrementCartItem = useCallback((productId: string) => {
+  const updatePieces = useCallback((productId: string, delta: number) => {
+    const product = localInventory.find(p => p.product_id === productId);
     setCart(prev => prev.map(item => {
-      if (item.product_id === productId) {
-        const newQty = item.quantity - 1;
-        if (newQty <= 0) return item;
-        return { ...item, quantity: newQty };
-      }
-      return item;
-    }).filter(item => item.quantity > 0));
-  }, []);
+      if (item.product_id !== productId) return item;
+      const newPieces = Math.max(0, item.piece_quantity + delta);
+      const newQty = totalPieces(item.pack_quantity, newPieces, item.units_per_pack);
+      if (product && newQty > product.quantity) return item;
+      return { ...item, piece_quantity: newPieces, quantity: newQty };
+    }).filter(i => i.quantity > 0));
+  }, [localInventory]);
 
   const removeFromCart = useCallback((productId: string) => {
     setCart(prev => prev.filter(item => item.product_id !== productId));
   }, []);
 
   const subtotal = useMemo(
-    () => cart.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0),
+    () => cart.reduce((sum, item) => sum + lineTotal(item), 0),
     [cart]
   );
   const discountPercentage = discountType === 'percentage' ? Math.min(100, Math.max(0, Number(discountInput) || 0)) : 
@@ -180,10 +230,23 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
     if (!selectedCustomer?.id || cart.length === 0) return;
     setLoading(true);
     try {
-      const saleItems = cart.map(item => ({
-        productId: item.product_id, productName: item.product_name,
-        quantity: item.quantity, unitPrice: item.unit_price, totalPrice: item.quantity * item.unit_price
-      }));
+      const saleItems = cart.map(item => {
+        const total = lineTotal(item);
+        const sold_unit = item.pack_quantity > 0 && item.piece_quantity > 0
+          ? 'MIXED'
+          : item.pack_quantity > 0 ? 'PACK' : 'PIECE';
+        return {
+          productId: item.product_id,
+          productName: item.product_name,
+          quantity: item.quantity,
+          unitPrice: item.unit_price,
+          totalPrice: total,
+          packQuantity: item.pack_quantity,
+          pieceQuantity: item.piece_quantity,
+          unitsPerPackSnapshot: item.units_per_pack,
+          soldUnit: sold_unit,
+        };
+      });
       const inventoryUpdates = cart.map(item => ({ productId: item.product_id, quantityDelta: -item.quantity }));
 
       await onQueueAction('CREATE_SALE', {
@@ -214,7 +277,7 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
           date={new Date()}
           items={lastSaleData.items.map((item: CartItem) => ({
             product_name: item.product_name, quantity: item.quantity, unit_price: item.unit_price,
-            total_price: item.quantity * item.unit_price, consumer_price: item.consumer_price, unit: item.unit
+            total_price: lineTotal(item), consumer_price: item.consumer_price, unit: item.unit
           }))}
           grandTotal={lastSaleData.grandTotal} subtotal={lastSaleData.subtotal}
           discountType={lastSaleData.discountType} discountPercentage={lastSaleData.discountPercentage}
@@ -281,8 +344,8 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
               key={item.product_id}
               item={item}
               locale={locale}
-              onIncrement={incrementCartItem}
-              onDecrement={decrementCartItem}
+              onUpdatePacks={updatePacks}
+              onUpdatePieces={updatePieces}
               onRemove={removeFromCart}
             />
           ))}
@@ -387,22 +450,38 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
               <p className="text-sm">{t('distributorSale.contactOwner')}</p>
             </div>
           ) : (
-            filteredProducts.map((product) => (
-              <button key={product.product_id} onClick={() => addToCart(product)}
-                className="w-full text-start p-5 bg-muted rounded-2xl hover:bg-muted/80 transition-colors active:scale-[0.98]">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-foreground text-lg">{product.product_name}</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {t('distributorSale.available')} {product.quantity} | {t('distributorSale.price')} {product.base_price.toLocaleString(locale)} {CURRENCY}
-                    </p>
+            filteredProducts.map((product) => {
+              const upp = Math.max(1, product.units_per_pack ?? 1);
+              const showPacks = upp > 1 && product.allow_pack_sales;
+              const packsAvail = Math.floor(product.quantity / upp);
+              const looseAvail = product.quantity % upp;
+              return (
+                <button key={product.product_id} onClick={() => addToCart(product)}
+                  className="w-full text-start p-5 bg-muted rounded-2xl hover:bg-muted/80 transition-colors active:scale-[0.98]">
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-foreground text-lg truncate">{product.product_name}</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {showPacks ? (
+                          <>
+                            <span className="inline-flex items-center gap-1"><Box className="w-3.5 h-3.5" /> {packsAvail} طرد + {looseAvail} قطعة</span>
+                            <span className="mx-2">|</span>
+                            <span>{(product.pack_price ?? 0).toLocaleString(locale)} {CURRENCY}/طرد</span>
+                          </>
+                        ) : (
+                          <>
+                            {t('distributorSale.available')} {product.quantity} | {t('distributorSale.price')} {product.base_price.toLocaleString(locale)} {CURRENCY}
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+                      <Plus className="w-5 h-5 text-primary" />
+                    </div>
                   </div>
-                  <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
-                    <Plus className="w-5 h-5 text-primary" />
-                  </div>
-                </div>
-              </button>
-            ))
+                </button>
+              );
+            })
           )}
         </div>
       </FullScreenModal>
