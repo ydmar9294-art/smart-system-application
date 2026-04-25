@@ -701,8 +701,9 @@ export function useDistributorOffline() {
     // Cache org name + legal info (stamp, registrations) eagerly at login/init
     refreshOrgLegalCache();
 
-    // Listen for realtime changes to distributor_inventory (e.g. when owner creates a delivery)
+    // Listen for realtime changes that affect distributor inventory or pricing
     let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+    let pricingChannel: ReturnType<typeof supabase.channel> | null = null;
     resolveOfflineOrgContext().then((ctx) => {
       if (!ctx?.organizationId || !mountedRef.current) return;
       realtimeChannel = supabase
@@ -717,6 +718,23 @@ export function useDistributorOffline() {
             refreshInventory();
           }
         })
+        .subscribe();
+
+      // Refresh distributor inventory cache when owner updates prices or exchange rate
+      pricingChannel = supabase
+        .channel(`dist-pricing-${ctx.organizationId}`)
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'exchange_rates',
+          filter: `organization_id=eq.${ctx.organizationId}`,
+        }, () => { if (mountedRef.current) refreshInventory(); })
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'products',
+          filter: `organization_id=eq.${ctx.organizationId}`,
+        }, () => { if (mountedRef.current) refreshInventory(); })
         .subscribe();
     });
 
