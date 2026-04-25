@@ -154,13 +154,55 @@ export function useDistributorOffline() {
 
       const { data: productsData } = await supabase
         .from('products')
-        .select('id, base_price, consumer_price, unit')
+        .select('id, base_price, consumer_price, unit, pricing_currency, organization_id')
         .in('id', productIds);
+
+      // Resolve org id from any product (all products belong to same org for distributor)
+      const orgId = productsData?.[0]?.organization_id;
+
+      // Fetch latest USD→SYP rate (used to convert USD-priced products to SYP for display)
+      let usdRate: number | null = null;
+      if (orgId) {
+        try {
+          const { data: rateRow } = await supabase
+            .from('exchange_rates')
+            .select('rate')
+            .eq('organization_id', orgId)
+            .eq('from_currency', 'USD')
+            .eq('to_currency', 'SYP')
+            .order('effective_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (rateRow?.rate) {
+            usdRate = Number(rateRow.rate);
+            try { localStorage.setItem('cached_usd_rate', String(usdRate)); } catch {}
+          }
+        } catch {
+          // network glitch — fall back to cached rate
+        }
+      }
+      // Fallback: cached rate
+      if (!usdRate || usdRate <= 0) {
+        try {
+          const cached = localStorage.getItem('cached_usd_rate');
+          if (cached) usdRate = Number(cached);
+        } catch {}
+      }
+
+      const toSyp = (amount: number, cur: string | null | undefined): number => {
+        const a = Number(amount) || 0;
+        if (cur === 'USD' && usdRate && usdRate > 0) return a * usdRate;
+        return a;
+      };
 
       const priceMap = new Map(
         (productsData || []).map(p => [
           p.id,
-          { base_price: Number(p.base_price), consumer_price: Number(p.consumer_price ?? 0), unit: p.unit || '' },
+          {
+            base_price: toSyp(Number(p.base_price), p.pricing_currency),
+            consumer_price: toSyp(Number(p.consumer_price ?? 0), p.pricing_currency),
+            unit: p.unit || '',
+          },
         ])
       );
 
@@ -659,8 +701,9 @@ export function useDistributorOffline() {
     // Cache org name + legal info (stamp, registrations) eagerly at login/init
     refreshOrgLegalCache();
 
-    // Listen for realtime changes to distributor_inventory (e.g. when owner creates a delivery)
+    // Listen for realtime changes that affect distributor inventory or pricing
     let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+    let pricingChannel: ReturnType<typeof supabase.channel> | null = null;
     resolveOfflineOrgContext().then((ctx) => {
       if (!ctx?.organizationId || !mountedRef.current) return;
       realtimeChannel = supabase
@@ -676,6 +719,23 @@ export function useDistributorOffline() {
           }
         })
         .subscribe();
+
+      // Refresh distributor inventory cache when owner updates prices or exchange rate
+      pricingChannel = supabase
+        .channel(`dist-pricing-${ctx.organizationId}`)
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'exchange_rates',
+          filter: `organization_id=eq.${ctx.organizationId}`,
+        }, () => { if (mountedRef.current) refreshInventory(); })
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'products',
+          filter: `organization_id=eq.${ctx.organizationId}`,
+        }, () => { if (mountedRef.current) refreshInventory(); })
+        .subscribe();
     });
 
     // Periodic stats refresh
@@ -690,6 +750,9 @@ export function useDistributorOffline() {
       clearInterval(statsInterval);
       if (realtimeChannel) {
         supabase.removeChannel(realtimeChannel);
+      }
+      if (pricingChannel) {
+        supabase.removeChannel(pricingChannel);
       }
     };
   }, [refreshStats, refreshInventory, refreshSales, refreshCustomers]);
