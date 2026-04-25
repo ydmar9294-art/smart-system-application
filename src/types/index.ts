@@ -50,6 +50,10 @@ export interface Organization {
 
 export type PricingCurrency = 'SYP' | 'USD';
 
+export type PricingUnit = 'PIECE' | 'PACK';
+export type StockDisplayUnit = 'PIECE' | 'PACK' | 'BOTH';
+export type SoldUnit = 'PIECE' | 'PACK' | 'MIXED';
+
 export interface Product {
   id: string;
   organization_id?: string;
@@ -57,13 +61,26 @@ export interface Product {
   category: string;
   /** @deprecated cost is no longer used by the UI; kept for DB compatibility */
   costPrice: number;
+  /** Price per single PIECE (always derived/stored even if pricing_unit = PACK) */
   basePrice: number;
   consumerPrice: number;
+  /** Price per full PACK (auto-synced from basePrice * unitsPerPack via DB trigger) */
+  packPrice: number;
+  packConsumerPrice: number;
+  /** Number of pieces inside one pack/box */
+  unitsPerPack: number;
+  /** Which unit the user enters the price in: PIECE or PACK */
+  pricingUnit: PricingUnit;
+  /** How stock should be displayed: as pieces, as packs, or both */
+  stockDisplayUnit: StockDisplayUnit;
+  /** Allow selling this product by full pack */
+  allowPackSales: boolean;
+  /** Allow selling this product by individual piece */
+  allowPieceSales: boolean;
   stock: number;
   minStock: number;
   unit: string;
   isDeleted: boolean;
-  /** Currency in which base/consumer prices were entered. Defaults to 'SYP'. */
   pricingCurrency?: PricingCurrency;
 }
 
@@ -101,9 +118,19 @@ export interface SaleItem {
   id: string;
   productId: string;
   productName: string;
+  /** Total pieces sold (= packQuantity * unitsPerPackSnapshot + pieceQuantity) */
   quantity: number;
+  /** Price per single PIECE */
   unitPrice: number;
   totalPrice: number;
+  /** Number of full packs sold (optional, defaults to 0) */
+  packQuantity?: number;
+  /** Number of loose pieces sold (optional, defaults to quantity for legacy data) */
+  pieceQuantity?: number;
+  /** Snapshot of unitsPerPack at sale time (for accurate display in history) */
+  unitsPerPackSnapshot?: number;
+  /** What unit the seller chose */
+  soldUnit?: SoldUnit;
 }
 
 export type PaymentDirection = 'IN' | 'OUT';
