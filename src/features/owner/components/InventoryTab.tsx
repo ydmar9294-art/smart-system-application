@@ -227,12 +227,22 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const pricingCurrency = (formData.get('pricingCurrency') as string) === 'USD' ? 'USD' : 'SYP';
+    const pricingUnit = (formData.get('pricingUnit') as string) === 'PACK' ? 'PACK' : 'PIECE';
+    const stockDisplayUnit = (formData.get('stockDisplayUnit') as string) as 'PIECE' | 'PACK' | 'BOTH';
+    const unitsPerPack = Math.max(1, Number(formData.get('unitsPerPack')) || 1);
     const productData = {
       name: formData.get('name') as string,
       category: formData.get('category') as string,
       costPrice: 0,
-      basePrice: Number(formData.get('basePrice')),
+      basePrice: Number(formData.get('basePrice')) || 0,
       consumerPrice: Number(formData.get('consumerPrice') || 0),
+      packPrice: Number(formData.get('packPrice')) || 0,
+      packConsumerPrice: Number(formData.get('packConsumerPrice') || 0),
+      unitsPerPack,
+      pricingUnit: pricingUnit as 'PIECE' | 'PACK',
+      stockDisplayUnit: (['PIECE','PACK','BOTH'].includes(stockDisplayUnit) ? stockDisplayUnit : 'PIECE') as 'PIECE' | 'PACK' | 'BOTH',
+      allowPackSales: formData.get('allowPackSales') === '1',
+      allowPieceSales: formData.get('allowPieceSales') !== '0',
       stock: Number(formData.get('stock')),
       minStock: Number(formData.get('minStock')),
       unit: formData.get('unit') as string,
