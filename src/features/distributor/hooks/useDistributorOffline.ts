@@ -751,6 +751,9 @@ export function useDistributorOffline() {
       if (realtimeChannel) {
         supabase.removeChannel(realtimeChannel);
       }
+      if (pricingChannel) {
+        supabase.removeChannel(pricingChannel);
+      }
     };
   }, [refreshStats, refreshInventory, refreshSales, refreshCustomers]);
 
