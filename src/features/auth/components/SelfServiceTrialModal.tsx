@@ -17,6 +17,9 @@ import { clearAuthCache } from '@/lib/authCache';
 import FullScreenModal from '@/components/ui/FullScreenModal';
 import { COMMON_CURRENCIES } from '@/constants/currencies';
 
+// النظام مغلق على عملتين فقط: ل.س و $
+const SUPPORTED_CURRENCIES = COMMON_CURRENCIES.filter(c => c.code === 'SYP' || c.code === 'USD');
+
 interface SelfServiceTrialModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -62,7 +65,7 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
     setForm(prev => ({ ...prev, [key]: value }));
 
   const secondaryOptions = useMemo(
-    () => COMMON_CURRENCIES.filter(c => c.code !== form.baseCurrency),
+    () => SUPPORTED_CURRENCIES.filter(c => c.code !== form.baseCurrency),
     [form.baseCurrency]
   );
 
@@ -93,7 +96,7 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
     setError('');
 
     if (!form.baseCurrency) { setError('يرجى اختيار العملة الأساسية للمنشأة'); return; }
-    const basePreset = COMMON_CURRENCIES.find(c => c.code === form.baseCurrency);
+    const basePreset = SUPPORTED_CURRENCIES.find(c => c.code === form.baseCurrency);
     if (!basePreset) { setError('عملة أساسية غير صحيحة'); return; }
 
     let secondaryPreset: typeof basePreset | undefined;
@@ -102,7 +105,7 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
       if (!form.secondaryCurrency || form.secondaryCurrency === form.baseCurrency) {
         setError('اختر عملة ثانوية مختلفة عن العملة الأساسية'); return;
       }
-      secondaryPreset = COMMON_CURRENCIES.find(c => c.code === form.secondaryCurrency);
+      secondaryPreset = SUPPORTED_CURRENCIES.find(c => c.code === form.secondaryCurrency);
       if (!secondaryPreset) { setError('عملة ثانوية غير صحيحة'); return; }
       rateNum = parseFloat(form.exchangeRate);
       if (!isFinite(rateNum) || rateNum <= 0) {
@@ -341,7 +344,7 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
             className="input-field"
           >
             <option value="">— اختر العملة الأساسية —</option>
-            {COMMON_CURRENCIES.map(c => (
+            {SUPPORTED_CURRENCIES.map(c => (
               <option key={c.code} value={c.code}>{c.name_ar} ({c.code})</option>
             ))}
           </select>

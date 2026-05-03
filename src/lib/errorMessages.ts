@@ -50,6 +50,12 @@ export function formatError(error: unknown, fallback = 'حدث خطأ غير م�
   }
 
   const e = error as ErrorLike;
+  const rawMsg = e.message ?? e.details ?? e.hint ?? '';
+
+  // 0) Prefer clear Arabic messages from RPC/trigger RAISE EXCEPTION
+  if (rawMsg && /[\u0600-\u06FF]/.test(rawMsg) && rawMsg.length < 300) {
+    return rawMsg;
+  }
 
   // 1) Postgres code lookup
   if (e.code && PG_CODE_MAP[e.code]) {
@@ -57,14 +63,8 @@ export function formatError(error: unknown, fallback = 'حدث خطأ غير م�
   }
 
   // 2) Pattern matching on message
-  const msg = e.message ?? e.details ?? e.hint ?? '';
-  const matched = matchPattern(msg);
+  const matched = matchPattern(rawMsg);
   if (matched) return matched;
-
-  // 3) If the raw message is short Arabic, return it as-is (it's likely from our RPCs)
-  if (msg && /[\u0600-\u06FF]/.test(msg) && msg.length < 200) {
-    return msg;
-  }
 
   return fallback;
 }
