@@ -17,6 +17,9 @@ import { clearAuthCache } from '@/lib/authCache';
 import FullScreenModal from '@/components/ui/FullScreenModal';
 import { COMMON_CURRENCIES } from '@/constants/currencies';
 
+// النظام مغلق على عملتين فقط: ل.س و $
+const SUPPORTED_CURRENCIES = COMMON_CURRENCIES.filter(c => c.code === 'SYP' || c.code === 'USD');
+
 interface SelfServiceTrialModalProps {
   isOpen: boolean;
   onClose: () => void;
