@@ -81,11 +81,20 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
   const filteredProducts = products.filter(p => p.name.includes(searchTerm) || p.category.includes(searchTerm));
   const lowStockCount = products.filter(p => p.stock <= p.minStock).length;
 
-  // Purchase handlers
+  // Purchase handlers — default to LAST historical purchase price for that product
   const handlePurchaseProductChange = (productId: string) => {
     setPurchaseProduct(productId);
     const product = products.find(p => p.id === productId);
-    if (product) setPurchasePrice(String(resolveProductBasePriceSYP(product, usdRate)));
+    // Find last purchase for this product (purchases are sorted newest-first by default)
+    const lastPurchase = purchases
+      .filter((p: any) => p.product_id === productId)
+      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+    if (lastPurchase) {
+      setPurchasePrice(String(lastPurchase.unit_price));
+      if (lastPurchase.supplier_name) setPurchaseSupplier(String(lastPurchase.supplier_name));
+    } else if (product) {
+      setPurchasePrice(String(resolveProductBasePriceSYP(product, usdRate)));
+    }
   };
 
   const resetPurchaseForm = () => {
@@ -160,11 +169,18 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
     }
   };
 
-  // Purchase Return handlers
+  // Purchase Return handlers — default to last purchase price (historical) for that product
   const handleReturnProductChange = (productId: string) => {
     setSelectedReturnProduct(productId);
     const product = products.find(p => p.id === productId);
-    if (product) setReturnItemPrice(String(resolveProductBasePriceSYP(product, usdRate)));
+    const lastPurchase = purchases
+      .filter((p: any) => p.product_id === productId)
+      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+    if (lastPurchase) {
+      setReturnItemPrice(String(lastPurchase.unit_price));
+    } else if (product) {
+      setReturnItemPrice(String(resolveProductBasePriceSYP(product, usdRate)));
+    }
   };
 
   const addPurchaseReturnItem = () => {
