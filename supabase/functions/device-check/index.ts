@@ -332,26 +332,37 @@ async function handleVerify(userId: string, deviceId: string, ipAddress: string)
  * Also validates session is still active (stolen token protection).
  */
 async function handleHeartbeat(userId: string, deviceId: string) {
-  const { data, error } = await serviceClient
+  // Look up the device row for this specific device_id (regardless of active flag)
+  const { data: deviceRow } = await serviceClient
     .from('devices')
-    .update({ last_seen: new Date().toISOString() })
+    .select('device_id, is_active')
     .eq('user_id', userId)
     .eq('device_id', deviceId)
-    .eq('is_active', true)
-    .select('device_id')
     .maybeSingle()
 
-  if (error || !data) {
-    // Device is no longer active — session was revoked
-    return jsonResponse({
-      success: true,
-      active: false,
-      status: 'SESSION_INVALID',
-      message: 'تم تسجيل الدخول من جهاز آخر',
-    })
+  // No row at all → device is not yet registered (e.g. mid-activation flow).
+  // Do NOT treat this as a revocation — just no-op until registration completes.
+  if (!deviceRow) {
+    return jsonResponse({ success: true, active: true, status: 'NOT_REGISTERED_YET' })
   }
 
-  return jsonResponse({ success: true, active: true, status: 'HEARTBEAT_OK' })
+  // Row exists and is active → bump last_seen
+  if (deviceRow.is_active) {
+    await serviceClient
+      .from('devices')
+      .update({ last_seen: new Date().toISOString() })
+      .eq('user_id', userId)
+      .eq('device_id', deviceId)
+    return jsonResponse({ success: true, active: true, status: 'HEARTBEAT_OK' })
+  }
+
+  // Row exists but is_active=false → genuinely revoked by another device
+  return jsonResponse({
+    success: true,
+    active: false,
+    status: 'SESSION_INVALID',
+    message: 'تم تسجيل الدخول من جهاز آخر',
+  })
 }
 
 /**
