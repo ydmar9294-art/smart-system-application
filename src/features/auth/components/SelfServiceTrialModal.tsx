@@ -95,23 +95,16 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
     e.preventDefault();
     setError('');
 
-    if (!form.baseCurrency) { setError('يرجى اختيار العملة الأساسية للمنشأة'); return; }
-    const basePreset = SUPPORTED_CURRENCIES.find(c => c.code === form.baseCurrency);
-    if (!basePreset) { setError('عملة أساسية غير صحيحة'); return; }
+    const basePreset = SUPPORTED_CURRENCIES.find(c => c.code === 'SYP');
+    const secondaryPreset = SUPPORTED_CURRENCIES.find(c => c.code === 'USD');
+    if (!basePreset || !secondaryPreset) { setError('عملات النظام غير متوفرة'); return; }
 
-    let secondaryPreset: typeof basePreset | undefined;
-    let rateNum: number | null = null;
-    if (form.addSecondary) {
-      if (!form.secondaryCurrency || form.secondaryCurrency === form.baseCurrency) {
-        setError('اختر عملة ثانوية مختلفة عن العملة الأساسية'); return;
-      }
-      secondaryPreset = SUPPORTED_CURRENCIES.find(c => c.code === form.secondaryCurrency);
-      if (!secondaryPreset) { setError('عملة ثانوية غير صحيحة'); return; }
-      rateNum = parseFloat(form.exchangeRate);
-      if (!isFinite(rateNum) || rateNum <= 0) {
-        setError(`سعر الصرف غير صحيح (1 ${basePreset.code} = ? ${secondaryPreset.code})`); return;
-      }
+    // المستخدم يُدخل: 1 USD = X ل.س (سعر الدولار). نحوّله إلى 1 SYP = 1/X USD
+    const usdInSyp = parseFloat(form.exchangeRate);
+    if (!isFinite(usdInSyp) || usdInSyp <= 0) {
+      setError('أدخل سعر صرف الدولار بالليرة السورية (مثال: 16000)'); return;
     }
+    const rateNum: number = 1 / usdInSyp;
 
     const fullName = sanitizeText(form.fullName);
     const orgName = sanitizeText(form.orgName);
