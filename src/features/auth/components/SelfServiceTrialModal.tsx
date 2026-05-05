@@ -323,76 +323,37 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
       <form id="self-trial-currency-form" onSubmit={handleSubmit} className="space-y-5">
         <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 space-y-2">
           <p className="font-bold text-foreground text-sm flex items-center gap-2">
-            <Coins className="w-4 h-4 text-primary" /> العملة الأساسية للمنشأة
+            <Coins className="w-4 h-4 text-primary" /> سعر صرف الدولار
           </p>
-          <p className="text-xs text-muted-foreground">
-            ستكون هي عملة التسعير والمحاسبة الافتراضية. يمكنك إضافة عملات أخرى لاحقاً من إعدادات العملات.
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            النظام يدعم عملتين فقط: الليرة السورية (ل.س) والدولار الأمريكي ($).
+            أدخل سعر الدولار اليوم بالليرة السورية ليتم اعتماده في كافة الفواتير والتقارير.
           </p>
         </div>
 
-        <Field icon={<Coins className="w-4 h-4 text-primary" />} label="العملة الأساسية" required>
-          <select
-            value={form.baseCurrency}
-            onChange={(e) => update('baseCurrency', e.target.value)}
-            className="input-field"
-          >
-            <option value="">— اختر العملة الأساسية —</option>
-            {SUPPORTED_CURRENCIES.map(c => (
-              <option key={c.code} value={c.code}>{c.name_ar} ({c.code})</option>
-            ))}
-          </select>
-        </Field>
-
-        <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={form.addSecondary}
-              onChange={(e) => update('addSecondary', e.target.checked)}
-              className="w-4 h-4 rounded accent-primary"
-            />
-            <span className="font-bold text-foreground text-sm flex items-center gap-2">
-              <ArrowRightLeft className="w-4 h-4 text-primary" />
-              إضافة عملة ثانوية وسعر صرفها (اختياري)
-            </span>
-          </label>
-
-          {form.addSecondary && (
-            <div className="space-y-3 pt-2">
-              <Field icon={<Coins className="w-4 h-4 text-amber-500" />} label="العملة الثانوية" required>
-                <select
-                  value={form.secondaryCurrency}
-                  onChange={(e) => update('secondaryCurrency', e.target.value)}
-                  disabled={!form.baseCurrency}
-                  className="input-field"
-                >
-                  <option value="">— اختر العملة الثانوية —</option>
-                  {secondaryOptions.map(c => (
-                    <option key={c.code} value={c.code}>{c.name_ar} ({c.code})</option>
-                  ))}
-                </select>
-              </Field>
-
-              <Field
-                icon={<ArrowRightLeft className="w-4 h-4 text-amber-500" />}
-                label={`سعر الصرف (1 ${form.baseCurrency || '?'} = ? ${form.secondaryCurrency || '?'})`}
+        <div className="bg-card rounded-2xl p-5 shadow-sm border border-border">
+          <h4 className="font-bold text-foreground text-sm mb-3 text-center">كم يساوي 1 دولار اليوم؟</h4>
+          <div className="bg-muted/30 rounded-xl p-3">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-xs font-bold text-foreground whitespace-nowrap shrink-0">1$ =</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="1"
+                min="1"
+                value={form.exchangeRate}
+                onChange={(e) => update('exchangeRate', e.target.value)}
+                placeholder="مثال: 16000"
                 required
-                hint="مثال: إذا كانت العملة الأساسية SYP والعملة الثانوية USD وسعر الدولار 15000 ل.س، فالسعر هو 0.0000667"
-              >
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  step="0.000001"
-                  min="0"
-                  value={form.exchangeRate}
-                  onChange={(e) => update('exchangeRate', e.target.value)}
-                  placeholder="مثال: 0.0000667"
-                  className="input-field text-center"
-                  dir="ltr"
-                />
-              </Field>
+                className="flex-1 min-w-0 px-2 py-3 bg-background text-foreground rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary text-center text-base font-black"
+                dir="ltr"
+              />
+              <span className="text-xs font-bold text-foreground whitespace-nowrap shrink-0">ل.س</span>
             </div>
-          )}
+          </div>
+          <p className="text-[11px] text-muted-foreground text-center mt-3">
+            يمكنك تحديث هذا السعر لاحقاً في أي وقت من تبويب «العملات والصرف».
+          </p>
         </div>
 
         {error && (
