@@ -53,9 +53,9 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
     phone: '',
     whatsapp: '',
     whatsappSameAsPhone: false,
-    baseCurrency: '',
-    addSecondary: false,
-    secondaryCurrency: '',
+    baseCurrency: 'SYP',
+    addSecondary: true,
+    secondaryCurrency: 'USD',
     exchangeRate: '',
   });
   const [loading, setLoading] = useState(false);
