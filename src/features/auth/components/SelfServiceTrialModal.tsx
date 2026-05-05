@@ -99,12 +99,11 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
     const secondaryPreset = SUPPORTED_CURRENCIES.find(c => c.code === 'USD');
     if (!basePreset || !secondaryPreset) { setError('عملات النظام غير متوفرة'); return; }
 
-    // المستخدم يُدخل: 1 USD = X ل.س (سعر الدولار). نحوّله إلى 1 SYP = 1/X USD
-    const usdInSyp = parseFloat(form.exchangeRate);
-    if (!isFinite(usdInSyp) || usdInSyp <= 0) {
+    // المستخدم يُدخل: 1 USD = X ل.س — يُحفظ مباشرة بهذه الصيغة
+    const rateNum = parseFloat(form.exchangeRate);
+    if (!isFinite(rateNum) || rateNum <= 0) {
       setError('أدخل سعر صرف الدولار بالليرة السورية (مثال: 16000)'); return;
     }
-    const rateNum: number = 1 / usdInSyp;
 
     const fullName = sanitizeText(form.fullName);
     const orgName = sanitizeText(form.orgName);
