@@ -78,18 +78,9 @@ export const useAuthActions = (deps: AuthActionsDeps) => {
       return;
     }
 
-    // If profile was JUST resolved (within last 15s), reuse cached data
-    // This prevents double edge function calls when AuthFlow and useSession
-    // both handle SIGNED_IN simultaneously on Capacitor
-    const cached = getCachedAuth();
-    if (cached && isCacheFullyActivated(cached) && (Date.now() - cached.cachedAt) < 15_000) {
-      logger.info('Auth cache is very fresh — skipping re-resolution', 'Auth');
-      const built = buildUserFromCache(cached);
-      setAuthenticatedState(built);
-      return;
-    }
-
-    // Clear cache and re-query to get fresh license/profile status
+    // Always re-query on explicit refresh — never reuse cache shortcut.
+    // This prevents bypassing the license-frozen screen by clicking "Check License"
+    // repeatedly while a fresh-but-stale cache exists.
     clearAuthCache();
 
     setIsLoading(true);

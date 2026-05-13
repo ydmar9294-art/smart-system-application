@@ -174,6 +174,7 @@ export const resolveUserProfile = async (uid: string): Promise<ProfileResolution
       organizationId: status.organization_id || null,
       organizationName: status.organization_name || null,
       licenseStatus: status.license_status as LicenseStatus || null,
+      expiryDate: typeof expiryDate === 'number' ? expiryDate : null,
       fullName: status.full_name || '',
       email: status.email || ''
     });

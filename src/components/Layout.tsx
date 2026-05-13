@@ -41,7 +41,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const expiryDate = (organization as any)?.expiryDate;
 
   const isSuspended = licenseStatus === LicenseStatus.SUSPENDED;
-  const isExpired = typeof expiryDate === 'number' && expiryDate < Date.now();
+  const isExpired =
+    licenseStatus === LicenseStatus.EXPIRED ||
+    (typeof expiryDate === 'number' && expiryDate < Date.now());
 
   if ((isSuspended || isExpired) && user.role !== UserRole.DEVELOPER) {
     return <LicenseFrozenScreen 

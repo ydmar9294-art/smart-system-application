@@ -31,6 +31,7 @@ export interface CachedAuthState {
   organizationId?: string | null;
   organizationName?: string | null;
   licenseStatus?: LicenseStatus | null;
+  expiryDate?: number | null;
   fullName: string;
   email: string;
   cachedAt: number;
