@@ -378,7 +378,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
             <p className="text-muted-foreground font-bold text-sm">{PHASE_LABELS[authState.phase]}</p>
             {isSlow &&
-            <div className="text-center space-y-2 animate-in fade-in duration-300">
+            <div className="text-center space-y-2 animate-in fade-in duration-150">
                 <p className="text-xs text-muted-foreground/70">{t('auth.takingLonger')}</p>
                 <button onClick={handleLogout} className="text-xs text-destructive hover:underline font-bold">
                   {t('auth.cancelAndLogout')}
@@ -492,13 +492,13 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
               <button
                 type="button"
                 onClick={() => setShowGuestSelector(true)}
-                className="w-full relative overflow-hidden flex items-center justify-center gap-3 py-4 rounded-2xl font-black text-sm transition-all duration-300 active:scale-[0.97] group text-primary-foreground"
+                className="w-full relative overflow-hidden flex items-center justify-center gap-3 py-4 rounded-2xl font-black text-sm transition-all duration-150 active:scale-[0.97] group text-primary-foreground"
                 style={{
                   background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.85) 50%, hsl(var(--primary) / 0.95) 100%)',
                   boxShadow: '0 8px 28px hsl(var(--primary) / 0.35), inset 0 1px 0 hsl(0 0% 100% / 0.25)',
                 }}
               >
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: 'linear-gradient(135deg, hsl(0 0% 100% / 0.15), transparent 60%)' }} />
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200" style={{ background: 'linear-gradient(135deg, hsl(0 0% 100% / 0.15), transparent 60%)' }} />
                 <div className="w-5 h-5 overflow-hidden rounded-md drop-shadow"><AppLogo size={20} /></div>
                 <span className="drop-shadow-sm">{t('auth.guestPromoTitle')}</span>
                 <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1 rtl:rotate-180 rtl:group-hover:translate-x-1 rtl:group-hover:-translate-x-0" />

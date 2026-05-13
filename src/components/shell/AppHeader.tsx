@@ -41,7 +41,7 @@ const AppHeader: React.FC<Props> = ({
       {/* Status-bar tint behind OS status bar / notch */}
       <div
         aria-hidden
-        className="fixed top-0 inset-x-0 z-50 pointer-events-none transition-[backdrop-filter] duration-300"
+        className="fixed top-0 inset-x-0 z-50 pointer-events-none transition-[backdrop-filter] duration-150"
         style={{
           height: 'env(safe-area-inset-top, 0px)',
           background: shrunk

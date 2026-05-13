@@ -8,7 +8,7 @@ import AppLogo from '@/components/ui/AppLogo';
 const LogoutScreen: React.FC = () => {
   return (
     <div
-      className="fixed inset-0 z-[9999] bg-background flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300"
+      className="fixed inset-0 z-[9999] bg-background flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-150"
       dir="rtl"
     >
       <div className="flex flex-col items-center gap-8 max-w-xs">

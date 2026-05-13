@@ -102,10 +102,10 @@ const LicenseActivation: React.FC<LicenseActivationProps> = ({ userId, email, fu
         <label className="text-sm font-bold text-foreground flex items-center gap-2"><Key className="w-4 h-4 text-primary" />{t('activation.activationCode')}</label>
         <div className="relative">
           <input type="text" placeholder={t('activation.placeholder')} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} disabled={loading}
-            className={`input-field text-center tracking-[0.3em] font-mono text-lg transition-all duration-300 ${codeType !== 'unknown' ? `${typeInfo.bgColor} border-2 ${typeInfo.borderColor} shadow-lg ${typeInfo.glowColor}` : 'bg-muted'}`} dir="ltr" />
+            className={`input-field text-center tracking-[0.3em] font-mono text-lg transition-all duration-150 ${codeType !== 'unknown' ? `${typeInfo.bgColor} border-2 ${typeInfo.borderColor} shadow-lg ${typeInfo.glowColor}` : 'bg-muted'}`} dir="ltr" />
         </div>
-        <div className={`overflow-hidden transition-all duration-500 ease-out ${code.length > 0 ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'}`}>
-          <div className={`flex items-center gap-3 p-4 rounded-2xl ${typeInfo.bgColor} border ${typeInfo.borderColor} transition-all duration-300`}>
+        <div className={`overflow-hidden transition-all duration-200 ease-out ${code.length > 0 ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className={`flex items-center gap-3 p-4 rounded-2xl ${typeInfo.bgColor} border ${typeInfo.borderColor} transition-all duration-150`}>
             <div className={`w-10 h-10 rounded-xl ${typeInfo.bgColor} flex items-center justify-center`}><TypeIcon className={`w-5 h-5 ${typeInfo.color}`} /></div>
             <div className="flex-1">
               <p className={`text-sm font-black ${typeInfo.color}`}>{typeInfo.label}</p>
@@ -116,7 +116,7 @@ const LicenseActivation: React.FC<LicenseActivationProps> = ({ userId, email, fu
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 p-4 bg-destructive/10 text-destructive rounded-2xl border border-destructive/20 animate-in slide-in-from-top duration-300">
+        <div className="flex items-center gap-3 p-4 bg-destructive/10 text-destructive rounded-2xl border border-destructive/20 animate-in slide-in-from-top duration-150">
           <AlertCircle className="w-5 h-5 flex-shrink-0" /><p className="text-sm font-bold">{error}</p>
         </div>
       )}
@@ -132,7 +132,7 @@ const LicenseActivation: React.FC<LicenseActivationProps> = ({ userId, email, fu
           <Wallet className="w-5 h-5" />{t('activation.payViaShamcash')}
         </button>
         {showPayment && (
-          <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-2xl border border-green-200 dark:border-green-800 space-y-4 animate-in slide-in-from-top duration-300">
+          <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-2xl border border-green-200 dark:border-green-800 space-y-4 animate-in slide-in-from-top duration-150">
             <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 rounded-xl">
               <div className="flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />

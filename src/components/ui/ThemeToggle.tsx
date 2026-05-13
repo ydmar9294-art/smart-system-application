@@ -16,7 +16,7 @@ const ThemeToggle: React.FC = () => {
       className="flex items-center gap-2 px-3 py-2 rounded-xl
                  bg-card border border-border shadow-sm
                  text-foreground text-xs font-bold
-                 transition-all duration-300 hover:shadow-md hover:scale-105 active:scale-95"
+                 transition-all duration-150 hover:shadow-md hover:scale-105 active:scale-95"
       aria-label="تبديل المظهر"
     >
       {isDark ? (

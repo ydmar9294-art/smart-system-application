@@ -137,7 +137,7 @@ const EmailPasswordAuth: React.FC<EmailPasswordAuthProps> = ({ onError, disabled
     return (
       <div className="space-y-4">
         {localError && (
-          <div className="flex items-center gap-3 p-4 bg-destructive/10 text-destructive rounded-2xl border border-destructive/20 animate-in slide-in-from-top duration-300">
+          <div className="flex items-center gap-3 p-4 bg-destructive/10 text-destructive rounded-2xl border border-destructive/20 animate-in slide-in-from-top duration-150">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <p className="text-sm font-bold">{localError}</p>
           </div>
@@ -171,7 +171,7 @@ const EmailPasswordAuth: React.FC<EmailPasswordAuthProps> = ({ onError, disabled
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {localError && (
-        <div className="flex items-center gap-3 p-4 bg-destructive/10 text-destructive rounded-2xl border border-destructive/20 animate-in slide-in-from-top duration-300">
+        <div className="flex items-center gap-3 p-4 bg-destructive/10 text-destructive rounded-2xl border border-destructive/20 animate-in slide-in-from-top duration-150">
           <AlertCircle className="w-5 h-5 flex-shrink-0" />
           <p className="text-sm font-bold">{localError}</p>
         </div>

@@ -53,7 +53,7 @@ const WelcomeSplash: React.FC<WelcomeSplashProps> = ({ onComplete, duration = 30
   if (!isVisible) return null;
 
   return (
-    <div className={`fixed inset-0 z-[9999] bg-background flex flex-col items-center justify-center p-6 text-center transition-all duration-500 safe-area-x safe-area-bottom ${isExiting ? 'opacity-0 scale-105' : 'opacity-100 scale-100'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className={`fixed inset-0 z-[9999] bg-background flex flex-col items-center justify-center p-6 text-center transition-all duration-200 safe-area-x safe-area-bottom ${isExiting ? 'opacity-0 scale-105' : 'opacity-100 scale-100'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       <div className="flex flex-col items-center gap-6 max-w-xs w-full animate-fade-in">
         <div className="relative">
           <div className="absolute inset-0 bg-primary/10 rounded-full blur-2xl scale-150" />
@@ -65,7 +65,7 @@ const WelcomeSplash: React.FC<WelcomeSplashProps> = ({ onComplete, duration = 30
         </div>
         <div className="w-10 h-10 border-3 border-muted border-t-primary rounded-full animate-spin" />
         <div className="space-y-3 min-h-[80px] flex flex-col items-center justify-center">
-          <div className="flex items-center gap-2 transition-all duration-300" key={messageIndex}>
+          <div className="flex items-center gap-2 transition-all duration-150" key={messageIndex}>
             {messages[messageIndex].icon}
             <p className="text-xl font-black text-foreground leading-relaxed animate-fade-in">{messages[messageIndex].text}</p>
           </div>

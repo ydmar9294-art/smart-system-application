@@ -55,7 +55,7 @@ const GuestPromoOverlay: React.FC = () => {
       />
 
       {/* Modal card */}
-      <div className="relative w-full max-w-sm animate-in zoom-in-95 fade-in slide-in-from-bottom-4 duration-300">
+      <div className="relative w-full max-w-sm animate-in zoom-in-95 fade-in slide-in-from-bottom-4 duration-150">
         <div
           className="rounded-3xl overflow-hidden shadow-2xl border border-border/50"
           style={{

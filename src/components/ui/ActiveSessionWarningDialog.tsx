@@ -37,7 +37,7 @@ const ActiveSessionWarningDialog: React.FC<ActiveSessionWarningDialogProps> = ({
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={!loading ? onCancel : undefined} />
 
       {/* Dialog */}
-      <div className="relative z-10 max-w-sm w-full bg-card border border-border rounded-3xl shadow-2xl p-6 space-y-5 animate-in zoom-in-95 fade-in duration-300">
+      <div className="relative z-10 max-w-sm w-full bg-card border border-border rounded-3xl shadow-2xl p-6 space-y-5 animate-in zoom-in-95 fade-in duration-150">
         {/* Icon */}
         <div className="flex justify-center">
           <div className="w-20 h-20 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20">

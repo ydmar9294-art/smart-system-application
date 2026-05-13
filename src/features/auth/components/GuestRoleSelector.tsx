@@ -35,7 +35,7 @@ const GuestRoleSelector: React.FC<GuestRoleSelectorProps> = ({ open, onClose, on
   return ReactDOM.createPortal(
     <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center" dir={isRtl ? 'rtl' : 'ltr'}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md mx-2 mb-2 sm:mb-0 animate-in slide-in-from-bottom-4 fade-in duration-300">
+      <div className="relative z-10 w-full max-w-md mx-2 mb-2 sm:mb-0 animate-in slide-in-from-bottom-4 fade-in duration-150">
         <div className="rounded-[2rem] overflow-hidden shadow-2xl"
           style={{ background: 'var(--card-glass-bg)', backdropFilter: 'blur(24px) saturate(1.5)', WebkitBackdropFilter: 'blur(24px) saturate(1.5)', border: '1px solid var(--card-glass-border)' }}>
           <div className="px-6 pt-6 pb-4 flex items-center justify-between">

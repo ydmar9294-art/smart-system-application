@@ -53,11 +53,11 @@ const OwnerBottomNav: React.FC<Props> = ({ active, onChange, onOpenSettings }) =
               <button
                 key={tab.id}
                 onClick={() => handle(tab.id)}
-                className="flex-1 relative flex flex-col items-center justify-center gap-0.5 py-2 rounded-2xl transition-all duration-300 active:scale-90"
+                className="flex-1 relative flex flex-col items-center justify-center gap-0.5 py-2 rounded-2xl transition-all duration-150 active:scale-90"
                 aria-label={tab.label}
               >
                 <div
-                  className={`flex items-center justify-center transition-all duration-300 ${
+                  className={`flex items-center justify-center transition-all duration-150 ${
                     isActive ? 'text-primary scale-110' : 'text-muted-foreground'
                   }`}
                 >
