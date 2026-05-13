@@ -34,7 +34,7 @@ export const buildUserFromCache = (cached: CachedAuthState): {
         id: cached.organizationId,
         name: cached.organizationName || '',
         licenseStatus: (cached.licenseStatus as LicenseStatus) || undefined,
-        expiryDate: undefined,
+        expiryDate: typeof cached.expiryDate === 'number' ? cached.expiryDate : undefined,
       }
     : null;
   return { user, role: cached.role, organization };
