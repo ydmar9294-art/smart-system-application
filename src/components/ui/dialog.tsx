@@ -51,7 +51,7 @@ const DialogContent = React.forwardRef<
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          "relative w-full max-w-lg rounded-2xl p-5 sm:p-6 max-h-[calc(100dvh-1.5rem)] overflow-y-auto pointer-events-auto duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+          "relative w-full max-w-lg rounded-2xl p-5 sm:p-6 max-h-[calc(100dvh-1.5rem)] overflow-y-auto pointer-events-auto duration-100 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
           className,
         )}
         style={{
