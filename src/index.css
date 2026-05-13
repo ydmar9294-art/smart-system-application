@@ -16,9 +16,37 @@ body,
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================
+   GLOBAL ANIMATION SPEED — snappy/instant feel
+   Overrides tailwindcss-animate defaults so Radix
+   dialogs, sheets, popovers, dropdowns, tooltips
+   open/close ~60% faster across the whole app.
+========================================== */
+:root {
+  --tw-enter-duration: 130ms;
+  --tw-exit-duration: 100ms;
+  --tw-animate-duration: 130ms;
+}
+[data-state="open"],
+[data-state="closed"] {
+  animation-duration: 130ms !important;
+}
+.animate-in { animation-duration: 130ms !important; }
+.animate-out { animation-duration: 100ms !important; }
+
+/* Respect users who request reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Language transition animation */
 html.lang-transition * {
-  transition: all 0.3s ease !important;
+  transition: all 0.15s ease !important;
 }
 
 
