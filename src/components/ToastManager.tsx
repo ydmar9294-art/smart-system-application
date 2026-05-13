@@ -77,7 +77,7 @@ export const ToastManager: React.FC = () => {
           aria-live="polite"
           onMouseEnter={() => pauseDismiss(toast.id)}
           onMouseLeave={() => scheduleDismiss(toast.id)}
-          className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-300 ${
+          className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-150 ${
             toast.exiting ? 'opacity-0 -translate-y-2 scale-95' : 'opacity-100 translate-y-0 scale-100 animate-fade-in'
           } ${getGlassStyle(toast.type)}`}
           style={{

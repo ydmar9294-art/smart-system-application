@@ -31,7 +31,7 @@ const DeviceRevokedScreen: React.FC<DeviceRevokedScreenProps> = ({ message, onCo
       className="fixed inset-0 z-[99999] flex items-center justify-center bg-background p-6"
       dir={isArabic ? 'rtl' : 'ltr'}
     >
-      <div className="max-w-sm w-full text-center space-y-6 animate-in zoom-in-95 fade-in duration-300">
+      <div className="max-w-sm w-full text-center space-y-6 animate-in zoom-in-95 fade-in duration-150">
         {/* Icon */}
         <div className="w-24 h-24 mx-auto rounded-full bg-destructive/10 flex items-center justify-center border-2 border-destructive/20">
           <Smartphone className="w-12 h-12 text-destructive" strokeWidth={1.5} />

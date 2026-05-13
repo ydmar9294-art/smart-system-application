@@ -81,7 +81,7 @@ const ConsentGate: React.FC<ConsentGateProps> = ({ userId, children }) => {
   // Consent screen
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4" dir="rtl">
-      <div className="w-full max-w-md space-y-6 animate-in fade-in duration-300">
+      <div className="w-full max-w-md space-y-6 animate-in fade-in duration-150">
         <div className="text-center space-y-3">
           <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto">
             <Shield className="w-10 h-10 text-primary" />

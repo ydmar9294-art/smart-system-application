@@ -73,7 +73,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
       <PullToRefresh onRefresh={handlePullRefresh}>
         <div
-          className="scroll-under-layout flex bg-background text-end overflow-x-hidden font-tajawal transition-colors duration-300 safe-area-x"
+          className="scroll-under-layout flex bg-background text-end overflow-x-hidden font-tajawal transition-colors duration-150 safe-area-x"
           dir={isRtl ? 'rtl' : 'ltr'}
         >
         <main className="flex-1 relative">

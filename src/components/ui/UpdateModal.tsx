@@ -85,7 +85,7 @@ const UpdateModal: React.FC<UpdateModalProps> = ({
   return (
     <div className="fixed inset-0 z-[9998] flex items-end justify-center bg-black/40 animate-in fade-in duration-200" dir="rtl">
       <div
-        className="w-full max-w-md bg-card border-t border-border rounded-t-3xl p-5 space-y-4 animate-in slide-in-from-bottom duration-300"
+        className="w-full max-w-md bg-card border-t border-border rounded-t-3xl p-5 space-y-4 animate-in slide-in-from-bottom duration-150"
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 20px), 20px)' }}
       >
         <div className="flex items-start gap-3">

@@ -161,7 +161,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
 
           {/* Main glass orb */}
           <div
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-150 ${
               showSuccess
                 ? 'ptr-orb-success'
                 : ready || isRefreshing
