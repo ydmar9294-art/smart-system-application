@@ -145,10 +145,10 @@ html.lang-transition * {
     --ring: 217 91% 65%;
 
     /* Glass tokens — dark */
-    --glass-blur: 22px;
-    --glass-saturation: 1.7;
-    --glass-shadow: 0 8px 32px hsla(222, 30%, 3%, 0.4), 0 2px 8px hsla(222, 30%, 3%, 0.2);
-    --glass-highlight: inset 0 1px 0 0 hsla(0, 0%, 100%, 0.07), inset 0 -1px 0 0 hsla(220, 30%, 50%, 0.05);
+    --glass-blur: 12px;
+    --glass-saturation: 1.4;
+    --glass-shadow: 0 4px 16px hsla(222, 30%, 3%, 0.3), 0 1px 4px hsla(222, 30%, 3%, 0.15);
+    --glass-highlight: inset 0 1px 0 0 hsla(0, 0%, 100%, 0.06), inset 0 -1px 0 0 hsla(220, 30%, 50%, 0.04);
 
     --sidebar-background: 222 30% 7%;
     --sidebar-foreground: 214 28% 85%;
