@@ -19,7 +19,6 @@ const FinanceWithPerformance: React.FC = () => {
           WebkitBackdropFilter: 'blur(12px)',
           border: '1px solid var(--card-glass-border)',
         }}
-        data-guest-nav
       >
         <button
           onClick={() => setView('finance')}

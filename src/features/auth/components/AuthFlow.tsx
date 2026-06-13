@@ -15,9 +15,7 @@ import LicenseActivation from './LicenseActivation';
 import AccountTypeChoice from './AccountTypeChoice';
 import SelfServiceTrialModal from './SelfServiceTrialModal';
 import AuthOverlay from './AuthOverlay';
-import GuestRoleSelector from './GuestRoleSelector';
 import ActiveSessionWarningDialog from '@/components/ui/ActiveSessionWarningDialog';
-import { useGuest, GuestRole } from '@/store/GuestContext';
 
 interface AuthFlowProps {
   onAuthComplete: () => void;
@@ -42,12 +40,10 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
   const [authError, setAuthError] = useState<string>('');
   const [isSlow, setIsSlow] = useState(false);
   const [oauthPending, setOauthPending] = useState(() => isOAuthPending());
-  const [showGuestSelector, setShowGuestSelector] = useState(false);
   const [deviceRegLoading, setDeviceRegLoading] = useState(false);
   // null = show choice screen | 'owner' = trial flow | 'employee' = license code flow
   const [accountChoice, setAccountChoice] = useState<null | 'owner' | 'employee'>(null);
   const [showTrialModal, setShowTrialModal] = useState(false);
-  const { enterGuestMode } = useGuest();
 
   // Track whether we've already started processing to avoid double runs
   const processingRef = useRef(false);
@@ -57,11 +53,6 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
     validating_license: t('auth.phaseValidating'),
     checking_status: t('auth.phaseChecking'),
     checking_device: t('auth.phaseChecking'),
-  };
-
-  const handleGuestSelect = (role: GuestRole) => {
-    setShowGuestSelector(false);
-    enterGuestMode(role);
   };
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -480,48 +471,10 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
             {/* Google sign-in — primary */}
             <GoogleSignInButton onError={handleAuthError} oauthInProgress={oauthPending} loadingText={oauthPending ? t('auth.googleReturning') : undefined} />
 
-            {/* Divider */}
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-border" />
-              <span className="text-[10px] text-muted-foreground font-black tracking-wider">{t('common.or')}</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-
-            {/* Promotional Guest Preview button */}
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => setShowGuestSelector(true)}
-                className="w-full relative overflow-hidden flex items-center justify-center gap-3 py-4 rounded-2xl font-black text-sm transition-all duration-150 active:scale-[0.97] group text-primary-foreground"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.85) 50%, hsl(var(--primary) / 0.95) 100%)',
-                  boxShadow: '0 8px 28px hsl(var(--primary) / 0.35), inset 0 1px 0 hsl(0 0% 100% / 0.25)',
-                }}
-              >
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200" style={{ background: 'linear-gradient(135deg, hsl(0 0% 100% / 0.15), transparent 60%)' }} />
-                <div className="w-5 h-5 overflow-hidden rounded-md drop-shadow"><AppLogo size={20} /></div>
-                <span className="drop-shadow-sm">{t('auth.guestPromoTitle')}</span>
-                <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1 rtl:rotate-180 rtl:group-hover:translate-x-1 rtl:group-hover:-translate-x-0" />
-              </button>
-
-              <div className="flex items-center justify-center gap-2">
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                  {t('auth.guestPromoBadge')}
-                </span>
-              </div>
-
-              <p className="text-center text-[11px] text-muted-foreground font-bold leading-relaxed px-4">
-                {t('auth.guestPromoSubtitle')}
-              </p>
-            </div>
-
             <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground pt-2">
               <ShieldCheck className="w-4 h-4" />
               <span>{t('common.secureLogin')}</span>
             </div>
-
-            <GuestRoleSelector open={showGuestSelector} onClose={() => setShowGuestSelector(false)} onSelect={handleGuestSelect} />
           </div>);
     }
   };

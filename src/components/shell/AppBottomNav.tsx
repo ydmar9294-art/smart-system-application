@@ -88,7 +88,6 @@ function AppBottomNav<T extends string>({
             border: '1px solid var(--card-glass-border)',
             boxShadow: '0 8px 32px hsl(var(--foreground) / 0.12), var(--glass-highlight)',
           }}
-          data-guest-nav
         >
           {primary.map((it) => renderButton(it.id, it.label, it.icon, active === it.id))}
           {renderButton(

@@ -22,8 +22,6 @@ import SecurityGate from '@/components/SecurityGate';
 import AccountStatusGate from '@/components/AccountStatusGate';
 import AppLoadingSkeleton from '@/components/ui/DashboardSkeleton';
 import ConsentGate from '@/components/ConsentGate';
-import { useGuest } from '@/store/GuestContext';
-import GuestDashboardShell from '@/features/auth/components/GuestDashboardShell';
 // PostUpdateMessage removed by request
 
 // ==========================================
@@ -107,7 +105,7 @@ const ViewManager: React.FC = () => {
 // ==========================================
 const MainContent: React.FC = () => {
   const { user, role, isLoading, refreshAuth, needsActivation, logout } = useAuth();
-  const { isGuest } = useGuest();
+  
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [replacedWarning, setReplacedWarning] = useState<string | null>(null);
   const [deviceRevoked, setDeviceRevoked] = useState(false);
@@ -212,10 +210,6 @@ const MainContent: React.FC = () => {
     );
   }
 
-  // Guest mode — show guest dashboard shell instead of auth
-  if (isGuest) {
-    return <GuestDashboardShell />;
-  }
 
   if (!user || needsActivation) {
     return (
