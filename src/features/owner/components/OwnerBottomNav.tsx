@@ -45,7 +45,6 @@ const OwnerBottomNav: React.FC<Props> = ({ active, onChange, onOpenSettings }) =
             border: '1px solid var(--card-glass-border)',
             boxShadow: '0 8px 32px hsl(var(--foreground) / 0.12), var(--glass-highlight)',
           }}
-          data-guest-nav
         >
           {tabs.map((tab) => {
             const isActive = active === tab.id;

@@ -2,19 +2,12 @@
  * AppContext - Backward-compatible wrapper
  * Combines AuthContext, DataContext, and NotificationContext
  * All existing useApp() calls continue to work
- * 
- * In guest preview mode, returns demo data instead of real contexts.
  */
 import React from 'react';
 import { AuthProvider, useAuth } from './AuthContext';
 import { DataProvider, useData } from './DataContext';
 import { NotificationProvider, useNotifications } from './NotificationContext';
 import { CurrencyProvider } from './CurrencyContext';
-import { useGuestOverride } from './GuestProviders';
-
-// ============================================
-// Combined Provider
-// ============================================
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
@@ -30,92 +23,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 };
 
-// ============================================
-// No-op async functions for guest mode (read-only)
-// ============================================
-const noop = async () => {};
-const noopReturn = async () => ({ code: '', employee: null });
-const noopBool = async () => false;
-const noopNull = async () => null;
-
-// ============================================
-// Backward-compatible hook
-// Merges all contexts so existing useApp() calls work
-// In guest mode, returns demo data
-// ============================================
-
 export const useApp = () => {
-  const guestOverride = useGuestOverride();
-  
-  // Guest mode — return demo data with no-op mutations
-  if (guestOverride) {
-    return {
-      // Auth
-      user: guestOverride.user,
-      role: guestOverride.role,
-      organization: guestOverride.organization,
-      isLoading: false,
-      isAuthenticated: false,
-      needsActivation: false,
-      logout: noop,
-      refreshAuth: noop,
-
-      // Data
-      products: guestOverride.products,
-      customers: guestOverride.customers,
-      sales: guestOverride.sales,
-      payments: guestOverride.payments,
-      users: guestOverride.users,
-      licenses: guestOverride.licenses,
-      purchases: guestOverride.purchases,
-      deliveries: guestOverride.deliveries,
-      pendingEmployees: guestOverride.pendingEmployees,
-      distributorInventory: guestOverride.distributorInventory,
-      purchaseReturns: guestOverride.purchaseReturns,
-      orgStats: guestOverride.orgStats,
-      refreshAllData: noop,
-
-      // Targeted refreshes (no-op)
-      refreshProducts: noop,
-      refreshCustomers: noop,
-      refreshSales: noop,
-      refreshPayments: noop,
-      refreshPurchases: noop,
-      refreshDeliveries: noop,
-      refreshPendingEmployees: noop,
-      refreshDistributorInventory: noop,
-      refreshLicenses: noop,
-
-      // Data mutations (all no-op in guest mode)
-      createSale: noop,
-      submitInvoice: noop,
-      submitPayment: noop,
-      voidSale: noop,
-      addCollection: noop,
-      reversePayment: noop,
-      addCustomer: noop,
-      addDistributor: noopReturn as any,
-      addProduct: noop,
-      updateProduct: noop,
-      deleteProduct: noop,
-      issueLicense: noop,
-      updateLicenseStatus: noop,
-      makeLicensePermanent: noop,
-      updateLicenseMaxEmployees: noopNull as any,
-      refreshOrgStats: noop,
-      addPurchase: noop,
-      createDelivery: noop,
-      createPurchaseReturn: noop,
-      deactivateEmployee: noopBool as any,
-      reactivateEmployee: noopBool as any,
-
-      // Notifications
-      notifications: guestOverride.notifications,
-      addNotification: () => {},
-    };
-  }
-  
-  // Normal authenticated mode
   const auth = useAuth();
   const data = useData();
   const notifications = useNotifications();
@@ -145,7 +53,6 @@ export const useApp = () => {
     purchaseReturns: data.purchaseReturns,
     refreshAllData: data.refreshAllData,
 
-    // Targeted refreshes (new)
     refreshProducts: data.refreshProducts,
     refreshCustomers: data.refreshCustomers,
     refreshSales: data.refreshSales,
@@ -156,7 +63,6 @@ export const useApp = () => {
     refreshDistributorInventory: data.refreshDistributorInventory,
     refreshLicenses: data.refreshLicenses,
 
-    // Data mutations
     createSale: data.createSale,
     submitInvoice: data.submitInvoice,
     submitPayment: data.submitPayment,
@@ -180,13 +86,11 @@ export const useApp = () => {
     deactivateEmployee: data.deactivateEmployee,
     reactivateEmployee: data.reactivateEmployee,
 
-    // Notifications
     notifications: notifications.notifications,
     addNotification: notifications.addNotification,
   };
 };
 
-// Re-export individual hooks for optimized usage
 export { useAuth } from './AuthContext';
 export { useData } from './DataContext';
 export { useNotifications } from './NotificationContext';

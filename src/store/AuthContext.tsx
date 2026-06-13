@@ -15,7 +15,6 @@ import { useAuthState } from '@/hooks/auth/useAuthState';
 import { useProfileResolver } from '@/hooks/auth/useProfileResolver';
 import { useSession } from '@/hooks/auth/useSession';
 import { useAuthActions } from '@/hooks/auth/useAuthActions';
-import { useGuestOverride } from './GuestProviders';
 
 interface AuthContextType {
   user: User | null;
@@ -98,22 +97,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
-  const guest = useGuestOverride();
 
-  // In guest preview mode, AuthContext is null — return guest override
   if (!ctx) {
-    if (guest) {
-      return {
-        user: guest.user,
-        role: guest.role,
-        organization: guest.organization,
-        isLoading: false,
-        isAuthenticated: false,
-        needsActivation: false,
-        logout: async () => {},
-        refreshAuth: async () => {},
-      };
-    }
     // Defensive fallback: avoid crashing the entire app tree if the provider
     // is briefly absent (HMR, error boundaries, transient renders). Returns a
     // safe "logged-out / loading" state instead of throwing.

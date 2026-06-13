@@ -6,7 +6,6 @@ import App from "./App.tsx";
 import "./lib/i18n"; // Initialize i18n before anything else
 import "./index.css";
 import { AppProvider } from "@/store/AppContext";
-import { GuestProvider } from "@/store/GuestContext";
 import { queryClient } from "@/lib/queryClient";
 import { Capacitor } from "@capacitor/core";
 import { resolveNativeDeviceName } from "@/lib/deviceId";
@@ -44,11 +43,9 @@ if (Capacitor.isNativePlatform()) {
 createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
     <HashRouter>
-      <GuestProvider>
-        <AppProvider>
-          <App />
-        </AppProvider>
-      </GuestProvider>
+      <AppProvider>
+        <App />
+      </AppProvider>
     </HashRouter>
   </QueryClientProvider>
 );
