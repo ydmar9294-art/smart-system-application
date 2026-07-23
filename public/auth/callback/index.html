@@ -126,9 +126,11 @@
       // attempting an Android intent here would fail (no app installed in browser context)
       // and waste 2 seconds before falling back, breaking the OAuth flow.
       if (accessToken && !type) {
-        var tokenFragment = '#access_token=' + accessToken + '&refresh_token=' + refreshToken + '&type=oauth';
-        // Use replace() so back-button doesn't return to /auth/callback
-        window.location.replace(origin + '/' + tokenFragment);
+        // Forward the FULL original hash (access_token, refresh_token, expires_in,
+        // expires_at, token_type, provider_token, ...) so Supabase's
+        // detectSessionInUrl can parse it. Stripping fields breaks setSession.
+        // Use replace() so back-button doesn't return to /auth/callback.
+        window.location.replace(origin + '/#' + hash);
         return;
       }
 
