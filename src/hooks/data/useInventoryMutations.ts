@@ -39,11 +39,10 @@ export function useInventoryMutations(
         employee_type: type,
         activation_code: code,
         is_used: false,
-        created_at: new Date().toISOString(),
-        organization_id: orgId || '',
+        created_at: Date.now(),
         activated_at: null,
         activated_by: null,
-      } as PendingEmployee;
+      };
       // Refresh list in background — don't block UI
       queryClient.invalidateQueries({ queryKey: queryKeys.pendingEmployees(orgId) });
       return { code, employee };
