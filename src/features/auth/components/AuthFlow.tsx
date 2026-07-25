@@ -238,6 +238,55 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
     processingRef.current = false;
   }, [clearTimers]);
 
+  // ── OAuth return watchdog: show visible error if session detection fails ──
+  useEffect(() => {
+    const rawHash = window.location.hash.startsWith('#')
+      ? window.location.hash.substring(1)
+      : window.location.hash;
+    if (!rawHash) return;
+    const params = new URLSearchParams(rawHash);
+    const errCode = params.get('error');
+    const errDesc = params.get('error_description');
+    const accessToken = params.get('access_token');
+
+    // Case A: provider returned an explicit error
+    if (errCode) {
+      const readable = decodeURIComponent(errDesc || errCode).replace(/\+/g, ' ');
+      logger.error('[OAUTH_RETURN_ERROR]', 'AuthFlow', { errCode, errDesc: readable });
+      clearOAuthPending();
+      setOauthPending(false);
+      setAuthState({
+        type: 'error',
+        message: `${t('auth.googleAuthFailed') || 'فشل تسجيل الدخول عبر Google'} — ${readable}`,
+        canRetry: true,
+      });
+      // Strip hash so the error doesn't re-trigger on refresh
+      try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch {}
+      return;
+    }
+
+    // Case B: tokens are in the URL — Supabase should pick them up.
+    // If nothing happens within the watchdog window, surface a clear error
+    // instead of silently bouncing back to the login screen.
+    if (accessToken) {
+      const watchdog = setTimeout(async () => {
+        if (processingRef.current) return;
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.user) return; // Supabase caught up — nothing to do
+        logger.error('[OAUTH_SESSION_DETECTION_FAILED] tokens present but no session', 'AuthFlow');
+        clearOAuthPending();
+        setOauthPending(false);
+        setAuthState({
+          type: 'error',
+          message: 'تعذّر استكمال تسجيل الدخول عبر Google. الرجاء المحاولة مرة أخرى، وإذا استمرت المشكلة تحقق من الاتصال بالإنترنت أو أعد فتح التطبيق.',
+          canRetry: true,
+        });
+        try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch {}
+      }, 8000);
+      return () => clearTimeout(watchdog);
+    }
+  }, [t]);
+
   useEffect(() => {
     const cached = getCachedAuth();
     const cacheIsFullyActivated = cached && cached.organizationId && cached.role;
