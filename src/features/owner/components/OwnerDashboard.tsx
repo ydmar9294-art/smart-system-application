@@ -300,7 +300,9 @@ const OwnerDashboard: React.FC = () => {
                   <option value={EmployeeType.ACCOUNTANT}>{t('owner.accountantType')}</option>
                   <option value={EmployeeType.FIELD_AGENT}>{t('owner.fieldAgentType')}</option>
                 </select>
-                <button type="submit" className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold">{t('owner.generateCode')}</button>
+                <button type="submit" disabled={creatingEmployee} className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-60">
+                  {creatingEmployee ? (<><Loader2 className="w-5 h-5 animate-spin" /> جاري توليد الكود...</>) : t('owner.generateCode')}
+                </button>
               </form>
             )}
           </div>
