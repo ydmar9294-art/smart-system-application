@@ -107,11 +107,18 @@ const OwnerDashboard: React.FC = () => {
     try { await logout(); } finally { setLoggingOut(false); }
   };
 
+  const [creatingEmployee, setCreatingEmployee] = useState(false);
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (creatingEmployee) return;
     const fd = new FormData(e.currentTarget as HTMLFormElement);
-    const result = await addDistributor(fd.get('name') as string, fd.get('phone') as string, UserRole.EMPLOYEE, fd.get('type') as EmployeeType);
-    if (result.code) { setNewEmployeeCode(result.code); setNewEmployeeData(result.employee); }
+    setCreatingEmployee(true);
+    try {
+      const result = await addDistributor(fd.get('name') as string, fd.get('phone') as string, UserRole.EMPLOYEE, fd.get('type') as EmployeeType);
+      if (result.code) { setNewEmployeeCode(result.code); setNewEmployeeData(result.employee); }
+    } finally {
+      setCreatingEmployee(false);
+    }
   };
 
   const closeEmployeeModal = () => { setShowAddUserModal(false); setNewEmployeeCode(null); setNewEmployeeData(null); };
@@ -293,7 +300,9 @@ const OwnerDashboard: React.FC = () => {
                   <option value={EmployeeType.ACCOUNTANT}>{t('owner.accountantType')}</option>
                   <option value={EmployeeType.FIELD_AGENT}>{t('owner.fieldAgentType')}</option>
                 </select>
-                <button type="submit" className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold">{t('owner.generateCode')}</button>
+                <button type="submit" disabled={creatingEmployee} className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-60">
+                  {creatingEmployee ? (<><Loader2 className="w-5 h-5 animate-spin" /> جاري توليد الكود...</>) : t('owner.generateCode')}
+                </button>
               </form>
             )}
           </div>
