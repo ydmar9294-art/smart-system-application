@@ -107,11 +107,18 @@ const OwnerDashboard: React.FC = () => {
     try { await logout(); } finally { setLoggingOut(false); }
   };
 
+  const [creatingEmployee, setCreatingEmployee] = useState(false);
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (creatingEmployee) return;
     const fd = new FormData(e.currentTarget as HTMLFormElement);
-    const result = await addDistributor(fd.get('name') as string, fd.get('phone') as string, UserRole.EMPLOYEE, fd.get('type') as EmployeeType);
-    if (result.code) { setNewEmployeeCode(result.code); setNewEmployeeData(result.employee); }
+    setCreatingEmployee(true);
+    try {
+      const result = await addDistributor(fd.get('name') as string, fd.get('phone') as string, UserRole.EMPLOYEE, fd.get('type') as EmployeeType);
+      if (result.code) { setNewEmployeeCode(result.code); setNewEmployeeData(result.employee); }
+    } finally {
+      setCreatingEmployee(false);
+    }
   };
 
   const closeEmployeeModal = () => { setShowAddUserModal(false); setNewEmployeeCode(null); setNewEmployeeData(null); };
