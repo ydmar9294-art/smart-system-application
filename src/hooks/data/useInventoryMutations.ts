@@ -29,12 +29,14 @@ export function useInventoryMutations(
 
   const addDistributor = useCallback(async (name: string, phone: string, role: UserRole, type: EmployeeType) => {
     try {
-      const code = await inventoryService.addEmployee(name, phone, role, type);
+      const cleanName = name.trim();
+      const cleanPhone = phone.trim();
+      const code = await inventoryService.addEmployee(cleanName, cleanPhone, role, type);
       // Build employee locally — no extra roundtrip needed
       const employee: PendingEmployee = {
         id: generateUUID(),
-        name,
-        phone,
+        name: cleanName,
+        phone: cleanPhone,
         role,
         employee_type: type,
         activation_code: code,
@@ -43,7 +45,13 @@ export function useInventoryMutations(
         activated_at: null,
         activated_by: null,
       };
-      // Refresh list in background — don't block UI
+
+      // Show the new code instantly, then refresh in background to replace the local row with DB data.
+      queryClient.setQueryData<PendingEmployee[]>(queryKeys.pendingEmployees(orgId), old => {
+        const list = old || [];
+        if (list.some(item => item.activation_code === code)) return list;
+        return [employee, ...list];
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.pendingEmployees(orgId) });
       return { code, employee };
     } catch (e) {

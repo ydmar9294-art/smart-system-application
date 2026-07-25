@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import AnimatedTabContent from '@/components/ui/AnimatedTabContent';
 import DeletionRequestsManager from '@/features/shared/components/DeletionRequestsManager';
-import { createPortal } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 import { copyToClipboard } from '@/lib/clipboard';
 import { useTranslation } from 'react-i18next';
 import {
@@ -32,6 +32,7 @@ import OwnerBottomNav, { OwnerNavTab } from './OwnerBottomNav';
 import OwnerSettingsSheet, { SettingsSubPage } from './OwnerSettingsSheet';
 import OwnerSubPageSheet from './OwnerSubPageSheet';
 import FinanceWithPerformance from './FinanceWithPerformance';
+import { Button } from '@/components/ui/button';
 
 const AgentMapView      = React.lazy(() => import('@/features/tracking/components/AgentMapView'));
 const RoutePlanner      = React.lazy(() => import('@/features/tracking/components/RoutePlanner'));
@@ -112,9 +113,16 @@ const OwnerDashboard: React.FC = () => {
     e.preventDefault();
     if (creatingEmployee) return;
     const fd = new FormData(e.currentTarget as HTMLFormElement);
-    setCreatingEmployee(true);
+    const name = String(fd.get('name') || '').trim();
+    const phone = String(fd.get('phone') || '').trim();
+    const type = String(fd.get('type') || EmployeeType.ACCOUNTANT) as EmployeeType;
+
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    flushSync(() => setCreatingEmployee(true));
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+
     try {
-      const result = await addDistributor(fd.get('name') as string, fd.get('phone') as string, UserRole.EMPLOYEE, fd.get('type') as EmployeeType);
+      const result = await addDistributor(name, phone, UserRole.EMPLOYEE, type);
       if (result.code) { setNewEmployeeCode(result.code); setNewEmployeeData(result.employee); }
     } finally {
       setCreatingEmployee(false);
@@ -263,9 +271,9 @@ const OwnerDashboard: React.FC = () => {
               <h2 className="text-xl font-bold text-foreground">
                 {newEmployeeCode ? t('owner.activationCodeCreated') : t('owner.addEmployee')}
               </h2>
-              <button onClick={closeEmployeeModal} className="p-2 bg-muted rounded-full hover:bg-accent">
+              <Button type="button" variant="ghost" size="icon" onClick={closeEmployeeModal} disabled={creatingEmployee} className="rounded-full bg-muted hover:bg-accent">
                 <X className="w-5 h-5 text-muted-foreground" />
-              </button>
+              </Button>
             </div>
 
             {newEmployeeCode ? (
@@ -284,25 +292,34 @@ const OwnerDashboard: React.FC = () => {
                   </div>
                 )}
 
-                <button onClick={async () => { await copyToClipboard(newEmployeeCode); }}
-                  className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold flex items-center justify-center gap-2">
+                <Button type="button" onClick={async () => { await copyToClipboard(newEmployeeCode); }}
+                  className="w-full py-3 font-bold">
                   <Copy className="w-5 h-5" /> {t('owner.copyCode')}
-                </button>
-                <button onClick={closeEmployeeModal} className="w-full py-3 bg-muted text-muted-foreground rounded-xl font-bold">{t('common.close')}</button>
+                </Button>
+                <Button type="button" variant="secondary" onClick={closeEmployeeModal} className="w-full py-3 font-bold">{t('common.close')}</Button>
               </div>
             ) : (
-              <form onSubmit={handleAddEmployee} className="space-y-4">
-                <input name="name" required placeholder={t('owner.employeeName')}
+              <form onSubmit={handleAddEmployee} className="relative space-y-4" aria-busy={creatingEmployee}>
+                {creatingEmployee && (
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-2xl bg-card/85 backdrop-blur-sm text-center">
+                    <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                    <div className="space-y-1">
+                      <p className="font-bold text-foreground">جاري توليد كود التفعيل</p>
+                      <p className="text-xs text-muted-foreground">يرجى الانتظار لحظات...</p>
+                    </div>
+                  </div>
+                )}
+                <input name="name" required disabled={creatingEmployee} placeholder={t('owner.employeeName')}
                   className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
-                <input name="phone" type="tel" inputMode="numeric" pattern="[0-9]*" required placeholder={t('owner.employeePhone')}
+                <input name="phone" type="tel" inputMode="numeric" pattern="[0-9]*" required disabled={creatingEmployee} placeholder={t('owner.employeePhone')}
                   className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
-                <select name="type" defaultValue={EmployeeType.ACCOUNTANT} className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-primary">
+                <select name="type" defaultValue={EmployeeType.ACCOUNTANT} disabled={creatingEmployee} className="w-full px-4 py-3 bg-muted text-foreground rounded-xl border-none outline-none focus:ring-2 focus:ring-primary">
                   <option value={EmployeeType.ACCOUNTANT}>{t('owner.accountantType')}</option>
                   <option value={EmployeeType.FIELD_AGENT}>{t('owner.fieldAgentType')}</option>
                 </select>
-                <button type="submit" disabled={creatingEmployee} className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-60">
+                <Button type="submit" disabled={creatingEmployee} className="w-full py-3 font-bold">
                   {creatingEmployee ? (<><Loader2 className="w-5 h-5 animate-spin" /> جاري توليد الكود...</>) : t('owner.generateCode')}
-                </button>
+                </Button>
               </form>
             )}
           </div>
