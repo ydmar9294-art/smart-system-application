@@ -2,9 +2,10 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Drawer, DrawerContent, DrawerOverlay, DrawerPortal } from '@/components/ui/drawer';
-import { ChevronLeft, ChevronRight, MessageCircle, LogOut, LucideIcon, Sun, Moon, Shield, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MessageCircle, LogOut, LucideIcon, Sun, Moon, Shield, FileText, LifeBuoy } from 'lucide-react';
 import { usePageTheme } from '@/hooks/usePageTheme';
 import AccountDeletionButton from '@/components/AccountDeletionButton';
+import { useHelp } from '@/features/help';
 
 export interface SettingsItem<T extends string = string> {
   id: T;
@@ -45,6 +46,7 @@ function AppSettingsSheet<T extends string>({
   const Chevron = isRtl ? ChevronLeft : ChevronRight;
   const { isDark, toggleTheme } = usePageTheme();
   const navigate = useNavigate();
+  const help = useHelp();
 
   const Row: React.FC<{
     onClick: () => void;
@@ -109,8 +111,16 @@ function AppSettingsSheet<T extends string>({
               </div>
             )}
 
-            {/* App preferences: theme + legal + delete account */}
+            {/* App preferences: help + theme + legal + delete account */}
             <div className="mt-3 bg-card/60 rounded-3xl p-1.5 space-y-0.5 border border-border/40">
+              <Row
+                onClick={() => { onClose(); help.openHelpCenter(); }}
+                icon={<LifeBuoy className="w-5 h-5" />}
+                iconBg="bg-amber-500/10"
+                iconColor="text-amber-600"
+                label="دليل الاستخدام"
+              />
+              <div className="mx-14 h-px bg-border/40" />
               <Row
                 onClick={toggleTheme}
                 icon={isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}

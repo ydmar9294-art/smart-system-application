@@ -22,6 +22,7 @@ import SecurityGate from '@/components/SecurityGate';
 import AccountStatusGate from '@/components/AccountStatusGate';
 import AppLoadingSkeleton from '@/components/ui/DashboardSkeleton';
 import ConsentGate from '@/components/ConsentGate';
+import { HelpProvider } from '@/features/help';
 // PostUpdateMessage removed by request
 
 // ==========================================
@@ -224,7 +225,9 @@ const MainContent: React.FC = () => {
   // Developers skip consent gate
   const content = (
     <AccountStatusGate>
-      <Layout><ViewManager /></Layout>
+      <HelpProvider>
+        <Layout><ViewManager /></Layout>
+      </HelpProvider>
     </AccountStatusGate>
   );
 
