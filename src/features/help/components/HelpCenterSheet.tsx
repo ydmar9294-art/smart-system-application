@@ -26,7 +26,7 @@ const HelpCenterSheet: React.FC<Props> = ({ role, onClose, onStartTour }) => {
     );
   }, [role, query]);
 
-  useBackButton(true, onClose);
+  useBackButton(() => { onClose(); return true; }, true);
 
   return createPortal(
     <div

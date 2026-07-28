@@ -41,7 +41,7 @@ const GuidedTour: React.FC<Props> = ({ steps, onFinish, onSkip, onJumpTab, onJum
     return () => window.removeEventListener('keydown', handler);
   }, [onSkip, steps.length]);
 
-  useBackButton(true, onSkip);
+  useBackButton(() => { onSkip(); return true; }, true);
 
   const next = useCallback(() => {
     if (isLast) onFinish();
