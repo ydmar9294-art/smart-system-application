@@ -5,10 +5,11 @@ import { Drawer, DrawerContent, DrawerOverlay, DrawerPortal } from '@/components
 import {
   CreditCard, Database, Coins, MapPin, ShieldCheck, MessageCircle, LogOut,
   ChevronLeft, ChevronRight, Sun, Moon, Shield, FileText,
-  ArrowUpDown, Truck, RotateCcw, DollarSign,
+  ArrowUpDown, Truck, RotateCcw, DollarSign, LifeBuoy,
 } from 'lucide-react';
 import { usePageTheme } from '@/hooks/usePageTheme';
 import AccountDeletionButton from '@/components/AccountDeletionButton';
+import { useHelp } from '@/features/help';
 
 export type SettingsSubPage =
   | 'subscription' | 'backup' | 'currencies' | 'tracking' | 'legal'
@@ -28,6 +29,7 @@ const OwnerSettingsSheet: React.FC<Props> = ({ open, onClose, onOpenSubPage, onL
   const isRtl = i18n.language === 'ar';
   const Chevron = isRtl ? ChevronLeft : ChevronRight;
   const { isDark, toggleTheme } = usePageTheme();
+  const help = useHelp();
   const navigate = useNavigate();
 
   const items: {
@@ -108,8 +110,16 @@ const OwnerSettingsSheet: React.FC<Props> = ({ open, onClose, onOpenSubPage, onL
               ))}
             </div>
 
-            {/* App preferences: theme + legal */}
+            {/* App preferences: help + theme + legal */}
             <div className="mt-3 bg-card/60 rounded-3xl p-1.5 space-y-0.5 border border-border/40">
+              <Row
+                onClick={() => { onClose(); help.openHelpCenter(); }}
+                icon={<LifeBuoy className="w-5 h-5" />}
+                iconBg="bg-amber-500/10"
+                iconColor="text-amber-600"
+                label="دليل الاستخدام"
+              />
+              <div className="mx-14 h-px bg-border/40" />
               <Row
                 onClick={toggleTheme}
                 icon={isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
