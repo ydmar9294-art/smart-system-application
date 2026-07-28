@@ -1,101 +1,87 @@
 
+# دليل استخدام تفاعلي شامل
 
-## الخطة — 4 مهام جذرية
+نظام مساعدة ثلاثي الطبقات لكل الأدوار (الإدارة / الموزع / المحاسب)، بالعربية RTL، مع الحفاظ على هوية Liquid-Glass وسرعة الأنيميشن الحالية (~120ms).
 
-### المهمة 1: إصلاح رسالة "تم تسجيل الدخول من جهاز آخر" الكاذبة عند إنشاء حساب جديد
+## المكوّنات
 
-**السبب الجذري:** الدالة `handleRegister` في `supabase/functions/device-check/index.ts` تعتبر **أي** جهاز سابق (حتى لو غير نشط فعلياً منذ أشهر) جهازاً يستحق رسالة `DEVICE_REPLACED`. عند إنشاء حساب جديد قد توجد صفوف قديمة في `devices` (من جلسات اختبار أو OAuth فاشل) تطلق هذه الرسالة.
+### 1) بنية أساسية مشتركة (`src/features/help/`)
+- `HelpProvider.tsx` — Context يدير: هل الجولة تعمل الآن، الخطوة الحالية، فتح مركز المساعدة، فتح تلميح سياقي.
+- `useOnboarding.ts` — Hook لقراءة/كتابة حالة الإنجاز محلياً:
+  - مفتاح: `onboarding:v1:<role>:<userId>` → `{ completed: boolean, completedSteps: string[], skippedAt?: number }`.
+  - يبدأ الجولة تلقائياً عند أول تسجيل دخول لدور معيّن، ويوقفها بعد الإتمام أو التخطي.
+- `helpContent.ts` — مصدر واحد للنصوص: لكل دور مصفوفة خطوات + مقالات مركز المساعدة (كلها من `src/locales/ar.ts`).
 
-**الإصلاح (Edge Function `device-check`):**
-- في `handleRegister`، تصفية الأجهزة "النشطة" بشرط إضافي: `last_seen >= now() - 24 hours`. أي جهاز أقدم يُعتبر مهجوراً ويتم تعطيله **بصمت** دون إطلاق `DEVICE_REPLACED` ولا تسجيل `audit_logs`.
-- أيضاً في `handlePreCheck`: نفس التصفية حتى لا تظهر شاشة التحذير `ActiveSessionWarningDialog` للأجهزة المهجورة.
+### 2) الجولة التفاعلية (Coach Marks)
+- `GuidedTour.tsx` — Overlay بـ Portal فوق `z-[10000]` (فوق كل الشيتات والنوافذ):
+  - يضيء العنصر المستهدف بواسطة `data-tour="<id>"` (spotlight بقناع SVG + حواف مضيئة زجاجية).
+  - بطاقة شرح متحركة بجانب العنصر: عنوان + وصف قصير + أزرار (التالي / السابق / تخطي / إنهاء).
+  - يتعامل مع scroll تلقائي للعنصر، ومع تبديل التبويبات (ينتقل الدور تلقائياً للتبويب المطلوب قبل إبراز الزر داخله).
+  - يحترم Safe-Area ويعمل على 360px حتى Desktop.
 
-**الإصلاح (AuthFlow.tsx):**
-- إضافة فحص: إذا كانت قيمة `replaced_device_name` فارغة أو غير معرّفة (حالة الحساب الجديد بدون جهاز سابق فعلي)، عدم إطلاق حدث `device-replaced-warning`.
+### 3) التلميحات السياقية (Contextual Tooltips)
+- `HelpDot.tsx` — أيقونة صغيرة (?) قابلة لللمس (24×24) توضع بجانب العناصر المهمة، تفتح Popover قصيراً يشرح الوظيفة.
+- تُخفى/تُظهر بمفتاح موحّد في الإعدادات: «إظهار تلميحات المساعدة».
 
-> لا تغيير في عقد API (الحقول نفسها) — تغيير سلوكي فقط ضمن نفس الـ status.
+### 4) مركز المساعدة (Help Center)
+- `HelpCenterSheet.tsx` — يفتح كـ FullScreen Sheet من الإعدادات، محتوى مقسّم:
+  - «ابدأ من هنا» (شرح مبسّط بحسب الدور)
+  - مقالات: تسجيل الدخول، إنشاء حساب/تفعيل، لوحة التحكم، كل تبويب رئيسي.
+  - «إعادة تشغيل الجولة التفاعلية» و«إعادة تعيين تلميحات المساعدة».
+- بحث نصي بسيط داخل العناوين/الوصف.
 
----
+### 5) نقطة الدخول
+- بند جديد داخل `AppSettingsSheet` (يظهر لكل الأدوار): «دليل الاستخدام» بأيقونة `HelpCircle`، يفتح `HelpCenterSheet`.
+- عند أول دخول للدور: تبدأ الجولة تلقائياً بعد تحميل الواجهة الرئيسية بـ 400ms.
 
-### المهمة 2: حذف واجهة أمين المستودع ونقل وظائفها إلى إعدادات الأونر
+## محتوى الجولات (خطوات مختصرة لكل دور)
 
-**النقل (إضافي وآمن):**
-- إضافة 3 صفحات فرعية جديدة لتبويب الإعدادات في `OwnerSettingsSheet.tsx`:
-  - **حركات المخزون** (`stock-movements`) — يُحمّل `StockMovementsTab` lazy.
-  - **التوريدات** (`deliveries`) — يُحمّل `DeliveriesTab` (موجود مسبقاً).
-  - **مرتجع المشتريات** (`purchase-returns`) — يُحمّل `InventoryTab` بـ `forceSubTab="purchase-returns"`.
-- في `OwnerDashboard.tsx` `renderSubPage`: إضافة الحالات الجديدة.
-- في `OwnerDashboard.tsx` `subPageTitle`: إضافة العناوين العربية.
+**الإدارة (OWNER):** الترحيب → التنقل السفلي → إضافة منتج (المخزون) → إدارة الأسعار → إضافة موظف → التوريدات → المشتريات → المالية → الاشتراك → الإعدادات → «انتهت الجولة».
 
-> الأسعار والمشتريات وقائمة المنتجات: موجودة بالفعل في تبويب **المخزون** (`InventoryTab`) لدى الأونر — لا حاجة لنقلها.
+**الموزع (EMPLOYEE-Distributor):** الترحيب → مخزوني → فاتورة جديدة (إضافة منتج بالطرد/القطعة) → تسجيل تحصيل → ديون العملاء → سجل الفواتير → مسار اليوم/GPS → المزامنة اليدوية.
 
-**الحذف (بعد نقل الوظائف):**
-- حذف ملف `src/features/warehouse/components/WarehouseKeeperDashboard.tsx`.
-- حذف `src/features/warehouse/components/StockMovementsTab.tsx` بعد نقله إلى مسار مشترك (سننقله إلى `src/features/owner/components/StockMovementsTab.tsx` للحفاظ على عمله).
-- تحديث `src/features/warehouse/index.ts` ليصبح فارغاً أو حذف المجلد كلياً.
-- في `src/App.tsx`:
-  - حذف `import` و `lazy()` لـ `WarehouseKeeperDashboard`.
-  - في `ViewManager`: تعديل `case EmployeeType.WAREHOUSE_KEEPER` ليُعيد توجيه المستخدم لشاشة "تم إيقاف هذا النوع من الحسابات — راجع المالك" أو إلى `AccountantDashboard` كاحتياط آمن (لأن الحسابات الموجودة في DB لا تزال).
+**المحاسب (EMPLOYEE-Accountant):** الترحيب → لوحة نظرة عامة → فواتير المبيعات → التحصيلات → الديون → المرتجعات (من الإعدادات) → التقارير → التنبيهات.
 
-> **توافق رجعي:** نوع `EmployeeType.WAREHOUSE_KEEPER` يبقى في `types/index.ts` و RPC، فقط الواجهة محذوفة. الأكواد الموجودة لأمناء مستودعات في DB سترى رسالة "حسابك معطّل" أو لوحة المحاسب البديلة.
+## التخزين والسلوك
+- `localStorage` فقط (حسب اختيار المستخدم)، مع Namespace للدور والمستخدم لتجنّب التداخل عند تبديل الحسابات على نفس الجهاز.
+- زر «إعادة تشغيل الجولة» يمسح مفتاح الدور الحالي فقط.
+- لا تعديل على قاعدة البيانات، لا Migrations، لا Edge Functions.
 
----
+## التفاصيل التقنية
 
-### المهمة 3: نافذة اختيار العملات الأساسية والثانوية وأسعار الصرف عند إنشاء المنشأة
+- **Portal + z-index:** الجولة و Popovers فوق `z-[10000]` لتجاوز شيتات `z-[9999]` الحالية.
+- **Targeting:** إضافة سمة `data-tour="owner.inventory.add"` على الأزرار المستهدفة فقط (بدون تغيير منطقها). قائمة السمات ثابتة داخل `helpContent.ts`.
+- **قياس العنصر:** `getBoundingClientRect` + `ResizeObserver` + `scroll` listener لتحديث الـ spotlight بسلاسة، مع `requestAnimationFrame` للأداء.
+- **الوصول (a11y):** `role="dialog"`, `aria-label` عربي، إمكانية إغلاق بـ Esc، وزر الرجوع للـ Capacitor عبر `useBackButton` الحالي.
+- **RTL:** كل المواضع تُحسب مع `isRtl`؛ الأسهم والانتقالات معكوسة.
+- **الأداء:** بدون مكتبات خارجية (لا driver.js/shepherd) لتقليل الحجم؛ مكوّنات خفيفة (~5KB gzipped).
+- **الأنيميشن:** open 120ms / close 90ms، fade + scale خفيف، متوافق مع معيار `mem://style/animation-speed-standard`.
+- **تكامل الشل:** تعديل `AppSettingsSheet.tsx` لتمرير بند «دليل الاستخدام» بشكل موحّد، أو استقبال `extraItems` كـ prop اختياري (الأقل تدخّلاً).
+- **نصوص:** إضافة قسم `help.*` في `src/locales/ar.ts` لكل النصوص (عناوين، أوصاف، أزرار).
 
-**الإصلاح في DB (Migration):**
-- تعديل `create_self_service_trial` RPC لإضافة 3 معاملات جديدة (additive):
-  - `p_base_currency_code text`, `p_base_currency_name text`, `p_base_currency_symbol text`
-  - بقاء التوقيع القديم متاحاً عبر `DEFAULT NULL` لكل معامل جديد ⇒ **لا breaking change**.
-- إذا تم تمرير العملة الأساسية، يتم إدراجها في `org_currencies` بـ `is_base = true, is_active = true` بدلاً من اعتماد `SYP` افتراضياً.
-- إذا لم تُمرَّر (نسخ قديمة من العميل)، يبقى السلوك الحالي (لا عملة افتراضية).
+## الملفات المنشأة/المعدّلة
 
-**واجهة (frontend):**
-- تعديل `SelfServiceTrialModal.tsx` لإضافة **خطوة 3** بعد ملء بيانات الشركة:
-  - اختيار **العملة الأساسية** من قائمة `COMMON_CURRENCIES` (موجودة مسبقاً في `CurrenciesTab.tsx`، نُعيد استخدامها عبر استخراج ثابت مشترك في `src/constants/currencies.ts`).
-  - زر "إضافة عملة ثانوية (اختياري)" — يفتح اختيار عملة ثانية + حقل سعر الصرف من الأساسية إلى الثانوية.
-- بعد نجاح RPC إنشاء التجربة: إذا أُضيفت عملة ثانوية، استدعاء `currencyService.add` و `currencyService.addRate`.
+**جديدة:**
+- `src/features/help/HelpProvider.tsx`
+- `src/features/help/useOnboarding.ts`
+- `src/features/help/helpContent.ts`
+- `src/features/help/components/GuidedTour.tsx`
+- `src/features/help/components/HelpDot.tsx`
+- `src/features/help/components/HelpCenterSheet.tsx`
+- `src/features/help/index.ts`
 
-> العملاء الحاليون لن تتأثر تجربتهم (الحقول الجديدة اختيارية). الأونرز الجدد يُجبرون على اختيار العملة الأساسية.
+**تعديلات:**
+- `src/App.tsx` — لفّ التطبيق بـ `HelpProvider` + تركيب `GuidedTour` مرة واحدة.
+- `src/components/shell/AppSettingsSheet.tsx` — دعم بند «دليل الاستخدام».
+- `src/features/owner/components/OwnerSettingsSheet.tsx` — نفس البند.
+- `src/features/owner/components/OwnerDashboard.tsx` — إضافة سمات `data-tour` على الأزرار الرئيسية + بدء الجولة عند أول دخول.
+- `src/features/accountant/components/AccountantDashboard.tsx` — نفس الشيء.
+- `src/features/distributor/components/DistributorDashboard.tsx` — نفس الشيء.
+- `src/locales/ar.ts` — إضافة قسم `help` كامل.
 
----
-
-### المهمة 4: نقل تخطيط مسارات الموزعين إلى واجهة الأونر
-
-**الوضع الحالي:** الأونر لديه تبويب `tracking` في الإعدادات يعرض `AgentMapView` فقط. مكوّن `RoutePlanner` موجود ويعمل مع صلاحيات `OWNER` على جداول `routes` و `route_stops` (RLS تسمح للأونر بالـ INSERT).
-
-**الإصلاح (frontend فقط):**
-- في `OwnerDashboard.tsx` `renderSubPage` الحالة `'tracking'`: إضافة `RoutePlanner`, `RouteHistory`, `RouteKPIs` مع `AgentMapView` ضمن نفس الصفحة الفرعية (تابات داخلية أو scroll).
-- استخدام `React.lazy` للجميع للحفاظ على أداء التحميل.
-- إعادة تسمية تسمية التبويب من "التتبع" إلى "تتبع المسارات والخريطة".
-
-> RLS موجودة وتعمل للأونر — لا حاجة لتغيير DB.
-
----
-
-## ملخص الملفات
-
-**معدّلة:**
-- `supabase/functions/device-check/index.ts` (تصفية الأجهزة المهجورة)
-- `src/features/auth/components/AuthFlow.tsx` (فحص اسم الجهاز)
-- `src/features/auth/components/SelfServiceTrialModal.tsx` (خطوة العملات)
-- `src/features/owner/components/OwnerDashboard.tsx` (صفحات فرعية جديدة + RoutePlanner)
-- `src/features/owner/components/OwnerSettingsSheet.tsx` (3 إدخالات جديدة)
-- `src/App.tsx` (حذف WarehouseKeeperDashboard من ViewManager)
-
-**مضافة:**
-- `src/constants/currencies.ts` (ثابت مشترك للعملات)
-- `src/features/owner/components/StockMovementsTab.tsx` (منقول من warehouse)
-- Migration: تحديث `create_self_service_trial` (additive params)
-
-**محذوفة (بعد النقل الآمن):**
-- `src/features/warehouse/components/WarehouseKeeperDashboard.tsx`
-- `src/features/warehouse/components/StockMovementsTab.tsx`
-- `src/features/warehouse/index.ts`
-
-**ضمانات التوافق الرجعي:**
-- `EmployeeType.WAREHOUSE_KEEPER` enum يبقى.
-- معاملات RPC الجديدة كلها `DEFAULT NULL`.
-- لا تغيير في schema الجداول (لا DROP COLUMN).
-- جداول `org_currencies` و `exchange_rates` موجودة ومستخدمة فعلاً.
-- RLS بدون تغيير.
+## معايير القبول
+- عند أول تسجيل دخول لأي دور: تبدأ الجولة تلقائياً وتُغطّي كل الأزرار الأساسية للدور.
+- بعد إتمامها أو تخطّيها: لا تعود إلا يدوياً من الإعدادات → «دليل الاستخدام» → «إعادة تشغيل الجولة».
+- «مركز المساعدة» متاح دائماً من الإعدادات لكل الأدوار.
+- تعمل بسلاسة على 360px و Tablet و Desktop، وعلى Capacitor مع زر الرجوع.
+- صفر تأثير على منطق الأعمال أو قاعدة البيانات.
