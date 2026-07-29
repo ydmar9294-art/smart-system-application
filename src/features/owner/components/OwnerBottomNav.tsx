@@ -51,6 +51,7 @@ const OwnerBottomNav: React.FC<Props> = ({ active, onChange, onOpenSettings }) =
             return (
               <button
                 key={tab.id}
+                data-tour={`tab.${tab.id}`}
                 onClick={() => handle(tab.id)}
                 className="flex-1 relative flex flex-col items-center justify-center gap-0.5 py-2 rounded-2xl transition-all duration-150 active:scale-90"
                 aria-label={tab.label}
