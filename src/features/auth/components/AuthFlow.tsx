@@ -16,6 +16,8 @@ import AccountTypeChoice from './AccountTypeChoice';
 import SelfServiceTrialModal from './SelfServiceTrialModal';
 import AuthOverlay from './AuthOverlay';
 import ActiveSessionWarningDialog from '@/components/ui/ActiveSessionWarningDialog';
+import { LoginHelpModal } from '@/features/help';
+import { HelpCircle } from 'lucide-react';
 
 interface AuthFlowProps {
   onAuthComplete: () => void;
@@ -44,6 +46,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
   // null = show choice screen | 'owner' = trial flow | 'employee' = license code flow
   const [accountChoice, setAccountChoice] = useState<null | 'owner' | 'employee'>(null);
   const [showTrialModal, setShowTrialModal] = useState(false);
+  const [showLoginHelp, setShowLoginHelp] = useState(false);
 
   // Track whether we've already started processing to avoid double runs
   const processingRef = useRef(false);
