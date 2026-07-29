@@ -1,6 +1,6 @@
 /**
  * Help feature root — provides:
- *  - Guided tour state (auto-start on first login per role, resumable from Settings).
+ *  - Guided tour state (auto-start every session unless permanently dismissed).
  *  - Help Center sheet open state.
  *  - Optional tab/sub-page jump bridge (dashboards register handlers).
  */
@@ -49,27 +49,24 @@ const resolveRole = (
 export const HelpProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, role: authRole } = useAuth();
   const helpRole = resolveRole(authRole, user?.employeeType);
-  const { state, markCompleted, markSkipped, reset } = useOnboarding(helpRole, user?.id);
+  const { state, dismissForever, reset } = useOnboarding(helpRole, user?.id);
 
   const [tourActive, setTourActive] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [handlers, setHandlers] = useState<JumpHandlers>({});
 
-  // Auto-start on first login per role
+  // Auto-start every session until user chooses "don't show again"
   useEffect(() => {
-    if (!helpRole) {
-      setTourActive(false);
-      return;
-    }
-    if (!state.completed) {
-      const t = setTimeout(() => setTourActive(true), 400);
+    if (!helpRole) { setTourActive(false); return; }
+    if (!state.dismissed) {
+      const t = setTimeout(() => setTourActive(true), 500);
       return () => clearTimeout(t);
     }
-  }, [helpRole, state.completed]);
+  }, [helpRole, state.dismissed]);
 
   const startTour = useCallback(() => {
     if (!helpRole) return;
-    reset();
+    reset();               // clear "dismissed" so it truly restarts
     setHelpOpen(false);
     setTourActive(true);
   }, [helpRole, reset]);
@@ -77,24 +74,19 @@ export const HelpProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const openHelpCenter = useCallback(() => setHelpOpen(true), []);
   const closeHelpCenter = useCallback(() => setHelpOpen(false), []);
 
-  const registerJumpHandlers = useCallback((h: JumpHandlers) => {
-    setHandlers(h);
-  }, []);
+  const registerJumpHandlers = useCallback((h: JumpHandlers) => setHandlers(h), []);
 
-  const finishTour = useCallback((completed: boolean) => {
+  const finishTour = useCallback(() => { setTourActive(false); }, []);
+  const skipTour = useCallback(() => { setTourActive(false); }, []);
+  const dismissTourForever = useCallback(() => {
     setTourActive(false);
-    if (completed) markCompleted();
-    else markSkipped();
-  }, [markCompleted, markSkipped]);
+    dismissForever();
+  }, [dismissForever]);
 
   const steps = useMemo(() => (helpRole ? ROLE_TOURS[helpRole] : []), [helpRole]);
 
   const value = useMemo<HelpContextValue>(() => ({
-    role: helpRole,
-    startTour,
-    openHelpCenter,
-    closeHelpCenter,
-    registerJumpHandlers,
+    role: helpRole, startTour, openHelpCenter, closeHelpCenter, registerJumpHandlers,
   }), [helpRole, startTour, openHelpCenter, closeHelpCenter, registerJumpHandlers]);
 
   return (
@@ -103,8 +95,9 @@ export const HelpProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {tourActive && helpRole && steps.length > 0 && (
         <GuidedTour
           steps={steps}
-          onFinish={() => finishTour(true)}
-          onSkip={() => finishTour(false)}
+          onFinish={finishTour}
+          onSkip={skipTour}
+          onDismissForever={dismissTourForever}
           onJumpTab={handlers.onJumpTab}
           onJumpSub={handlers.onJumpSub}
         />

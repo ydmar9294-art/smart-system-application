@@ -16,6 +16,8 @@ import AccountTypeChoice from './AccountTypeChoice';
 import SelfServiceTrialModal from './SelfServiceTrialModal';
 import AuthOverlay from './AuthOverlay';
 import ActiveSessionWarningDialog from '@/components/ui/ActiveSessionWarningDialog';
+import { LoginHelpModal } from '@/features/help';
+import { HelpCircle } from 'lucide-react';
 
 interface AuthFlowProps {
   onAuthComplete: () => void;
@@ -44,6 +46,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
   // null = show choice screen | 'owner' = trial flow | 'employee' = license code flow
   const [accountChoice, setAccountChoice] = useState<null | 'owner' | 'employee'>(null);
   const [showTrialModal, setShowTrialModal] = useState(false);
+  const [showLoginHelp, setShowLoginHelp] = useState(false);
 
   // Track whether we've already started processing to avoid double runs
   const processingRef = useRef(false);
@@ -593,7 +596,22 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
         {/* Soft mesh glow behind the glass card */}
         <div className="auth-card-mesh" aria-hidden="true" />
         <div className="glass-surface rounded-[2.5rem] shadow-xl overflow-hidden p-6 relative z-20">{renderContent()}</div>
+
+        {/* Login help trigger — visible on the initial + account-type screens */}
+        {(authState.type === 'initial' ||
+          (authState.type === 'needs_activation' && accountChoice === null)) && (
+          <button
+            type="button"
+            onClick={() => setShowLoginHelp(true)}
+            className="mt-4 mx-auto flex items-center gap-2 text-xs font-black text-primary bg-primary/10 hover:bg-primary/15 border border-primary/30 rounded-full px-4 py-2.5 active:scale-95 transition"
+          >
+            <HelpCircle className="w-4 h-4" />
+            كيف أسجّل الدخول؟
+          </button>
+        )}
       </div>
+
+      {showLoginHelp && <LoginHelpModal onClose={() => setShowLoginHelp(false)} />}
     </div>);
 };
 
