@@ -373,7 +373,7 @@ const SubscriptionTab: React.FC = () => {
       {showRenewModal && createPortal(
         <div className="modal-overlay safe-area-x safe-area-bottom" dir="rtl"
           onClick={() => { setShowRenewModal(false); setReceiptFile(null); setReceiptPreview(null); }}>
-          <div className="card-elevated w-full max-w-md p-5 space-y-5 animate-zoom-in mx-4 max-h-[90vh] overflow-y-auto"
+          <div className="card-elevated w-full max-w-md p-5 space-y-5 animate-zoom-in mx-4 max-h-[85vh] modal-scroll my-auto"
             onClick={(e) => e.stopPropagation()}>
 
             <div className="flex justify-between items-center">
@@ -472,7 +472,7 @@ const SubscriptionTab: React.FC = () => {
       {/* Receipt Viewer */}
       {viewReceiptUrl && createPortal(
         <div className="modal-overlay safe-area-x safe-area-bottom" dir="rtl" onClick={() => setViewReceiptUrl(null)}>
-          <div className="card-elevated w-full max-w-md p-4 space-y-4 animate-zoom-in mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="card-elevated w-full max-w-md p-4 space-y-4 animate-zoom-in mx-4 max-h-[85vh] modal-scroll my-auto" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center">
               <h3 className="font-black text-foreground">صورة الحوالة</h3>
               <button onClick={() => setViewReceiptUrl(null)} className="p-2 rounded-full hover:bg-muted"><X size={18} /></button>
