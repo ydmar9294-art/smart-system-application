@@ -81,14 +81,8 @@ function AppBottomNav<T extends string>({
     >
       <div className="max-w-lg mx-auto px-3 pb-2 pointer-events-auto">
         <div
-          className="rounded-3xl flex items-center justify-around px-1.5 py-1.5"
-          style={{
-            background: 'var(--card-glass-bg)',
-            backdropFilter: 'blur(24px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-            border: '1px solid var(--card-glass-border)',
-            boxShadow: '0 8px 32px hsl(var(--foreground) / 0.12), var(--glass-highlight)',
-          }}
+          className="app-tabbar rounded-[26px] flex items-center justify-around px-1.5 py-1.5 shadow-card"
+
         >
           {primary.map((it) => renderButton(it.id, it.label, it.icon, active === it.id))}
           {renderButton(
