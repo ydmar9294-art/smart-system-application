@@ -37,14 +37,8 @@ const OwnerBottomNav: React.FC<Props> = ({ active, onChange, onOpenSettings }) =
     >
       <div className="max-w-lg mx-auto px-3 pb-2 pointer-events-auto">
         <div
-          className="rounded-3xl flex items-center justify-around px-1.5 py-1.5"
-          style={{
-            background: 'var(--card-glass-bg)',
-            backdropFilter: 'blur(24px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-            border: '1px solid var(--card-glass-border)',
-            boxShadow: '0 8px 32px hsl(var(--foreground) / 0.12), var(--glass-highlight)',
-          }}
+          className="app-tabbar rounded-[26px] flex items-center justify-around px-1.5 py-1.5 shadow-card"
+
         >
           {tabs.map((tab) => {
             const isActive = active === tab.id;
@@ -53,12 +47,14 @@ const OwnerBottomNav: React.FC<Props> = ({ active, onChange, onOpenSettings }) =
                 key={tab.id}
                 data-tour={`tab.${tab.id}`}
                 onClick={() => handle(tab.id)}
-                className="flex-1 relative flex flex-col items-center justify-center gap-0.5 py-2 rounded-2xl transition-all duration-150 active:scale-90"
+                className={`flex-1 relative flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-2xl transition-all duration-100 active:scale-90 ${
+                  isActive ? 'bg-primary/10' : ''
+                }`}
                 aria-label={tab.label}
               >
                 <div
                   className={`flex items-center justify-center transition-all duration-150 ${
-                    isActive ? 'text-primary scale-110' : 'text-muted-foreground'
+                    isActive ? 'text-primary scale-105' : 'text-muted-foreground'
                   }`}
                 >
                   {tab.icon}
@@ -70,9 +66,7 @@ const OwnerBottomNav: React.FC<Props> = ({ active, onChange, onOpenSettings }) =
                 >
                   {tab.label}
                 </span>
-                {isActive && (
-                  <span className="absolute -top-0.5 w-1 h-1 rounded-full bg-primary" />
-                )}
+                
               </button>
             );
           })}
