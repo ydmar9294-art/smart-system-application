@@ -521,12 +521,11 @@ html.lang-transition * {
 
   /* Glass surface base */
   .glass-surface {
-    background: var(--card-glass-bg);
-    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
-    border: 1px solid var(--card-glass-border);
-    box-shadow: var(--glass-shadow), var(--glass-highlight);
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-card);
   }
+
 
   /* Card Styles — Native solid surface (fast, high legibility) */
   .card-elevated {
