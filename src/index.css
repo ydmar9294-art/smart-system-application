@@ -141,61 +141,73 @@ html.lang-transition * {
 
 
   .dark {
-    /* Dark — deep slate with subtle blue undertone */
-    --background: 222 30% 8%;
-    --foreground: 214 32% 91%;
+    /* Dark — deep emerald night (#0B2A22) */
+    --background: 165 59% 10%;
+    --foreground: 150 25% 92%;
 
-    --card: 222 24% 12%;
-    --card-foreground: 214 32% 91%;
-    --card-glass-bg: hsla(222, 24%, 13%, 0.65);
-    --card-glass-border: hsla(220, 20%, 26%, 0.5);
+    --card: 166 42% 13%;
+    --card-foreground: 150 25% 92%;
+    --card-glass-bg: hsla(166, 42%, 14%, 0.72);
+    --card-glass-border: hsla(160, 28%, 26%, 0.55);
 
-    --popover: 222 24% 12%;
-    --popover-foreground: 214 32% 91%;
-    --popover-glass-bg: hsla(222, 24%, 13%, 0.82);
-    --popover-glass-border: hsla(220, 20%, 28%, 0.55);
+    --popover: 166 42% 13%;
+    --popover-foreground: 150 25% 92%;
+    --popover-glass-bg: hsla(166, 42%, 14%, 0.9);
+    --popover-glass-border: hsla(160, 28%, 28%, 0.6);
 
-    /* Primary — slightly brighter blue for dark bg */
-    --primary: 217 91% 65%;
-    --primary-foreground: 0 0% 100%;
+    /* Primary — emerald glow for dark bg */
+    --primary: 160 84% 39%;
+    --primary-foreground: 165 59% 8%;
 
-    --secondary: 222 18% 16%;
-    --secondary-foreground: 214 28% 85%;
+    --secondary: 166 30% 17%;
+    --secondary-foreground: 150 22% 88%;
 
-    --muted: 222 16% 16%;
-    --muted-foreground: 218 14% 58%;
+    --muted: 166 26% 17%;
+    --muted-foreground: 155 14% 62%;
 
-    --accent: 222 20% 18%;
-    --accent-foreground: 214 32% 91%;
+    --accent: 166 32% 19%;
+    --accent-foreground: 150 25% 92%;
 
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 162 72% 42%;
-    --success-foreground: 0 0% 100%;
+    --success: 158 72% 45%;
+    --success-foreground: 165 59% 8%;
 
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 165 59% 8%;
 
-    --border: 222 16% 18%;
-    --input: 222 16% 18%;
-    --ring: 217 91% 65%;
+    --border: 166 24% 19%;
+    --input: 166 24% 19%;
+    --ring: 160 84% 45%;
 
     /* Glass tokens — dark */
-    --glass-blur: 12px;
-    --glass-saturation: 1.4;
-    --glass-shadow: 0 4px 16px hsla(222, 30%, 3%, 0.3), 0 1px 4px hsla(222, 30%, 3%, 0.15);
-    --glass-highlight: inset 0 1px 0 0 hsla(0, 0%, 100%, 0.06), inset 0 -1px 0 0 hsla(220, 30%, 50%, 0.04);
+    --glass-blur: 8px;
+    --glass-saturation: 1.3;
+    --glass-shadow: 0 4px 16px hsla(165, 60%, 3%, 0.4), 0 1px 4px hsla(165, 60%, 3%, 0.2);
+    --glass-highlight: inset 0 1px 0 0 hsla(0, 0%, 100%, 0.05), inset 0 -1px 0 0 hsla(160, 30%, 50%, 0.04);
 
-    --sidebar-background: 222 30% 7%;
-    --sidebar-foreground: 214 28% 85%;
-    --sidebar-primary: 217 91% 65%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 20% 14%;
-    --sidebar-accent-foreground: 214 28% 85%;
-    --sidebar-border: 222 16% 14%;
-    --sidebar-ring: 217 91% 65%;
+    --shadow-card: 0 1px 2px hsla(165, 60%, 3%, 0.4), 0 8px 22px -10px hsla(165, 60%, 3%, 0.55);
+    --shadow-float: 0 10px 30px -12px hsla(160, 84%, 25%, 0.6);
+    --nav-bg: hsla(166, 45%, 11%, 0.92);
+    --nav-border: hsla(160, 26%, 22%, 0.9);
+
+    --gradient-primary: linear-gradient(135deg, hsl(162 84% 30%), hsl(160 84% 42%));
+    --gradient-header: linear-gradient(135deg, hsl(165 62% 8%), hsl(164 60% 14%) 70%, hsl(162 60% 20%));
+    --gradient-emerald: linear-gradient(135deg, hsl(162 84% 30%), hsl(160 84% 42%));
+    --gradient-dark: linear-gradient(135deg, hsl(165 62% 8%), hsl(166 45% 13%));
+    --gradient-success: linear-gradient(135deg, hsl(158 72% 42%), hsl(152 62% 50%));
+
+    --sidebar-background: 165 62% 8%;
+    --sidebar-foreground: 150 22% 88%;
+    --sidebar-primary: 160 84% 39%;
+    --sidebar-primary-foreground: 165 59% 8%;
+    --sidebar-accent: 166 32% 15%;
+    --sidebar-accent-foreground: 150 22% 88%;
+    --sidebar-border: 166 24% 15%;
+    --sidebar-ring: 160 84% 45%;
   }
+
 
   *,
   *::before,
