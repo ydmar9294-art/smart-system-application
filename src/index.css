@@ -1716,12 +1716,15 @@ html.lang-transition * {
 .app-header-pro__icon {
   width: 26px;
   height: 26px;
-  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.72));
-  box-shadow:
-    0 2px 10px -2px hsl(var(--primary) / 0.55),
-    inset 0 1px 0 hsl(0 0% 100% / 0.30);
-  transition: width 280ms ease, height 280ms ease;
+  background: hsl(0 0% 100% / 0.92);
+  color: hsl(162 94% 24%);
+  box-shadow: 0 2px 10px -2px hsl(165 60% 5% / 0.5);
+  transition: width 180ms ease, height 180ms ease;
 }
+.app-header-pro__icon > svg {
+  color: hsl(162 94% 24%);
+}
+
 .app-header-pro__icon > svg {
   width: 14px;
   height: 14px;
