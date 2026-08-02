@@ -751,7 +751,7 @@ html.lang-transition * {
   /* ==========================================
      NATIVE SURFACES — Override Tailwind bg-card / bg-muted
      with solid, low-cost surfaces (no heavy blur) so the app
-     reads like a native SaaS client and stays fast on低-end devices.
+     reads like a native SaaS client and stays fast onlow-end devices.
   ========================================== */
 
   [class*="bg-card"] {
