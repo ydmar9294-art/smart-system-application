@@ -101,7 +101,7 @@ const DeveloperHub: React.FC = () => {
   ];
 
   const settingsItems: SettingsItem<DevSubPage>[] = [
-    { id: 'settings', label: 'إعدادات النظام', Icon: SettingsIcon, color: 'text-primary',  bg: 'bg-primary/10' },
+    { id: 'settings', label: 'إعدادات النظام', Icon: SettingsIcon, color: 'text-sky-600',  bg: 'bg-sky-500/10' },
     { id: 'deletion', label: 'طلبات الحذف',    Icon: Trash2,       color: 'text-rose-600', bg: 'bg-rose-500/10' },
   ];
 
@@ -469,12 +469,12 @@ const SettingsTab: React.FC = () => {
           </div>
         )}
       </div>
-      <div className="card-elevated p-4 border border-primary/20">
+      <div className="card-elevated p-4 bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800">
         <div className="flex gap-3">
-          <AlertTriangle size={16} className="text-primary flex-shrink-0 mt-0.5" />
+          <AlertTriangle size={16} className="text-sky-600 flex-shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <p className="text-xs font-bold text-primary">ملاحظات هامة</p>
-            <ul className="text-[11px] text-muted-foreground space-y-1 list-disc list-inside">
+            <p className="text-xs font-bold text-sky-800 dark:text-sky-300">ملاحظات هامة</p>
+            <ul className="text-[11px] text-sky-700 dark:text-sky-400 space-y-1 list-disc list-inside">
               <li>عند تغيير العنوان، سيتم تحديثه فوراً في جميع واجهات الدفع</li>
               <li>يشمل ذلك: شاشة تفعيل الترخيص + شاشة تجديد الاشتراك</li>
               <li>تأكد من صحة العنوان قبل الحفظ لتجنب خسارة الحوالات</li>

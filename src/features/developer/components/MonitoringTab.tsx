@@ -58,9 +58,9 @@ type SectionId = 'orgs' | 'errors' | 'ai' | 'security' | 'resources' | 'alerts' 
 const SECTIONS: { id: SectionId; label: string; icon: React.ElementType; color: string }[] = [
   { id: 'orgs', label: 'ملخص المنشآت', icon: Building2, color: 'text-primary' },
   { id: 'errors', label: 'الأخطاء والتحذيرات', icon: FileWarning, color: 'text-destructive' },
-  { id: 'ai', label: 'تقارير أداء AI', icon: Brain, color: 'text-accent-foreground' },
+  { id: 'ai', label: 'تقارير أداء AI', icon: Brain, color: 'text-purple-500' },
   { id: 'security', label: 'الثغرات الأمنية', icon: Shield, color: 'text-amber-500' },
-  { id: 'resources', label: 'مراقبة الموارد', icon: Cpu, color: 'text-primary' },
+  { id: 'resources', label: 'مراقبة الموارد', icon: Cpu, color: 'text-blue-500' },
   { id: 'alerts', label: 'تنبيهات الاختراق', icon: Bell, color: 'text-red-500' },
   { id: 'dbhealth', label: 'سلامة قاعدة البيانات', icon: Database, color: 'text-emerald-500' },
 ];
@@ -716,7 +716,7 @@ const ResourcesSection: React.FC<{ metrics: any }> = ({ metrics }) => {
     <div className="space-y-3">
       <div className="glass-surface p-3 rounded-2xl">
         <div className="flex items-center gap-2 mb-2">
-          <HardDrive size={13} className="text-primary" />
+          <HardDrive size={13} className="text-blue-500" />
           <span className="text-xs font-black text-foreground">الذاكرة (JS Heap)</span>
         </div>
         {metrics.memoryTotal > 0 ? (
@@ -734,7 +734,7 @@ const ResourcesSection: React.FC<{ metrics: any }> = ({ metrics }) => {
 
       <div className="grid grid-cols-2 gap-2">
         <div className="glass-surface p-2.5 rounded-2xl text-center">
-          <MonitorCheck size={14} className="text-primary mx-auto mb-1" />
+          <MonitorCheck size={14} className="text-purple-500 mx-auto mb-1" />
           <p className="text-lg font-black text-foreground">{metrics.domNodes.toLocaleString('ar-EG')}</p>
           <p className="text-[8px] text-muted-foreground font-bold">عناصر DOM</p>
         </div>
