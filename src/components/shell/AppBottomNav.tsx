@@ -53,12 +53,14 @@ function AppBottomNav<T extends string>({
       key={id}
       data-tour={`tab.${id}`}
       onClick={() => handle(id)}
-      className="flex-1 relative flex flex-col items-center justify-center gap-0.5 py-2 rounded-2xl transition-all duration-150 active:scale-90"
+      className={`flex-1 relative flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-2xl transition-all duration-100 active:scale-90 ${
+        isActive ? 'bg-primary/10' : ''
+      }`}
       aria-label={label}
     >
       <div
         className={`flex items-center justify-center transition-all duration-150 ${
-          isActive ? 'text-primary scale-110' : 'text-muted-foreground'
+          isActive ? 'text-primary scale-105' : 'text-muted-foreground'
         }`}
       >
         <Icon className="w-[22px] h-[22px]" />
@@ -70,7 +72,7 @@ function AppBottomNav<T extends string>({
       >
         {label}
       </span>
-      {isActive && <span className="absolute -top-0.5 w-1 h-1 rounded-full bg-primary" />}
+      
     </button>
   );
 
