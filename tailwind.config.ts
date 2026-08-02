@@ -15,7 +15,19 @@ export default {
     extend: {
       fontFamily: {
         tajawal: ['Tajawal', 'sans-serif'],
+        sans: ['DM Sans', 'Tajawal', 'sans-serif'],
+        display: ['Space Grotesk', 'Tajawal', 'sans-serif'],
+        num: ['Space Grotesk', 'DM Sans', 'monospace'],
       },
+      boxShadow: {
+        card: 'var(--shadow-card)',
+        float: 'var(--shadow-float)',
+      },
+      backgroundImage: {
+        'gradient-header': 'var(--gradient-header)',
+        'gradient-emerald': 'var(--gradient-emerald)',
+      },
+
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
