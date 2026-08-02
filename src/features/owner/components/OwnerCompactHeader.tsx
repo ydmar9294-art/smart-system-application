@@ -23,7 +23,11 @@ const OwnerCompactHeader: React.FC<Props> = ({ userName, orgName }) => {
         className="fixed top-0 inset-x-0 z-50 pointer-events-none transition-[backdrop-filter] duration-150"
         style={{
           height: 'env(safe-area-inset-top, 0px)',
-          backgroundImage: 'var(--gradient-header)',
+          background: shrunk
+            ? 'var(--card-glass-bg)'
+            : 'color-mix(in oklab, var(--card-glass-bg) 75%, transparent)',
+          backdropFilter: shrunk ? 'blur(34px) saturate(200%)' : 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: shrunk ? 'blur(34px) saturate(200%)' : 'blur(24px) saturate(180%)',
         }}
       />
 
