@@ -528,28 +528,55 @@ html.lang-transition * {
     box-shadow: var(--glass-shadow), var(--glass-highlight);
   }
 
-  /* Card Styles — Liquid Glass */
+  /* Card Styles — Native solid surface (fast, high legibility) */
   .card-elevated {
-    background: var(--card-glass-bg);
-    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
-    border: 1px solid var(--card-glass-border);
-    box-shadow: var(--glass-shadow), var(--glass-highlight);
-    @apply text-card-foreground rounded-[2rem] transition-all duration-300;
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-card);
+    @apply text-card-foreground rounded-[1.5rem] transition-all duration-150;
   }
 
   .card-elevated:hover {
-    box-shadow: var(--glass-shadow), var(--glass-highlight), 0 12px 40px hsla(215, 25%, 27%, 0.12);
+    box-shadow: var(--shadow-card), 0 10px 26px -12px hsla(162, 60%, 20%, 0.22);
   }
 
   .dark .card-elevated:hover {
-    box-shadow: var(--glass-shadow), var(--glass-highlight), 0 12px 40px hsla(220, 20%, 4%, 0.4);
+    box-shadow: var(--shadow-card), 0 10px 26px -12px hsla(165, 60%, 3%, 0.6);
+  }
+
+  /* Native app header — emerald gradient */
+  .app-header-emerald {
+    background-image: var(--gradient-header);
+    @apply relative overflow-hidden text-primary-foreground;
+  }
+  .dark .app-header-emerald { @apply text-foreground; }
+
+  /* Native bottom tab bar */
+  .app-tabbar {
+    background: var(--nav-bg);
+    border-top: 1px solid var(--nav-border);
+    backdrop-filter: blur(14px) saturate(1.4);
+    -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  }
+
+  /* Tabular financial figures */
+  .num {
+    font-family: 'Space Grotesk', 'DM Sans', monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  /* Native list row */
+  .list-row-native {
+    @apply flex items-center gap-3 min-h-[56px] px-4 py-3 rounded-2xl transition-colors duration-100 active:bg-muted/70;
   }
 
   /* Professional Dark Header */
   .header-dark {
-    @apply bg-slate-900 relative overflow-hidden;
+    @apply relative overflow-hidden;
+    background-image: var(--gradient-header);
   }
+
 
   .header-dark::before {
     content: '';
