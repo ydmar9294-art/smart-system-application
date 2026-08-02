@@ -1272,7 +1272,7 @@ html.lang-transition * {
 }
 
 .ptr-orb-active {
-  background: hsla(217, 91%, 60%, 0.12);
+  background: hsla(160, 84%, 39%, 0.12);
   border: 1.5px solid hsl(var(--primary) / 0.35);
   backdrop-filter: blur(24px) saturate(1.8);
   -webkit-backdrop-filter: blur(24px) saturate(1.8);
@@ -1333,7 +1333,7 @@ html.lang-transition * {
 }
 
 .dark .ptr-orb-active {
-  background: hsla(217, 91%, 60%, 0.18);
+  background: hsla(160, 84%, 39%, 0.18);
   border-color: hsl(var(--primary) / 0.45);
 }
 
@@ -1349,25 +1349,25 @@ html.lang-transition * {
 /* ── Button States ── */
 @keyframes google-border-glow {
   0%, 100% {
-    border-color: hsla(217, 91%, 65%, 0.25);
+    border-color: hsla(160, 84%, 42%, 0.25);
     box-shadow: var(--glass-shadow), var(--glass-highlight),
-                0 0 12px hsla(217, 91%, 60%, 0.08);
+                0 0 12px hsla(160, 84%, 39%, 0.08);
   }
   50% {
-    border-color: hsla(217, 91%, 65%, 0.5);
+    border-color: hsla(160, 84%, 42%, 0.5);
     box-shadow: var(--glass-shadow), var(--glass-highlight),
-                0 0 22px hsla(217, 91%, 60%, 0.18),
-                0 0 44px hsla(217, 91%, 60%, 0.06);
+                0 0 22px hsla(160, 84%, 39%, 0.18),
+                0 0 44px hsla(160, 84%, 39%, 0.06);
   }
 }
 
 .google-signin-btn {
-  border: 1.5px solid hsla(217, 91%, 65%, 0.3);
+  border: 1.5px solid hsla(160, 84%, 42%, 0.3);
   background: var(--card-glass-bg);
   backdrop-filter: blur(20px) saturate(1.8);
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
   box-shadow: var(--glass-shadow), var(--glass-highlight),
-              0 0 12px hsla(217, 91%, 60%, 0.08);
+              0 0 12px hsla(160, 84%, 39%, 0.08);
   will-change: transform, box-shadow;
   animation: google-border-glow 4s ease-in-out infinite;
 }
@@ -1381,8 +1381,8 @@ html.lang-transition * {
 .google-signin-idle:hover {
   box-shadow: var(--glass-shadow),
               var(--glass-highlight),
-              0 0 28px hsla(217, 91%, 60%, 0.22),
-              0 0 56px hsla(217, 91%, 60%, 0.08);
+              0 0 28px hsla(160, 84%, 39%, 0.22),
+              0 0 56px hsla(160, 84%, 39%, 0.08);
 }
 
 /* Predictive touch — scale down instantly */
