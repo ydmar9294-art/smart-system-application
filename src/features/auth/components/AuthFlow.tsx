@@ -556,7 +556,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       
       <div className="auth-edge-bar auth-edge-bar--top" />
       <div className="auth-edge-bar auth-edge-bar--bottom" />
-      <div className="bg-slate-900 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] pb-16 px-6 relative overflow-hidden flex flex-col items-center shrink-0">
+      <div className="app-header-emerald pt-[calc(3.5rem+env(safe-area-inset-top,0px))] pb-16 px-6 relative overflow-hidden flex flex-col items-center shrink-0">
         {/* Premium aurora orbs */}
         <div className="auth-aurora auth-aurora--cyan" aria-hidden="true" />
         <div className="auth-aurora auth-aurora--violet" aria-hidden="true" />
@@ -577,17 +577,17 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
           <div className="auth-logo-ring" aria-hidden="true" />
           <AppLogo size={80} />
         </div>
-        <h1 className="text-3xl font-black mb-2 tracking-tight z-10 animate-title-gradient">{t('common.appName')}</h1>
-        <p className="text-white/40 text-[11px] font-bold z-10 text-center leading-relaxed max-w-[200px] my-[5px]">{t('common.appSubtitle')}</p>
+        <h1 className="text-3xl font-black mb-2 tracking-tight z-10 animate-title-gradient font-display">{t('common.appName')}</h1>
+        <p className="text-white/55 text-[11px] font-bold z-10 text-center leading-relaxed max-w-[200px] my-[5px]">{t('common.appSubtitle')}</p>
         <div className="flex items-center justify-center gap-6 mt-6 z-10">
           {[
-            { icon: <Lock className="w-5 h-5 text-emerald-400" />, label: t('auth.secure'), delay: '0s' },
-            { icon: <BarChart3 className="w-5 h-5 text-cyan-400" />, label: t('auth.accurate'), delay: '2.5s' },
-            { icon: <Zap className="w-5 h-5 text-amber-400" />, label: t('auth.fast'), delay: '5s' },
+            { icon: <Lock className="w-5 h-5 text-emerald-300" />, label: t('auth.secure'), delay: '0s' },
+            { icon: <BarChart3 className="w-5 h-5 text-teal-200" />, label: t('auth.accurate'), delay: '2.5s' },
+            { icon: <Zap className="w-5 h-5 text-lime-200" />, label: t('auth.fast'), delay: '5s' },
           ].map((item, i) => (
             <div key={i} className="flex flex-col items-center gap-2 animate-float" style={{ animationDelay: `${i * 0.4}s` }}>
               <div className="glass-capsule w-14 h-14 rounded-[1.2rem] flex items-center justify-center" style={{ '--sweep-delay': item.delay } as React.CSSProperties}>{item.icon}</div>
-              <span className="text-white/50 text-[10px] font-black">{item.label}</span>
+              <span className="text-white/70 text-[10px] font-black">{item.label}</span>
             </div>
           ))}
         </div>
@@ -595,7 +595,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       <div className="max-w-md w-full mx-auto px-6 -mt-8 z-20 flex-1 flex flex-col pb-[calc(6rem+env(safe-area-inset-bottom,0px))] relative">
         {/* Soft mesh glow behind the glass card */}
         <div className="auth-card-mesh" aria-hidden="true" />
-        <div className="glass-surface rounded-[2.5rem] shadow-xl overflow-hidden p-6 relative z-20">{renderContent()}</div>
+        <div className="card-elevated rounded-[2rem] overflow-hidden p-6 relative z-20">{renderContent()}</div>
 
         {/* Login help trigger — visible on the initial + account-type screens */}
         {(authState.type === 'initial' ||
