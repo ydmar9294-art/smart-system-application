@@ -216,8 +216,15 @@ html.lang-transition * {
   }
 
   body {
-    @apply bg-background text-foreground font-tajawal antialiased;
+    @apply bg-background text-foreground font-sans antialiased;
   }
+
+  /* Latin glyphs (numbers, codes) render in Space Grotesk / DM Sans,
+     Arabic text falls back to Tajawal automatically. */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', 'Tajawal', sans-serif;
+  }
+
 
   html {
     scroll-behavior: smooth;
