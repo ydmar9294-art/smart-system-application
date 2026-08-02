@@ -1033,10 +1033,10 @@ html.lang-transition * {
 /* Logo glow pulse — soft glow every 6s */
 @keyframes logo-glow-pulse {
   0%, 80%, 100% {
-    filter: drop-shadow(0 0 0px hsla(217, 91%, 60%, 0));
+    filter: drop-shadow(0 0 0px hsla(160, 84%, 45%, 0));
   }
   90% {
-    filter: drop-shadow(0 0 18px hsla(217, 91%, 65%, 0.55)) drop-shadow(0 0 40px hsla(217, 91%, 60%, 0.2));
+    filter: drop-shadow(0 0 18px hsla(160, 84%, 50%, 0.55)) drop-shadow(0 0 40px hsla(160, 84%, 45%, 0.25));
   }
 }
 
@@ -1090,7 +1090,7 @@ html.lang-transition * {
     90deg,
     hsla(0, 0%, 100%, 1) 0%,
     hsla(0, 0%, 100%, 1) 40%,
-    hsla(217, 91%, 75%, 1) 50%,
+    hsla(155, 85%, 78%, 1) 50%,
     hsla(0, 0%, 100%, 1) 60%,
     hsla(0, 0%, 100%, 1) 100%
   );
