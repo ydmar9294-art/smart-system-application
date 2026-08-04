@@ -147,6 +147,45 @@ export function useInventoryMutations(
     queryClient.invalidateQueries({ queryKey: queryKeys.purchaseReturns(orgId) });
   }, [queryClient, orgId, handleError]);
 
+  const confirmDelivery = useCallback(async (deliveryId: string) => {
+    try {
+      await inventoryService.confirmDelivery(deliveryId);
+      queryClient.invalidateQueries({ queryKey: queryKeys.deliveries(orgId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.distributorInventory(orgId) });
+      onSuccess?.('تم تأكيد استلام التسليم');
+      return true;
+    } catch (e) { handleError(e); return false; }
+  }, [queryClient, orgId, onSuccess, handleError]);
+
+  const rejectDelivery = useCallback(async (deliveryId: string, reason?: string) => {
+    try {
+      await inventoryService.rejectDelivery(deliveryId, reason);
+      queryClient.invalidateQueries({ queryKey: queryKeys.deliveries(orgId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.products(orgId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.distributorInventory(orgId) });
+      onSuccess?.('تم إلغاء التسليم وإرجاع البضاعة للمستودع الرئيسي');
+      return true;
+    } catch (e) { handleError(e); return false; }
+  }, [queryClient, orgId, onSuccess, handleError]);
+
+  const adjustStock = useCallback(async (productId: string, delta: number, reason: string) => {
+    try {
+      await inventoryService.adjustStock(productId, delta, reason);
+      queryClient.invalidateQueries({ queryKey: queryKeys.products(orgId) });
+      onSuccess?.('تم تسجيل التسوية بنجاح');
+      return true;
+    } catch (e) { handleError(e); return false; }
+  }, [queryClient, orgId, onSuccess, handleError]);
+
+  const archiveProduct = useCallback(async (productId: string) => {
+    try {
+      await inventoryService.archiveProduct(productId);
+      queryClient.invalidateQueries({ queryKey: queryKeys.products(orgId) });
+      onSuccess?.('تم أرشفة المادة');
+      return true;
+    } catch (e) { handleError(e); return false; }
+  }, [queryClient, orgId, onSuccess, handleError]);
+
   const deactivateEmployee = useCallback(async (employeeId: string): Promise<boolean> => {
     try {
       const result = await inventoryService.deactivateEmployee(employeeId);
