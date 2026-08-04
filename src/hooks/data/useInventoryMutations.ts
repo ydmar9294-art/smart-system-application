@@ -253,6 +253,7 @@ export function useInventoryMutations(
 
   return {
     addDistributor, addPurchase, createDelivery, createPurchaseReturn,
+    confirmDelivery, rejectDelivery, adjustStock, archiveProduct,
     deactivateEmployee, reactivateEmployee,
     issueLicense, updateLicenseStatus, makeLicensePermanent, updateLicenseMaxEmployees,
   };
