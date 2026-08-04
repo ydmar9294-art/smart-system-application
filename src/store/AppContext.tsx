@@ -83,6 +83,10 @@ export const useApp = () => {
     addPurchase: data.addPurchase,
     createDelivery: data.createDelivery,
     createPurchaseReturn: data.createPurchaseReturn,
+    confirmDelivery: data.confirmDelivery,
+    rejectDelivery: data.rejectDelivery,
+    adjustStock: data.adjustStock,
+    archiveProduct: data.archiveProduct,
     deactivateEmployee: data.deactivateEmployee,
     reactivateEmployee: data.reactivateEmployee,
 

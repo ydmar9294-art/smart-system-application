@@ -87,11 +87,17 @@ export const productService = {
     if (error) throw error;
   },
 
+  /**
+   * Archive a product (replaces hard/soft delete).
+   * The RPC refuses to archive while stock exists in the main warehouse,
+   * in any distributor warehouse, or in a pending delivery.
+   */
   async deleteProduct(id: string): Promise<void> {
     validateUUID(id, 'معرف المنتج');
-    const { error } = await supabase.from('products').update({ is_deleted: true }).eq('id', id);
+    const { error } = await supabase.rpc('archive_product_rpc', { p_product_id: id });
     if (error) throw error;
   },
+
 
   async logPriceChanges(
     oldProduct: Product, newProduct: Product, orgId: string, userId: string, changerName: string

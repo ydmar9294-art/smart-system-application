@@ -392,6 +392,8 @@ export type Database = {
       }
       deliveries: {
         Row: {
+          confirmed_at: string | null
+          confirmed_by: string | null
           created_at: string
           created_by: string | null
           distributor_id: string | null
@@ -399,9 +401,12 @@ export type Database = {
           id: string
           notes: string | null
           organization_id: string
+          rejection_reason: string | null
           status: string
         }
         Insert: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           created_by?: string | null
           distributor_id?: string | null
@@ -409,9 +414,12 @@ export type Database = {
           id?: string
           notes?: string | null
           organization_id: string
+          rejection_reason?: string | null
           status?: string
         }
         Update: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           created_by?: string | null
           distributor_id?: string | null
@@ -419,6 +427,7 @@ export type Database = {
           id?: string
           notes?: string | null
           organization_id?: string
+          rejection_reason?: string | null
           status?: string
         }
         Relationships: [
@@ -1065,12 +1074,15 @@ export type Database = {
         Row: {
           allow_pack_sales: boolean
           allow_piece_sales: boolean
+          archived_at: string | null
+          archived_by: string | null
           base_price: number
           category: string
           consumer_price: number
           cost_price: number
           created_at: string
           id: string
+          is_archived: boolean
           is_deleted: boolean
           min_stock: number
           name: string
@@ -1088,12 +1100,15 @@ export type Database = {
         Insert: {
           allow_pack_sales?: boolean
           allow_piece_sales?: boolean
+          archived_at?: string | null
+          archived_by?: string | null
           base_price?: number
           category?: string
           consumer_price?: number
           cost_price?: number
           created_at?: string
           id?: string
+          is_archived?: boolean
           is_deleted?: boolean
           min_stock?: number
           name: string
@@ -1111,12 +1126,15 @@ export type Database = {
         Update: {
           allow_pack_sales?: boolean
           allow_piece_sales?: boolean
+          archived_at?: string | null
+          archived_by?: string | null
           base_price?: number
           category?: string
           consumer_price?: number
           cost_price?: number
           created_at?: string
           id?: string
+          is_archived?: boolean
           is_deleted?: boolean
           min_stock?: number
           name?: string
@@ -2067,19 +2085,72 @@ export type Database = {
         }
         Returns: string
       }
-      add_purchase_rpc: {
+      add_purchase_rpc:
+        | {
+            Args: {
+              p_notes?: string
+              p_product_id: string
+              p_quantity: number
+              p_supplier_name?: string
+              p_unit_price: number
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_notes?: string
+              p_pack_quantity?: number
+              p_piece_quantity?: number
+              p_product_id: string
+              p_quantity: number
+              p_supplier_name?: string
+              p_unit_price: number
+            }
+            Returns: string
+          }
+      adjust_central_stock: {
+        Args: { p_delta: number; p_org_id: string; p_product_id: string }
+        Returns: undefined
+      }
+      adjust_distributor_stock: {
         Args: {
+          p_delta: number
+          p_distributor_id: string
+          p_org_id: string
+          p_product_id: string
+        }
+        Returns: undefined
+      }
+      adjust_stock_rpc: {
+        Args: { p_delta: number; p_product_id: string; p_reason: string }
+        Returns: undefined
+      }
+      apply_stock_movement: {
+        Args: {
+          p_destination_id?: string
+          p_destination_type: string
+          p_movement_type: string
           p_notes?: string
+          p_org_id: string
           p_product_id: string
           p_quantity: number
-          p_supplier_name?: string
-          p_unit_price: number
+          p_reference_id?: string
+          p_source_id?: string
+          p_source_type: string
         }
-        Returns: string
+        Returns: undefined
       }
       approve_subscription_payment: {
         Args: { p_payment_id: string; p_start_date?: string }
         Returns: Json
+      }
+      archive_product_rpc: {
+        Args: { p_product_id: string }
+        Returns: undefined
+      }
+      calc_pieces: {
+        Args: { p_item: Json; p_units_per_pack: number }
+        Returns: number
       }
       check_and_assign_developer_role: {
         Args: { p_email: string; p_full_name?: string; p_user_id: string }
@@ -2094,6 +2165,10 @@ export type Database = {
           p_window_seconds?: number
         }
         Returns: Json
+      }
+      confirm_delivery_rpc: {
+        Args: { p_delivery_id: string }
+        Returns: undefined
       }
       create_delivery_rpc: {
         Args: {
@@ -2273,9 +2348,17 @@ export type Database = {
         Args: { p_employee_id: string }
         Returns: Json
       }
+      reject_delivery_rpc: {
+        Args: { p_delivery_id: string; p_reason?: string }
+        Returns: undefined
+      }
       reject_subscription_payment: {
         Args: { p_payment_id: string; p_reason?: string }
         Returns: Json
+      }
+      restore_product_rpc: {
+        Args: { p_product_id: string }
+        Returns: undefined
       }
       reverse_payment_rpc: {
         Args: { p_payment_id: string; p_reason: string }

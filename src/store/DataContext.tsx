@@ -81,6 +81,10 @@ interface DataContextType {
   addPurchase: (productId: string, quantity: number, unitPrice: number, supplierName?: string, notes?: string) => Promise<void>;
   createDelivery: (distributorName: string, items: any[], notes?: string, distributorId?: string) => Promise<void>;
   createPurchaseReturn: (items: { product_id: string; product_name: string; quantity: number; unit_price: number }[], reason?: string, supplierName?: string) => Promise<void>;
+  confirmDelivery: (deliveryId: string) => Promise<boolean>;
+  rejectDelivery: (deliveryId: string, reason?: string) => Promise<boolean>;
+  adjustStock: (productId: string, delta: number, reason: string) => Promise<boolean>;
+  archiveProduct: (productId: string) => Promise<boolean>;
   deactivateEmployee: (employeeId: string) => Promise<boolean>;
   reactivateEmployee: (employeeId: string) => Promise<boolean>;
 }
@@ -262,6 +266,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addPurchase: inventoryMutations.addPurchase,
     createDelivery: inventoryMutations.createDelivery,
     createPurchaseReturn: inventoryMutations.createPurchaseReturn,
+    confirmDelivery: inventoryMutations.confirmDelivery,
+    rejectDelivery: inventoryMutations.rejectDelivery,
+    adjustStock: inventoryMutations.adjustStock,
+    archiveProduct: inventoryMutations.archiveProduct,
     deactivateEmployee: inventoryMutations.deactivateEmployee,
     reactivateEmployee: inventoryMutations.reactivateEmployee,
     issueLicense: inventoryMutations.issueLicense,
