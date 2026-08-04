@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import FullScreenModal from '@/components/ui/FullScreenModal';
 import { VirtualList } from '@/components/ui/VirtualList';
+import PendingDeliveriesPanel from './PendingDeliveriesPanel';
 import type { CachedInventoryItem, OfflineActionType } from '../services/distributorOfflineService';
 
 interface TransferItem {
@@ -154,6 +155,9 @@ const DistributorInventoryTab: React.FC<DistributorInventoryTabProps> = ({ local
 
   return (
     <div className="p-4 space-y-4">
+      {/* Deliveries awaiting confirmation */}
+      <PendingDeliveriesPanel isOnline={isOnline} />
+
       {/* Success Message */}
       {successMessage && (
         <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 rounded-2xl flex items-center gap-2 border border-emerald-500/20">
