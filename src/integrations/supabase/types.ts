@@ -2085,16 +2085,29 @@ export type Database = {
         }
         Returns: string
       }
-      add_purchase_rpc: {
-        Args: {
-          p_notes?: string
-          p_product_id: string
-          p_quantity: number
-          p_supplier_name?: string
-          p_unit_price: number
-        }
-        Returns: string
-      }
+      add_purchase_rpc:
+        | {
+            Args: {
+              p_notes?: string
+              p_product_id: string
+              p_quantity: number
+              p_supplier_name?: string
+              p_unit_price: number
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_notes?: string
+              p_pack_quantity?: number
+              p_piece_quantity?: number
+              p_product_id: string
+              p_quantity: number
+              p_supplier_name?: string
+              p_unit_price: number
+            }
+            Returns: string
+          }
       adjust_central_stock: {
         Args: { p_delta: number; p_org_id: string; p_product_id: string }
         Returns: undefined
@@ -2106,6 +2119,10 @@ export type Database = {
           p_org_id: string
           p_product_id: string
         }
+        Returns: undefined
+      }
+      adjust_stock_rpc: {
+        Args: { p_delta: number; p_product_id: string; p_reason: string }
         Returns: undefined
       }
       apply_stock_movement: {
@@ -2127,6 +2144,14 @@ export type Database = {
         Args: { p_payment_id: string; p_start_date?: string }
         Returns: Json
       }
+      archive_product_rpc: {
+        Args: { p_product_id: string }
+        Returns: undefined
+      }
+      calc_pieces: {
+        Args: { p_item: Json; p_units_per_pack: number }
+        Returns: number
+      }
       check_and_assign_developer_role: {
         Args: { p_email: string; p_full_name?: string; p_user_id: string }
         Returns: undefined
@@ -2140,6 +2165,10 @@ export type Database = {
           p_window_seconds?: number
         }
         Returns: Json
+      }
+      confirm_delivery_rpc: {
+        Args: { p_delivery_id: string }
+        Returns: undefined
       }
       create_delivery_rpc: {
         Args: {
@@ -2319,9 +2348,17 @@ export type Database = {
         Args: { p_employee_id: string }
         Returns: Json
       }
+      reject_delivery_rpc: {
+        Args: { p_delivery_id: string; p_reason?: string }
+        Returns: undefined
+      }
       reject_subscription_payment: {
         Args: { p_payment_id: string; p_reason?: string }
         Returns: Json
+      }
+      restore_product_rpc: {
+        Args: { p_product_id: string }
+        Returns: undefined
       }
       reverse_payment_rpc: {
         Args: { p_payment_id: string; p_reason: string }
