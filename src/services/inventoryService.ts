@@ -6,14 +6,19 @@ import { safeRpc, validateUUID, validatePositiveNumber, validateRequiredString, 
 import { transformPendingEmployee } from '@/hooks/useDataOperations';
 
 export const inventoryService = {
-  async addPurchase(productId: string, quantity: number, unitPrice: number, supplierName?: string, notes?: string): Promise<string> {
+  async addPurchase(
+    productId: string, quantity: number, unitPrice: number,
+    supplierName?: string, notes?: string,
+    packQuantity = 0, pieceQuantity = 0
+  ): Promise<string> {
     validateUUID(productId, 'معرف المنتج');
-    validatePositiveNumber(quantity, 'الكمية');
+    if (packQuantity <= 0 && pieceQuantity <= 0) validatePositiveNumber(quantity, 'الكمية');
     validatePositiveNumber(unitPrice, 'سعر الوحدة');
 
     return safeRpc<string>('add_purchase_rpc', {
       p_product_id: productId, p_quantity: quantity, p_unit_price: unitPrice,
       p_supplier_name: supplierName, p_notes: notes,
+      p_pack_quantity: packQuantity, p_piece_quantity: pieceQuantity,
     }, { label: 'addPurchase' });
   },
 
@@ -25,6 +30,34 @@ export const inventoryService = {
       p_distributor_name: distributorName, p_items: items,
       p_notes: notes, p_distributor_id: distributorId,
     }, { label: 'createDelivery' });
+  },
+
+  async confirmDelivery(deliveryId: string): Promise<void> {
+    validateUUID(deliveryId, 'معرف التسليم');
+    return safeRpc<void>('confirm_delivery_rpc', { p_delivery_id: deliveryId }, { label: 'confirmDelivery' });
+  },
+
+  async rejectDelivery(deliveryId: string, reason?: string): Promise<void> {
+    validateUUID(deliveryId, 'معرف التسليم');
+    return safeRpc<void>('reject_delivery_rpc', { p_delivery_id: deliveryId, p_reason: reason }, { label: 'rejectDelivery' });
+  },
+
+  async adjustStock(productId: string, delta: number, reason: string): Promise<void> {
+    validateUUID(productId, 'معرف المنتج');
+    validateRequiredString(reason, 'سبب التسوية');
+    return safeRpc<void>('adjust_stock_rpc', {
+      p_product_id: productId, p_delta: delta, p_reason: reason,
+    }, { label: 'adjustStock' });
+  },
+
+  async archiveProduct(productId: string): Promise<void> {
+    validateUUID(productId, 'معرف المنتج');
+    return safeRpc<void>('archive_product_rpc', { p_product_id: productId }, { label: 'archiveProduct' });
+  },
+
+  async restoreProduct(productId: string): Promise<void> {
+    validateUUID(productId, 'معرف المنتج');
+    return safeRpc<void>('restore_product_rpc', { p_product_id: productId }, { label: 'restoreProduct' });
   },
 
   async createPurchaseReturn(
