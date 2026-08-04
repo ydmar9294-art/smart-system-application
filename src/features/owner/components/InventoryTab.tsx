@@ -312,7 +312,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
       )}
 
       {effectiveSubTab === 'deliveries' && (
-        <DeliveriesView deliveries={deliveries} onOpen={() => setShowDeliveryModal(true)} />
+        <DeliveriesView deliveries={deliveries} onOpen={() => setShowDeliveryModal(true)} onCancel={rejectDelivery} />
       )}
 
       <PurchaseModal
