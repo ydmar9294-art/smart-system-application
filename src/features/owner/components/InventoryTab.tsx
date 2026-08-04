@@ -28,7 +28,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
   const {
     products, users, purchases = [], deliveries = [],
     addPurchase, createDelivery, addProduct, updateProduct, deleteProduct,
-    createPurchaseReturn, purchaseReturns = [], distributorInventory = []
+    createPurchaseReturn, purchaseReturns = [], distributorInventory = [], rejectDelivery
   } = useApp();
   const [subTab, setSubTab] = useState<SubTab>(forceSubTab || 'products');
   const effectiveSubTab = forceSubTab || (productsOnly ? 'products' : subTab);
