@@ -16,6 +16,7 @@ import { PurchaseModal } from './inventory/PurchaseModal';
 import { DeliveryModal } from './inventory/DeliveryModal';
 import { PurchaseReturnModal } from './inventory/PurchaseReturnModal';
 import { ProductModal } from './inventory/ProductModal';
+import { validatePackPieceEntry, toPieces } from './inventory/productRules';
 
 type SubTab = InventorySubTab;
 
@@ -49,7 +50,9 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
   // Purchase modal state
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [purchaseProduct, setPurchaseProduct] = useState('');
-  const [purchaseQty, setPurchaseQty] = useState(1);
+  const [purchasePackQty, setPurchasePackQty] = useState(0);
+  const [purchasePieceQty, setPurchasePieceQty] = useState(1);
+  const [purchaseError, setPurchaseError] = useState('');
   const [purchasePrice, setPurchasePrice] = useState('');
   const [purchaseSupplier, setPurchaseSupplier] = useState('');
   const [purchaseNotes, setPurchaseNotes] = useState('');
@@ -70,7 +73,9 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [deliveryItems, setDeliveryItems] = useState<DeliveryItem[]>([]);
   const [selectedDeliveryProduct, setSelectedDeliveryProduct] = useState('');
-  const [deliveryItemQty, setDeliveryItemQty] = useState(1);
+  const [deliveryPackQty, setDeliveryPackQty] = useState(0);
+  const [deliveryPieceQty, setDeliveryPieceQty] = useState(1);
+  const [deliveryError, setDeliveryError] = useState('');
 
   // Product modal state
   const [showProductModal, setShowProductModal] = useState(false);
@@ -99,7 +104,9 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
 
   const resetPurchaseForm = () => {
     setPurchaseProduct('');
-    setPurchaseQty(1);
+    setPurchasePackQty(0);
+    setPurchasePieceQty(1);
+    setPurchaseError('');
     setPurchasePrice('');
     setPurchaseSupplier('');
     setPurchaseNotes('');
@@ -107,9 +114,13 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
 
   const handlePurchaseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!purchaseProduct || purchaseQty <= 0) return;
+    const product = products.find(p => p.id === purchaseProduct);
+    const check = validatePackPieceEntry(product, purchasePackQty, purchasePieceQty);
+    if (!check.ok) { setPurchaseError(check.error || ''); return; }
+    if (!(Number(purchasePrice) > 0)) { setPurchaseError('سعر القطعة يجب أن يكون أكبر من صفر'); return; }
+    setPurchaseError('');
     try {
-      await addPurchase(purchaseProduct, purchaseQty, Number(purchasePrice), purchaseSupplier || undefined, purchaseNotes || undefined);
+      await addPurchase(purchaseProduct, check.pieces, Number(purchasePrice), purchaseSupplier || undefined, purchaseNotes || undefined, purchasePackQty, purchasePieceQty);
       setShowPurchaseModal(false);
       resetPurchaseForm();
     } catch {
@@ -119,27 +130,38 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
 
   // Delivery handlers
   const addDeliveryItem = () => {
-    if (!selectedDeliveryProduct || deliveryItemQty <= 0) return;
     const product = products.find(p => p.id === selectedDeliveryProduct);
-    if (!product) return;
     const existingItem = deliveryItems.find(i => i.product_id === selectedDeliveryProduct);
-    const totalQty = (existingItem?.quantity || 0) + deliveryItemQty;
-    if (totalQty > product.stock) return;
+    const alreadyPieces = existingItem?.quantity || 0;
+    const check = validatePackPieceEntry(product, deliveryPackQty, deliveryPieceQty, (product?.stock ?? 0) - alreadyPieces);
+    if (!check.ok || !product) { setDeliveryError(check.error || ''); return; }
+    setDeliveryError('');
+    const upp = Math.max(1, product.unitsPerPack ?? 1);
     if (existingItem) {
-      setDeliveryItems(deliveryItems.map(i =>
-        i.product_id === selectedDeliveryProduct
-          ? { ...i, quantity: i.quantity + deliveryItemQty }
-          : i
-      ));
+      setDeliveryItems(deliveryItems.map(i => {
+        if (i.product_id !== selectedDeliveryProduct) return i;
+        const qty = i.quantity + check.pieces;
+        return {
+          ...i,
+          quantity: qty,
+          pack_quantity: Math.floor(qty / upp),
+          piece_quantity: qty % upp,
+          units_per_pack: upp,
+        };
+      }));
     } else {
       setDeliveryItems([...deliveryItems, {
         product_id: product.id,
         product_name: product.name,
-        quantity: deliveryItemQty,
+        quantity: check.pieces,
+        pack_quantity: Math.trunc(deliveryPackQty),
+        piece_quantity: Math.trunc(deliveryPieceQty),
+        units_per_pack: upp,
       }]);
     }
     setSelectedDeliveryProduct('');
-    setDeliveryItemQty(1);
+    setDeliveryPackQty(0);
+    setDeliveryPieceQty(1);
   };
 
   const removeDeliveryItem = (productId: string) => {
@@ -152,12 +174,18 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
     setDeliveryNotes('');
     setDeliveryItems([]);
     setSelectedDeliveryProduct('');
-    setDeliveryItemQty(1);
+    setDeliveryPackQty(0);
+    setDeliveryPieceQty(1);
+    setDeliveryError('');
   };
 
   const handleDeliverySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDistributorId || deliveryItems.length === 0) return;
+    if (deliveryItems.some(i => !i.quantity || i.quantity <= 0)) {
+      setDeliveryError('لا يمكن التسليم بكمية صفرية — راجع الطرود والقطع');
+      return;
+    }
     const selected = distributors.find(d => d.id === selectedDistributorId);
     const officialName = selected?.name || distributorName;
     try {
@@ -320,10 +348,13 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
         onClose={() => { setShowPurchaseModal(false); resetPurchaseForm(); }}
         products={products}
         purchaseProduct={purchaseProduct}
-        purchaseQty={purchaseQty}
+        purchasePackQty={purchasePackQty}
+        purchasePieceQty={purchasePieceQty}
+        purchaseError={purchaseError}
         purchasePrice={purchasePrice}
         purchaseSupplier={purchaseSupplier}
-        setPurchaseQty={setPurchaseQty}
+        setPurchasePackQty={setPurchasePackQty}
+        setPurchasePieceQty={setPurchasePieceQty}
         setPurchasePrice={setPurchasePrice}
         setPurchaseSupplier={setPurchaseSupplier}
         onProductChange={handlePurchaseProductChange}
@@ -340,8 +371,11 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
         setDistributorName={setDistributorName}
         selectedDeliveryProduct={selectedDeliveryProduct}
         setSelectedDeliveryProduct={setSelectedDeliveryProduct}
-        deliveryItemQty={deliveryItemQty}
-        setDeliveryItemQty={setDeliveryItemQty}
+        deliveryPackQty={deliveryPackQty}
+        setDeliveryPackQty={setDeliveryPackQty}
+        deliveryPieceQty={deliveryPieceQty}
+        setDeliveryPieceQty={setDeliveryPieceQty}
+        deliveryError={deliveryError}
         deliveryItems={deliveryItems}
         addDeliveryItem={addDeliveryItem}
         removeDeliveryItem={removeDeliveryItem}
