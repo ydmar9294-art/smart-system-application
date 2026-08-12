@@ -25,12 +25,21 @@ export const inventoryService = {
   async createDelivery(distributorName: string, items: any[], notes?: string, distributorId?: string): Promise<string> {
     validateRequiredString(distributorName, 'اسم الموزع');
     validateNonEmptyArray(items, 'أصناف التسليم');
+    for (const it of items) {
+      const pieces = Number(it?.quantity ?? 0);
+      const pack = Number(it?.pack_quantity ?? 0);
+      const piece = Number(it?.piece_quantity ?? 0);
+      if (!(pieces > 0) || (pack <= 0 && piece <= 0)) {
+        throw new Error(`يجب ضبط عدد الطرود والقطع للصنف: ${it?.product_name || ''}`);
+      }
+    }
 
     return safeRpc<string>('create_delivery_rpc', {
       p_distributor_name: distributorName, p_items: items,
       p_notes: notes, p_distributor_id: distributorId,
     }, { label: 'createDelivery' });
   },
+
 
   async confirmDelivery(deliveryId: string): Promise<void> {
     validateUUID(deliveryId, 'معرف التسليم');

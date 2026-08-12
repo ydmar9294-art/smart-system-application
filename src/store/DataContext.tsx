@@ -78,7 +78,7 @@ interface DataContextType {
   /** @deprecated Permanent licenses no longer supported */
   makeLicensePermanent: (id: string, ownerId: string | null) => Promise<void>;
   updateLicenseMaxEmployees: (licenseId: string, maxEmployees: number) => Promise<{ currentEmployees: number; exceedsLimit: boolean } | null>;
-  addPurchase: (productId: string, quantity: number, unitPrice: number, supplierName?: string, notes?: string) => Promise<void>;
+  addPurchase: (productId: string, quantity: number, unitPrice: number, supplierName?: string, notes?: string, packQuantity?: number, pieceQuantity?: number) => Promise<void>;
   createDelivery: (distributorName: string, items: any[], notes?: string, distributorId?: string) => Promise<void>;
   createPurchaseReturn: (items: { product_id: string; product_name: string; quantity: number; unit_price: number }[], reason?: string, supplierName?: string) => Promise<void>;
   confirmDelivery: (deliveryId: string) => Promise<boolean>;

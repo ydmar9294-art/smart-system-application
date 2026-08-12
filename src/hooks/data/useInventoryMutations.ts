@@ -60,7 +60,7 @@ export function useInventoryMutations(
     }
   }, [queryClient, orgId, handleError]);
 
-  const addPurchase = useCallback(async (productId: string, quantity: number, unitPrice: number, supplierName?: string, notes?: string) => {
+  const addPurchase = useCallback(async (productId: string, quantity: number, unitPrice: number, supplierName?: string, notes?: string, packQuantity = 0, pieceQuantity = 0) => {
     // Optimistic: update product stock immediately
     const prodKey = queryKeys.products(orgId);
     const previousProducts = queryClient.getQueryData<Product[]>(prodKey);
@@ -74,7 +74,7 @@ export function useInventoryMutations(
     }
 
     try {
-      await inventoryService.addPurchase(productId, quantity, unitPrice, supplierName, notes);
+      await inventoryService.addPurchase(productId, quantity, unitPrice, supplierName, notes, packQuantity, pieceQuantity);
     } catch (err) {
       // Rollback
       if (previousProducts) queryClient.setQueryData(prodKey, previousProducts);
