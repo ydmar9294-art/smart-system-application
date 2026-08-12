@@ -228,6 +228,11 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
 
   const handleCreateSale = async () => {
     if (!selectedCustomer?.id || cart.length === 0) return;
+    const invalid = cart.find(i => !(i.quantity > 0) || (i.pack_quantity <= 0 && i.piece_quantity <= 0));
+    if (invalid) {
+      addNotification(`يجب ضبط عدد الطرود أو القطع للصنف: ${invalid.product_name}`, 'error');
+      return;
+    }
     setLoading(true);
     try {
       const saleItems = cart.map(item => {
