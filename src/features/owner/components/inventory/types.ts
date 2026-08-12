@@ -6,6 +6,9 @@ export interface DeliveryItem {
   product_id: string;
   product_name: string;
   quantity: number;
+  pack_quantity?: number;
+  piece_quantity?: number;
+  units_per_pack?: number;
 }
 
 export interface PurchaseReturnItem {
