@@ -3,15 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { Package, Box, Layers, AlertTriangle } from 'lucide-react';
 import FullScreenModal from '@/components/ui/FullScreenModal';
 import type { Product, PricingCurrency, PricingUnit, StockDisplayUnit } from '@/types';
+import { validateProductRules, hasRuleErrors, buildProductCode, type RuleErrors } from './productRules';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   editingProduct: Product | null;
+  categories?: string[];
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
 }
 
-export const ProductModal: React.FC<Props> = ({ isOpen, onClose, editingProduct, onSubmit }) => {
+export const ProductModal: React.FC<Props> = ({ isOpen, onClose, editingProduct, categories = [], onSubmit }) => {
   const { t } = useTranslation();
   const [pricingCurrency, setPricingCurrency] = useState<PricingCurrency>('SYP');
   const [pricingUnit, setPricingUnit] = useState<PricingUnit>('PIECE');
@@ -23,6 +25,9 @@ export const ProductModal: React.FC<Props> = ({ isOpen, onClose, editingProduct,
   const [consumerPrice, setConsumerPrice] = useState<number>(0);
   const [packPrice, setPackPrice] = useState<number>(0);
   const [packConsumerPrice, setPackConsumerPrice] = useState<number>(0);
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('');
+  const [errors, setErrors] = useState<RuleErrors>({});
 
   const stockHasValue = (editingProduct?.stock ?? 0) > 0;
   const lockUnitsPerPack = !!editingProduct && stockHasValue;
@@ -39,7 +44,42 @@ export const ProductModal: React.FC<Props> = ({ isOpen, onClose, editingProduct,
     setConsumerPrice(editingProduct?.consumerPrice ?? 0);
     setPackPrice(editingProduct?.packPrice ?? ((editingProduct?.basePrice ?? 0) * (editingProduct?.unitsPerPack ?? 1)));
     setPackConsumerPrice(editingProduct?.packConsumerPrice ?? ((editingProduct?.consumerPrice ?? 0) * (editingProduct?.unitsPerPack ?? 1)));
+    setName(editingProduct?.name ?? '');
+    setCategory(editingProduct?.category ?? '');
+    setErrors({});
   }, [isOpen, editingProduct]);
+
+  const productCode = useMemo(() => buildProductCode(category, name, unitsPerPack), [category, name, unitsPerPack]);
+
+  const handleValidatedSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const found = validateProductRules({
+      name,
+      category,
+      unit: String(fd.get('unit') || ''),
+      unitsPerPack,
+      allowPackSales,
+      allowPieceSales,
+      pricingUnit,
+      basePrice: pricingUnit === 'PIECE' ? basePrice : derivedPiecePrice,
+      packPrice: pricingUnit === 'PACK' ? packPrice : derivedPackPrice,
+      consumerPrice,
+      packConsumerPrice,
+      stock: Math.trunc(Number(fd.get('stock')) || 0),
+      minStock: Math.trunc(Number(fd.get('minStock')) || 0),
+    });
+    setErrors(found);
+    if (hasRuleErrors(found)) return;
+    onSubmit(e);
+  };
+
+  const ErrorText: React.FC<{ msg?: string }> = ({ msg }) => msg ? (
+    <div className="flex items-start gap-2 text-xs font-bold text-destructive bg-destructive/10 rounded-lg p-2">
+      <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+      <span>{msg}</span>
+    </div>
+  ) : null;
 
   // Auto-sync prices based on pricingUnit
   const derivedPiecePrice = useMemo(() => {
@@ -72,21 +112,40 @@ export const ProductModal: React.FC<Props> = ({ isOpen, onClose, editingProduct,
         </button>
       }
     >
-      <form id="product-form" onSubmit={onSubmit} className="space-y-5">
+      <form id="product-form" onSubmit={handleValidatedSubmit} className="space-y-5">
         {/* Basic info */}
         <div className="space-y-2">
           <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.productName')}</label>
-          <input name="name" required defaultValue={editingProduct?.name} placeholder={t('ownerInventory.productName')} className="input-field py-4 text-base" />
+          <input name="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder={t('ownerInventory.productName')} className="input-field py-4 text-base" />
+          <ErrorText msg={errors.name} />
         </div>
 
         <div className="space-y-2">
           <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.category')}</label>
-          <input name="category" defaultValue={editingProduct?.category} placeholder={t('ownerInventory.category')} className="input-field py-4" />
+          <input
+            name="category"
+            list="product-categories"
+            required
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder={t('ownerInventory.category')}
+            className="input-field py-4"
+          />
+          <datalist id="product-categories">
+            {categories.map(c => <option key={c} value={c} />)}
+          </datalist>
+          <ErrorText msg={errors.category} />
+        </div>
+
+        <div className="rounded-xl bg-muted/40 p-3 flex items-center justify-between">
+          <span className="text-xs font-black text-muted-foreground">الترميز التلقائي للمادة</span>
+          <span className="font-black text-primary tracking-wider" dir="ltr">{productCode}</span>
         </div>
 
         <div className="space-y-2">
           <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.unitLabel')}</label>
-          <input name="unit" defaultValue={editingProduct?.unit ?? t('ownerInventory.piece')} placeholder={t('ownerInventory.piece')} className="input-field py-4" />
+          <input name="unit" required defaultValue={editingProduct?.unit ?? t('ownerInventory.piece')} placeholder={t('ownerInventory.piece')} className="input-field py-4" />
+          <ErrorText msg={errors.unit} />
         </div>
 
         {/* ============== الطرد (Pack) settings ============== */}
@@ -109,6 +168,7 @@ export const ProductModal: React.FC<Props> = ({ isOpen, onClose, editingProduct,
               disabled={lockUnitsPerPack}
               className="input-field py-4 text-center text-xl font-black disabled:opacity-60 disabled:cursor-not-allowed"
             />
+            <ErrorText msg={errors.unitsPerPack} />
             {lockUnitsPerPack && (
               <div className="flex items-start gap-2 text-xs text-warning bg-warning/10 rounded-lg p-2">
                 <AlertTriangle size={14} className="shrink-0 mt-0.5" />
@@ -138,6 +198,7 @@ export const ProductModal: React.FC<Props> = ({ isOpen, onClose, editingProduct,
                 <span className="text-sm font-black">بالطرد</span>
               </button>
             </div>
+            <ErrorText msg={errors.sales} />
             <input type="hidden" name="allowPieceSales" value={allowPieceSales ? '1' : '0'} />
             <input type="hidden" name="allowPackSales" value={allowPackSales ? '1' : '0'} />
           </div>
@@ -220,6 +281,7 @@ export const ProductModal: React.FC<Props> = ({ isOpen, onClose, editingProduct,
                   onChange={(e) => setBasePrice(Number(e.target.value) || 0)}
                   className="input-field py-4 text-center text-xl font-black"
                 />
+                <ErrorText msg={errors.basePrice} />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-black text-muted-foreground uppercase">سعر القطعة للمستهلك</label>
@@ -254,6 +316,7 @@ export const ProductModal: React.FC<Props> = ({ isOpen, onClose, editingProduct,
                   onChange={(e) => setPackPrice(Number(e.target.value) || 0)}
                   className="input-field py-4 text-center text-xl font-black"
                 />
+                <ErrorText msg={errors.packPrice} />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-black text-muted-foreground uppercase">سعر الطرد للمستهلك</label>
@@ -280,11 +343,13 @@ export const ProductModal: React.FC<Props> = ({ isOpen, onClose, editingProduct,
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-xs font-black text-muted-foreground uppercase">المخزون الحالي (قطع)</label>
-            <input name="stock" type="number" defaultValue={editingProduct?.stock ?? 0} className="input-field py-4 text-center text-xl font-black" />
+            <input name="stock" type="number" min={0} step={1} defaultValue={editingProduct?.stock ?? 0} className="input-field py-4 text-center text-xl font-black" />
+            <ErrorText msg={errors.stock} />
           </div>
           <div className="space-y-2">
             <label className="text-xs font-black text-muted-foreground uppercase">الحد الأدنى (قطع)</label>
-            <input name="minStock" type="number" defaultValue={editingProduct?.minStock ?? 5} className="input-field py-4 text-center text-xl font-black" />
+            <input name="minStock" type="number" min={0} step={1} defaultValue={editingProduct?.minStock ?? 5} className="input-field py-4 text-center text-xl font-black" />
+            <ErrorText msg={errors.minStock} />
           </div>
         </div>
       </form>

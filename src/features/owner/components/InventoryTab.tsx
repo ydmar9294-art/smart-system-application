@@ -407,6 +407,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({ productsOnly = false
         isOpen={showProductModal}
         onClose={() => { setShowProductModal(false); setEditingProduct(null); }}
         editingProduct={editingProduct}
+        categories={Array.from(new Set(products.map(p => p.category).filter(Boolean)))}
         onSubmit={handleProductSubmit}
       />
     </div>
