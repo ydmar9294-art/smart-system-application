@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Truck, Plus, Trash2, Check, AlertTriangle } from 'lucide-react';
 import FullScreenModal from '@/components/ui/FullScreenModal';
+import NumberInput from '@/components/ui/NumberInput';
 import type { Product, User as UserT } from '@/types';
 import type { DeliveryItem } from './types';
 import { formatPackPiece } from './productRules';
@@ -26,11 +27,6 @@ interface Props {
   removeDeliveryItem: (id: string) => void;
   onSubmit: (e: React.FormEvent) => void;
 }
-
-const numInput = (v: string) => {
-  const clean = v.replace(/\D/g, '');
-  return clean ? Number(clean) : 0;
-};
 
 export const DeliveryModal: React.FC<Props> = (p) => {
   const { t } = useTranslation();
@@ -108,24 +104,20 @@ export const DeliveryModal: React.FC<Props> = (p) => {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-[11px] font-black text-muted-foreground">عدد الطرود</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
+              <NumberInput
                 disabled={upp < 2}
                 value={p.deliveryPackQty}
-                onChange={(e) => p.setDeliveryPackQty(numInput(e.target.value))}
+                onValueChange={p.setDeliveryPackQty}
+                placeholder="0"
                 className="w-full text-center text-xl font-black bg-card border-2 border-primary/30 rounded-xl text-foreground focus:border-primary focus:outline-none py-4 disabled:opacity-50"
               />
             </div>
             <div className="space-y-1">
               <label className="text-[11px] font-black text-muted-foreground">عدد القطع</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
+              <NumberInput
                 value={p.deliveryPieceQty}
-                onChange={(e) => p.setDeliveryPieceQty(numInput(e.target.value))}
+                onValueChange={p.setDeliveryPieceQty}
+                placeholder="0"
                 className="w-full text-center text-xl font-black bg-card border-2 border-primary/30 rounded-xl text-foreground focus:border-primary focus:outline-none py-4"
               />
             </div>
