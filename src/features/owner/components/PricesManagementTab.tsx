@@ -178,7 +178,20 @@ const PricesManagementTab: React.FC = () => {
         pricingCurrency: (product.pricingCurrency as PricingCurrency) ?? 'SYP',
         pricingUnit: (product.pricingUnit as 'PIECE' | 'PACK') ?? 'PIECE',
       };
-      return { ...prev, [id]: { ...existing, ...patch } };
+
+      const next: Draft = { ...existing, ...patch };
+      const round = (n: number) => String(Math.round(n * 100) / 100);
+
+      // مزامنة تلقائية بين سعر القطعة وسعر الطرد
+      if (upp > 1) {
+        if (patch.basePrice !== undefined) next.packPrice = round((Number(patch.basePrice) || 0) * upp);
+        else if (patch.packPrice !== undefined) next.basePrice = round((Number(patch.packPrice) || 0) / upp);
+
+        if (patch.consumerPrice !== undefined) next.packConsumerPrice = round((Number(patch.consumerPrice) || 0) * upp);
+        else if (patch.packConsumerPrice !== undefined) next.consumerPrice = round((Number(patch.packConsumerPrice) || 0) / upp);
+      }
+
+      return { ...prev, [id]: next };
     });
   }, [products]);
 
@@ -189,11 +202,11 @@ const PricesManagementTab: React.FC = () => {
     setSavingId(id);
     try {
       const upp = Math.max(1, product.unitsPerPack ?? 1);
-      const isPackUnit = draft.pricingUnit === 'PACK';
-      const basePrice = isPackUnit ? (Number(draft.packPrice) || 0) / upp : Number(draft.basePrice) || 0;
-      const consumerPrice = isPackUnit ? (Number(draft.packConsumerPrice) || 0) / upp : Number(draft.consumerPrice) || 0;
-      const packPrice = isPackUnit ? Number(draft.packPrice) || 0 : basePrice * upp;
-      const packConsumerPrice = isPackUnit ? Number(draft.packConsumerPrice) || 0 : consumerPrice * upp;
+      const basePrice = Number(draft.basePrice) || 0;
+      const consumerPrice = Number(draft.consumerPrice) || 0;
+      const packPrice = Number(draft.packPrice) || basePrice * upp;
+      const packConsumerPrice = Number(draft.packConsumerPrice) || consumerPrice * upp;
+
 
       await updateProduct({
         ...product,
