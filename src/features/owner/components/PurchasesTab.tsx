@@ -6,6 +6,7 @@ import { ShoppingCart, Package, Calendar, User, Share2, Download, Loader2, Check
 import FullScreenModal from '@/components/ui/FullScreenModal';
 import { escapeHtml, escapeNumber } from '@/lib/htmlEscape';
 import { buildLegalInfoHtml, buildStampHtml, INVOICE_PAGE_STYLE, INVOICE_FOOTER_HTML, type InvoiceLegalInfo } from '@/lib/invoiceHtmlHelpers';
+import NumberInput from '@/components/ui/NumberInput';
 
 interface Purchase {
   id: string;
