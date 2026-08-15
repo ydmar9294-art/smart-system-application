@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Package, Box, Layers, AlertTriangle } from 'lucide-react';
 import FullScreenModal from '@/components/ui/FullScreenModal';
+import NumberInput from '@/components/ui/NumberInput';
 import type { Product, PricingCurrency, PricingUnit, StockDisplayUnit } from '@/types';
 import { validateProductRules, hasRuleErrors, buildProductCode, type RuleErrors } from './productRules';
 
@@ -157,14 +158,12 @@ export const ProductModal: React.FC<Props> = ({ isOpen, onClose, editingProduct,
 
           <div className="space-y-2">
             <label className="text-xs font-black text-muted-foreground uppercase">عدد القطع داخل الطرد الواحد</label>
-            <input
+            <NumberInput
               name="unitsPerPack"
-              type="number"
-              min={1}
-              step={1}
-              required
               value={unitsPerPack}
-              onChange={(e) => setUnitsPerPack(Math.max(1, Number(e.target.value) || 1))}
+              onValueChange={(n) => setUnitsPerPack(Math.max(1, n || 1))}
+              emptyValue={1}
+              placeholder="1"
               disabled={lockUnitsPerPack}
               className="input-field py-4 text-center text-xl font-black disabled:opacity-60 disabled:cursor-not-allowed"
             />
@@ -272,25 +271,24 @@ export const ProductModal: React.FC<Props> = ({ isOpen, onClose, editingProduct,
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-xs font-black text-muted-foreground uppercase">سعر بيع القطعة</label>
-                <input
+                <NumberInput
                   name="basePrice"
-                  type="number"
-                  step="0.01"
-                  required
+                  decimal
                   value={basePrice}
-                  onChange={(e) => setBasePrice(Number(e.target.value) || 0)}
+                  onValueChange={setBasePrice}
+                  placeholder="0"
                   className="input-field py-4 text-center text-xl font-black"
                 />
                 <ErrorText msg={errors.basePrice} />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-black text-muted-foreground uppercase">سعر القطعة للمستهلك</label>
-                <input
+                <NumberInput
                   name="consumerPrice"
-                  type="number"
-                  step="0.01"
+                  decimal
                   value={consumerPrice}
-                  onChange={(e) => setConsumerPrice(Number(e.target.value) || 0)}
+                  onValueChange={setConsumerPrice}
+                  placeholder="0"
                   className="input-field py-4 text-center text-xl font-black"
                 />
               </div>
@@ -307,25 +305,24 @@ export const ProductModal: React.FC<Props> = ({ isOpen, onClose, editingProduct,
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-xs font-black text-muted-foreground uppercase">سعر بيع الطرد</label>
-                <input
+                <NumberInput
                   name="packPrice"
-                  type="number"
-                  step="0.01"
-                  required
+                  decimal
                   value={packPrice}
-                  onChange={(e) => setPackPrice(Number(e.target.value) || 0)}
+                  onValueChange={setPackPrice}
+                  placeholder="0"
                   className="input-field py-4 text-center text-xl font-black"
                 />
                 <ErrorText msg={errors.packPrice} />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-black text-muted-foreground uppercase">سعر الطرد للمستهلك</label>
-                <input
+                <NumberInput
                   name="packConsumerPrice"
-                  type="number"
-                  step="0.01"
+                  decimal
                   value={packConsumerPrice}
-                  onChange={(e) => setPackConsumerPrice(Number(e.target.value) || 0)}
+                  onValueChange={setPackConsumerPrice}
+                  placeholder="0"
                   className="input-field py-4 text-center text-xl font-black"
                 />
               </div>
@@ -343,12 +340,12 @@ export const ProductModal: React.FC<Props> = ({ isOpen, onClose, editingProduct,
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-xs font-black text-muted-foreground uppercase">المخزون الحالي (قطع)</label>
-            <input name="stock" type="number" min={0} step={1} defaultValue={editingProduct?.stock ?? 0} className="input-field py-4 text-center text-xl font-black" />
+            <input name="stock" type="text" inputMode="numeric" pattern="[0-9]*" defaultValue={editingProduct?.stock ? String(editingProduct.stock) : ''} placeholder="0" className="input-field py-4 text-center text-xl font-black" />
             <ErrorText msg={errors.stock} />
           </div>
           <div className="space-y-2">
             <label className="text-xs font-black text-muted-foreground uppercase">الحد الأدنى (قطع)</label>
-            <input name="minStock" type="number" min={0} step={1} defaultValue={editingProduct?.minStock ?? 5} className="input-field py-4 text-center text-xl font-black" />
+            <input name="minStock" type="text" inputMode="numeric" pattern="[0-9]*" defaultValue={editingProduct?.minStock ? String(editingProduct.minStock) : ''} placeholder="5" className="input-field py-4 text-center text-xl font-black" />
             <ErrorText msg={errors.minStock} />
           </div>
         </div>

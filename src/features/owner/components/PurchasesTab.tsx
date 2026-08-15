@@ -410,11 +410,10 @@ export const PurchasesTab: React.FC = () => {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-xs font-black text-muted-foreground uppercase">الكمية</label>
-              <input 
-                type="number" 
-                min="1"
-                value={quantity} 
-                onChange={(e) => setQuantity(Number(e.target.value))}
+              <NumberInput
+                value={quantity}
+                onValueChange={setQuantity}
+                placeholder="1"
                 required
                 className="input-field text-center text-xl font-black py-4" 
               />
