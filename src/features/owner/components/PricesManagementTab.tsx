@@ -308,7 +308,7 @@ const PricesManagementTab: React.FC = () => {
         <div style={{ height: 'calc(100vh - 360px)', minHeight: 400 }}>
           <VirtualList<Product>
             items={filtered}
-            itemHeight={220}
+            itemHeight={264}
             overscan={4}
             containerHeight="100%"
             renderItem={(p) => (
