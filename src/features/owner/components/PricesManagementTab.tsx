@@ -46,9 +46,26 @@ const PriceRow: React.FC<RowProps> = React.memo(({ product, draft, onChange, onS
   const isDirty = !!draft;
   const hasPacks = upp > 1;
 
-  // Derived values for display
-  const derivedPiecePrice = unit === 'PACK' && upp > 0 ? Number(packVal) / upp : Number(baseVal);
-  const derivedPackPrice = unit === 'PIECE' ? Number(baseVal) * upp : Number(packVal);
+  const field = (
+    label: string,
+    value: string,
+    key: keyof Draft,
+    highlight: boolean,
+  ) => (
+    <div>
+      <label className="text-[10px] font-black text-muted-foreground block mb-1">{label}</label>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={value === '0' ? '' : value}
+        placeholder="0"
+        onChange={(e) => onChange(product.id, { [key]: e.target.value.replace(/[^\d.]/g, '') } as Partial<Draft>)}
+        className={`w-full px-3 py-2 rounded-xl text-foreground font-black text-sm text-center outline-none focus:ring-2 focus:ring-primary ${
+          highlight ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted'
+        }`}
+      />
+    </div>
+  );
 
   return (
     <div className={`bg-card p-3 rounded-2xl border shadow-sm transition-colors ${isDirty ? 'border-primary/40 bg-primary/5' : 'border-border'}`}>
@@ -75,7 +92,7 @@ const PriceRow: React.FC<RowProps> = React.memo(({ product, draft, onChange, onS
         </div>
       </div>
 
-      {/* Pricing unit selector (only relevant if has packs) */}
+      {/* وحدة التسعير المعتمدة (تُحفظ مع المادة) */}
       {hasPacks && (
         <div className="grid grid-cols-2 gap-1 mb-2">
           {(['PIECE', 'PACK'] as const).map(u => (
@@ -93,61 +110,18 @@ const PriceRow: React.FC<RowProps> = React.memo(({ product, draft, onChange, onS
         </div>
       )}
 
-      {unit === 'PIECE' || !hasPacks ? (
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-[10px] font-black text-muted-foreground block mb-1">سعر القطعة ({curSymbol})</label>
-            <input
-              type="number" inputMode="decimal" step="0.01"
-              value={baseVal}
-              onChange={(e) => onChange(product.id, { basePrice: e.target.value })}
-              className="w-full px-3 py-2 bg-muted rounded-xl text-foreground font-black text-sm text-center outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-          <div>
-            <label className="text-[10px] font-black text-muted-foreground block mb-1">سعر المستهلك ({curSymbol})</label>
-            <input
-              type="number" inputMode="decimal" step="0.01"
-              value={consumerVal}
-              onChange={(e) => onChange(product.id, { consumerPrice: e.target.value })}
-              className="w-full px-3 py-2 bg-muted rounded-xl text-foreground font-black text-sm text-center outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-[10px] font-black text-muted-foreground block mb-1">سعر الطرد ({curSymbol})</label>
-            <input
-              type="number" inputMode="decimal" step="0.01"
-              value={packVal}
-              onChange={(e) => onChange(product.id, { packPrice: e.target.value })}
-              className="w-full px-3 py-2 bg-muted rounded-xl text-foreground font-black text-sm text-center outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-          <div>
-            <label className="text-[10px] font-black text-muted-foreground block mb-1">سعر طرد المستهلك ({curSymbol})</label>
-            <input
-              type="number" inputMode="decimal" step="0.01"
-              value={packConsumerVal}
-              onChange={(e) => onChange(product.id, { packConsumerPrice: e.target.value })}
-              className="w-full px-3 py-2 bg-muted rounded-xl text-foreground font-black text-sm text-center outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-        </div>
-      )}
+      {/* أي حقل يُعدَّل يحسب الآخر تلقائياً */}
+      <div className="grid grid-cols-2 gap-2">
+        {field(`سعر القطعة (${curSymbol})`, baseVal, 'basePrice', unit === 'PIECE')}
+        {hasPacks && field(`سعر الطرد (${curSymbol})`, packVal, 'packPrice', unit === 'PACK')}
+        {field(`مستهلك/قطعة (${curSymbol})`, consumerVal, 'consumerPrice', false)}
+        {hasPacks && field(`مستهلك/طرد (${curSymbol})`, packConsumerVal, 'packConsumerPrice', false)}
+      </div>
 
       {hasPacks && (
-        <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] font-bold">
-          <div className="bg-muted/40 rounded-lg p-2 text-center">
-            <span className="text-muted-foreground">قطعة: </span>
-            <span className="text-success font-black">{derivedPiecePrice.toFixed(2)}</span>
-          </div>
-          <div className="bg-muted/40 rounded-lg p-2 text-center">
-            <span className="text-muted-foreground">طرد: </span>
-            <span className="text-success font-black">{derivedPackPrice.toFixed(2)}</span>
-          </div>
-        </div>
+        <p className="mt-2 text-[10px] font-bold text-muted-foreground text-center bg-muted/40 rounded-lg py-1.5">
+          الطرد = {upp} قطعة · يتم حساب السعر الآخر تلقائياً عند التعديل
+        </p>
       )}
 
       {isDirty && (
@@ -169,6 +143,7 @@ const PriceRow: React.FC<RowProps> = React.memo(({ product, draft, onChange, onS
     </div>
   );
 });
+
 PriceRow.displayName = 'PriceRow';
 
 const PricesManagementTab: React.FC = () => {
@@ -203,7 +178,20 @@ const PricesManagementTab: React.FC = () => {
         pricingCurrency: (product.pricingCurrency as PricingCurrency) ?? 'SYP',
         pricingUnit: (product.pricingUnit as 'PIECE' | 'PACK') ?? 'PIECE',
       };
-      return { ...prev, [id]: { ...existing, ...patch } };
+
+      const next: Draft = { ...existing, ...patch };
+      const round = (n: number) => String(Math.round(n * 100) / 100);
+
+      // مزامنة تلقائية بين سعر القطعة وسعر الطرد
+      if (upp > 1) {
+        if (patch.basePrice !== undefined) next.packPrice = round((Number(patch.basePrice) || 0) * upp);
+        else if (patch.packPrice !== undefined) next.basePrice = round((Number(patch.packPrice) || 0) / upp);
+
+        if (patch.consumerPrice !== undefined) next.packConsumerPrice = round((Number(patch.consumerPrice) || 0) * upp);
+        else if (patch.packConsumerPrice !== undefined) next.consumerPrice = round((Number(patch.packConsumerPrice) || 0) / upp);
+      }
+
+      return { ...prev, [id]: next };
     });
   }, [products]);
 
@@ -214,11 +202,11 @@ const PricesManagementTab: React.FC = () => {
     setSavingId(id);
     try {
       const upp = Math.max(1, product.unitsPerPack ?? 1);
-      const isPackUnit = draft.pricingUnit === 'PACK';
-      const basePrice = isPackUnit ? (Number(draft.packPrice) || 0) / upp : Number(draft.basePrice) || 0;
-      const consumerPrice = isPackUnit ? (Number(draft.packConsumerPrice) || 0) / upp : Number(draft.consumerPrice) || 0;
-      const packPrice = isPackUnit ? Number(draft.packPrice) || 0 : basePrice * upp;
-      const packConsumerPrice = isPackUnit ? Number(draft.packConsumerPrice) || 0 : consumerPrice * upp;
+      const basePrice = Number(draft.basePrice) || 0;
+      const consumerPrice = Number(draft.consumerPrice) || 0;
+      const packPrice = Number(draft.packPrice) || basePrice * upp;
+      const packConsumerPrice = Number(draft.packConsumerPrice) || consumerPrice * upp;
+
 
       await updateProduct({
         ...product,
@@ -320,7 +308,7 @@ const PricesManagementTab: React.FC = () => {
         <div style={{ height: 'calc(100vh - 360px)', minHeight: 400 }}>
           <VirtualList<Product>
             items={filtered}
-            itemHeight={220}
+            itemHeight={264}
             overscan={4}
             containerHeight="100%"
             renderItem={(p) => (

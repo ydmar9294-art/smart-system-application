@@ -44,6 +44,20 @@ interface AuthStatusResponse {
 // Inflight deduplication
 let inflightAuthStatus: Promise<AuthStatusResponse> | null = null;
 
+// Short-lived result cache — avoids a second edge-function round trip when the
+// login flow checks status and then immediately resolves the profile.
+const AUTH_STATUS_TTL_MS = 15_000;
+let lastAuthStatus: { at: number; data: AuthStatusResponse } | null = null;
+
+export const invalidateAuthStatusCache = () => { lastAuthStatus = null; };
+
+// إبطال الكاش فوراً عند تسجيل الخروج أو تبديل المستخدم
+supabase.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_OUT' || event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+    lastAuthStatus = null;
+  }
+});
+
 /** Timeout-wrapped fetch with a single retry (both attempts timeout-protected) */
 const callAuthStatus = async (accessToken: string): Promise<AuthStatusResponse> => {
   const invokeWithTimeout = async (): Promise<AuthStatusResponse> => {
@@ -79,6 +93,9 @@ const callAuthStatus = async (accessToken: string): Promise<AuthStatusResponse> 
  */
 export const checkAuthStatus = async (): Promise<AuthStatusResponse> => {
   if (inflightAuthStatus) return inflightAuthStatus;
+  if (lastAuthStatus && Date.now() - lastAuthStatus.at < AUTH_STATUS_TTL_MS) {
+    return lastAuthStatus.data;
+  }
 
   const promise = (async () => {
     try {
@@ -87,7 +104,7 @@ export const checkAuthStatus = async (): Promise<AuthStatusResponse> => {
         return { authenticated: false, reason: 'NO_SESSION' };
       }
 
-      return await authCircuitBreaker.execute<AuthStatusResponse>(
+      const result = await authCircuitBreaker.execute<AuthStatusResponse>(
         () => callAuthStatus(session.access_token),
         // Fallback: use cached auth if circuit is open
         () => {
@@ -110,6 +127,9 @@ export const checkAuthStatus = async (): Promise<AuthStatusResponse> => {
           return { authenticated: false, reason: 'CIRCUIT_OPEN' };
         }
       );
+
+      if (result?.authenticated) lastAuthStatus = { at: Date.now(), data: result };
+      return result;
     } catch (err) {
       logger.error('checkAuthStatus failed', 'AuthOps');
       return { authenticated: false, reason: 'ERROR' };

@@ -2,6 +2,7 @@ import React from 'react';
 import { Drawer, DrawerContent, DrawerOverlay, DrawerPortal } from '@/components/ui/drawer';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useBackButton } from '@/hooks/useBackButton';
 
 interface Props {
   open: boolean;
@@ -14,6 +15,9 @@ const OwnerSubPageSheet: React.FC<Props> = ({ open, onClose, title, children }) 
   const { i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
   const BackIcon = isRtl ? ChevronRight : ChevronLeft;
+
+  // زر الرجوع في الأندرويد يغلق هذه اللوحة أولاً بدل الخروج للواجهة الرئيسية
+  useBackButton(React.useCallback(() => { onClose(); return true; }, [onClose]), open);
 
   return (
     <Drawer open={open} onOpenChange={(o) => !o && onClose()}>

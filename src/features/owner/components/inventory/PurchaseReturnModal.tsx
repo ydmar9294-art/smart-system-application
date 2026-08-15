@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { RotateCcw, Plus, Trash2, Check } from 'lucide-react';
 import FullScreenModal from '@/components/ui/FullScreenModal';
+import NumberInput from '@/components/ui/NumberInput';
 import { CURRENCY } from '@/constants';
 import type { Product } from '@/types';
 import type { PurchaseReturnItem } from './types';
@@ -79,11 +80,10 @@ export const PurchaseReturnModal: React.FC<Props> = (p) => {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-muted-foreground">{t('ownerInventory.quantity')}</label>
-              <input
-                type="number"
-                min="1"
+              <NumberInput
                 value={p.returnItemQty}
-                onChange={(e) => p.setReturnItemQty(Number(e.target.value))}
+                onValueChange={p.setReturnItemQty}
+                placeholder="0"
                 className="input-field text-center text-xl font-black py-4"
               />
             </div>

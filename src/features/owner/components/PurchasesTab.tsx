@@ -6,6 +6,7 @@ import { ShoppingCart, Package, Calendar, User, Share2, Download, Loader2, Check
 import FullScreenModal from '@/components/ui/FullScreenModal';
 import { escapeHtml, escapeNumber } from '@/lib/htmlEscape';
 import { buildLegalInfoHtml, buildStampHtml, INVOICE_PAGE_STYLE, INVOICE_FOOTER_HTML, type InvoiceLegalInfo } from '@/lib/invoiceHtmlHelpers';
+import NumberInput from '@/components/ui/NumberInput';
 
 interface Purchase {
   id: string;
@@ -410,11 +411,10 @@ export const PurchasesTab: React.FC = () => {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-xs font-black text-muted-foreground uppercase">الكمية</label>
-              <input 
-                type="number" 
-                min="1"
-                value={quantity} 
-                onChange={(e) => setQuantity(Number(e.target.value))}
+              <NumberInput
+                value={quantity}
+                onValueChange={setQuantity}
+                placeholder="1"
                 required
                 className="input-field text-center text-xl font-black py-4" 
               />

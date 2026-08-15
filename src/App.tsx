@@ -23,6 +23,7 @@ import AccountStatusGate from '@/components/AccountStatusGate';
 import AppLoadingSkeleton from '@/components/ui/DashboardSkeleton';
 import ConsentGate from '@/components/ConsentGate';
 import { HelpProvider } from '@/features/help';
+import { useBackButton } from '@/hooks/useBackButton';
 // PostUpdateMessage removed by request
 
 // ==========================================
@@ -277,32 +278,32 @@ const App: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
-    let exitPressedOnce = false;
-    let exitTimeout: ReturnType<typeof setTimeout> | null = null;
+  // ── Root back handler (lowest priority) ──
+  // يعمل فقط إذا لم تستهلك أي نافذة/لوحة مفتوحة ضغطة الرجوع (LIFO stack).
+  const exitPressedOnce = useRef(false);
+  const exitTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pathRef = useRef(location.pathname);
+  pathRef.current = location.pathname;
 
-    const handleBackButton = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
-      const isOnHomeScreen = location.pathname === '/' || location.pathname === '';
-      
-      if (!isOnHomeScreen && canGoBack) {
-        navigate(-1);
-      } else {
-        // Double-press to exit
-        if (exitPressedOnce) {
-          CapacitorApp.exitApp();
-        } else {
-          exitPressedOnce = true;
-          if (exitTimeout) clearTimeout(exitTimeout);
-          exitTimeout = setTimeout(() => { exitPressedOnce = false; }, 2000);
-        }
-      }
-    });
+  const rootBackHandler = useCallback(() => {
+    const isOnHomeScreen = pathRef.current === '/' || pathRef.current === '';
+    if (!isOnHomeScreen) {
+      navigate(-1);
+      return true;
+    }
+    if (exitPressedOnce.current) {
+      CapacitorApp.exitApp();
+      return true;
+    }
+    exitPressedOnce.current = true;
+    if (exitTimeout.current) clearTimeout(exitTimeout.current);
+    exitTimeout.current = setTimeout(() => { exitPressedOnce.current = false; }, 2000);
+    return true;
+  }, [navigate]);
 
-    return () => {
-      handleBackButton.then(listener => listener.remove());
-      if (exitTimeout) clearTimeout(exitTimeout);
-    };
-  }, [navigate, location.pathname]);
+  useBackButton(rootBackHandler);
+
+  useEffect(() => () => { if (exitTimeout.current) clearTimeout(exitTimeout.current); }, []);
 
   return (
       <SecurityGate blockRooted={true} blockSideloaded={true}>

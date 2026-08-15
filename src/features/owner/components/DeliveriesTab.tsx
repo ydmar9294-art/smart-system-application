@@ -5,6 +5,7 @@ import { Truck, Plus, Package, Calendar, User, Check, Trash2, Loader2, AlertCirc
 import { EmployeeType } from '@/types';
 import DeliveryDetailsModal from './DeliveryDetailsModal';
 import FullScreenModal from '@/components/ui/FullScreenModal';
+import NumberInput from '@/components/ui/NumberInput';
 
 interface DeliveryItem {
   product_id: string;
@@ -281,11 +282,10 @@ export const DeliveriesTab: React.FC = () => {
                   <option key={p.id} value={p.id}>{p.name} (المتوفر: {p.stock})</option>
                 ))}
               </select>
-              <input 
-                type="number" 
-                min="1"
+              <NumberInput
                 value={itemQuantity}
-                onChange={(e) => setItemQuantity(Number(e.target.value))}
+                onValueChange={setItemQuantity}
+                placeholder="1"
                 className="w-20 text-center text-xl font-black bg-card border-2 border-primary/30 rounded-xl text-foreground focus:border-primary focus:outline-none py-4"
                 disabled={loading}
               />

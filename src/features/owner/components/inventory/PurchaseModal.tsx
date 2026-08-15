@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShoppingCart, AlertTriangle } from 'lucide-react';
 import FullScreenModal from '@/components/ui/FullScreenModal';
+import NumberInput from '@/components/ui/NumberInput';
 import { CURRENCY } from '@/constants';
 import type { Product } from '@/types';
 import { formatPackPiece, toPieces } from './productRules';
@@ -34,7 +35,6 @@ export const PurchaseModal: React.FC<Props> = ({
   const selected = products.find(p => p.id === purchaseProduct);
   const upp = Math.max(1, selected?.unitsPerPack ?? 1);
   const totalPieces = toPieces(purchasePackQty, purchasePieceQty, upp);
-  const numInput = (v: string) => { const c = v.replace(/\D/g, ''); return c ? Number(c) : 0; };
   return (
     <FullScreenModal
       isOpen={isOpen}
@@ -78,24 +78,20 @@ export const PurchaseModal: React.FC<Props> = ({
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-xs font-black text-muted-foreground uppercase">عدد الطرود</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
+            <NumberInput
               disabled={upp < 2}
               value={purchasePackQty}
-              onChange={(e) => setPurchasePackQty(numInput(e.target.value))}
+              onValueChange={setPurchasePackQty}
+              placeholder="0"
               className="input-field text-center text-xl font-black py-4 disabled:opacity-50"
             />
           </div>
           <div className="space-y-2">
             <label className="text-xs font-black text-muted-foreground uppercase">عدد القطع</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
+            <NumberInput
               value={purchasePieceQty}
-              onChange={(e) => setPurchasePieceQty(numInput(e.target.value))}
+              onValueChange={setPurchasePieceQty}
+              placeholder="0"
               className="input-field text-center text-xl font-black py-4"
             />
           </div>
