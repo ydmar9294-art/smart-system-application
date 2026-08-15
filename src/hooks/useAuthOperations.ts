@@ -51,6 +51,13 @@ let lastAuthStatus: { at: number; data: AuthStatusResponse } | null = null;
 
 export const invalidateAuthStatusCache = () => { lastAuthStatus = null; };
 
+// إبطال الكاش فوراً عند تسجيل الخروج أو تبديل المستخدم
+supabase.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_OUT' || event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+    lastAuthStatus = null;
+  }
+});
+
 /** Timeout-wrapped fetch with a single retry (both attempts timeout-protected) */
 const callAuthStatus = async (accessToken: string): Promise<AuthStatusResponse> => {
   const invokeWithTimeout = async (): Promise<AuthStatusResponse> => {

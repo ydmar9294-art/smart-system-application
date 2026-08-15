@@ -85,11 +85,12 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
    * If another device is active, show warning dialog.
    * Otherwise, register device and complete.
    */
-  const handleDeviceFlow = useCallback(async (userId: string) => {
+  const handleDeviceFlow = useCallback(async (userId: string, prefetched?: Promise<any>) => {
     try {
       setAuthState(prev => prev.type === 'loading' ? { ...prev, phase: 'checking_device' } : prev);
-      
-      const preCheck = await preCheckDevice();
+
+      // نستخدم نتيجة الفحص التي بدأت بالتوازي مع فحص الترخيص لتسريع الدخول
+      const preCheck = await (prefetched ?? preCheckDevice());
       
       if (preCheck.success && preCheck.has_active_session && preCheck.active_devices?.length) {
         // Show warning dialog — user must confirm
@@ -133,7 +134,10 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       await yieldToRenderer();
       
       logger.info(`[LICENSE_CHECK] Attempt ${retryCount + 1}`, 'AuthFlow');
-      
+
+      // فحص الجهاز يعمل بالتوازي مع فحص الترخيص (توفير جولة شبكة كاملة)
+      const devicePreCheck = preCheckDevice().catch(() => ({ success: false, has_active_session: false }));
+
       const status = await Promise.race([
         checkAuthStatus(),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error('VERIFY_TIMEOUT')), VERIFY_TIMEOUT_MS - 1000))
@@ -193,7 +197,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthComplete }) => {
       logger.info('[LICENSE_VALID] Profile check passed', 'AuthFlow');
 
       // Profile OK — now check device
-      const canComplete = await handleDeviceFlow(userId);
+      const canComplete = await handleDeviceFlow(userId, devicePreCheck);
       if (canComplete) {
         clearTimers();
         logger.info('[LOGIN_COMPLETE]', 'AuthFlow');
