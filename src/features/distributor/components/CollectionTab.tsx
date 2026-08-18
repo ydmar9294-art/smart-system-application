@@ -8,6 +8,7 @@ import { useApp } from '@/store/AppContext';
 import { useCurrency } from '@/store/CurrencyContext';
 import InvoicePrint from './InvoicePrint';
 import type { CachedSale, CachedCustomer } from '../services/distributorOfflineService';
+import { normalizeNumericInput, parseLocalizedNumber } from '@/lib/validation';
 
 type Direction = 'IN' | 'OUT';
 type Currency = 'SYP' | 'USD';
@@ -66,7 +67,7 @@ const CollectionTab: React.FC<CollectionTabProps> = ({ selectedCustomer, onQueue
   const selectedCust = localCustomers.find(c => c.id === selectedCustomerId);
 
   // Currency conversion preview
-  const numAmount = parseFloat(amount) || 0;
+  const numAmount = parseLocalizedNumber(amount) || 0;
   const sypAmount = currency === 'USD' && usdRate ? numAmount * usdRate : numAmount;
 
   const canSubmit = direction === 'IN'
@@ -147,7 +148,7 @@ const CollectionTab: React.FC<CollectionTabProps> = ({ selectedCustomer, onQueue
   };
 
   const handleQuickAmount = (value: number) => {
-    const current = parseFloat(amount) || 0;
+    const current = parseLocalizedNumber(amount) || 0;
     setAmount((current + value).toString());
   };
 
@@ -231,7 +232,7 @@ const CollectionTab: React.FC<CollectionTabProps> = ({ selectedCustomer, onQueue
         <p className="text-muted-foreground text-center font-bold mb-4">
           {direction === 'IN' ? 'مبلغ التحصيل' : 'مبلغ الدفع'} ({currency === 'USD' ? 'بالدولار' : 'بالليرة'})
         </p>
-        <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
+        <input type="text" inputMode="decimal" value={amount} onChange={(e) => setAmount(normalizeNumericInput(e.target.value, true))}
           placeholder="0.00"
           className="w-full text-center text-4xl md:text-5xl font-black text-foreground bg-transparent border-none outline-none py-6" dir="ltr" />
         {currency === 'USD' && usdRate && numAmount > 0 && (

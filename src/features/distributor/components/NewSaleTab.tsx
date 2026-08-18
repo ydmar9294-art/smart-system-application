@@ -11,6 +11,7 @@ import { CURRENCY } from '@/constants';
 import InvoicePrint from './InvoicePrint';
 import FullScreenModal from '@/components/ui/FullScreenModal';
 import type { CachedInventoryItem } from '../services/distributorOfflineService';
+import { normalizeNumericInput } from '@/lib/validation';
 
 interface CartItem {
   product_id: string;
@@ -391,9 +392,8 @@ const NewSaleTab: React.FC<NewSaleTabProps> = ({ selectedCustomer, localInventor
             </div>
             {discountType && (
               <div className="relative">
-                <input type="number" inputMode="decimal" min="0"
-                  max={discountType === 'percentage' ? '100' : String(subtotal)}
-                  value={discountInput} onChange={(e) => setDiscountInput(e.target.value)}
+                <input type="text" inputMode="decimal"
+                  value={discountInput} onChange={(e) => setDiscountInput(normalizeNumericInput(e.target.value, true))}
                   placeholder={discountType === 'percentage' ? t('invoice.discountPercentPlaceholder') : t('invoice.discountFixedPlaceholder')}
                   className="w-full bg-muted border border-border rounded-xl px-4 py-3 font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-base" />
                 <span className="absolute start-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-bold">

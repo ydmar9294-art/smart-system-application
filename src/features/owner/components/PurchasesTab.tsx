@@ -261,7 +261,7 @@ export const PurchasesTab: React.FC = () => {
   const { products, addPurchase, purchases = [] } = useApp();
   const [showModal, setShowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState('');
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(0);
   const [unitPrice, setUnitPrice] = useState('');
   const [supplierName, setSupplierName] = useState('');
   const [notes, setNotes] = useState('');
@@ -307,7 +307,7 @@ export const PurchasesTab: React.FC = () => {
 
   const resetForm = () => {
     setSelectedProduct('');
-    setQuantity(1);
+    setQuantity(0);
     setUnitPrice('');
     setSupplierName('');
     setNotes('');
@@ -421,12 +421,10 @@ export const PurchasesTab: React.FC = () => {
             </div>
             <div className="space-y-2">
               <label className="text-xs font-black text-muted-foreground uppercase">سعر الوحدة</label>
-              <input 
-                type="number" 
-                min="0"
-                step="0.01"
-                value={unitPrice} 
-                onChange={(e) => setUnitPrice(e.target.value)}
+              <NumberInput
+                decimal
+                value={Number(unitPrice) || 0}
+                onValueChange={(value) => setUnitPrice(value > 0 ? String(value) : '')}
                 placeholder="0"
                 required
                 className="input-field text-center text-xl font-black py-4" 

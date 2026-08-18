@@ -8,6 +8,7 @@ import { CURRENCY } from '@/constants';
 import { UserRole } from '@/types';
 import type { Product, PricingCurrency } from '@/types';
 import { logger } from '@/lib/logger';
+import { normalizeNumericInput } from '@/lib/validation';
 
 /**
  * PricesManagementTab — Owner-only centralized price control.
@@ -59,7 +60,7 @@ const PriceRow: React.FC<RowProps> = React.memo(({ product, draft, onChange, onS
         inputMode="decimal"
         value={value === '0' ? '' : value}
         placeholder="0"
-        onChange={(e) => onChange(product.id, { [key]: e.target.value.replace(/[^\d.]/g, '') } as Partial<Draft>)}
+        onChange={(e) => onChange(product.id, { [key]: normalizeNumericInput(e.target.value, true) } as Partial<Draft>)}
         className={`w-full px-3 py-2 rounded-xl text-foreground font-black text-sm text-center outline-none focus:ring-2 focus:ring-primary ${
           highlight ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted'
         }`}

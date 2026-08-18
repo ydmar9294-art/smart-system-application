@@ -36,7 +36,7 @@ export const DeliveriesTab: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<DeliveryItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState('');
-  const [itemQuantity, setItemQuantity] = useState(1);
+  const [itemQuantity, setItemQuantity] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -89,7 +89,7 @@ export const DeliveriesTab: React.FC = () => {
     }
 
     setSelectedProduct('');
-    setItemQuantity(1);
+    setItemQuantity(0);
   };
 
   const removeItem = (productId: string) => {
@@ -138,7 +138,7 @@ export const DeliveriesTab: React.FC = () => {
     setNotes('');
     setItems([]);
     setSelectedProduct('');
-    setItemQuantity(1);
+    setItemQuantity(0);
     setError('');
   };
 

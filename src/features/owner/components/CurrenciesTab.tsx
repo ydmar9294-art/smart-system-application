@@ -15,6 +15,7 @@ import { useAuth } from '@/store/AuthContext';
 import { useCurrency } from '@/store/CurrencyContext';
 import { currencyService } from '@/services/currencyService';
 import { useApp } from '@/store/AppContext';
+import { normalizeNumericInput, parseLocalizedNumber } from '@/lib/validation';
 
 const formatRate = (n: number) =>
   Math.round(n).toLocaleString('en-US');
@@ -63,7 +64,7 @@ export const CurrenciesTab: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!orgId) return;
-    const value = parseFloat(newRate);
+    const value = parseLocalizedNumber(newRate);
     if (!Number.isFinite(value) || value <= 0) {
       addNotification('أدخل سعراً صحيحاً أكبر من صفر', 'error');
       return;
@@ -139,12 +140,10 @@ export const CurrenciesTab: React.FC = () => {
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="text-xs font-bold text-foreground whitespace-nowrap shrink-0">1$ =</span>
               <input
-                type="number"
+                type="text"
                 inputMode="decimal"
-                step="1"
-                min="1"
                 value={newRate}
-                onChange={(e) => setNewRate(e.target.value)}
+                onChange={(e) => setNewRate(normalizeNumericInput(e.target.value, true))}
                 placeholder={usdRate ? formatRate(usdRate) : '14000'}
                 required
                 className="flex-1 min-w-0 px-2 py-3 bg-background text-foreground rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary text-center text-base font-black"

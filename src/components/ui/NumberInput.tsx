@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { normalizeNumericInput } from '@/lib/validation';
 
 /**
  * NumberInput — حقل رقمي لا يعرض رقماً ثابتاً (مثل 0) داخل الحقل.
@@ -34,9 +35,7 @@ const NumberInput: React.FC<NumberInputProps> = ({
   }, [value, emptyValue]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = (raw: string) => {
-    const cleaned = decimal
-      ? raw.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1')
-      : raw.replace(/\D/g, '');
+    const cleaned = normalizeNumericInput(raw, decimal);
     setText(cleaned);
     if (cleaned === '' || cleaned === '.') {
       onValueChange(emptyValue);

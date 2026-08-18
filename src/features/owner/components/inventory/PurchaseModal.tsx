@@ -99,12 +99,10 @@ export const PurchaseModal: React.FC<Props> = ({
 
         <div className="space-y-2">
           <label className="text-xs font-black text-muted-foreground uppercase">{t('ownerInventory.unitPrice')} (للقطعة)</label>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={purchasePrice}
-            onChange={(e) => setPurchasePrice(e.target.value)}
+          <NumberInput
+            decimal
+            value={Number(purchasePrice) || 0}
+            onValueChange={(value) => setPurchasePrice(value > 0 ? String(value) : '')}
             placeholder="0"
             required
             className="input-field text-center text-xl font-black py-4"
