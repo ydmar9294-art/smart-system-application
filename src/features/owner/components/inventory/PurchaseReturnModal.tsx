@@ -89,12 +89,10 @@ export const PurchaseReturnModal: React.FC<Props> = (p) => {
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-muted-foreground">{t('ownerInventory.unitPrice')}</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={p.returnItemPrice}
-                onChange={(e) => p.setReturnItemPrice(e.target.value)}
+              <NumberInput
+                decimal
+                value={Number(p.returnItemPrice) || 0}
+                onValueChange={(value) => p.setReturnItemPrice(value > 0 ? String(value) : '')}
                 placeholder="0"
                 className="input-field text-center text-xl font-black py-4"
               />

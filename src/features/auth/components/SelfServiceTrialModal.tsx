@@ -12,7 +12,7 @@ import {
 import AppLogo from '@/components/ui/AppLogo';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
-import { sanitizeText, sanitizePhone } from '@/lib/validation';
+import { sanitizeText, sanitizePhone, normalizeNumericInput, parseLocalizedNumber } from '@/lib/validation';
 import { clearAuthCache } from '@/lib/authCache';
 import FullScreenModal from '@/components/ui/FullScreenModal';
 import { COMMON_CURRENCIES } from '@/constants/currencies';
@@ -72,7 +72,7 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
   const validateCompanyStep = (): string | null => {
     const fullName = sanitizeText(form.fullName);
     const orgName = sanitizeText(form.orgName);
-    const distributorsCount = parseInt(form.distributorsCount, 10);
+    const distributorsCount = Math.trunc(parseLocalizedNumber(form.distributorsCount));
     const phone = sanitizePhone(form.phone);
     const whatsapp = form.whatsappSameAsPhone ? phone : sanitizePhone(form.whatsapp);
     if (!fullName || fullName.length < 2) return 'الاسم الكامل مطلوب (حرفان على الأقل)';
@@ -100,14 +100,14 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
     if (!basePreset || !secondaryPreset) { setError('عملات النظام غير متوفرة'); return; }
 
     // المستخدم يُدخل: 1 USD = X ل.س — يُحفظ مباشرة بهذه الصيغة
-    const rateNum = parseFloat(form.exchangeRate);
+    const rateNum = parseLocalizedNumber(form.exchangeRate);
     if (!isFinite(rateNum) || rateNum <= 0) {
       setError('أدخل سعر صرف الدولار بالليرة السورية (مثال: 16000)'); return;
     }
 
     const fullName = sanitizeText(form.fullName);
     const orgName = sanitizeText(form.orgName);
-    const distributorsCount = parseInt(form.distributorsCount, 10);
+    const distributorsCount = Math.trunc(parseLocalizedNumber(form.distributorsCount));
     const phone = sanitizePhone(form.phone);
     const whatsapp = form.whatsappSameAsPhone ? phone : sanitizePhone(form.whatsapp);
 
@@ -246,9 +246,9 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
 
           <Field icon={<Users className="w-4 h-4 text-primary" />} label="عدد الموزعين" required
             hint="كم عدد الموزعين/المندوبين العاملين لديك؟">
-            <input type="number" inputMode="numeric" min={1} max={500}
+            <input type="text" inputMode="numeric" pattern="[0-9٠-٩۰-۹]*"
               value={form.distributorsCount}
-              onChange={(e) => update('distributorsCount', e.target.value.replace(/[^0-9]/g, ''))}
+              onChange={(e) => update('distributorsCount', normalizeNumericInput(e.target.value))}
               placeholder="مثال: 5" className="input-field text-center" dir="ltr" />
           </Field>
 
@@ -336,12 +336,10 @@ const SelfServiceTrialModal: React.FC<SelfServiceTrialModalProps> = ({
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="text-xs font-bold text-foreground whitespace-nowrap shrink-0">1$ =</span>
               <input
-                type="number"
+                type="text"
                 inputMode="decimal"
-                step="1"
-                min="1"
                 value={form.exchangeRate}
-                onChange={(e) => update('exchangeRate', e.target.value)}
+                onChange={(e) => update('exchangeRate', normalizeNumericInput(e.target.value, true))}
                 placeholder="مثال: 16000"
                 required
                 className="flex-1 min-w-0 px-2 py-3 bg-background text-foreground rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary text-center text-base font-black"

@@ -4,6 +4,23 @@
  */
 export { validatePositiveNumber, validateRequiredString as validateRequired, validateUUID, validateNonEmptyArray } from '@/lib/safeQuery';
 
+/** تحويل الأرقام العربية/الفارسية إلى الإنجليزية قبل التحقق أو الحساب. */
+export const normalizeDigits = (input: string): string => input
+  .replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+  .replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+  .replace(/[٫،]/g, '.')
+  .replace(/٬/g, '');
+
+/** تنظيف حقل رقمي مع إبقاء قيمة الإدخال كنص حتى يستطيع المستخدم مسحه. */
+export const normalizeNumericInput = (input: string, decimal = false): string => {
+  const normalized = normalizeDigits(input);
+  return decimal
+    ? normalized.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1')
+    : normalized.replace(/[^0-9]/g, '');
+};
+
+export const parseLocalizedNumber = (input: string): number => Number(normalizeDigits(input));
+
 /**
  * Sanitize text input — removes dangerous characters and patterns.
  * Defends against XSS, HTML injection, javascript: URIs, and event handlers.
@@ -26,7 +43,7 @@ export const sanitizeText = (input: string): string => {
  */
 export const sanitizePhone = (input: string): string => {
   if (!input || typeof input !== 'string') return '';
-  return input.replace(/[^0-9+\-\s()]/g, '').trim().slice(0, 20);
+  return normalizeDigits(input).replace(/[^0-9+\-\s()]/g, '').trim().slice(0, 20);
 };
 
 /**
